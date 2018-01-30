@@ -41,6 +41,9 @@ def geonet_data(station,comp,start,end=None,response=True):
     # check if data spans multiple days
     if end:
         # if data spans multiple years
+
+        # !!! DOESN'T WORK - need to figure out a way to dynamically determine
+        #!!! which filenames to grab. Regex maybe? want this to be a general fx
         if start.year != end.year:
             mseed_files = []
             for iterate_year in range(start.year,end_year+1,1):
@@ -102,9 +105,7 @@ else:
     multiday = False
     mseed_filename = glob.glob(mseed_GNApath +'*{}'.format(julday))
 
-# waveform processing
-print("reading inventory")
-# filename set naming parameters
+# read in response (filename set naming parameters)
 NET,STA,LOC,CHA,SUFX,YEAR,JDAY = os.path.basename(mseed_filename[0]).split('.')
 response_filename = "RESP.{net}.{sta}.{loc}.{cha}".format(net=NET,
                                                             sta=STA,
@@ -113,7 +114,7 @@ response_filename = "RESP.{net}.{sta}.{loc}.{cha}".format(net=NET,
 response_filepath = os.path.join(resp_GNApath,response_filename)
 inv = read_inventory(response_filepath)
 
-print("reading data stream")
+# read in data streams
 if multiday:
     tr1 = read(mseed_filename[0])[0]
     tr2 = read(mseed_filename[1])[0]
@@ -123,14 +124,14 @@ else:
     st = read(mseed_filename[0])
     st_original = st.copy()
 
-print('trimming waveform')
+# trim
 st.trim(starttime=start_time,endtime=end_time)
 
-print("removing response")
+# remove response
 st.attach_response(inventories=inv)
 st.remove_response(output='VEL',water_level=100)
 
-print("preprocessing")
+# filter window
 tmin = 1
 tmax = 100
 freqmin = 1/tmax
@@ -141,11 +142,13 @@ window_length = 200
 clip_low = 0
 clip_high = 1.0
 
+# preprocessing
 st.detrend("simple")
 st.filter("bandpass",freqmin=freqmin,freqmax=freqmax,corners=3)
 st.taper(max_percentage=0.05)
 
 # plotting
+print("plotting",end=", ")
 f,(ax1,ax2) = plt.subplots(2,sharex=True,sharey=False,figsize=(9,5))
 label_dict = {'Z':'Vertical','1':'N/S','N':'N/S','2':'E/W','E':'E/W'}
 
@@ -188,18 +191,19 @@ plt.xlim([200,2000])
 plt.subplots_adjust(wspace=0, hspace=0)
 
 # save fig
-figure_folder = '/seis/prj/fwi/bchow/geonet_stations/figures/spectrograms/'
+figure_folder = '/seis/prj/fwi/bchow/spectral/figures/spectrograms/'
 subfolder = '{}-{}s'.format(tmin,tmax)
 foldercheck = os.path.join(figure_folder,subfolder)
 if not os.path.exists(foldercheck):
-    print("Making directory ",foldercheck)
+    print("Making directory ",foldercheck,end=", ")
     os.makedirs(foldercheck)
 figure_name = "{s}-{c}_{l}-{h}kaikoura".format(s=station,
                                 c=channel,
                                 l=tmin,
                                 h=tmax)
 outpath = os.path.join(figure_folder,subfolder,figure_name)
-f.savefig(outpath,dpi=f.dpi)
+# f.savefig(outpath,dpi=f.dpi)
+plt.show()
 print("saved figure:\n\t",outpath)
 
 # plt.show()
