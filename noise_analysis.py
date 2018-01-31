@@ -13,6 +13,7 @@ from obspy import read_inventory
 from obspy.signal import PPSD
 from obspy import UTCDateTime
 from obspy.imaging.cm import pqlx
+from getdata_fdsn import geonet_data
 
 # manual set time interval
 start_date = UTCDateTime('2015-01-01')

@@ -5,67 +5,15 @@ import sys
 import glob
 import obspy
 import numpy as np
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 from obspy.core.stream import Stream
 from obspy import read
 from obspy import read_inventory
 from obspy import UTCDateTime
 
-def geonet_data(station,comp,start,end=None,response=True):
-    """
-    returns a list of pathnames for GEONET archives on GNS internal system, if
-    response == True, also returns path for response. If end not specified,
-    returns a list of length 1 for the day in question
-
-    :type station: str
-    :param station: station name i.e. GKBS (case-insensitive)
-    :type comp: str
-    :param comp: component of interest, N/E/Z (case-insensitive)
-    :type start: UTCDateTime
-    :param start: starttime for data request
-    :type end: UTCDateTime
-    :param end: endtime for data request
-    :type response: bool
-    :param response: return response filepath
-    """
-    # channel naming convention based on instrument type
-    chan_dict = {'Z':'HH','S':'BN'}
-    channel = chan_dict[station[-1]] + chan_choice # i.e. HHZ
-
-    # filepaths direct to GeoNet Archives path
-    mseed_GNApath = '/geonet/seismic/{year}/NZ/{sta}/{ch}.D/'.format(year=year,
-                                                                    sta=station,
-                                                                    ch=channel)
-    resp_GNApath = '/geonet/seed/RESPONSE/{}.NZ/'.format(station)
-
-    # check if data spans multiple days
-    if end:
-        # if data spans multiple years
-
-        # !!! DOESN'T WORK - need to figure out a way to dynamically determine
-        #!!! which filenames to grab. Regex maybe? want this to be a general fx
-        if start.year != end.year:
-            mseed_files = []
-            for iterate_year in range(start.year,end_year+1,1):
-                mseed_files += glob.glob(mseed_GNApath + '*{year}.*'.format(
-                                                            year=start.year))
-            mseed_files.sort()
-    else:
-        mseed_files = glob.glob(mseed_GNApath +'*{year}.{day}'.format(
-                                                            year=start.year,
-                                                            day=start.julday))
-
-    # mseed sets naming parameters for response
-    NET,STA,LOC,CHA,SUFX,YEAR,JDAY = os.path.basename(
-                                                mseed_files[0]).split('.')
-
-    if response:
-        response_filename = "RESP.{net}.{sta}.{loc}.{cha}".format(net=NET,
-                                                                    sta=STA,
-                                                                    loc=LOC,
-                                                                    cha=CHA)
-        response_filepath = os.path.join(resp_GNApath,response_filename)
-
+mpl.rcParams['font.size'] = 8
+mpl.rcParams['lines.linewidth'] = 1
 
 # ignore warnings
 import warnings
@@ -149,7 +97,7 @@ st.taper(max_percentage=0.05)
 
 # plotting
 print("plotting",end=", ")
-f,(ax1,ax2) = plt.subplots(2,sharex=True,sharey=False,figsize=(9,5))
+f,(ax1,ax2,ax3) = plt.subplots(3,sharex=True,sharey=False,figsize=(9,5))
 label_dict = {'Z':'Vertical','1':'N/S','N':'N/S','2':'E/W','E':'E/W'}
 
 # subplot 1 (waveform)
@@ -174,21 +122,65 @@ ax1.set_title(plot_title,fontsize=10)
 spec = st.spectrogram(log=False,clip=[clip_low,clip_high],cmap='plasma',
                         axes=ax2,show=False,wlen=window_length)
 ax2.set_ylabel("Frequency (Hz)")
-ax2.set_xlabel("Time (sec)")
 ax2.set_ylim([freqmin,0.2])
-ax2.set_yticks(np.linspace(freqmin,0.2,10),10)
+ax2.set_yticks(np.linspace(freqmin,0.2,3))
 ax2.grid(color='w')
 
-# subplot 2 (mirrored y axis for period) - Didn't work properly
+# subplot 2 (mirrored y axis for period) - this is impossible...
+# locs,labels = plt.yticks()
 # ax2a = ax2.twinx()
 # ax2a.set_ylabel("Period (sec)")
-# ax2a.set_yticks(np.linspace(tmin,tmax,10),10)
-# ax2a.set_ylim([tmax,tmin])
-# ax2a.set_yscale("log")
+# ax2a = ax2.yaxis.get_major_locator()
+# # new_labels = 1/np.linspace(freqmin,0.2,10)
+# # plt.yticks(locs,new_labels)
+# # ax2a.set_yscale("log")
+# import ipdb;ipdb.set_trace()
 
+# processing for sub3 - determine duration of "secondary energy"
+seismo =  np.sqrt(st[0].data**2)
+samp_rate = st[0].stats.sampling_rate
+
+peak_amp = seismo.max()
+threshold_percentage = 0.15
+threshold = peak_amp * threshold_percentage
+
+# loop over seismogram, determine start and end of peak energy
+over_threshold = []
+for i,sample in enumerate(seismo):
+    if sample >= threshold:
+        over_threshold.append(i)
+
+energy_start = over_threshold[0]
+energy_end = over_threshold[-1]
+duration = (energy_end-energy_start)/samp_rate
+
+# subplot 3 edited seismogram with threshold
+ax3.plot(t,seismo,'k',label=st[0].get_id())
+ax3.plot(t[energy_start:energy_end],seismo[energy_start:energy_end],'r',
+                                                label='Amplitude >= Threshold')
+h_lab = "Threshold = {}% peak amplitude".format(int(threshold_percentage*100))
+ax3.axhline(y=threshold,
+            xmin=t[0],xmax=t[-1],
+            zorder=1,
+            color='r',
+            linestyle='-.',
+            linewidth=.85,
+            label=h_lab)
+
+ax3.grid()
+ax3.set_ylim([0,peak_amp+peak_amp*0.1])
+ax3.set_ylabel('sqrt(velocity^2) (m/s)')
+ax3.set_xlabel("Time (sec)")
+ax3.legend()
+
+ano_x = round(t[int(energy_end + 100*samp_rate)]/1000) * 1000
+ano_y = threshold * 2
+ax3.annotate("Duration of energy: {} sec".format(duration),
+                                                xy=(ano_x,ano_y),
+                                                xytext=(ano_x,ano_y))
 # final touches
 plt.xlim([200,2000])
-plt.subplots_adjust(wspace=0, hspace=0)
+plt.subplots_adjust(wspace=.5, hspace=0)
 
 # save fig
 figure_folder = '/seis/prj/fwi/bchow/spectral/figures/spectrograms/'
@@ -202,8 +194,8 @@ figure_name = "{s}-{c}_{l}-{h}kaikoura".format(s=station,
                                 l=tmin,
                                 h=tmax)
 outpath = os.path.join(figure_folder,subfolder,figure_name)
-# f.savefig(outpath,dpi=f.dpi)
-plt.show()
+f.savefig(outpath,dpi=250)
+# plt.show()
 print("saved figure:\n\t",outpath)
 
 # plt.show()
