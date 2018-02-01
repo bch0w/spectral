@@ -14,6 +14,9 @@ color_dict = {"MWZ":"b","BKZ":"orange","KNZ":"g","RTZ":"r","PUZ":"purple",
 npz_path = "/seis/prj/fwi/bchow/spectral/ppsd_arrays/"
 npz_files = glob.glob(npz_path + "*HHZ*001-365.npz")
 
+# manual paths
+npz_files = glob.glob(npz_path + "*KNZ*")
+
 # start figure
 f = plt.figure(dpi=200)
 # loop through filenames
@@ -21,8 +24,9 @@ for fid in npz_files:
     sta,cha,year = os.path.basename(fid).split(".")[:3]
     ppsd = PPSD.load_npz(fid)
     mean = ppsd.get_mean()
-    plt.plot(mean[0],mean[1],label=sta,color=color_dict[sta])
-
+    # plt.plot(mean[0],mean[1],label=sta,color=color_dict[sta])
+    plt.plot(mean[0],mean[1],label=fid)
+    
 nlnm_x,nlnm_y = get_nlnm()
 nhnm_x,nhnm_y = get_nhnm()
 plt.plot(nlnm_x,nlnm_y,'gray',alpha=0.7)
