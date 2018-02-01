@@ -1,13 +1,12 @@
 """24/1/18
 Use geonet permanent station data for noise spectra analysis
 in accordance with McNamara2004 using the obspy PPSD package
-!!! currently only works for year-long spectral analyses, grabs entire year
-!!! directory from geonet archive for analysis. which year can be specified
 """
 import os
 import sys
 import glob
 import time
+import argparse
 from obspy import read
 from obspy import read_inventory
 from obspy.signal import PPSD
@@ -15,56 +14,56 @@ from obspy import UTCDateTime
 from obspy.imaging.cm import pqlx
 from getdata_fdsn import geonet_data
 
-# manual set time interval
-start_date = UTCDateTime('2015-01-01')
-end_date = UTCDateTime('2016-01-01')
-print("Timeframe set: {} through {}".format(start_date.date,end_date.date))
+# user input arguments
+parser = argparse.ArgumentParser(description='Download create PPSD for \
+ station and timeframe $ python noise_analysis.py --station TBAS -comp\
+ z --start 2015-01-01 --end 2016-01-01')
+parser.add_argument('--station', help='Instrument station, default = KNZ',
+                    type=str,default='KNZ')
+parser.add_argument('--comp', help='Instrument component, default = Z',
+                    type=str, default='Z')
+parser.add_argument('--start', help='Starttime YYYY-MM-DD default = \
+                    2015-01-01',type=str, default='2015-01-01')
+parser.add_argument('--end', help='Endtime, default = 2015-01-01',type=str,
+                    default='2015-01-02')
+parser.add_argument('--dec', help='Decimate trace, default 0',type=int,
+                    default=0)
+
+# parse arguments
+arg = parser.parse_args()
+station = arg.station.upper()
+comp = arg.comp.upper()
+start = UTCDateTime(arg.start)
+end = UTCDateTime(arg.end)
+decimateby = arg.dec
+
+print("\nTimeframe set: {} through {}".format(start.date,end.date))
 
 # set instrument choice on command line
-station = sys.argv[1].upper()
 if station[-1].upper() == 'Z':
-    channel = 'HH' + sys.argv[2].upper()
+    channel = 'HH' + comp
 elif station[-1].upper() == 'S':
-    channel = 'BN' + sys.argv[2].upper()
+    channel = 'BN' + comp
 instrument_id = 'NZ.{}.*.{}'.format(station,channel)
 print("Analyzing noise spectra for {}".format(instrument_id))
 
 # filepaths of geonet archive
-net, sta, loc, cha = instrument_id.split('.')
-mseed_GNApath = '/geonet/seismic/{year}/NZ/{sta}/{ch}.D/'.format(
-                                                        year=start_date.year,
-                                                        sta=sta,
-                                                        ch=cha)
-resp_GNApath = '/geonet/seed/RESPONSE/{}.NZ/'.format(sta)
-
-# data files
-data_files = glob.glob(mseed_GNApath+'*')
-data_files.sort()
-
-# response file
-NET,STA,LOC,CHA,SUFX,YEAR,JDAY = os.path.basename(data_files[0]).split('.')
-response_filename = "RESP.{net}.{sta}.{loc}.{cha}".format(net=NET,
-                                                            sta=STA,
-                                                            loc=LOC,
-                                                            cha=CHA)
-resp_file = os.path.join(resp_GNApath,response_filename)
-
-# notify files found
-print("++ data file(s): ", mseed_GNApath)
-print("\t {} data files found".format(len(data_files)))
-print("++ response file: ", resp_file)
+data_files, resp_file = geonet_data(station=station,
+                                    comp=channel[-1],
+                                    start=start,
+                                    end=end)
 
 # read in response file, set decimate parameter
 inv = read_inventory(resp_file)
-decimateby = 5
 
 # initialize PPSD with first datafile
 print("1/{} Initializing with data file: ".format(len(data_files)),
                                                     data_files[0],end='... ')
 start = time.time()
 st = read(data_files[0])
-st.decimate(decimateby)
-tr = st.select(channel=cha)[0]
+if decimateby != 0:
+    st.decimate(decimateby)
+tr = st.select(channel=channel)[0]
 ppsd = PPSD(tr.stats, metadata=inv)
 ppsd.add(st)
 end = time.time()
@@ -76,7 +75,8 @@ for i,filename in enumerate(data_files[1:]):
     try:
         start = time.time()
         st = read(filename)
-        st.decimate(decimateby)
+        if decimateby != 0:
+            st.decimate(decimateby)
         ppsd.add(st)
         end = time.time()
         print("complete ({}s)".format(round(end-start,2)))
@@ -89,8 +89,8 @@ for i,filename in enumerate(data_files[1:]):
 year_start,jday_start = os.path.basename(data_files[0]).split('.')[-2:]
 year_end,jday_end = os.path.basename(data_files[-1]).split('.')[-2:]
 
-output_filename = '{sta}.{cha}.{year}.{day_start}-{day_end}'.format(sta=sta,
-                                                        cha=cha,
+output_filename = '{sta}.{cha}.{year}.{day_start}-{day_end}'.format(sta=station,
+                                                        cha=channel,
                                                         year=year_start,
                                                         day_start=jday_start,
                                                         day_end=jday_end)

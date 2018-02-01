@@ -21,10 +21,10 @@ from obspy.clients.fdsn import Client
 
 def geonet_data(station,comp,start,end=None,response=True):
     """
-    returns a list of pathnames for GEONET archives on GNS internal system, if
-    response == True, also returns path for response. If end not specified,
-    returns a list of length 1 for day requested. Currently only works for
-    single component requests, no wildcard on components.
+    returns a list of pathnames for GEONET archives on GNS internal system.
+    If response == True, also returns path for response.
+    If end not specified, returns a list of length 1 for day requested.
+    Currently only works for single component requests, no wildcards possible.
 
     :type station: str
     :param station: station name i.e. GKBS (case-insensitive)
@@ -81,7 +81,7 @@ def geonet_data(station,comp,start,end=None,response=True):
             mseed_files = list_of_files[start_file_index:end_file_index]
 
         # if data spans multiple years
-        if start.year != end.year:
+        else:
             # first year
             first_year_files = glob.glob(mseed_GNApath + '*')
             first_year_files.sort()
@@ -116,6 +116,7 @@ def geonet_data(station,comp,start,end=None,response=True):
                                                             day=start.julday))
     mseed_files.sort()
     days_between = int((end-start)/86400)
+    print("\n","="*25)
     print("++ {nfiles} files for {days_between} days requested".format(
                                                     nfiles=len(mseed_files),
                                                     days_between=days_between))
@@ -133,10 +134,9 @@ def geonet_data(station,comp,start,end=None,response=True):
     else:
         response_filepath = None
 
-
+    print(" ","="*25,"\n")
 
     return mseed_files, response_filepath
-
 
 
 if __name__ == "__main__":
