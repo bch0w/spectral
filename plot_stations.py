@@ -9,28 +9,33 @@ from obspy.clients.fdsn import Client
 import warnings
 warnings.filterwarnings("ignore",category=mpl.cbook.mplDeprecation)
 
+# choices: s (accelerometers) / z (seismometer) / d (durations)
 choice = sys.argv[1].upper()
+if choice not in ['S','Z','D']:
+    sys.exit("\tChoice should be s(acc), z(seis) or d(dur)")
 tmin = 1
 tmax = 50
 perc = 90
-chan_dict = {'Z':'HH*','S':'BN*'}
-color_dict = {'Z':'b','S':'r'}
-text_dict = {'Z':'Seismometer','S':'Accelerometer'}
+sta_dict = {'Z':'*Z','S':'*S','D':'*S'}
+chan_dict = {'Z':'HH*','S':'BN*','D':'BN*'}
+color_dict = {'Z':'b','S':'r','D':'r'}
+text_dict = {'Z':'Seismometer','S':'Accelerometer','D':'Accelerometer'}
+label_dict = {'Z':True,'S':True,'D':False}
 lat = -38.468
 lon = 177.217849
 
 c = Client('GEONET')
 # 2 degree radius around Te Urewera
 inv = c.get_stations(network='NZ',
-                    station='*{}'.format(choice),
+                    station=sta_dict[choice],
                     channel=chan_dict[choice],
                     starttime='2015-01-01',
                     endtime='2016-01-01',
-                    latitude = lat,
-                    longitude = lon,
-                    maxradius=2)
+                    latitude=lat,
+                    longitude=lon,
+                    maxradius=5)
 
-fig = inv.plot(label=False,
+fig = inv.plot(label=label_dict[choice],
         marker='.',
         projection="local",
         resolution = "i",
@@ -38,11 +43,14 @@ fig = inv.plot(label=False,
         size=6,
         show=False)
 
+if choice != 'D':
+    plt.show()
+    sys.exit()
+
 # manual plot scatterpoints - really hacked together
-text_file = '/seis/prj/fwi/bchow/spectral/durations/{t0}-{t1}s_{p}p.txt'.format(
+text_file = '/seis/prj/fwi/bchow/spectral/duration/{t0}-{t1}s_amp.txt'.format(
                                                                 t0=tmin,
-                                                                t1=tmax,
-                                                                p=perc)
+                                                                t1=tmax)
 stations,durations,lats,lons = [],[],[],[]
 with open(text_file,'r') as f:
     for line in f:

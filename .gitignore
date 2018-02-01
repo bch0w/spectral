@@ -1,4 +1,4 @@
 NZ/
-ppsd_arrays/*.npz
-one_off_functions/
+ppsd_arrays/
+one_off/
 output_plots/

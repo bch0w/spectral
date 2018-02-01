@@ -12,7 +12,7 @@ from obspy import read_inventory
 from obspy.signal import PPSD
 from obspy import UTCDateTime
 from obspy.imaging.cm import pqlx
-from getdata_fdsn import geonet_data
+from getdata import geonet_data
 
 # user input arguments
 parser = argparse.ArgumentParser(description='Download create PPSD for \
@@ -99,20 +99,24 @@ npz_filepath = './ppsd_arrays/{}.npz'.format(output_filename)
 png_filepath = './output_plots/ppsd_plots/{}.png'.format(output_filename)
 
 # check npz file exists
-if os.path.exists(npz_filepath):
-    npz_check = input('npz path exists, overwrite? [y]/n')
-    if npz_check == 'n':
-        ppsd.save_npz(npz_filepath)
-else:
-    ppsd.save_npz(npz_filepath)
-    print("saved .npz file: ",npz_filepath)
+# if os.path.exists(npz_filepath):
+#     npz_check = input('npz path exists, overwrite? [y]/n')
+#     if npz_check == 'n':
+#         ppsd.save_npz(npz_filepath)
+# else:
+#     ppsd.save_npz(npz_filepath)
+#     print("saved .npz file: ",npz_filepath)
 
 # check png file exists
-if os.path.exists(png_filepath):
-    png_check = input('png path exists, overwrite? [y]/n')
-    if png_check == 'n':
-        import pdb;pdb.set_trace()
-        sys.exit('Aborted')
+# if os.path.exists(png_filepath):
+#     png_check = input('png path exists, overwrite? [y]/n')
+#     if png_check == 'n':
+#         import pdb;pdb.set_trace()
+#         sys.exit('Aborted')
+
+# ignore overwrite protection
+ppsd.save_npz(npz_filepath)
+print("saved .npz file: ",npz_filepath)
 
 ppsd.plot(filename=png_filepath,cmap=pqlx,show_mean=True)
 print("saved .png file: ",png_filepath)
