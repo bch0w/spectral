@@ -96,7 +96,7 @@ output_filename = '{sta}.{cha}.{year}.{day_start}-{day_end}'.format(sta=station,
                                                         day_end=jday_end)
 
 npz_filepath = './ppsd_arrays/{}.npz'.format(output_filename)
-png_filepath = './figures/ppsd_plots/{}.png'.format(output_filename)
+png_filepath = './output_plots/ppsd_plots/{}.png'.format(output_filename)
 
 # check npz file exists
 if os.path.exists(npz_filepath):

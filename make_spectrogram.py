@@ -183,7 +183,7 @@ plt.xlim([200,2000])
 plt.subplots_adjust(wspace=.5, hspace=0)
 
 # save fig
-figure_folder = '/seis/prj/fwi/bchow/spectral/figures/spectrograms/'
+figure_folder = '/seis/prj/fwi/bchow/spectral/output_plots/spectrograms/'
 subfolder = '{}-{}s'.format(tmin,tmax)
 foldercheck = os.path.join(figure_folder,subfolder)
 if not os.path.exists(foldercheck):
@@ -198,7 +198,7 @@ f.savefig(outpath,dpi=250)
 print("saved figure:\n\t",outpath)
 
 # text file containing parameters for easy comparisons
-text_file = '/seis/prj/fwi/bchow/spectral/durations/{t0}-{t1}s_{p}p.txt'.format(
+text_file = '/seis/prj/fwi/bchow/spectral/duration/{t0}-{t1}s_{p}p.txt'.format(
                                             t0=tmin,
                                             t1=tmax,
                                             p=int(thresh_max*100))
