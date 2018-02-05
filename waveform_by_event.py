@@ -60,7 +60,7 @@ inv = read_inventory(resp_filepath)
 # st.trim(starttime=origin-180,endtime=origin+3600*2)
 st.taper(max_percentage=0.05)
 st.attach_response(inv)
-st.remove_response(output='DISP',water_level=100,plot=True)
+st.remove_response(output='DISP',water_level=200,plot=True)
 st.detrend('simple')
 
 # create time axis for plotting, initiate figure
