@@ -194,3 +194,10 @@ Peak amplitude: 0.030184978902999038 m/s
 Duration: 301.1 s
 Start: 394.28 s
 End: 695.38 s
+================================================================================
+ID: NZ.GKBS.20.BNZ
+Filter bounds: 1-50 s
+Peak amplitude: 0.05043415521000811 m/s
+Duration: 435.06 s
+Start: 421.04 s
+End: 856.1 s

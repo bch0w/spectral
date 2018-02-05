@@ -40,18 +40,37 @@ decimateby = arg.dec
 print("\nTimeframe set: {} through {}".format(start.date,end.date))
 
 # set instrument choice on command line
-if station[-1].upper() == 'Z':
-    channel = 'HH' + comp
-elif station[-1].upper() == 'S':
+network = 'NZ'
+channel = 'HH' + comp
+if station[-1].upper() == 'S':
     channel = 'BN' + comp
-instrument_id = 'NZ.{}.*.{}'.format(station,channel)
+elif station[:2].upper() == 'RD':
+    network = 'XX'
+
+instrument_id = '{net}.{sta}.*.{cha}'.format(net=network,
+                                            sta=station,
+                                            cha=channel)
 print("Analyzing noise spectra for {}".format(instrument_id))
 
 # filepaths of geonet archive
-data_files, resp_file = geonet_data(station=station,
-                                    comp=channel[-1],
-                                    start=start,
-                                    end=end)
+if network == 'NZ':
+    data_files, resp_file = geonet_data(station=station,
+                                        comp=channel[-1],
+                                        start=start,
+                                        end=end)
+# RDF temporary network - includes all files, does not filter by time
+elif network == 'XX':
+    d1 = "/seis/prj/fwi/yoshi/RDF_Array/July2017_Sep2017/DATA_ALL/"
+    d2 = "/seis/prj/fwi/yoshi/RDF_Array/Sep2017_Nov2017/DATA_ALL/"
+    d3 = "/seis/prj/fwi/bchow/RDF_Array/Nov2017_Jan2018/DATA_ALL/"
+    data_files = []
+    for D in [d1,d2,d3]:
+        data_files += glob.glob(D + '{sta}*{cha}*'.format(sta=station,
+                                                        cha=channel))
+    data_files.sort()
+    print("++ {} data files found".format(len(data_files)))
+    resp_file = "/seis/prj/fwi/bchow/RDF_Array/DATALESS.RDF.XX"
+
 
 # read in response file, set decimate parameter
 inv = read_inventory(resp_file)
@@ -66,6 +85,8 @@ if decimateby != 0:
 tr = st.select(channel=channel)[0]
 ppsd = PPSD(tr.stats, metadata=inv)
 ppsd.add(st)
+year_start = st[0].stats.starttime.year
+jday_start = st[0].stats.starttime.julday
 end = time.time()
 print("complete ({}s)".format(round(end-start,2)))
 
@@ -86,12 +107,14 @@ for i,filename in enumerate(data_files[1:]):
 
 # set output name for saving .npz and f# save data as .npz array, save plot as .png
 # i'm assuming here the year stays the same
-year_start,jday_start = os.path.basename(data_files[0]).split('.')[-2:]
-year_end,jday_end = os.path.basename(data_files[-1]).split('.')[-2:]
+year_end = st[0].stats.starttime.year
+jday_end = st[0].stats.starttime.julday
 
-output_filename = '{sta}.{cha}.{year}.{day_start}-{day_end}'.format(sta=station,
+output_filename = '{sta}.{cha}.{yearS}.{day_start}-{yearE}.{day_end}'.format(
+                                                        sta=station,
                                                         cha=channel,
-                                                        year=year_start,
+                                                        yearS=year_start,
+                                                        yearE=year_end,
                                                         day_start=jday_start,
                                                         day_end=jday_end)
 
