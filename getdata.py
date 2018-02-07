@@ -19,7 +19,7 @@ from obspy import UTCDateTime
 from obspy.clients.fdsn import Client
 
 
-def geonet_data(station,comp,start,end=None,response=True):
+def geonet_data(station,comp,start,end=False,response=True):
     """
     returns a list of pathnames for GEONET archives on GNS internal system.
     If response == True, also returns path for response.
@@ -63,7 +63,7 @@ def geonet_data(station,comp,start,end=None,response=True):
         sys.exit("Channel choice does not exist")
 
     # check if data spans more than one day
-    if end:
+    if type(end) == str:
         end = UTCDateTime(end)
         # if data only spans one year
         if start.year == end.year:
@@ -86,7 +86,7 @@ def geonet_data(station,comp,start,end=None,response=True):
             first_year_files = glob.glob(mseed_GNApath + '*')
             first_year_files.sort()
             start_file_match = glob.glob(mseed_GNApath + "*{date}".format(
-                                 date=start.format_seed().replace(',','.')))[0]
+                                date=start.format_seed().replace(',','.')))[0]
             start_file_index = first_year_files.index(start_file_match)
             mseed_files = first_year_files[start_file_index:]
             # if years in middle
@@ -108,14 +108,17 @@ def geonet_data(station,comp,start,end=None,response=True):
                                     date=end.format_seed().replace(',','.')))[0]
             end_file_index = last_year_files.index(end_file_match)
             mseed_files += last_year_files[:end_file_index]
+            days_between = int((end-start)/86400)
+
 
     # if data only needed for one day
     else:
         mseed_files = glob.glob(mseed_GNApath +'*{year}.{day:0>3}'.format(
                                                             year=start.year,
                                                             day=start.julday))
+        days_between = 1
+
     mseed_files.sort()
-    days_between = int((end-start)/86400)
     print("\n","="*25)
     print("++ {nfiles} files for {days_between} days requested".format(
                                                     nfiles=len(mseed_files),
