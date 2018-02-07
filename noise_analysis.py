@@ -16,7 +16,7 @@ from getdata import geonet_data
 
 # user input arguments
 parser = argparse.ArgumentParser(description='Download create PPSD for \
- station and timeframe $ python noise_analysis.py --station TBAS -comp\
+ station and timeframe $ python noise_analysis.py --station TBAS --comp\
  z --start 2015-01-01 --end 2016-01-01')
 parser.add_argument('--station', help='Instrument station, default = KNZ',
                     type=str,default='KNZ')
@@ -71,7 +71,6 @@ elif network == 'XX':
     print("++ {} data files found".format(len(data_files)))
     resp_file = "/seis/prj/fwi/bchow/RDF_Array/DATALESS.RDF.XX"
 
-
 # read in response file, set decimate parameter
 inv = read_inventory(resp_file)
 
@@ -110,7 +109,7 @@ for i,filename in enumerate(data_files[1:]):
 year_end = st[0].stats.starttime.year
 jday_end = st[0].stats.starttime.julday
 
-output_filename = '{sta}.{cha}.{yearS}.{day_start}-{yearE}.{day_end}'.format(
+output_filename = '{sta}.{cha}.{yearS}.{day_start:0>3}-{yearE}.{day_end:0>3}'.format(
                                                         sta=station,
                                                         cha=channel,
                                                         yearS=year_start,

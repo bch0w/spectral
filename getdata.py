@@ -63,7 +63,7 @@ def geonet_data(station,comp,start,end=False,response=True):
         sys.exit("Channel choice does not exist")
 
     # check if data spans more than one day
-    if type(end) == str:
+    if type(end) != bool:
         end = UTCDateTime(end)
         # if data only spans one year
         if start.year == end.year:
@@ -79,7 +79,6 @@ def geonet_data(station,comp,start,end=False,response=True):
             end_file_index = list_of_files.index(end_file_match)
             # list of files for return
             mseed_files = list_of_files[start_file_index:end_file_index]
-
         # if data spans multiple years
         else:
             # first year
@@ -108,9 +107,8 @@ def geonet_data(station,comp,start,end=False,response=True):
                                     date=end.format_seed().replace(',','.')))[0]
             end_file_index = last_year_files.index(end_file_match)
             mseed_files += last_year_files[:end_file_index]
-            days_between = int((end-start)/86400)
 
-
+        days_between = int((end-start)/86400)
     # if data only needed for one day
     else:
         mseed_files = glob.glob(mseed_GNApath +'*{year}.{day:0>3}'.format(
