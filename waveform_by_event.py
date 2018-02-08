@@ -22,17 +22,16 @@ event_list = ["2017p852531", # M4.8 36km; W of Wellington
               "2017p861155", # M4.7 11km; SW of Wellington
               "2017p968142", # M4.1 16km; W of Mt Ruapehu
               "2017p879247"] # M4.7 40km; N of Bay of Plenty
-event_id = event_list[4]
+event_id = event_list[5]
 
 print(event_id)
 
 try:
     choice = sys.argv[1].lower() # geonet or temp
     station_id = sys.argv[2].upper() # i.e. RD06 or PXZ
-    component = sys.argv[3].upper() # i.e. HHZ
-    response_output = sys.argv[4].upper() # i.e. "VEL" or "DISP"
+    response_output = sys.argv[3].upper() # i.e. "VEL" or "DISP"
 except IndexError:
-    sys.exit("example call: python waveform_by_event.py temp RD06 HHZ VEL")
+    sys.exit("example call: python waveform_by_event.py temp RD06 VEL")
 
 # get event information
 c = Client("GEONET")
@@ -56,17 +55,19 @@ if choice == "temp":
     d2 = "/seis/prj/fwi/yoshi/RDF_Array/Sep2017_Nov2017/DATA_ALL/"
     d3 = "/seis/prj/fwi/bchow/RDF_Array/Nov2017_Jan2018/DATA_ALL/"
     date_search = "{year}.{jday}".format(year=origin.year,jday=origin.julday)
-    filepath = []
+    path_vert,path_north,path_east = [],[],[]
     for search in [d1,d2,d3]:
-        filepath += glob.glob(search+"{sta}.{date}*{comp}*".format(
+        path_vert += glob.glob(search+"{sta}.{date}*HHZ*".format(
                                                             sta=station_id,
-                                                            date=date_search,
-                                                            comp=component))
+                                                            date=date_search))
+        path_north += glob.glob(search+"{sta}.{date}*HHN*".format(
+                                                            sta=station_id,
+                                                            date=date_search))
+        path_east += glob.glob(search+"{sta}.{date}*HHE*".format(
+                                                            sta=station_id,
+                                                            date=date_search))
 
-    if not filepath:
-        sys.exit("Files do doesn't not exist")
-
-    print("++ {} data files found".format(len(filepath)))
+    # print("++ {} data files found".format(len(filepath)))
     resp_filepath = "/seis/prj/fwi/bchow/RDF_Array/DATALESS.RDF.XX"
 
 elif choice == "geonet":
@@ -74,60 +75,77 @@ elif choice == "geonet":
                                         comp=component[-1],
                                         start=origin)
 
-
 # read in data - assuming only 1 datafile found
-st = read(filepath[0])
+st = read(path_vert[0]) + read(path_north[0]) + read(path_east[0])
+# incase data gaps (??? is this okay?)
+st.merge()
 inv = read_inventory(resp_filepath)
 
 # preprocessing
-st.trim(starttime=origin-180,endtime=origin+60*5)
+st.trim(starttime=origin,endtime=origin+60*7.5)
 st.detrend('linear')
 st.taper(max_percentage=0.05)
 st.attach_response(inv)
-pre_filt = [0.025,0.033,1,10]
 st.remove_response(output=response_output,water_level=60)
 
 # create time axis for plotting, initiate figure
 t = np.linspace(0,st[0].stats.endtime-st[0].stats.starttime,st[0].stats.npts)
-f,ax = plt.subplots(1,figsize=(9,5))
+f,(ax1,ax2,ax3) = plt.subplots(3,figsize=(9,5),sharex=True,sharey=True,dpi=200)
 
 # clean up trace
 st_temp = st.copy()
 st_temp.detrend('linear')
 st_temp.taper(max_percentage=0.05)
-st_temp.filter('highpass',freq=1/30)
-
-# no lowpass
-st_nolowpass = st_temp.copy()
-plt.plot(t,st_nolowpass[0].data,linewidth=0.5,label="No lowpass")
-# print("No lowpass: {}".format(st_nolowpass[0].data.max()))
+st_temp.filter('highpass',freq=1/30,corners=3,zerophase=True)
 
 # filter bands
-for i in [3,6,10]:
-    st_filter = st_temp.copy()
-    st_filter.filter('lowpass',freq=1/i)
-    plt.plot(t,st_filter[0].data,
-                linewidth=0.5,
-                label="{}s filter".format(i),
-                zorder=i)
-    print("Lowpass at {} s".format(st_filter[0].data.max()))
+alpha = 0.7
+linewidth = 0.5
+for i in [1,3,6,10]:
+    for ax,tr in zip([ax1,ax2,ax3],[0,1,2]):
 
-plt.xlabel('Time (sec)')
+        st_filter = st_temp.copy()
+        st_filter.filter('lowpass',freq=1/i,corners=3,zerophase=True)
+        ax.plot(t,st_filter[tr].data,
+                    linewidth=linewidth,
+                    alpha=alpha,
+                    label="{}Hz/{}s lowpass".format(round(1/i,2),i),
+                    zorder=i)
+        if i == 1:
+            ax.plot(t,st_temp[tr].data,
+                        linewidth=0.4,
+                        alpha=0.2,
+                        label="raw".format(round(1/i,2),i),
+                        zorder=0,
+                        color='gray')
+            ax.set_ylim([max(st_filter[tr].data),min(st_filter[tr].data)])
+
+    alpha+=0.1
+    linewidth+=0.2
+    # print("Lowpass at {} s".format(st_filter[0].data.max()))
+
+ax3.set_xlabel('Time (sec)')
 unit_dict = {"VEL":"m/s","DISP":"m"}
-plt.ylabel('{} ({})'.format(response_output,unit_dict[response_output]))
-plt.title("Station {s} | Event {e} | Origin {o}".format(s=station_id,
+ax1.set_ylabel('Vert {} ({})'.format(response_output,
+                                        unit_dict[response_output]))
+ax2.set_ylabel('North {} ({})'.format(response_output,
+                                        unit_dict[response_output]))
+ax3.set_ylabel('East {} ({})'.format(response_output,
+                                        unit_dict[response_output]))
+ax1.set_title("Station {s} | Event {e} | Origin {o}".format(s=station_id,
                                                         e=event_id,
                                                         o=origin))
-plt.grid(True)
-plt.legend()
+for ax in [ax1,ax2,ax3]: ax.grid(True)
+ax2.legend(loc='best',prop={'size':7})
 basepath = "/seis/prj/fwi/bchow/spectral/output_plots/waveforms/"
 if not os.path.exists(basepath+event_id):
     os.makedirs(basepath+event_id)
-figure_name = os.path.join(basepath,event_id,"{0}_{1}.{2}_{3}.png".format(
+figure_name = os.path.join(basepath,event_id,"{0}_{1}_{2}.png".format(
                                             event_id,
                                             station_id,
-                                            component,
                                             response_output))
 print(figure_name)
 plt.savefig(figure_name)
-# plt.show()
+plt.subplots_adjust(wspace=.5, hspace=0)
+
+plt.show()

@@ -4,6 +4,7 @@ import sys
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 from obspy.clients.fdsn import Client
+from matplotlib.patches import Polygon
 
 # ignore warnings
 import warnings
@@ -43,11 +44,44 @@ fig = inv.plot(label=label_dict[choice],
         size=6,
         show=False)
 
+# ========= plot RDF station array =========
+stations,lats,lons = [],[],[]
+with open('/seis/prj/fwi/bchow/RDF_Array/rdf_locations.txt','r') as f:
+    station_lines = f.readlines()
+for lines in station_lines[1:]:
+    splitlines = lines.split(',')
+    # stations.append("{n}/{s}".format(n=splitlines[0],s=splitlines[1]))
+    stations.append(splitlines[0])
+    lats.append(float(splitlines[2]))
+    lons.append(float(splitlines[3]))
+
+# plot onto basemap
+x,y = fig.bmap(lons,lats)
+scatter = fig.bmap.scatter(x,y,marker='o',s=40,zorder=1000,c='g')
+for i,sta in enumerate(stations):
+    plt.annotate(sta,xy=(x[i],y[i]),
+                    xytext=(x[i]+5000,y[i]+5000),
+                    fontsize=8)
+
+# ========= plot low velocity overlay with a polygon =========
+nw_lat,nw_lon = -37.9281, 178.1972
+ne_lat,ne_lon = -38.7006, 179.5930
+se_lat,se_lon = -40.0229, 178.4043
+sw_lat,sw_lon = -39.2371, 176.9909
+x1,y1 = fig.bmap(nw_lon,nw_lat)
+x2,y2 = fig.bmap(ne_lon,ne_lat)
+x3,y3 = fig.bmap(se_lon,se_lat)
+x4,y4 = fig.bmap(sw_lon,sw_lat)
+poly = Polygon([(x1,y1),(x2,y2),(x3,y3),(x4,y4)],
+                facecolor='red',edgecolor='k',
+                linewidth=1,alpha=0.2)
+plt.gca().add_patch(poly)
+
 if choice != 'D':
     plt.show()
     sys.exit()
 
-# manual plot scatterpoints - really hacked together
+# ========= manual plot scatterpoints - really hacked together =========
 text_file = '/seis/prj/fwi/bchow/spectral/duration/{t0}-{t1}s_amp.txt'.format(
                                                                 t0=tmin,
                                                                 t1=tmax)
@@ -67,6 +101,8 @@ for sta in stations:
     sta_info = inv.select(station=sta)[0][0]
     lats.append(sta_info.latitude)
     lons.append(sta_info.longitude)
+
+import ipdb;ipdb.set_trace()
 
 # set colors
 D = [(_/max(durations))**2 for _ in durations]
