@@ -3,12 +3,15 @@
 import sys
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+from getdata import pathnames
 from obspy.clients.fdsn import Client
 from matplotlib.patches import Polygon
 
 # ignore warnings
 import warnings
 warnings.filterwarnings("ignore",category=mpl.cbook.mplDeprecation)
+
+vic_or_gns = 'vic'
 
 # choices: s (accelerometers) / z (seismometer) / d (durations)
 choice = sys.argv[1].upper()
@@ -22,19 +25,19 @@ chan_dict = {'Z':'HH*','S':'BN*','D':'BN*'}
 color_dict = {'Z':'b','S':'r','D':'r'}
 text_dict = {'Z':'Seismometer','S':'Accelerometer','D':'Accelerometer'}
 label_dict = {'Z':True,'S':True,'D':False}
-lat = -38.468
-lon = 177.217849
+
 
 c = Client('GEONET')
 # 2 degree radius around Te Urewera
+north_island = [-45,-35,175,180]
+new_zealand = [-50,-35,165,180]
 inv = c.get_stations(network='NZ',
                     station=sta_dict[choice],
-                    channel=chan_dict[choice],
-                    starttime='2015-01-01',
-                    endtime='2016-01-01',
-                    latitude=lat,
-                    longitude=lon,
-                    maxradius=5)
+                    minlatitude=-45,
+                    maxlatitude=-35,
+                    minlongitude=175,
+                    maxlongitude=180,
+                    level="station")
 
 fig = inv.plot(label=label_dict[choice],
         marker='.',
@@ -46,8 +49,9 @@ fig = inv.plot(label=label_dict[choice],
 
 # ========= plot RDF station array =========
 stations,lats,lons = [],[],[]
-with open('/seis/prj/fwi/bchow/RDF_Array/rdf_locations.txt','r') as f:
+with open(pathnames(vic_or_gns)['rdf'] + 'rdf_locations.txt','r') as f:
     station_lines = f.readlines()
+
 for lines in station_lines[1:]:
     splitlines = lines.split(',')
     # stations.append("{n}/{s}".format(n=splitlines[0],s=splitlines[1]))
@@ -60,8 +64,14 @@ x,y = fig.bmap(lons,lats)
 scatter = fig.bmap.scatter(x,y,marker='o',s=40,zorder=1000,c='g')
 for i,sta in enumerate(stations):
     plt.annotate(sta,xy=(x[i],y[i]),
-                    xytext=(x[i]+5000,y[i]+5000),
-                    fontsize=8)
+                    xytext=(x[i]+2500,y[i]+2500),
+                    fontsize=9,
+                    fontweight='bold')
+
+# manual set bounds
+# map_limx,map_limy = fig.bmap([175.75,178],[-39,-40.75])
+# plt.xlim(map_limx)
+# plt.ylim(map_limy)
 
 # ========= plot low velocity overlay with a polygon =========
 nw_lat,nw_lon = -37.9281, 178.1972
@@ -82,9 +92,10 @@ if choice != 'D':
     sys.exit()
 
 # ========= manual plot scatterpoints - really hacked together =========
-text_file = '/seis/prj/fwi/bchow/spectral/duration/{t0}-{t1}s_amp.txt'.format(
+text_file = (pathnames(vic_or_gns)['spectral'] +
+                                'duration/{t0}-{t1}s_amp.txt'.format(
                                                                 t0=tmin,
-                                                                t1=tmax)
+                                                                t1=tmax))
 stations,durations,lats,lons = [],[],[],[]
 with open(text_file,'r') as f:
     for line in f:
@@ -101,8 +112,6 @@ for sta in stations:
     sta_info = inv.select(station=sta)[0][0]
     lats.append(sta_info.latitude)
     lons.append(sta_info.longitude)
-
-import ipdb;ipdb.set_trace()
 
 # set colors
 D = [(_/max(durations))**2 for _ in durations]

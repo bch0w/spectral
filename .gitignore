@@ -1,5 +1,6 @@
 NZ/
 __pycache__/
-ppsd_arrays/
+ppsd_arrays/*
+!ppsd_arrays/*.py
 one_off/
 output_plots/

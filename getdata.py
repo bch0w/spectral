@@ -18,6 +18,27 @@ import argparse
 from obspy import UTCDateTime
 from obspy.clients.fdsn import Client
 
+def pathnames(choice):
+    """
+    simplify pathname calling between Vic and GNS, call function to return the
+    correct pathname instead of setting them in every script
+    """
+    choice = choice.upper()
+    if choice == 'VIC':
+        basepath = '/Users/chowbr/Documents/subduction/'
+        path_dictionary = {"spectral":basepath + 'spectral/',
+                            "rdf":basepath + 'RDF_Array/',
+                            "plots":basepath + 'spectral/output_plots/',
+                            "ppsd":basepath + 'spectral/ppsd_arrays/'}
+    elif choice == 'GNS':
+        basepath = '/seis/prj/fwi/bchow/'
+        path_dictionary = {"spectral":basepath + 'spectral/',
+                            "rdf_y":'/seis/prj/fwi/yoshi/RDF_Array/',
+                            "rdf_b":basepath + 'RDF_Array/',
+                            "plots":basepath + 'spectral/output_plots/',
+                            "ppsd":basepath + 'ppsd_arrays/'}
+
+    return path_dictionary
 
 def geonet_data(station,comp,start,end=False,response=True):
     """

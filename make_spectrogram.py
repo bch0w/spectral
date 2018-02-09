@@ -1,4 +1,5 @@
 """spectrogram of data for Kaikoura earthquake 2016-14-11T00:02:00
+only works on GNS computer
 """
 import os
 import sys
