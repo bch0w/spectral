@@ -1,14 +1,11 @@
-"""Downloads data from FDSN webservice for GEONET permanent stations,
-over a given time period. Downloads data for full days, saves to folder under
-the current working directory in a schema similar to observatory practices
+"""Downloads and saves data from FDSN webservice for instruments on FDSN,
+over a given time period. Saves to folder under the current working directory in
+a schema similar to observatory practices
 i.e. ./NZ/'Station'/'Channel'/'data' -> ./NZ/TUDS/BHN/*.mseed
 
-!!! If you're working internally at GNS, the data can be accessed under the
-!!! directory /geonet/seismic/ and the response files can be accessed under the
-!!! directory /geonet/seed/RESPONSE
-
 Example calls:
-python getdata_fdsn.py --station GKBS --channel BN* --start 2016-11-13 --end 2016-11-14
+python getdata_fdsn.py --station GKBS --channel BN* --start 2016-11-13 \
+--end 2016-11-14 --response True
 
 """
 import os
@@ -40,7 +37,7 @@ def pathnames(choice):
 
     return path_dictionary
 
-def geonet_data(station,comp,start,end=False,response=True):
+def geonet_internal(station,comp,start,end=False,response=True):
     """
     returns a list of pathnames for GEONET archives on GNS internal system.
     If response == True, also returns path for response.
@@ -160,6 +157,66 @@ def geonet_data(station,comp,start,end=False,response=True):
 
     return mseed_files, response_filepath
 
+def fdsn_download(station,channel,start,end,response=False,client="GEONET",):
+    """Download data via FDSN client for given station, channel and start
+    and end times. Can output response as well. Return stream and response.
+
+    """
+    station = station.upper()
+    folders = 1 # corresponds to number of channels
+    if channel[-1] == "*":
+        folders = 3
+    start = UTCDateTime(start)
+    end = UTCDateTime(end)
+
+    # set instrument id from arguments
+    instrument_id = 'NZ.{}.*.{}'.format(station,channel)
+    print("++ Requesting data for intrument: {}".format(instrument_id))
+    net, sta, loc, cha = instrument_id.split('.')
+
+    # split time into days
+    sec_per_day = 3600*24
+    time_delta_days = int((end-start)/(sec_per_day))
+
+    # initiate downloading of data
+    c = Client(client)
+    day_of = start
+    err_num = 0
+    while day_of <= end:
+        # fetch waveforms
+        try:
+            st = c.get_waveforms(network=net,
+                                station=sta,
+                                location=loc,
+                                channel=cha,
+                                starttime=day_of,
+                                endtime=day_of+sec_per_day)
+            day_of += sec_per_day
+
+        except Exception as e:
+            print(e)
+            err_num += 1
+            if err_num > 5:
+                sys.exit('Errored out')
+            pass
+
+    if response:
+        # fetch response file
+        print("++ Requesting response information")
+        try:
+            response = c.get_stations(network=net,
+                                station=sta,
+                                location='*',
+                                channel='*',
+                                starttime=start,
+                                endtime=end,
+                                level='response')
+        except Exception as e:
+            print(e)
+            pass
+
+
+    return st, response
 
 if __name__ == "__main__":
     # user input arguments

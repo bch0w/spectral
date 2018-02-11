@@ -54,10 +54,13 @@ print("Analyzing noise spectra for {}".format(instrument_id))
 
 # filepaths of geonet archive
 if network == 'NZ':
-    data_files, resp_file = geonet_data(station=station,
-                                        comp=channel[-1],
-                                        start=start,
-                                        end=end)
+    if vic_or_gnz == "GNS"
+        data_files, resp_file = geonet_data(station=station,
+                                            comp=channel[-1],
+                                            start=start,
+                                            end=end)
+    else:
+        data_files, resp_file =
 # RDF temporary network - includes all files, does not filter by time
 elif network == 'XX':
     d1 = "/seis/prj/fwi/yoshi/RDF_Array/July2017_Sep2017/DATA_ALL/"
