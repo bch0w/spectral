@@ -31,13 +31,13 @@ def pathnames(choice):
         basepath = '/seis/prj/fwi/bchow/'
         path_dictionary = {"spectral":basepath + 'spectral/',
                             "rdf_y":'/seis/prj/fwi/yoshi/RDF_Array/',
-                            "rdf_b":basepath + 'RDF_Array/',
+                            "rdf":basepath + 'RDF_Array/',
                             "plots":basepath + 'spectral/output_plots/',
                             "ppsd":basepath + 'ppsd_arrays/'}
 
     return path_dictionary
 
-def geonet_internal(station,comp,start,end=False,response=True):
+def geonet_internal(station,channel,start,end=False,response=True):
     """
     returns a list of pathnames for GEONET archives on GNS internal system.
     If response == True, also returns path for response.
@@ -46,8 +46,8 @@ def geonet_internal(station,comp,start,end=False,response=True):
 
     :type station: str
     :param station: station name i.e. GKBS (case-insensitive)
-    :type comp: str
-    :param comp: component of interest, N/E/Z (case-insensitive)
+    :type channel: str
+    :param channel: channel of interest, i.e. BHN, HHE (case-insensitive)
     :type start: str
     :param start: starttime for data request
     :type end: str
@@ -60,10 +60,8 @@ def geonet_internal(station,comp,start,end=False,response=True):
     :return response_filepath: if requested, filepath of response
     """
     # channel naming convention based on instrument type
-    chan_dict = {'Z':'HH','S':'BN'}
     station = station.upper()
-    comp = comp.upper()
-    channel = chan_dict[station[-1]] + comp # i.e. HHZ
+    channel = channel.upper()
     start = UTCDateTime(start)
 
     # filepaths direct to GeoNet Archives path
@@ -76,10 +74,11 @@ def geonet_internal(station,comp,start,end=False,response=True):
     # check if station exists
     check_sta_path = '/geonet/seismic/{year}/NZ/'.format(year=start.year)
     if not glob.glob(check_sta_path + station):
-        sys.exit("Station choice does not exist")
+        print("Station choice does not exist")
+        return False, False
     if not glob.glob(mseed_GNApath):
-        sys.exit("Channel choice does not exist")
-
+        print("Channel choice does not exist")
+        return False, False
     # check if data spans more than one day
     if type(end) != bool:
         end = UTCDateTime(end)
@@ -135,10 +134,10 @@ def geonet_internal(station,comp,start,end=False,response=True):
         days_between = 1
 
     mseed_files.sort()
-    print("\n","="*25)
-    print("++ {nfiles} files for {days_between} days requested".format(
-                                                    nfiles=len(mseed_files),
-                                                    days_between=days_between))
+    # print("\n","="*25)
+    # print("++ {nfiles} files for {days_between} days requested".format(
+                                                    # nfiles=len(mseed_files),
+                                                    # days_between=days_between))
 
     # response information; mseed sets naming parameters
     NET,STA,LOC,CHA,SUFX,YEAR,JDAY = os.path.basename(
@@ -149,11 +148,11 @@ def geonet_internal(station,comp,start,end=False,response=True):
                                                                     loc=LOC,
                                                                     cha=CHA)
         response_filepath = os.path.join(resp_GNApath,response_filename)
-        print("++ response filepath")
+        # print("++ response filepath")
     else:
         response_filepath = None
 
-    print(" ","="*25,"\n")
+    # print(" ","="*25,"\n")
 
     return mseed_files, response_filepath
 
@@ -227,7 +226,7 @@ if __name__ == "__main__":
                         type=str,default='KNZ')
     parser.add_argument('--channel', help='Instrument channel, i.e. BN1/HHZ, \
                         if ??* downloads all 3 components, default = HHZ',
-                        type=str, default='Z')
+                        type=str, default='HHZ')
     parser.add_argument('--start', help='Starttime YYYY-MM-DD default = \
                         2015-01-01',type=str, default='2015-01-01')
     parser.add_argument('--end', help='Endtime, default = 2015-01-02',type=str,

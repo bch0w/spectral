@@ -39,6 +39,14 @@ npz_path = pathnames(vic_or_gns)['ppsd'] + "/RDF_decimateby5/" #temp array
 npz_files = glob.glob(npz_path + "RD*.npz")
 # npz_files = glob.glob(npz_path + "*HHZ*001-365.npz")
 
+# manual set npz file load to compare two stations (kidnapper)
+npz_files = []
+npz_files.append("/seis/prj/fwi/bchow/spectral/ppsd_arrays/RDF_decimateby5/RD10.HHZ.2017.321-2017.321.npz")
+npz_files.append("/seis/prj/fwi/bchow/spectral/ppsd_arrays/CKHZ.EHZ.2017.321-2018.014.npz")
+npz_files.append("/seis/prj/fwi/bchow/spectral/ppsd_arrays/RDF_decimateby5/RD11.HHZ.2017.321-2017.314.npz")
+npz_files.append("/seis/prj/fwi/bchow/spectral/ppsd_arrays/KAHZ.EHZ.2017.321-2018.014.npz")
+
+
 npz_files.sort()
 
 # start figure
@@ -46,9 +54,12 @@ f = plt.figure(dpi=200)
 ax = f.add_subplot(111)
 
 # unique colors and linestyles
-color_cycle(ax,len(npz_files),'nipy_spectral')
-line_styles = ['solid','dashed','dashdot','dotted']
+# color_cycle(ax,len(npz_files),'nipy_spectral')
+# line_styles = ['solid','dashed','dashdot','dotted']
+line_styles = ['solid','solid','dashed','dashed']
 num_styles = len(line_styles)
+
+color_styles = ['r','k','r','k']
 
 # coastal_stations = ["BFZ", "PXZ", "KNZ", "PUZ"]
 coastal_stations = ["RD12","RD03","RD11","RD10","RD17","RD16"]
@@ -63,6 +74,7 @@ for i,fid in enumerate(npz_files):
         continue
     plt.plot(avg[0],avg[1],
                 linestyle=line_styles[i%num_styles],
+                color=color_styles[i%num_styles],
                 linewidth=0.75,
                 label="{}".format(sta))
     # if sta not in coastal_stations:
@@ -80,6 +92,17 @@ for i,fid in enumerate(npz_files):
     #             linestyle=line_styles[i%num_styles],
     #             linewidth=.75)
 
+
+# TEMPORARY
+ppsd = PPSD.load_npz("/seis/prj/fwi/bchow/spectral/ppsd_arrays/RDF_decimateby5/RD06.HHZ.2017.320-2017.320.npz")
+avg = ppsd.get_percentile(percentile=50)
+sta= "RD06"
+plt.plot(avg[0],avg[1],
+            linestyle="dashed",
+            color="orange",
+            linewidth=0.75,
+            label="{}".format(sta))
+# TEMPORARY
 # noncoastal_mean = np.array(noncoastal_avgs).mean(axis=0)
 # plt.plot(avg[0],noncoastal_mean,linewidth=1,label="Quiet station average")
 
@@ -92,7 +115,7 @@ plt.axvline(x=16,color='k',alpha=0.5,zorder=1,lw=0.5,ls='dashed')
 plt.axvline(x=4,color='k',alpha=0.5,zorder=1,lw=0.5,ls='dashed')
 plt.axvline(x=30,color='k',alpha=0.5,zorder=1,lw=0.5,ls='dashed')
 
-plt.legend(ncol=4,prop={"size":5})
+plt.legend(ncol=1,prop={"size":5})
 
 # for geonet permanent stations
 plt.ylim([nlnm_y.min(),-90])
@@ -107,7 +130,7 @@ plt.xlabel("Period (s)")
 plt.ylabel("Amplitude [m^2/s^4/Hz][dB]")
 # plt.title("Mean values of year-long PPSD\'s for GEONET permanent seismometers\n"
 #             "Year: 2015 | Sampling Rate: 10 Hz | # Stations: {}".format(len(npz_files)))
-plt.title("Median values of PPSD for RDF Temporary Array - Baseline")
+plt.title("Median values of PPSD for RDF stations vs colocated geonet short period sensors")
 plt.grid()
 plt.show()
 

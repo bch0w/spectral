@@ -12,15 +12,16 @@ from obspy import read_inventory
 from obspy.signal import PPSD
 from obspy import UTCDateTime
 from obspy.imaging.cm import pqlx
-from getdata import geonet_data
+from getdata import geonet_internal, fdsn_download
 
 # user input arguments
 parser = argparse.ArgumentParser(description='Download create PPSD for \
- station and timeframe $ python noise_analysis.py --station TBAS --comp\
- z --start 2015-01-01 --end 2016-01-01')
+ station and timeframe $ python noise_analysis.py --station TBAS --channel\
+ HHZ --start 2015-01-01 --end 2016-01-01')
 parser.add_argument('--station', help='Instrument station, default = KNZ',
                     type=str,default='KNZ')
-parser.add_argument('--comp', help='Instrument component, default = Z',
+parser.add_argument('--channel', help='Instrument channel, default = HHZ,\
+                    other options, BNE, EHZ',
                     type=str, default='Z')
 parser.add_argument('--start', help='Starttime YYYY-MM-DD default = \
                     2015-01-01',type=str, default='2015-01-01')
@@ -29,10 +30,12 @@ parser.add_argument('--end', help='Endtime, default = 2015-01-01',type=str,
 parser.add_argument('--dec', help='Decimate trace, default 0',type=int,
                     default=0)
 
+vic_or_gns = "GNS"
+
 # parse arguments
 arg = parser.parse_args()
 station = arg.station.upper()
-comp = arg.comp.upper()
+channel = arg.channel.upper()
 start = UTCDateTime(arg.start)
 end = UTCDateTime(arg.end)
 decimateby = arg.dec
@@ -41,10 +44,7 @@ print("\nTimeframe set: {} through {}".format(start.date,end.date))
 
 # set instrument choice on command line
 network = 'NZ'
-channel = 'HH' + comp
-if station[-1].upper() == 'S':
-    channel = 'BN' + comp
-elif station[:2].upper() == 'RD':
+if station[:2].upper() == 'RD':
     network = 'XX'
 
 instrument_id = '{net}.{sta}.*.{cha}'.format(net=network,
@@ -54,17 +54,17 @@ print("Analyzing noise spectra for {}".format(instrument_id))
 
 # filepaths of geonet archive
 if network == 'NZ':
-    if vic_or_gnz == "GNS"
-        data_files, resp_file = geonet_data(station=station,
-                                            comp=channel[-1],
+    if vic_or_gns == "GNS":
+        data_files, resp_file = geonet_internal(station=station,
+                                            channel=channel,
                                             start=start,
                                             end=end)
-    else:
-        data_files, resp_file =
+    # else:
+        # data_files, resp_file =
 # RDF temporary network - includes all files, does not filter by time
 elif network == 'XX':
     d1 = "/seis/prj/fwi/yoshi/RDF_Array/July2017_Sep2017/DATA_ALL/"
-    d2 = "/seis/prj/fwi/yoshi/RDF_Array/Sep2017_Nov2017/DATA_ALL/"
+    d2 = "/seis/prj/fwi/yoshi/RDF_Array/Sep2017_Nov2017/DATA_ALL"
     d3 = "/seis/prj/fwi/bchow/RDF_Array/Nov2017_Jan2018/DATA_ALL/"
     data_files = []
     for D in [d1,d2,d3]:

@@ -11,7 +11,7 @@ from matplotlib.patches import Polygon
 import warnings
 warnings.filterwarnings("ignore",category=mpl.cbook.mplDeprecation)
 
-vic_or_gns = 'vic'
+vic_or_gns = 'GNS'
 
 # choices: s (accelerometers) / z (seismometer) / d (durations)
 choice = sys.argv[1].upper()
@@ -33,8 +33,8 @@ north_island = [-45,-35,175,180]
 new_zealand = [-50,-35,165,180]
 inv = c.get_stations(network='NZ',
                     station=sta_dict[choice],
-                    minlatitude=-45,
-                    maxlatitude=-35,
+                    minlatitude=-41,
+                    maxlatitude=-39,
                     minlongitude=175,
                     maxlongitude=180,
                     level="station")
