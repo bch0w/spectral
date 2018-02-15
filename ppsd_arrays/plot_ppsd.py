@@ -22,31 +22,27 @@ def color_cycle(ax,length,cmap):
     colors = [scalarMap.to_rgba(i) for i in range(num_colors)]
     ax.set_prop_cycle('color',colors)
 
-vic_or_gns = "vic"
-
-station_dict = {"RD01":"PRWZ", "RD02":"ANWZ", "RD03":"TURI", "RD04":"PORA",
-                "RD05":"MNHR", "RD06":"DNVZ", "RD07":"WPAW", "RD08":"RAKW",
-                "RD09":"MCHZ", "RD10":"CKHZ", "RD11":"KAHU", "RD12":"KWHZ",
-                "RD13":"KERE", "RD14":"PNUI", "RD15":"WPUK", "RD16":"OROA",
-                "RD17":"TEAC", "RD18":"RANC"}
+vic_or_gns = "GNS"
+# naming conventions
+# station_dict = {"RD01":"PRWZ", "RD02":"ANWZ", "RD03":"TURI", "RD04":"PORA",
+#                 "RD05":"MNHR", "RD06":"DNVZ", "RD07":"WPAW", "RD08":"RAKW",
+#                 "RD09":"MCHZ", "RD10":"CKHZ", "RD11":"KAHU", "RD12":"KWHZ",
+#                 "RD13":"KERE", "RD14":"PNUI", "RD15":"WPUK", "RD16":"OROA",
+#                 "RD17":"TEAC", "RD18":"RANC"}
+# colocated short period sensors
+station_dict = {"RD01":"PRWZ", "RD02":"ANWZ", "RD03":"", "RD04":"PRHZ",
+                "RD05":"", "RD06":"DVHZ", "RD07":"", "RD08":"",
+                "RD09":"MCHZ", "RD10":"CKHZ", "RD11":"KAHZ", "RD12":"KWHZ",
+                "RD13":"KRHZ", "RD14":"PNHZ", "RD15":"WPHZ", "RD16":"",
+                "RD17":"", "RD18":""}
 
 month_dict = {"001*031":"JAN","032*059":"FEB","060*090":"MAR","091*120":"APR",
                 "121*151":"MAY","152*181":"JUN","182*212":"JUL","213*243":"AUG",
                 "244*273":"SEP","274*304":"OCT","305*334":"NOV","335-365":"DEC"}
 
 # set path
-npz_path = pathnames(vic_or_gns)['ppsd'] + "/RDF_decimateby5/" #temp array
-npz_files = glob.glob(npz_path + "RD*.npz")
-# npz_files = glob.glob(npz_path + "*HHZ*001-365.npz")
-
-# manual set npz file load to compare two stations (kidnapper)
-npz_files = []
-npz_files.append("/seis/prj/fwi/bchow/spectral/ppsd_arrays/RDF_decimateby5/RD10.HHZ.2017.321-2017.321.npz")
-npz_files.append("/seis/prj/fwi/bchow/spectral/ppsd_arrays/CKHZ.EHZ.2017.321-2018.014.npz")
-npz_files.append("/seis/prj/fwi/bchow/spectral/ppsd_arrays/RDF_decimateby5/RD11.HHZ.2017.321-2017.314.npz")
-npz_files.append("/seis/prj/fwi/bchow/spectral/ppsd_arrays/KAHZ.EHZ.2017.321-2018.014.npz")
-
-
+npz_path = pathnames(vic_or_gns)['ppsd'] + "/geonet_decimateby2/" #temp array
+npz_files = glob.glob(npz_path + "*.npz")
 npz_files.sort()
 
 # start figure
@@ -54,57 +50,21 @@ f = plt.figure(dpi=200)
 ax = f.add_subplot(111)
 
 # unique colors and linestyles
-# color_cycle(ax,len(npz_files),'nipy_spectral')
-# line_styles = ['solid','dashed','dashdot','dotted']
-line_styles = ['solid','solid','dashed','dashed']
+color_cycle(ax,len(npz_files),'nipy_spectral')
+line_styles = ['solid','dashed','dashdot','dotted']
+# line_styles = ['solid','dashed','dashed','dashed']
 num_styles = len(line_styles)
-
-color_styles = ['r','k','r','k']
-
-# coastal_stations = ["BFZ", "PXZ", "KNZ", "PUZ"]
-coastal_stations = ["RD12","RD03","RD11","RD10","RD17","RD16"]
-coastal_avgs,coastal_sta,noncoastal_avgs = [],[],[]
+# color_styles = ['r','k','r','k']
 
 for i,fid in enumerate(npz_files):
     sta,cha,year = os.path.basename(fid).split(".")[:3]
     ppsd = PPSD.load_npz(fid)
     # avg = ppsd.get_mode()
     avg = ppsd.get_percentile(percentile=50)
-    if sta == "WSRZ":
-        continue
     plt.plot(avg[0],avg[1],
                 linestyle=line_styles[i%num_styles],
-                color=color_styles[i%num_styles],
                 linewidth=0.75,
                 label="{}".format(sta))
-    # if sta not in coastal_stations:
-    #     noncoastal_avgs.append(avg[1])
-    #     plt.plot(avg[0],avg[1],
-    #             color='gray',
-    #             alpha=0.25,
-    #             zorder=0,
-    #             linewidth=0.25)
-    # else:
-    #     coastal_sta.append(sta)
-    #     coastal_avgs.append(avg[1])
-    #     plt.plot(avg[0],avg[1],
-    #             label="{sta}".format(sta=sta),
-    #             linestyle=line_styles[i%num_styles],
-    #             linewidth=.75)
-
-
-# TEMPORARY
-ppsd = PPSD.load_npz("/seis/prj/fwi/bchow/spectral/ppsd_arrays/RDF_decimateby5/RD06.HHZ.2017.320-2017.320.npz")
-avg = ppsd.get_percentile(percentile=50)
-sta= "RD06"
-plt.plot(avg[0],avg[1],
-            linestyle="dashed",
-            color="orange",
-            linewidth=0.75,
-            label="{}".format(sta))
-# TEMPORARY
-# noncoastal_mean = np.array(noncoastal_avgs).mean(axis=0)
-# plt.plot(avg[0],noncoastal_mean,linewidth=1,label="Quiet station average")
 
 # plot lines for noise models and microseisms
 nlnm_x,nlnm_y = get_nlnm()
@@ -130,8 +90,11 @@ plt.xlabel("Period (s)")
 plt.ylabel("Amplitude [m^2/s^4/Hz][dB]")
 # plt.title("Mean values of year-long PPSD\'s for GEONET permanent seismometers\n"
 #             "Year: 2015 | Sampling Rate: 10 Hz | # Stations: {}".format(len(npz_files)))
-plt.title("Median values of PPSD for RDF stations vs colocated geonet short period sensors")
+# plt.title("Median values of PPSD for {} and {}".format(station,station_dict[station]))
+plt.title("Median Values of GEONET broadband stations vertical component 2015")
+# figure_savename = "/seis/prj/fwi/bchow/spectral/output_plots/ppsd_plots/rdf_vs_gnSP/{}_{}.png".format(station,station_dict[station])
 plt.grid()
+# plt.savefig(figure_savename)
 plt.show()
 
 # plot variations from baseline

@@ -87,22 +87,22 @@ tr_work.data = motion_vector
 stats = tr_work.stats
 
 # plotting
-f,(ax1,ax1a,ax1b,ax2,ax3) = plt.subplots(5,
-                                        sharex=True,
-                                        sharey=False,
-                                        figsize=(9,5))
+f,(ax1,ax1a,ax1b,ax3) = plt.subplots(4,
+                                    sharex=True,
+                                    sharey=False,
+                                    figsize=(9,5))
 
 # subplot 1 (waveform)
 t = np.linspace(0,stats.endtime-stats.starttime,stats.npts)
 ax1.plot(t,vertical,linewidth=1,c='k')
-ax1.set_ylabel('Vertical velocity (m/s)')
+ax1.set_ylabel('Z velocity (m/s)')
 ax1a.plot(t,north,linewidth=1,c='k')
-ax1a.set_ylabel('North velocity (m/s)')
+ax1a.set_ylabel('N/1 velocity (m/s)')
 ax1b.plot(t,east,linewidth=1,c='k')
-ax1b.set_ylabel('East velocity (m/s)')
+ax1b.set_ylabel('E/2 velocity (m/s)')
 for ax in [ax1,ax1a,ax1b]:
     ax.grid(which="both")
-    
+
 plot_title = "Kaikoura Earthquake | " + \
 "{instr} | {otime} | {t0}-{t1} s | FFT Len: {wl}s".format(
             otime=stats.starttime,
@@ -111,18 +111,6 @@ plot_title = "Kaikoura Earthquake | " + \
             t1=tmax,
             wl=window_length)
 ax1.set_title(plot_title,fontsize=10)
-
-# subplot 2 (spectrogram)
-spec = tr_work.spectrogram(log=False,
-                            clip=[clip_low,clip_high],
-                            cmap='plasma',
-                            axes=ax2,
-                            wlen=window_length,
-                            show=False)
-ax2.set_ylabel("Frequency (Hz)")
-ax2.set_ylim([freqmin,0.2])
-ax2.set_yticks(np.linspace(freqmin,0.2,3))
-ax2.grid(color='w')
 
 # processing for sub3 - determine duration of "secondary energy"
 # normalize trace between 0 and 1 for comparison between stations
@@ -174,54 +162,25 @@ ax3.axhline(y=threshold,
 
 ax3.grid()
 ax3.set_ylim([0,peak_amp+peak_amp*0.1])
-ax3.set_ylabel('velocity^2 (m^/s^2)')
+ax3.set_ylabel('Ground motion (m/s)')
 ax3.set_xlabel("Time (sec)")
 ax3.legend()
 
-# ano_x = round(t[int(energy_end + 100*samp_rate)]/1000) * 1000
-# ano_y = threshold * 2
-# ax3.annotate("Duration of energy: {} sec".format(duration),
-#                                                 xy=(ano_x,ano_y),
-#                                                 xytext=(ano_x,ano_y))
+ano_x = t_over[-1]
+ano_y = threshold * 2
+ax3.annotate("Duration criteria: {}".format(round(duration,2)),
+                                            xy=(ano_x,ano_y),
+                                            xytext=(ano_x,ano_y))
 
 # final touches
 plt.xlim([200,2000])
 plt.subplots_adjust(wspace=.5, hspace=0)
 
 # save fig
-figure_folder = '/seis/prj/fwi/bchow/spectral/output_plots/spectrograms/'
-subfolder = '{}-{}s'.format(tmin,tmax)
-foldercheck = os.path.join(figure_folder,subfolder)
-if not os.path.exists(foldercheck):
-    print("Making directory ",foldercheck,end=", ")
-    os.makedirs(foldercheck)
-figure_name = "{s}-{c}_{l}-{h}kaikoura".format(s=station,
-                                c=channel,
-                                l=tmin,
-                                h=tmax)
-outpath = os.path.join(figure_folder,subfolder,figure_name)
-# f.savefig(outpath,dpi=250)
+figure_folder = '/seis/prj/fwi/bchow/spectral/output_plots/waveforms/kaikoura/'
+figure_name = "{}.png".format(station)
+outpath = os.path.join(figure_folder,figure_name)
+f.savefig(outpath,dpi=250)
 # print("saved figure:\n\t",outpath)
 
-# text file containing parameters for easy comparisons
-text_file = '/seis/prj/fwi/bchow/spectral/duration/{t0}-{t1}s_amp.txt'.format(
-                                            t0=tmin,
-                                            t1=tmax)
-# with open(text_file,'a') as f:
-#     write_string = ("\nID: {I}\n"
-#                     "Filter bounds: {F1}-{F2} s\n"
-#                     "Peak amplitude: {P} m/s\n"
-#                     "Duration: {D} s\n"
-#                     "Start: {S} s\n"
-#                     "End: {E} s\n".format(I=st[0].get_id(),
-#                                         F1=tmin,
-#                                         F2=tmax,
-#                                         P=st[0].data.max(),
-#                                         D=duration,
-#                                         S=energy_start/samp_rate,
-#                                         E=energy_end/samp_rate))
-#     f.write("="*80)
-#     f.write("{}".format(write_string))
-#     print("text file written")
-
-plt.show()
+# plt.show()
