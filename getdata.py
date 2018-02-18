@@ -240,7 +240,104 @@ def fdsn_download(station,channel,start,end=False,response=False,
 
     return st, response
 
+def event_stream(vic_or_gns,station,channel,event_id=False):
+    """Given a GEONET event ID, return raw waveform streams and response files
+    Waveforms can be from RDF or GEONET permanent stations, chooses
+    correct downloading format based on requests. If no event_id given, full
+    catalog downloaded for times set in the function.
 
+    :type vic_or_gns: str
+    :param vic_or_gns: specifies pathames for data searching
+    :type choice: str
+    :param choice: GEONET or RDF (temporary) station data
+    :type station: str
+    :param station: station name i.e. GKBS or RD01 (case-insensitive)
+    :type channel: str
+    :param channel: channel of interest, i.e. BHN, HHE (case-insensitive)
+    :type event_id: str
+    :param event_id: GEONET event id for earthquakes, if default, function will
+                    simply collect a catalog of events for a given time periods
+    """
+    # parse arguments
+    station_id = station.upper() # i.e. RD06 or PXZ
+    choice = "geonet"
+    if station_id[:2] == "RD":
+        choice = "rdf"
+    channel = channel.upper()
+
+    # get event information
+    c = Client("GEONET")
+    if event_id:
+        cat = c.get_events(eventid=event_id)
+    else:
+        t_start = UTCDateTime("2017-320")
+        t_end = UTCDateTime("2018-001")
+        cat = c.get_events(starttime=t_start,
+                            endtime=t_end,
+                            minmagnitude=4,
+                            maxmagnitude=6,
+                            minlatitude=-50,
+                            maxlatitude=-35,
+                            minlongitude=165,
+                            maxlongitude=180,
+                            orderby="magnitude")
+
+    for event in cat:
+        origin = event.origins[0].time
+
+        # temporary station filepaths
+        if choice == "rdf":
+            d1 = pathnames(vic_or_gns)['rdf'] + "July2017_Sep2017/DATA_ALL/"
+            d2 = pathnames(vic_or_gns)['rdf'] + "Sep2017_Nov2017/DATA_ALL/"
+            d3 = pathnames(vic_or_gns)['rdf'] + "Nov2017_Jan2018/DATA_ALL/"
+            date_search = "{year}.{jday}".format(
+                                            year=origin.year,jday=origin.julday)
+            path_vert,path_north,path_east = [],[],[]
+            for search in [d1,d2,d3]:
+                path_vert += glob.glob(search+"{sta}.{date}*HHZ*".format(
+                                                            sta=station_id,
+                                                            date=date_search))
+                path_north += glob.glob(search+"{sta}.{date}*HHN*".format(
+                                                            sta=station_id,
+                                                            date=date_search))
+                path_east += glob.glob(search+"{sta}.{date}*HHE*".format(
+                                                            sta=station_id,
+                                                            date=date_search))
+
+            st = read(path_vert[0]) + read(path_north[0]) + read(path_east[0])
+            resp_filepath = pathnames(vic_or_gns)['rdf'] + "DATALESS.RDF.XX"
+            inv = read_inventory(resp_filepath)
+
+
+        # grab geonet data either internally or via fdsn
+        elif choice == "geonet":
+            if vic_or_gns == "GNS":
+                path_vert, resp_vert = geonet_internal(station=station_id,
+                                            channel= channel[:2] + 'Z',
+                                            start = origin,
+                                            response = True)
+                path_north, resp_north = geonet_internal(station=station_id,
+                                            channel= channel[:2] + 'N',
+                                            start = origin,
+                                            response = True)
+                path_east, resp_east = geonet_internal(station=station_id,
+                                            channel= channel[:2] + 'E',
+                                            start = origin,
+                                            response = True)
+                inv = read_inventory(resp_vert)
+                inv += read_inventory(resp_north)
+                inv += read_inventory(resp_east)
+                st = (read(path_vert[0]) + read(path_north[0]) +
+                                                            read(path_east[0]))
+
+
+            elif vic_or_gns == "VIC":
+                st, inv = fdsn_download(station=station_id,
+                                        channel = channel[:2] + '*',
+                                        start = origin,
+                                        response = True)
+
+        return st, inv, cat
 
 if __name__ == "__main__":
     # user input arguments

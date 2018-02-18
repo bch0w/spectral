@@ -1,5 +1,10 @@
-"""spectrogram of data for Kaikoura earthquake 2016-14-11T00:02:00
-only works on GNS computer
+"""19.2.18
+Plot waveforms of all three components for a given GEONET permanent station,
+or a temporary RDF station, with preprocessing and filtering set in the script.
+Also subplots of determining duration criteria, which is captured using an
+amplitude threshold criteria and summing up the time sections (dt) where the
+waveform crosses this amplitude threshold.
+
 """
 import os
 import sys
@@ -11,49 +16,46 @@ import matplotlib.pyplot as plt
 from obspy.core.stream import Stream
 from obspy import read, read_inventory, UTCDateTime
 from obspy.clients.fdsn import Client
-from getdata import geonet_internal
-
+from getdata import vog, geonet_internal, fdsn_download, event_stream
 
 # ignore warnings
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 
+# global plot parameters
 mpl.rcParams['font.size'] = 8
 mpl.rcParams['lines.linewidth'] = 1
+
+
+# ====================================== MAIN ==================================
+vic_or_gns = vog()
 
 # set station and channel ID
 channel_dict = {"Z":"HH*","S":"BN*"}
 station = sys.argv[1].upper() # i.e. gkbs
 channel = channel_dict[station[-1]]
 
-
-# origin time (kaikoura earthquake)
-# origin = UTCDateTime('2016-11-13T11:02:56')
-
 # origin time per event
 event_id = "2015p822263"
-c = Client("GEONET")
-event = c.get_events(eventid=event_id)
 
-origin = event[0].origins[0].time
+# origin = UTCDateTime('2016-11-13T11:02:56') # kaikoura
+
+
+# ================================ READ IN DATA ===============================
+st,inv,cat = event_stream(vic_or_gns=vic_or_gns,
+                            station=station,
+                            channel=channel,
+                            event_id=event_id)
+
+# set timing
+event = cat[0]
+origin = event.origins[0].time
 start = origin - 200
 end = origin + 1200
 year = start.year
 julday = start.julday
 
-# ===================== READ IN DATA =====================
-mseed_files, resp_files = geonet_internal(station=station,
-                                                channel=channel,
-                                                start=origin,
-                                                response=True)
-st = Stream()
-for files in mseed_files:
-    st += read(files)
-inv = read_inventory(resp_files[0])
-for files in resp_files[1:]:
-    inv += read_inventory(files)
-
-# ===================== PREPROCESSING =====================
+# ================================ PREPROCESSING ===============================
 st.detrend('simple')
 st.trim(starttime=start,endtime=end)
 st.detrend('linear')
@@ -74,7 +76,7 @@ tracestart = start + 200
 traceend = start + 700
 st.trim(starttime=tracestart,endtime=traceend)
 
-# ===================== SEPARATE DATA STREAMS =====================
+# ================================ SEPARATE DATA STREAMS =======================
 north = st.select(component='1')
 east = st.select(component='2')
 if (len(north) and len(east)) == 0:
@@ -93,13 +95,13 @@ samp_rate = int(stats.sampling_rate)
 t = np.linspace(0,stats.endtime-stats.starttime,stats.npts)
 
 
-# ===================== PLOTTING =====================
+# ================================ PLOTTING ====================================
 f,(ax1,ax1a,ax1b,ax3,ax3a,ax3b) = plt.subplots(6,
                                     sharex=True,
                                     sharey=False,
                                     figsize=(9,5))
 
-# ===================== SUBPLOT 1,1a,1b (waveform) =====================
+# ================================ SUBPLOT 1,1a,1b (waveform) ==================
 ax1.plot(t,vertical,linewidth=1,c='k')
 ax1.set_ylabel('Z (m/s)')
 ax1a.plot(t,north,linewidth=1,c='k')
@@ -240,22 +242,22 @@ ax3b.set_xlabel("Time (sec)")
     #
     # ax3b.set_xlabel("Time (sec)")
 
-# ===================== FINAL FIGURE ADJUSTMENTS =====================
+# ====================== FINAL FIGURE ADJUSTMENTS ==============================
 plt.xlim([0,ano_x+100])
 plt.subplots_adjust(wspace=.5, hspace=0)
 
 figure_folder = '/seis/prj/fwi/bchow/spectral/output_plots/waveforms/{}/'.format(event_id)
 figure_name = "{}_time.png".format(station)
 outpath = os.path.join(figure_folder,figure_name)
-f.savefig(outpath,dpi=250)
-# plt.show()
+# f.savefig(outpath,dpi=250)
+plt.show()
 
-# ===================== TEXT FILE =====================
-with open(figure_folder + 'durations.txt', 'a+') as f:
-    f.write('{0}_time {1} {2} {3}\n'.format(station,int(sample_plot[0]),
-                                                    int(sample_plot[1]),
-                                                    int(sample_plot[2])
-                                                    ))
+# ================================ TEXT FILE ===================================
+# with open(figure_folder + 'durations.txt', 'a+') as f:
+#     f.write('{0}_time {1} {2} {3}\n'.format(station,int(sample_plot[0]),
+#                                                     int(sample_plot[1]),
+#                                                     int(sample_plot[2])
+#                                                     ))
     # f.write('{0}_integral {1} {2} {3}\n'.format(station,
     #                                                     int(duration_i[0]),
     #                                                     int(duration_i[1]),

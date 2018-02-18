@@ -3,7 +3,7 @@
 import sys
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-from getdata import pathnames
+from getdata import pathnames, vog
 from obspy.clients.fdsn import Client
 from matplotlib.patches import Polygon
 
@@ -11,15 +11,20 @@ from matplotlib.patches import Polygon
 import warnings
 warnings.filterwarnings("ignore",category=mpl.cbook.mplDeprecation)
 
-vic_or_gns = 'VIC'
+vic_or_gns = vog()
 
-# choices: s (accelerometers) / z (seismometer) / d (durations)
-choice = sys.argv[1].upper()
+
+# command line choices
+choice = sys.argv[1].upper() #s,z,d
+event_id = sys.argv[2] #2014p240655,2015p82263,2016p892721,2017p059122
+component = sys.argv[3].lower() #vertical,horizontal,groundmotion
 if choice not in ['S','Z','D']:
     sys.exit("\tChoice should be s(acc), z(seis) or d(dur)")
-tmin = 1
-tmax = 50
-perc = 90
+
+# dictionaries for dynamic choices
+comp_dic = {"vertical":1,
+            "horizontal":2,
+            "groundmotion":3}
 sta_dict = {'Z':'*Z','S':'*S','D':'*Z'}
 chan_dict = {'Z':'*H*','S':'*N*','D':'HH*'}
 color_dict = {'Z':'b','S':'r','D':'r'}
@@ -27,8 +32,8 @@ text_dict = {'Z':'Seismometer','S':'Accelerometer','D':'Seismometer'}
 label_dict = {'Z':True,'S':True,'D':False}
 
 
+# grab station information
 c = Client('GEONET')
-# 2 degree radius around Te Urewera
 north_island = [-45,-35,175,180]
 new_zealand = [-50,-35,165,180]
 inv = c.get_stations(network='NZ',
@@ -39,6 +44,7 @@ inv = c.get_stations(network='NZ',
                     maxlongitude=180,
                     level="station")
 
+# plot stations
 fig = inv.plot(label=label_dict[choice],
         marker='.',
         projection="local",
@@ -92,8 +98,7 @@ if choice != 'D':
     sys.exit()
 
 # ========= manual plot scatterpoints - really hacked together =========
-# text_file = (pathnames(vic_or_gns)['spectral']+'duration/revised_durations.txt'
-text_file = '/seis/prj/fwi/bchow/spectral/output_plots/waveforms/2017p059122/time_criteria.txt'
+text_file = pathnames(vic_or_gns)['spectral']+'duration/{}.txt'.format(event_id)
 durations,durstations,lats,lons = [],[],[],[]
 with open(text_file,'r') as f:
     for line in f:
@@ -101,7 +106,7 @@ with open(text_file,'r') as f:
         if "time" in eachline[0]:
             station = eachline[0].split('_')[0]
             durstations.append(station)
-            durations.append(float(eachline[1]))
+            durations.append(float(eachline[comp_dic[component]]))
         else:
             continue
 
@@ -124,11 +129,16 @@ for i,(sta,dur) in enumerate(zip(durstations,durations)):
                     xy=(x[i],y[i]),
                     xytext=(x[i]+5000,y[i]+5000),
                     fontsize=8)
-plt.xlim([299288,696892])
-plt.ylim([248581,533109])
-plt.title('Geonet {name} w/ time based vertical shaking durations '.format(
+# set limits based off map - only works for predefined map, for more dynamic
+# call use fig.bmap(lon,lat)
+plt.xlim([370000,756892])
+plt.ylim([248581,563109])
+plt.title('{name} {comp} component durations | {Eid}'.format(
+            comp=component,
             name=text_dict[choice],
-            Fl=tmin,
-            Fh=tmax))
+            Eid=event_id))
+fname = "{comp}_{Eid}.png".format(comp=component,Eid=event_id)
+fullname = pathnames(vic_or_gns)['plots'] + "durations/{}".format(fname)
+plt.savefig(fullname,dpi=200)
 
 plt.show()
