@@ -15,6 +15,18 @@ import argparse
 from obspy import UTCDateTime
 from obspy.clients.fdsn import Client
 
+def vog():
+    """
+    Determine what computer system is being used
+    """
+    cwd = os.getcwd()
+    if cwd == '/Users/chowbr/Documents/subduction/spectral':
+        vic_or_gns = "VIC"
+    elif cwd == '/seis/prj/fwi/bchow/spectral':
+        vic_or_gns = "GNS"
+
+    return vic_or_gns
+
 def pathnames(choice):
     """
     simplify pathname calling between Vic and GNS, call function to return the
@@ -156,52 +168,62 @@ def geonet_internal(station,channel,start,end=False,response=True):
 
     return mseed_files, response_filepath
 
-def fdsn_download(station,channel,start,end,response=False,client="GEONET",):
+def fdsn_download(station,channel,start,end=False,response=False,
+                                                    client="GEONET",cushion=0):
     """Download data via FDSN client for given station, channel and start
     and end times. Can output response as well. Return stream and response.
-
+    :type station: str
+    :param station: station name i.e. GKBS (case-insensitive)
+    :type channel: str
+    :param channel: channel of interest, i.e. BHN, HHE (case-insensitive)
+    :type start: str
+    :param start: starttime for data request
+    :type end: str
+    :param end: endtime for data request
+    :type response: bool
+    :param response: whether or not to return the response information, if not,
+                    just returns bool False
+    :type client: str
+    :param client: client that fdsn searches for data
+    :type cushion: int
+    :param cushion: padding on start and end time
     """
     station = station.upper()
     folders = 1 # corresponds to number of channels
     if channel[-1] == "*":
         folders = 3
-    start = UTCDateTime(start)
-    end = UTCDateTime(end)
+    start = UTCDateTime(start) - cushion
+    if end:
+        end = UTCDateTime(end) + cushion
+    else:
+        end = start + 3600*24
 
     # set instrument id from arguments
     instrument_id = 'NZ.{}.*.{}'.format(station,channel)
-    print("++ Requesting data for intrument: {}".format(instrument_id))
+    # print("++ Requesting data for instrument: {}".format(instrument_id))
     net, sta, loc, cha = instrument_id.split('.')
-
-    # split time into days
-    sec_per_day = 3600*24
-    time_delta_days = int((end-start)/(sec_per_day))
 
     # initiate downloading of data
     c = Client(client)
-    day_of = start
     err_num = 0
-    while day_of <= end:
-        # fetch waveforms
-        try:
-            st = c.get_waveforms(network=net,
-                                station=sta,
-                                location=loc,
-                                channel=cha,
-                                starttime=day_of,
-                                endtime=day_of+sec_per_day)
-            day_of += sec_per_day
+    try:
+        st = c.get_waveforms(network=net,
+                            station=sta,
+                            location=loc,
+                            channel=cha,
+                            starttime=start,
+                            endtime=end)
 
-        except Exception as e:
-            print(e)
-            err_num += 1
-            if err_num > 5:
-                sys.exit('Errored out')
-            pass
+    except Exception as e:
+        print(e)
+        err_num += 1
+        if err_num > 5:
+            sys.exit('Errored out')
+        pass
 
     if response:
         # fetch response file
-        print("++ Requesting response information")
+        # print("++ Requesting response information")
         try:
             response = c.get_stations(network=net,
                                 station=sta,
@@ -216,6 +238,8 @@ def fdsn_download(station,channel,start,end,response=False,client="GEONET",):
 
 
     return st, response
+
+
 
 if __name__ == "__main__":
     # user input arguments

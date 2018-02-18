@@ -11,7 +11,7 @@ from matplotlib.patches import Polygon
 import warnings
 warnings.filterwarnings("ignore",category=mpl.cbook.mplDeprecation)
 
-vic_or_gns = 'GNS'
+vic_or_gns = 'VIC'
 
 # choices: s (accelerometers) / z (seismometer) / d (durations)
 choice = sys.argv[1].upper()

@@ -6,7 +6,7 @@ import glob
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
-from getdata import geonet_internal, pathnames
+from getdata import geonet_internal, pathnames, vog, fdsn_download
 from obspy import read, read_inventory, UTCDateTime
 from obspy.clients.fdsn import Client
 from obspy.geodetics import locations2degrees
@@ -18,7 +18,7 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 # user input arguments
 parser = argparse.ArgumentParser(description='Plot waveforms for earthquake\
 data, example call $ python waveform_by_event.py --station TBAS --channel\
- BNZ --end 2015-02-01 --response True')
+ BNZ --end 2015-02-01 --unit vel')
 parser.add_argument('--choice', help='GEONET or RDF, default = RDF',
                     type=str,default='RDF')
 parser.add_argument('--station', help='Station choice, default = RD01',type=str,
@@ -42,7 +42,7 @@ response_output = arg.unit.upper() # i.e. "VEL" or "DISP" or "ACC"
 t_start = UTCDateTime(arg.start)
 t_end = UTCDateTime(arg.end)
 
-vic_or_gns = "GNS"
+vic_or_gns = vog()
 
 # list of earthquakes to look at
 event_list = ["2017p852531", # M4.8 36km; W of Wellington
@@ -51,7 +51,8 @@ event_list = ["2017p852531", # M4.8 36km; W of Wellington
               "2017p861155", # M4.7 11km; SW of Wellington
               "2017p968142", # M4.1 16km; W of Mt Ruapehu
               "2017p879247"] # M4.7 40km; N of Bay of Plenty
-event_id = "2017p916322"
+# event_id = "2017p916322"
+event_id = False
 
 # get event information
 c = Client("GEONET")
@@ -98,7 +99,7 @@ for event in cat:
                                                             sta=station_id,
                                                             date=date_search))
 
-        # print("++ {} data files found".format(len(filepath)))
+        st = read(path_vert[0]) + read(path_north[0]) + read(path_east[0])
         resp_filepath = pathnames(vic_or_gns)['rdf'] + "DATALESS.RDF.XX"
         inv = read_inventory(resp_filepath)
 
@@ -116,32 +117,36 @@ for event in cat:
                 distance *= 40000/360
                 distance = round(distance,2)
 
+    # grab geonet data either internally or via fdsn
     elif choice == "geonet":
-        # only from internal - might need to change to download data
-        path_vert, resp_vert = geonet_internal(station=station_id,
-                                    channel= channel[:2] + 'Z',
-                                    start = origin,
-                                    response = True)
-        path_north, resp_north = geonet_internal(station=station_id,
-                                    channel= channel[:2] + 'N',
-                                    start = origin,
-                                    response = True)
-        path_east, resp_east = geonet_internal(station=station_id,
-                                    channel= channel[:2] + 'E',
-                                    start = origin,
-                                    response = True)
-        inv = read_inventory(resp_vert)
-        inv += read_inventory(resp_north)
-        inv += read_inventory(resp_east)
+        if vic_or_gns == "GNS":
+            path_vert, resp_vert = geonet_internal(station=station_id,
+                                        channel= channel[:2] + 'Z',
+                                        start = origin,
+                                        response = True)
+            path_north, resp_north = geonet_internal(station=station_id,
+                                        channel= channel[:2] + 'N',
+                                        start = origin,
+                                        response = True)
+            path_east, resp_east = geonet_internal(station=station_id,
+                                        channel= channel[:2] + 'E',
+                                        start = origin,
+                                        response = True)
+            inv = read_inventory(resp_vert)
+            inv += read_inventory(resp_north)
+            inv += read_inventory(resp_east)
+            st = read(path_vert[0]) + read(path_north[0]) + read(path_east[0])
 
-    # read in data - assuming only 1 datafile found
-    st = read(path_vert[0]) + read(path_north[0]) + read(path_east[0])
-    # incase data gaps (??? is this okay?)
-    st.merge()
 
+        elif vic_or_gns == "VIC":
+            st, inv = fdsn_download(station=station_id,
+                                                channel = channel[:2] + '*',
+                                                start = origin,
+                                                response = True)
 
     # preprocessing
     pushback = -50
+    # st.merge()
     st.trim(starttime=origin+pushback,endtime=origin+60*7.5)
     st.detrend('linear')
     st.taper(max_percentage=0.05)
@@ -181,7 +186,7 @@ for event in cat:
     print("Signal to noise ratio ",signal_noise_ratio)
 
     # filter bands
-    alpha = 0.7
+    alpha = 0.4
     linewidth = 0.5
     for i in [1,3,6,10]:
         for ax,co in zip([ax1,ax2,ax3],['N','E','Z']):
@@ -209,7 +214,7 @@ for event in cat:
                 ax.set_ylim([min(st_filter[0].data),max(st_filter[0].data)])
 
 
-        alpha+=0.1
+        alpha+=0.2
         linewidth+=0.2
         # print("Lowpass at {} s".format(st_filter[0].data.max()))
 
@@ -249,7 +254,7 @@ for event in cat:
                                                 station_id,
                                                 response_output))
     # print(figure_name)
-    plt.subplots_adjust(wspace=.5, hspace=0)
+    # plt.subplots_adjust(wspace=.5, hspace=0)
     # plt.savefig(figure_name)
 
-    # plt.show()
+    plt.show()

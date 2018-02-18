@@ -12,7 +12,7 @@ from obspy import read_inventory
 from obspy.signal import PPSD
 from obspy import UTCDateTime
 from obspy.imaging.cm import pqlx
-from getdata import geonet_internal, fdsn_download
+from getdata import geonet_internal, fdsn_download, vog
 
 # user input arguments
 parser = argparse.ArgumentParser(description='Download create PPSD for \
@@ -30,7 +30,7 @@ parser.add_argument('--end', help='Endtime, default = 2015-01-01',type=str,
 parser.add_argument('--dec', help='Decimate trace, default 0',type=int,
                     default=0)
 
-vic_or_gns = "GNS"
+vic_or_gns = vog()
 
 # parse arguments
 arg = parser.parse_args()
