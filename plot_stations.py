@@ -20,10 +20,10 @@ if choice not in ['S','Z','D']:
 tmin = 1
 tmax = 50
 perc = 90
-sta_dict = {'Z':'*Z','S':'*S','D':'*S'}
-chan_dict = {'Z':'HH*','S':'BN*','D':'BN*'}
+sta_dict = {'Z':'*Z','S':'*S','D':'*Z'}
+chan_dict = {'Z':'*H*','S':'*N*','D':'HH*'}
 color_dict = {'Z':'b','S':'r','D':'r'}
-text_dict = {'Z':'Seismometer','S':'Accelerometer','D':'Accelerometer'}
+text_dict = {'Z':'Seismometer','S':'Accelerometer','D':'Seismometer'}
 label_dict = {'Z':True,'S':True,'D':False}
 
 
@@ -33,8 +33,8 @@ north_island = [-45,-35,175,180]
 new_zealand = [-50,-35,165,180]
 inv = c.get_stations(network='NZ',
                     station=sta_dict[choice],
-                    minlatitude=-41,
-                    maxlatitude=-39,
+                    minlatitude=-45,
+                    maxlatitude=-35,
                     minlongitude=175,
                     maxlongitude=180,
                     level="station")
@@ -48,25 +48,25 @@ fig = inv.plot(label=label_dict[choice],
         show=False)
 
 # ========= plot RDF station array =========
-stations,lats,lons = [],[],[]
-with open(pathnames(vic_or_gns)['rdf'] + 'rdf_locations.txt','r') as f:
-    station_lines = f.readlines()
-
-for lines in station_lines[1:]:
-    splitlines = lines.split(',')
-    # stations.append("{n}/{s}".format(n=splitlines[0],s=splitlines[1]))
-    stations.append(splitlines[0])
-    lats.append(float(splitlines[2]))
-    lons.append(float(splitlines[3]))
-
-# plot onto basemap
-x,y = fig.bmap(lons,lats)
-scatter = fig.bmap.scatter(x,y,marker='o',s=40,zorder=1000,c='g')
-for i,sta in enumerate(stations):
-    plt.annotate(sta,xy=(x[i],y[i]),
-                    xytext=(x[i]+2500,y[i]+2500),
-                    fontsize=9,
-                    fontweight='bold')
+    # stations,lats,lons = [],[],[]
+    # with open(pathnames(vic_or_gns)['rdf'] + 'rdf_locations.txt','r') as f:
+    #     station_lines = f.readlines()
+    #
+    # for lines in station_lines[1:]:
+    #     splitlines = lines.split(',')
+    #     # stations.append("{n}/{s}".format(n=splitlines[0],s=splitlines[1]))
+    #     stations.append(splitlines[0])
+    #     lats.append(float(splitlines[2]))
+    #     lons.append(float(splitlines[3]))
+    #
+    # # plot onto basemap
+    # x,y = fig.bmap(lons,lats)
+    # scatter = fig.bmap.scatter(x,y,marker='o',s=40,zorder=1000,c='g')
+    # for i,sta in enumerate(stations):
+    #     plt.annotate(sta,xy=(x[i],y[i]),
+    #                     xytext=(x[i]+2500,y[i]+2500),
+    #                     fontsize=9,
+    #                     fontweight='bold')
 
 # manual set bounds
 # map_limx,map_limy = fig.bmap([175.75,178],[-39,-40.75])
@@ -92,42 +92,41 @@ if choice != 'D':
     sys.exit()
 
 # ========= manual plot scatterpoints - really hacked together =========
-text_file = (pathnames(vic_or_gns)['spectral'] +
-                                'duration/{t0}-{t1}s_amp.txt'.format(
-                                                                t0=tmin,
-                                                                t1=tmax))
-stations,durations,lats,lons = [],[],[],[]
+# text_file = (pathnames(vic_or_gns)['spectral']+'duration/revised_durations.txt'
+text_file = '/seis/prj/fwi/bchow/spectral/output_plots/waveforms/2017p059122/time_criteria.txt'
+durations,durstations,lats,lons = [],[],[],[]
 with open(text_file,'r') as f:
     for line in f:
-        if "ID" in line:
-            station_temp = line.split('.')[1]
-            stations.append(station_temp)
-        elif "Duration" in line:
-            line_temp = line.strip()
-            duration_temp = float(line.split(' ')[1])
-            durations.append(duration_temp)
+        eachline = line.split(' ')
+        if "time" in eachline[0]:
+            station = eachline[0].split('_')[0]
+            durstations.append(station)
+            durations.append(float(eachline[1]))
+        else:
+            continue
 
 # grab latitude and longitude information
-for sta in stations:
+for sta in durstations:
     sta_info = inv.select(station=sta)[0][0]
     lats.append(sta_info.latitude)
     lons.append(sta_info.longitude)
 
 # set colors
-D = [(_/max(durations))**2 for _ in durations]
+D = [(_/max(durations))**4 for _ in durations]
 cmap = plt.get_cmap('YlGn')
 colors = cmap(D)
 
 # plot onto basemap
 x,y = fig.bmap(lons,lats)
 scatter = fig.bmap.scatter(x,y,marker='o',s=100,zorder=1000,c=colors)
-for i,(sta,dur) in enumerate(zip(stations,durations)):
-    plt.annotate("{}/{}s".format(sta,dur),
+for i,(sta,dur) in enumerate(zip(durstations,durations)):
+    plt.annotate("{}/{}".format(sta,dur),
                     xy=(x[i],y[i]),
                     xytext=(x[i]+5000,y[i]+5000),
                     fontsize=8)
-
-plt.title('Geonet {name} w/ shaking durations | Filt: {Fl}-{Fh} s'.format(
+plt.xlim([299288,696892])
+plt.ylim([248581,533109])
+plt.title('Geonet {name} w/ time based vertical shaking durations '.format(
             name=text_dict[choice],
             Fl=tmin,
             Fh=tmax))

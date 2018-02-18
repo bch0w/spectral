@@ -23,6 +23,7 @@ def color_cycle(ax,length,cmap):
     shuffle(colorrange)
     ax.set_prop_cycle('color',colorrange)
 
+<<<<<<< HEAD:plot_ppsd.py
     return colorrange
 
 vic_or_gns = vog()
@@ -32,12 +33,28 @@ station_dict = {"RD01":"PRWZ", "RD02":"ANWZ", "RD03":"TURI", "RD04":"PORA",
                 "RD09":"MCHZ", "RD10":"CKHZ", "RD11":"KAHU", "RD12":"KWHZ",
                 "RD13":"KERE", "RD14":"PNUI", "RD15":"WPUK", "RD16":"OROA",
                 "RD17":"TEAC", "RD18":"RANC"}
+=======
+vic_or_gns = "GNS"
+# naming conventions
+# station_dict = {"RD01":"PRWZ", "RD02":"ANWZ", "RD03":"TURI", "RD04":"PORA",
+#                 "RD05":"MNHR", "RD06":"DNVZ", "RD07":"WPAW", "RD08":"RAKW",
+#                 "RD09":"MCHZ", "RD10":"CKHZ", "RD11":"KAHU", "RD12":"KWHZ",
+#                 "RD13":"KERE", "RD14":"PNUI", "RD15":"WPUK", "RD16":"OROA",
+#                 "RD17":"TEAC", "RD18":"RANC"}
+# colocated short period sensors
+station_dict = {"RD01":"PRWZ", "RD02":"ANWZ", "RD03":"", "RD04":"PRHZ",
+                "RD05":"", "RD06":"DVHZ", "RD07":"", "RD08":"",
+                "RD09":"MCHZ", "RD10":"CKHZ", "RD11":"KAHZ", "RD12":"KWHZ",
+                "RD13":"KRHZ", "RD14":"PNHZ", "RD15":"WPHZ", "RD16":"",
+                "RD17":"", "RD18":""}
+>>>>>>> 7c48029a178761b53455b2ba433ab5a76c9aa6af:ppsd_arrays/plot_ppsd.py
 
 month_dict = {"001*031":"JAN","032*059":"FEB","060*090":"MAR","091*120":"APR",
                 "121*151":"MAY","152*181":"JUN","182*212":"JUL","213*243":"AUG",
                 "244*273":"SEP","274*304":"OCT","305*334":"NOV","335-365":"DEC"}
 
 # set path
+<<<<<<< HEAD:plot_ppsd.py
 npz_path = pathnames(vic_or_gns)['ppsd'] + "/RDF_decimateby5/" #temp array
 # npz_files = glob.glob(npz_path + "*.npz")
 rdf_files = glob.glob(npz_path + "RD*.npz")
@@ -45,12 +62,18 @@ ehz_files = glob.glob(npz_path + "*EHZ*.npz")
 
 rdf_files.sort()
 ehz_files.sort()
+=======
+npz_path = pathnames(vic_or_gns)['ppsd'] + "/geonet_decimateby2/" #temp array
+npz_files = glob.glob(npz_path + "*.npz")
+npz_files.sort()
+>>>>>>> 7c48029a178761b53455b2ba433ab5a76c9aa6af:ppsd_arrays/plot_ppsd.py
 
 # start figure
 f = plt.figure(dpi=200)
 ax = f.add_subplot(111)
 
 # unique colors and linestyles
+<<<<<<< HEAD:plot_ppsd.py
 cr = color_cycle(ax,len(rdf_files),'nipy_spectral')
 line_styles = ['solid','dashed','dashdot','dotted']
 num_styles = len(line_styles)
@@ -77,16 +100,31 @@ for i,fid in enumerate(rdf_files):
 
 colorrange = [cr[1],cr[9],cr[5],cr[10],cr[12],cr[11],cr[8],cr[13],cr[3],cr[0],cr[14]]
 for i,fid in enumerate(ehz_files):
+=======
+color_cycle(ax,len(npz_files),'nipy_spectral')
+line_styles = ['solid','dashed','dashdot','dotted']
+# line_styles = ['solid','dashed','dashed','dashed']
+num_styles = len(line_styles)
+# color_styles = ['r','k','r','k']
+
+for i,fid in enumerate(npz_files):
+>>>>>>> 7c48029a178761b53455b2ba433ab5a76c9aa6af:ppsd_arrays/plot_ppsd.py
     sta,cha,year = os.path.basename(fid).split(".")[:3]
     ppsd = PPSD.load_npz(fid)
     # avg = ppsd.get_mode()
     avg = ppsd.get_percentile(percentile=50)
+<<<<<<< HEAD:plot_ppsd.py
 
     plt.plot(avg[0],avg[1],
                 linestyle='solid',
                 linewidth=0.5,
                 color=colorrange[i],
                 zorder=3,
+=======
+    plt.plot(avg[0],avg[1],
+                linestyle=line_styles[i%num_styles],
+                linewidth=0.75,
+>>>>>>> 7c48029a178761b53455b2ba433ab5a76c9aa6af:ppsd_arrays/plot_ppsd.py
                 label="{}".format(sta))
 
 # plot lines for noise models and microseisms
@@ -114,8 +152,15 @@ plt.xlabel("Period (s)")
 plt.ylabel("Amplitude [m^2/s^4/Hz][dB]")
 # plt.title("Mean values of year-long PPSD\'s for GEONET permanent seismometers\n"
 #             "Year: 2015 | Sampling Rate: 10 Hz | # Stations: {}".format(len(npz_files)))
+<<<<<<< HEAD:plot_ppsd.py
 plt.title("Median values of PPSD for RDF stations and colocated short-period sensors")
+=======
+# plt.title("Median values of PPSD for {} and {}".format(station,station_dict[station]))
+plt.title("Median Values of GEONET broadband stations vertical component 2015")
+# figure_savename = "/seis/prj/fwi/bchow/spectral/output_plots/ppsd_plots/rdf_vs_gnSP/{}_{}.png".format(station,station_dict[station])
+>>>>>>> 7c48029a178761b53455b2ba433ab5a76c9aa6af:ppsd_arrays/plot_ppsd.py
 plt.grid()
+# plt.savefig(figure_savename)
 plt.show()
 
 # plot variations from baseline

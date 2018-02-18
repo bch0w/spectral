@@ -14,6 +14,9 @@ from obspy import read, read_inventory, UTCDateTime
 from obspy.clients.fdsn import Client
 from getdata import vog, geonet_internal, fdsn_download, pathnames
 
+
+mpl.rcParams['font.size'] = 8
+mpl.rcParams['lines.linewidth'] = 1
 # ignore warnings
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -171,20 +174,34 @@ clip_low = 0
 clip_high = 1.0
 
 # preprocessing
-st.trim(starttime=start_time,endtime=end_time)
-st.detrend('linear')
-st.taper(max_percentage=0.05)
-st.attach_response(inventories=inv)
-st.remove_response(output=output,water_level=100)
-
-st.detrend('linear')
+st.detrend("simple")
 st.taper(max_percentage=0.05)
 st.filter("bandpass",freqmin=freqmin,freqmax=freqmax,corners=3)
 
+# separate horizontal data streams
+north = st.select(component='1')
+east = st.select(component='2')
+if (len(north) and len(east)) == 0:
+    north = st.select(component='N')
+    east = st.select(component='E')
+north = north[0].data
+east = east[0].data
+
+# choices for working trace
+vertical = st.select(component='Z')[0].data
+horizontal = np.sqrt(north**2 + east**2)
+motion_vector = np.sqrt(vertical**2 + north**2 + east**2)
+
+# assign trace to use
+tr_work = st[0].copy()
+tr_work.data = motion_vector
+stats = tr_work.stats
+
 # plotting
-print("plotting",end=", ")
-f,(ax1,ax2,ax3) = plt.subplots(3,sharex=True,sharey=False,figsize=(9,5))
-label_dict = {'Z':'Vertical','1':'N/S','N':'N/S','2':'E/W','E':'E/W'}
+f,(ax1,ax1a,ax1b,ax2,ax3) = plt.subplots(5,
+                                        sharex=True,
+                                        sharey=False,
+                                        figsize=(9,5))
 
 # s============= subplot 1 (waveform) =============
 tr = st.select(component=comp)[0]
@@ -219,23 +236,38 @@ seismo =  tr.data**2
 samp_rate = stats.sampling_rate
 
 peak_amp = seismo.max()
-threshold_percentage = 0.05
+threshold_percentage = 0.1
 threshold = peak_amp * threshold_percentage
 
 # loop over seismogram, determine start and end of peak energy
-over_threshold = []
-for i,sample in enumerate(seismo):
-    if sample >= threshold:
-        over_threshold.append(i)
+a_over, s_over = [],[]
+for i,amplitude in enumerate(seismo):
+    if amplitude >= threshold:
+        s_over.append(i)
+        a_over.append(amplitude)
 
-energy_start = over_threshold[0]
-energy_end = over_threshold[-1]
-duration = (energy_end-energy_start)/samp_rate
+# find edgepoints by checking if the next sample j is the same as i+1
+s_edge,a_edge,sections = [s_over[0]],[a_over[0]],[]
+for i,(S,A) in enumerate(zip(s_over[1:-2],a_over[1:-2])):
+    if s_over[i+2] != (S + 1):
+        section = np.trapz(a_edge,s_edge)
+        sections.append(section)
+        s_edge,a_edge = [s_over[i+1]],[a_over[i+1]]
+    else:
+        s_edge.append(S)
+        a_edge.append(A)
 
-# ============= subplot 3 edited seismogram with threshold =============
-ax3.plot(t,seismo,'k',label=tr.get_id())
-ax3.plot(t[energy_start:energy_end],seismo[energy_start:energy_end],'r',
-                                                label='Amplitude >= Threshold')
+# convert samples to time
+t_over = []
+for S in s_over:
+    t_over.append(t[S])
+
+duration = sum(sections)
+print("Duration criteria: {}".format(duration))
+
+# subplot 3 edited seismogram with threshold
+ax3.plot(t,seismo,'k',label=st[0].get_id())
+ax3.scatter(t_over,a_over,c='r',marker='.',s=1,zorder=100)
 h_lab = "Threshold = {}% peak amplitude".format(int(threshold_percentage*100))
 ax3.axhline(y=threshold,
             xmin=t[0],xmax=t[-1],
@@ -251,56 +283,50 @@ ax3.set_ylabel('velocity^2 (m^/s^2)')
 ax3.set_xlabel("Time (sec)")
 ax3.legend()
 
-ano_x = round(t[int(energy_end + 100*samp_rate)]/1000) * 1000
-ano_y = threshold * 2
-ax3.annotate("Duration of energy: {} sec".format(duration),
-                                                xy=(ano_x,ano_y),
-                                                xytext=(ano_x,ano_y))
+# ano_x = round(t[int(energy_end + 100*samp_rate)]/1000) * 1000
+# ano_y = threshold * 2
+# ax3.annotate("Duration of energy: {} sec".format(duration),
+#                                                 xy=(ano_x,ano_y),
+#                                                 xytext=(ano_x,ano_y))
 
-
-# ============= final touches =============
-# plt.xlim([200,2000])
+# final touches
+plt.xlim([200,2000])
 plt.subplots_adjust(wspace=.5, hspace=0)
 
+# save fig
+figure_folder = '/seis/prj/fwi/bchow/spectral/output_plots/spectrograms/'
+subfolder = '{}-{}s'.format(tmin,tmax)
+foldercheck = os.path.join(figure_folder,subfolder)
+if not os.path.exists(foldercheck):
+    print("Making directory ",foldercheck,end=", ")
+    os.makedirs(foldercheck)
+figure_name = "{s}-{c}_{l}-{h}kaikoura".format(s=station,
+                                c=channel,
+                                l=tmin,
+                                h=tmax)
+outpath = os.path.join(figure_folder,subfolder,figure_name)
+# f.savefig(outpath,dpi=250)
+# print("saved figure:\n\t",outpath)
+
+# text file containing parameters for easy comparisons
+text_file = '/seis/prj/fwi/bchow/spectral/duration/{t0}-{t1}s_amp.txt'.format(
+                                            t0=tmin,
+                                            t1=tmax)
+# with open(text_file,'a') as f:
+#     write_string = ("\nID: {I}\n"
+#                     "Filter bounds: {F1}-{F2} s\n"
+#                     "Peak amplitude: {P} m/s\n"
+#                     "Duration: {D} s\n"
+#                     "Start: {S} s\n"
+#                     "End: {E} s\n".format(I=st[0].get_id(),
+#                                         F1=tmin,
+#                                         F2=tmax,
+#                                         P=st[0].data.max(),
+#                                         D=duration,
+#                                         S=energy_start/samp_rate,
+#                                         E=energy_end/samp_rate))
+#     f.write("="*80)
+#     f.write("{}".format(write_string))
+#     print("text file written")
+
 plt.show()
-
-
-# ===========================OLD-INTEGRAL-APPROACH==============================
-    # # determine when 75% of energy reached
-    # total_energy = np.trapz(seismo,t)
-    # thresh_max = 0.9
-    # thresh_min = 0.01
-    # threshold = [thresh_min*total_energy, thresh_max*total_energy]
-    #
-    # # iterate over waveform by 1 sec intervals
-    # temp_energy = 0
-    # energy_start = 0
-    # while temp_energy < threshold[0]:
-    #     energy_start += samp_rate
-    #     temp_energy = np.trapz(seismo[0:energy_start],t[0:energy_start])
-    #
-    # energy_end = energy_start
-    # while temp_energy < threshold[1]:
-    #     energy_end += samp_rate
-    #     temp_energy = np.trapz(seismo[0:energy_end],t[0:energy_end])
-    #
-    # duration = (energy_end-energy_start)/samp_rate
-    #
-    # # subplot 3 edited seismogram with threshold
-    # ax3.plot(t,seismo,'k',label=st[0].get_id())
-    # ax3.plot(t[energy_start:energy_end],seismo[energy_start:energy_end],'r',
-    #     label='{min}% < A^2 < {max}% total energy'.format(min=thresh_min*100,
-    #                                                             max=thresh_max*100))
-    #
-    # ax3.grid()
-    # ax3.set_ylim([0,peak_amp+peak_amp*0.1])
-    # ax3.set_ylabel('velocity^2 (m^2/s^2)')
-    # ax3.set_xlabel("Time (sec)")
-    # ax3.legend()
-    #
-    # ano_x = round(t[int(energy_end + 100*samp_rate)]/1000) * 1000
-    # ano_y = peak_amp/2
-    # ax3.annotate("Duration of energy: {} sec".format(duration),
-    #                                                 xy=(ano_x,ano_y),
-    #                                                 xytext=(ano_x,ano_y))
-# ===========================OLD-INTEGRAL-APPROACH==============================

@@ -45,7 +45,7 @@ def pathnames(choice):
                             "rdf_y":'/seis/prj/fwi/yoshi/RDF_Array/',
                             "rdf":basepath + 'RDF_Array/',
                             "plots":basepath + 'spectral/output_plots/',
-                            "ppsd":basepath + 'ppsd_arrays/'}
+                            "ppsd":basepath + 'spectral/ppsd_arrays/'}
 
     return path_dictionary
 
@@ -54,7 +54,8 @@ def geonet_internal(station,channel,start,end=False,response=True):
     returns a list of pathnames for GEONET archives on GNS internal system.
     If response == True, also returns path for response.
     If end not specified, returns a list of length 1 for day requested.
-    Currently only works for single component requests, no wildcards possible.
+    Wildcards possible, however inventory returns a full list of instruments at
+    a certain location, rather than a paired down list.
 
     :type station: str
     :param station: station name i.e. GKBS (case-insensitive)
@@ -155,11 +156,11 @@ def geonet_internal(station,channel,start,end=False,response=True):
     NET,STA,LOC,CHA,SUFX,YEAR,JDAY = os.path.basename(
                                                 mseed_files[0]).split('.')
     if response:
-        response_filename = "RESP.{net}.{sta}.{loc}.{cha}".format(net=NET,
-                                                                    sta=STA,
-                                                                    loc=LOC,
-                                                                    cha=CHA)
-        response_filepath = os.path.join(resp_GNApath,response_filename)
+        response_filename = "RESP.{net}.{sta}.{loc}.*".format(net=NET,
+                                                            sta=STA,
+                                                            loc=LOC)
+        response_filepath = glob.glob(
+                                os.path.join(resp_GNApath,response_filename))
         # print("++ response filepath")
     else:
         response_filepath = None
