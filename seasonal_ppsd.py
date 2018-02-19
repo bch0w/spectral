@@ -8,7 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.cm as mplcm
 
-from getdata import pathnames
+from getdata import vog, pathnames
 from obspy.signal import PPSD
 from obspy.signal.spectral_estimation import get_nlnm, get_nhnm
 
@@ -24,8 +24,9 @@ def color_cycle(ax,length,cmap):
     ax.set_prop_cycle('color',colors)
 
 # main
-vic_or_gns = "vic"
+vic_or_gns = vog()
 
+# not used anymore
 month_dict = {"JAN":"001*031",
               "FEB":"032*059",
               "MAR":"060*090",
@@ -39,47 +40,66 @@ month_dict = {"JAN":"001*031",
               "NOV":"305*334",
               "DEC":"335*365"}
 
-station_list = ["TSZ","MRZ","BFZ","WAZ","KHEZ","VRZ","HIZ","TLZ","TOZ",
+year = "2015"
+comp = "N"
+npz_path = os.path.join(pathnames(vic_or_gns)['ppsd'],
+                        "geonet_monthly_decimateby5",
+                        year,
+                        '')
+station_list = ["TSZ","MRZ","BFZ","WAZ","KHEZ","HIZ","TLZ","TOZ",
                 "KUZ","GRZ","WSRZ","RATZ","WCZ","OUZ","MWZ","BKZ","KNZ","RTZ",
-                "HAZ","PUZ","OPRZ","URZ","PXZ","MXZ"] #"MKAZ" < no files
+                "HAZ","PUZ","OPRZ","PXZ","MXZ"] #"MKAZ" < no files
 
-npz_path = pathnames(vic_or_gns)['ppsd']
+# lame way of including stations where some components dont have data
+if comp == "Z":
+    station_list += ["URZ"]
+if (comp == "Z") or (comp == "N"):
+    station_list += ["VRZ"]
 
 # average summer/winter months into separate PPSDs
-winter_avgs,summer_avgs = [],[]
+winter_avgs,summer_avgs,station_ignore = [],[],[]
 for station in station_list:
     winter_files,summer_files = [],[]
     # =========================== WINTER ===========================
-    for winter in ["JUN","JUL","AUG"]:
-        winter_files += glob.glob(npz_path + "{s}*{w}.npz".format(s=station,
-                                                        w=month_dict[winter]))
+    for winter in ["jun","jul","aug"]:
+        winter_files += glob.glob(npz_path + "{m}/{s}.*{c}*.npz".format(
+                                                        m=winter,
+                                                        s=station,
+                                                        c=comp))
+
     # grab mean/mode from winter
+    print(station, "winter:",len(winter_files),end=' ')
     average_avg = []
     for temp in winter_files:
+        temp_station = os.path.basename(temp).split('.')[0]
         ppsd_temp = PPSD.load_npz(temp)
-        avg_temp = ppsd_temp.get_mode()
+        avg_temp = ppsd_temp.get_percentile(percentile=50)
         average_avg.append(avg_temp[1])
+
 
     # take mean of all winter months
     mean_of_averages = np.array(average_avg).mean(axis=0)
     winter_avgs.append(mean_of_averages)
 
     # =========================== SUMMER ===========================
-    for summer in ["DEC","JAN","FEB"]:
-        summer_files += glob.glob(npz_path + "{s}*{w}.npz".format(s=station,
-                                                        w=month_dict[summer]))
+    for summer in ["dec","jan","feb"]:
+        summer_files += glob.glob(npz_path + "{m}/{s}.*{c}*.npz".format(
+                                                        m=winter,
+                                                        s=station,
+                                                        c=comp))
+
+    print("summer:",len(summer_files))
     # grab mean/mode from each season
     average_avg = []
     for temp in summer_files:
         ppsd_temp = PPSD.load_npz(temp)
-        avg_temp = ppsd_temp.get_mode()
+        avg_temp = ppsd_temp.get_percentile(percentile=50)
         average_avg.append(avg_temp[1])
+
 
     # take mean of all summer months
     mean_of_averages = np.array(average_avg).mean(axis=0)
     summer_avgs.append(mean_of_averages)
-
-import ipdb;ipdb.set_trace()
 
 # PPSD x-axis; same for all
 periods = avg_temp[0]
@@ -140,7 +160,9 @@ plt.xscale("log")
 plt.xlabel("Period (s)")
 plt.ylabel("Amplitude [m^2/s^4/Hz][dB]")
 plt.title("Seasonal averages of PPSD\'s for GEONET permanent seismometers\n"
-            "Year: 2015 | # Stations: {}".format(len(station_list)))
+            "Year: 2015 | # Stations: {0} | Component: {1}".format(
+                                                        len(station_list),
+                                                        comp))
 # plt.title("Mode values of PPSD for RDF Temporary Array")
 plt.grid()
 plt.show()
