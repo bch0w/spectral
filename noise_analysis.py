@@ -12,7 +12,7 @@ from obspy import read_inventory
 from obspy.signal import PPSD
 from obspy import UTCDateTime
 from obspy.imaging.cm import pqlx
-from getdata import geonet_internal, fdsn_download, vog
+from getdata import geonet_internal, fdsn_download
 
 # user input arguments
 parser = argparse.ArgumentParser(description='Download create PPSD for \
@@ -29,8 +29,6 @@ parser.add_argument('--end', help='Endtime, default = 2015-01-01',type=str,
                     default='2015-01-02')
 parser.add_argument('--dec', help='Decimate trace, default 0',type=int,
                     default=0)
-
-vic_or_gns = vog()
 
 # parse arguments
 arg = parser.parse_args()
@@ -54,7 +52,7 @@ print("Analyzing noise spectra for {}".format(instrument_id))
 
 # filepaths of geonet archive
 if network == 'NZ':
-    if vic_or_gns == "GNS":
+    if pathnames()["where"] == "GNS":
         data_files, resp_file = geonet_internal(station=station,
                                             channel=channel,
                                             start=start,

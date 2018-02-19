@@ -10,7 +10,7 @@ import matplotlib.cm as mplcm
 import matplotlib.colors as colors
 
 from random import shuffle
-from getdata import pathnames, vog
+from getdata import pathnames
 from obspy.signal import PPSD
 from obspy.signal.spectral_estimation import get_nlnm, get_nhnm
 
@@ -26,11 +26,8 @@ def color_cycle(ax,length,cmap):
     shuffle(colorrange)
     ax.set_prop_cycle('color',colorrange)
 
-vic_or_gns = vog()
-
 # set path
-npz_path = os.path.join(pathnames(vic_or_gns)['ppsd'],
-                        "geonet_db5_averages","")
+npz_path = os.path.join(pathnames()['ppsd'],"geonet_db5_averages","")
 station_list = ['PUZ', 'TSZ', 'TLZ', 'HAZ', 'KNZ', 'TOZ', 'KHEZ', 'MKAZ', 'MRZ',
                 'BFZ', 'WAZ', 'RTZ', 'WCZ', 'WSRZ', 'KUZ', 'GRZ', 'BKZ',
                 'MXZ', 'PXZ', 'OUZ', 'MWZ', 'RATZ', 'OPRZ', 'HIZ'] #VRZ, URZ

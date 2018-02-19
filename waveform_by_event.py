@@ -6,7 +6,7 @@ import glob
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
-from getdata import geonet_internal, pathnames, vog, fdsn_download
+from getdata import geonet_internal, pathnames, fdsn_download, event_stream
 from obspy import read, read_inventory, UTCDateTime
 from obspy.clients.fdsn import Client
 from obspy.geodetics import locations2degrees
@@ -19,8 +19,6 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 parser = argparse.ArgumentParser(description='Plot waveforms for earthquake\
 data, example call $ python waveform_by_event.py --station TBAS --channel\
  BNZ --end 2015-02-01 --unit vel')
-parser.add_argument('--choice', help='GEONET or RDF, default = RDF',
-                    type=str,default='RDF')
 parser.add_argument('--station', help='Station choice, default = RD01',type=str,
                     default='RD01')
 parser.add_argument('--channel', help='Instrument channel for choice geonet\
@@ -35,14 +33,11 @@ parser.add_argument('--end', help='Endtime, default = 2018-001',type=str,
 
 # parse arguments
 arg = parser.parse_args()
-choice = arg.choice.lower() # geonet or rdf
 station_id = arg.station.upper() # i.e. RD06 or PXZ
 channel = arg.channel.upper()
 response_output = arg.unit.upper() # i.e. "VEL" or "DISP" or "ACC"
 t_start = UTCDateTime(arg.start)
 t_end = UTCDateTime(arg.end)
-
-vic_or_gns = vog()
 
 # list of earthquakes to look at
 event_list = ["2017p852531", # M4.8 36km; W of Wellington
@@ -80,69 +75,11 @@ for event in cat:
     latitude = event.origins[0].latitude
     longitude = event.origins[0].longitude
 
-    # temporary station filepaths
-    if choice == "rdf":
-        d1 = pathnames(vic_or_gns)['rdf'] + "July2017_Sep2017/DATA_ALL/"
-        d2 = pathnames(vic_or_gns)['rdf'] + "Sep2017_Nov2017/DATA_ALL/"
-        d3 = pathnames(vic_or_gns)['rdf'] + "Nov2017_Jan2018/DATA_ALL/"
-        date_search = "{year}.{jday}".format(
-                                            year=origin.year,jday=origin.julday)
-        path_vert,path_north,path_east = [],[],[]
-        for search in [d1,d2,d3]:
-            path_vert += glob.glob(search+"{sta}.{date}*HHZ*".format(
-                                                            sta=station_id,
-                                                            date=date_search))
-            path_north += glob.glob(search+"{sta}.{date}*HHN*".format(
-                                                            sta=station_id,
-                                                            date=date_search))
-            path_east += glob.glob(search+"{sta}.{date}*HHE*".format(
-                                                            sta=station_id,
-                                                            date=date_search))
+    # download data
+    st,inv,cat = event_stream(station=station_id,
+                                channel=channel,
+                                event_id=event_id)
 
-        st = read(path_vert[0]) + read(path_north[0]) + read(path_east[0])
-        resp_filepath = pathnames(vic_or_gns)['rdf'] + "DATALESS.RDF.XX"
-        inv = read_inventory(resp_filepath)
-
-        # grab station information - determine station-event distance
-        stations,lats,lons = [],[],[]
-        with open(pathnames(vic_or_gns)['rdf']+ 'rdf_locations.txt','r') as f:
-            station_lines = f.readlines()
-        for lines in station_lines[1:]:
-            splitlines = lines.split(',')
-            if splitlines[0] == station_id:
-                distance = locations2degrees(lat1=latitude,
-                                            long1=longitude,
-                                            lat2=float(splitlines[2]),
-                                            long2=float(splitlines[3]))
-                distance *= 40000/360
-                distance = round(distance,2)
-
-    # grab geonet data either internally or via fdsn
-    elif choice == "geonet":
-        if vic_or_gns == "GNS":
-            path_vert, resp_vert = geonet_internal(station=station_id,
-                                        channel= channel[:2] + 'Z',
-                                        start = origin,
-                                        response = True)
-            path_north, resp_north = geonet_internal(station=station_id,
-                                        channel= channel[:2] + 'N',
-                                        start = origin,
-                                        response = True)
-            path_east, resp_east = geonet_internal(station=station_id,
-                                        channel= channel[:2] + 'E',
-                                        start = origin,
-                                        response = True)
-            inv = read_inventory(resp_vert)
-            inv += read_inventory(resp_north)
-            inv += read_inventory(resp_east)
-            st = read(path_vert[0]) + read(path_north[0]) + read(path_east[0])
-
-
-        elif vic_or_gns == "VIC":
-            st, inv = fdsn_download(station=station_id,
-                                                channel = channel[:2] + '*',
-                                                start = origin,
-                                                response = True)
 
     # preprocessing
     pushback = -50
@@ -246,7 +183,7 @@ for event in cat:
     for ax in [ax1,ax2,ax3]: ax.grid(True)
     ax2.legend(loc='best',prop={'size':7})
     ax2.set_zorder(100)
-    basepath = pathnames(vic_or_gns)['plots'] + "waveforms/"
+    basepath = pathnames()['plots'] + "waveforms/"
     if not os.path.exists(basepath+event_id):
         os.makedirs(basepath+event_id)
     figure_name = os.path.join(basepath,event_id,"{0}_{1}_{2}.png".format(

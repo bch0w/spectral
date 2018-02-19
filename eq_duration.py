@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 from obspy.core.stream import Stream
 from obspy import read, read_inventory, UTCDateTime
 from obspy.clients.fdsn import Client
-from getdata import vog, geonet_internal, fdsn_download, event_stream
+from getdata import geonet_internal, fdsn_download, event_stream
 
 # ignore warnings
 import warnings
@@ -28,8 +28,6 @@ mpl.rcParams['lines.linewidth'] = 1
 
 
 # ====================================== MAIN ==================================
-vic_or_gns = vog()
-
 # set station and channel ID
 channel_dict = {"Z":"HH*","S":"BN*"}
 station = sys.argv[1].upper() # i.e. gkbs
@@ -42,8 +40,7 @@ event_id = "2015p822263"
 
 
 # ================================ READ IN DATA ===============================
-st,inv,cat = event_stream(vic_or_gns=vic_or_gns,
-                            station=station,
+st,inv,cat = event_stream(station=station,
                             channel=channel,
                             event_id=event_id)
 

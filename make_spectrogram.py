@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 from obspy.core.stream import Stream
 from obspy import read, read_inventory, UTCDateTime
 from obspy.clients.fdsn import Client
-from getdata import vog, pathnames, geonet_internal, fdsn_download, event_stream
+from getdata import pathnames, geonet_internal, fdsn_download, event_stream
 
 
 mpl.rcParams['font.size'] = 8
@@ -53,12 +53,10 @@ output = arg.output.upper() # i.e. "VEL" or "DISP" or "ACC"
 comp = arg.component.upper()
 
 # grab data
-vic_or_gns = vog()
-st,inv,cat = event_stream(vic_or_gns=vic_or_gns,
-                      choice=choice,
-                      station=station_id,
-                      channel=channel,
-                      event_id="2017p916322")
+st,inv,cat = event_stream(choice=choice,
+                          station=station_id,
+                          channel=channel,
+                          event_id="2017p916322")
 
 # origin time
 event = cat[0]

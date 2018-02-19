@@ -15,37 +15,25 @@ import argparse
 from obspy import UTCDateTime
 from obspy.clients.fdsn import Client
 
-def vog():
-    """
-    Determine what computer system is being used
-    """
-    cwd = os.getcwd()
-    if cwd == '/Users/chowbr/Documents/subduction/spectral':
-        vic_or_gns = "VIC"
-    elif cwd == '/seis/prj/fwi/bchow/spectral':
-        vic_or_gns = "GNS"
 
-    return vic_or_gns
-
-def pathnames(choice):
+def pathnames():
     """
-    simplify pathname calling between Vic and GNS, call function to return the
+    simplify pathname calling between computers, call function to return the
     correct pathname instead of setting them in every script
     """
-    choice = choice.upper()
-    if choice == 'VIC':
-        basepath = '/Users/chowbr/Documents/subduction/'
-        path_dictionary = {"spectral":basepath + 'spectral/',
-                            "rdf":basepath + 'RDF_Array/',
-                            "plots":basepath + 'spectral/output_plots/',
-                            "ppsd":basepath + 'spectral/ppsd_arrays/'}
-    elif choice == 'GNS':
-        basepath = '/seis/prj/fwi/bchow/'
-        path_dictionary = {"spectral":basepath + 'spectral/',
-                            "rdf_y":'/seis/prj/fwi/yoshi/RDF_Array/',
-                            "rdf":basepath + 'RDF_Array/',
-                            "plots":basepath + 'spectral/output_plots/',
-                            "ppsd":basepath + 'spectral/ppsd_arrays/'}
+    cwd = os.getcwd()
+    if cwd == "/Users/chowbr/Documents/subduction/spectral":
+        where = "GNS"
+    elif cwd == "/seis/prj/fwi/bchow/spectral":
+        where = "VIC"
+    else:
+        where = "OTHER"
+    path_dictionary = {"spectral":os.path.join(cwd,''),
+                        "rdf":os.path.join(cwd,'..','RDF_Array',''),
+                        "plots":os.path.join(cwd,'output_plots',''),
+                        "ppsd":os.path.join(cwd,'ppsd_arrays',''),
+                        "where": where
+                        }
 
     return path_dictionary
 
@@ -240,14 +228,12 @@ def fdsn_download(station,channel,start,end=False,response=False,
 
     return st, response
 
-def event_stream(vic_or_gns,station,channel,event_id=False):
+def event_stream(station,channel,event_id=False):
     """Given a GEONET event ID, return raw waveform streams and response files
     Waveforms can be from RDF or GEONET permanent stations, chooses
     correct downloading format based on requests. If no event_id given, full
     catalog downloaded for times set in the function.
 
-    :type vic_or_gns: str
-    :param vic_or_gns: specifies pathames for data searching
     :type choice: str
     :param choice: GEONET or RDF (temporary) station data
     :type station: str
@@ -287,9 +273,9 @@ def event_stream(vic_or_gns,station,channel,event_id=False):
 
         # temporary station filepaths
         if choice == "rdf":
-            d1 = pathnames(vic_or_gns)['rdf'] + "July2017_Sep2017/DATA_ALL/"
-            d2 = pathnames(vic_or_gns)['rdf'] + "Sep2017_Nov2017/DATA_ALL/"
-            d3 = pathnames(vic_or_gns)['rdf'] + "Nov2017_Jan2018/DATA_ALL/"
+            d1 = pathnames()['rdf'] + "July2017_Sep2017/DATA_ALL/"
+            d2 = pathnames()['rdf'] + "Sep2017_Nov2017/DATA_ALL/"
+            d3 = pathnames()['rdf'] + "Nov2017_Jan2018/DATA_ALL/"
             date_search = "{year}.{jday}".format(
                                             year=origin.year,jday=origin.julday)
             path_vert,path_north,path_east = [],[],[]
@@ -305,13 +291,13 @@ def event_stream(vic_or_gns,station,channel,event_id=False):
                                                             date=date_search))
 
             st = read(path_vert[0]) + read(path_north[0]) + read(path_east[0])
-            resp_filepath = pathnames(vic_or_gns)['rdf'] + "DATALESS.RDF.XX"
+            resp_filepath = pathnames()['rdf'] + "DATALESS.RDF.XX"
             inv = read_inventory(resp_filepath)
 
 
         # grab geonet data either internally or via fdsn
         elif choice == "geonet":
-            if vic_or_gns == "GNS":
+            if pathname()["where"] == "GNS":
                 path_vert, resp_vert = geonet_internal(station=station_id,
                                             channel= channel[:2] + 'Z',
                                             start = origin,
@@ -330,8 +316,8 @@ def event_stream(vic_or_gns,station,channel,event_id=False):
                 st = (read(path_vert[0]) + read(path_north[0]) +
                                                             read(path_east[0]))
 
-
-            elif vic_or_gns == "VIC":
+            # if not working on GNS computer
+            else:
                 st, inv = fdsn_download(station=station_id,
                                         channel = channel[:2] + '*',
                                         start = origin,

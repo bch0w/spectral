@@ -8,7 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.cm as mplcm
 
-from getdata import vog, pathnames
+from getdata import pathnames
 from obspy.signal import PPSD
 from obspy.signal.spectral_estimation import get_nlnm, get_nhnm
 
@@ -24,8 +24,6 @@ def color_cycle(ax,length,cmap):
     ax.set_prop_cycle('color',colors)
 
 # main
-vic_or_gns = vog()
-
 # not used anymore
 month_dict = {"JAN":"001*031",
               "FEB":"032*059",
@@ -42,7 +40,7 @@ month_dict = {"JAN":"001*031",
 
 year = "2015"
 comp = "N"
-npz_path = os.path.join(pathnames(vic_or_gns)['ppsd'],
+npz_path = os.path.join(pathnames()['ppsd'],
                         "geonet_monthly_decimateby5",
                         year,
                         '')

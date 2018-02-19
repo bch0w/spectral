@@ -7,7 +7,7 @@ import matplotlib.cm as mplcm
 import matplotlib.colors as colors
 
 from random import shuffle
-from getdata import pathnames, vog
+from getdata import pathnames
 from obspy.signal import PPSD
 from obspy.signal.spectral_estimation import get_nlnm, get_nhnm
 
@@ -23,7 +23,6 @@ def color_cycle(ax,length,cmap):
     shuffle(colorrange)
     ax.set_prop_cycle('color',colorrange)
 
-vic_or_gns = vog()
 # naming conventions
 # station_dict = {"RD01":"PRWZ", "RD02":"ANWZ", "RD03":"TURI", "RD04":"PORA",
 #                 "RD05":"MNHR", "RD06":"DNVZ", "RD07":"WPAW", "RD08":"RAKW",
@@ -42,7 +41,7 @@ month_dict = {"001*031":"JAN","032*059":"FEB","060*090":"MAR","091*120":"APR",
                 "244*273":"SEP","274*304":"OCT","305*334":"NOV","335-365":"DEC"}
 
 # set path
-npz_path = pathnames(vic_or_gns)['ppsd'] + "/RDF_decimateby5/" #temp array
+npz_path = pathnames()['ppsd'] + "/RDF_decimateby5/" #temp array
 # npz_files = glob.glob(npz_path + "*.npz")
 rdf_files = glob.glob(npz_path + "RD*.npz")
 ehz_files = glob.glob(npz_path + "*EHZ*.npz")

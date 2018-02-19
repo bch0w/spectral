@@ -3,16 +3,13 @@
 import sys
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-from getdata import pathnames, vog
+from getdata import pathnames
 from obspy.clients.fdsn import Client
 from matplotlib.patches import Polygon
 
 # ignore warnings
 import warnings
 warnings.filterwarnings("ignore",category=mpl.cbook.mplDeprecation)
-
-vic_or_gns = vog()
-
 
 # command line choices
 choice = sys.argv[1].upper() #s,z,d
@@ -55,7 +52,7 @@ fig = inv.plot(label=label_dict[choice],
 
 # ========= plot RDF station array =========
     # stations,lats,lons = [],[],[]
-    # with open(pathnames(vic_or_gns)['rdf'] + 'rdf_locations.txt','r') as f:
+    # with open(pathnames()['rdf'] + 'rdf_locations.txt','r') as f:
     #     station_lines = f.readlines()
     #
     # for lines in station_lines[1:]:
@@ -98,7 +95,7 @@ if choice != 'D':
     sys.exit()
 
 # ========= manual plot scatterpoints - really hacked together =========
-text_file = pathnames(vic_or_gns)['spectral']+'duration/{}.txt'.format(event_id)
+text_file = pathnames()['spectral']+'duration/{}.txt'.format(event_id)
 durations,durstations,lats,lons = [],[],[],[]
 with open(text_file,'r') as f:
     for line in f:
@@ -138,7 +135,7 @@ plt.title('{name} {comp} component durations | {Eid}'.format(
             name=text_dict[choice],
             Eid=event_id))
 fname = "{comp}_{Eid}.png".format(comp=component,Eid=event_id)
-fullname = pathnames(vic_or_gns)['plots'] + "durations/{}".format(fname)
+fullname = pathnames()['plots'] + "durations/{}".format(fname)
 plt.savefig(fullname,dpi=200)
 
 plt.show()
