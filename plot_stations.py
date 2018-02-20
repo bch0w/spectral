@@ -13,8 +13,9 @@ warnings.filterwarnings("ignore",category=mpl.cbook.mplDeprecation)
 
 # command line choices
 choice = sys.argv[1].upper() #s,z,d
-event_id = sys.argv[2] #2014p240655,2015p82263,2016p892721,2017p059122
-component = sys.argv[3].lower() #vertical,horizontal,groundmotion
+if choice == 'D':
+    event_id = sys.argv[2] #2014p240655,2015p82263,2016p892721,2017p059122
+    component = sys.argv[3].lower() #vertical,horizontal,groundmotion
 if choice not in ['S','Z','D']:
     sys.exit("\tChoice should be s(acc), z(seis) or d(dur)")
 
@@ -23,7 +24,7 @@ comp_dic = {"vertical":1,
             "horizontal":2,
             "groundmotion":3}
 sta_dict = {'Z':'*Z','S':'*S','D':'*Z'}
-chan_dict = {'Z':'*H*','S':'*N*','D':'HH*'}
+chan_dict = {'Z':'HH*','S':'*N*','D':'HH*'}
 color_dict = {'Z':'b','S':'r','D':'r'}
 text_dict = {'Z':'Seismometer','S':'Accelerometer','D':'Seismometer'}
 label_dict = {'Z':True,'S':True,'D':False}
@@ -32,13 +33,16 @@ label_dict = {'Z':True,'S':True,'D':False}
 # grab station information
 c = Client('GEONET')
 north_island = [-45,-35,175,180]
+north_island_zoom = [-40,-37,176,178.5]
 new_zealand = [-50,-35,165,180]
+lat_lon = north_island
 inv = c.get_stations(network='NZ',
                     station=sta_dict[choice],
-                    minlatitude=-45,
-                    maxlatitude=-35,
-                    minlongitude=175,
-                    maxlongitude=180,
+                    channel=chan_dict[choice],
+                    minlatitude=lat_lon[0],
+                    maxlatitude=lat_lon[1],
+                    minlongitude=lat_lon[2],
+                    maxlongitude=lat_lon[3],
                     level="station")
 
 # plot stations

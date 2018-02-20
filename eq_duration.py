@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 from obspy.core.stream import Stream
 from obspy import read, read_inventory, UTCDateTime
 from obspy.clients.fdsn import Client
-from getdata import geonet_internal, fdsn_download, event_stream
+from getdata import pathnames, event_stream
 
 # ignore warnings
 import warnings
@@ -128,6 +128,7 @@ for i,seismo in enumerate(component_list):
     threshold_plot.append(threshold)
 
     # loop over seismogram, determine start and end of peak energy
+    # a for amplitude, s for sample
     a_over, s_over = [],[]
     for i,amplitude in enumerate(seismo):
         if amplitude >= threshold:
@@ -168,7 +169,7 @@ for AX,DU,CL,TO,AO,LA,TH,SA in zip(axes,duration_a,component_list,
 
     # plot
     AX.plot(t,CL,'k')
-    AX.scatter(TO,AO,c='r',marker='.',s=1,zorder=100)
+    AX.scatter(TO,AO,c='r',marker='x',s=1,zorder=100)
     AX.set_ylabel('{}'.format(LA))
     # set threshold line and annotation
     h_lab = "Threshold = {}% peak amplitude".format(
@@ -243,18 +244,20 @@ ax3b.set_xlabel("Time (sec)")
 plt.xlim([0,ano_x+100])
 plt.subplots_adjust(wspace=.5, hspace=0)
 
-figure_folder = '/seis/prj/fwi/bchow/spectral/output_plots/waveforms/{}/'.format(event_id)
+figure_folder = pathnames()["plots"]+ 'waveforms/{}/'.format(event_id)
+if not os.path.exists(figure_folder):
+    os.makedirs(figure_folder)
 figure_name = "{}_time.png".format(station)
 outpath = os.path.join(figure_folder,figure_name)
-# f.savefig(outpath,dpi=250)
-plt.show()
+f.savefig(outpath,dpi=250)
+# plt.show()
 
 # ================================ TEXT FILE ===================================
-# with open(figure_folder + 'durations.txt', 'a+') as f:
-#     f.write('{0}_time {1} {2} {3}\n'.format(station,int(sample_plot[0]),
-#                                                     int(sample_plot[1]),
-#                                                     int(sample_plot[2])
-#                                                     ))
+with open(figure_folder + 'durations.txt', 'a+') as f:
+    f.write('{0}_time {1} {2} {3}\n'.format(station,int(sample_plot[0]),
+                                                    int(sample_plot[1]),
+                                                    int(sample_plot[2])
+                                                    ))
     # f.write('{0}_integral {1} {2} {3}\n'.format(station,
     #                                                     int(duration_i[0]),
     #                                                     int(duration_i[1]),
