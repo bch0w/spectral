@@ -14,7 +14,7 @@ warnings.filterwarnings("ignore",category=mpl.cbook.mplDeprecation)
 # command line choices
 choice = sys.argv[1].upper() #s,z,d
 if choice == 'D':
-    event_id = sys.argv[2] #2014p240655,2015p82263,2016p892721,2017p059122
+    event_id = sys.argv[2] #2014p240655,2015p822263,2016p892721,2017p059122
     component = sys.argv[3].lower() #vertical,horizontal,groundmotion
 if choice not in ['S','Z','D']:
     sys.exit("\tChoice should be s(acc), z(seis) or d(dur)")

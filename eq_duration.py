@@ -31,7 +31,7 @@ mpl.rcParams['lines.linewidth'] = 1
 # set station and channel ID
 channel_dict = {"Z":"HH*","S":"BN*"}
 station = sys.argv[1].upper() # i.e. gkbs
-event_id = sys.argv[2] #2014p240655,2015p82263,2016p892721,2017p059122
+event_id = sys.argv[2] #2014p240655,2015p822263,2016p892721,2017p059122
 channel = channel_dict[station[-1]]
 
 # for determining amplitude threshold
@@ -40,13 +40,15 @@ threshold_percentage = 0.125
 # origin = UTCDateTime('2016-11-13T11:02:56') # kaikoura
 
 # ================================ READ IN DATA ===============================
+pad = 200
 st,inv,cat = event_stream(station=station,
                             channel=channel,
-                            event_id=event_id)
+                            event_id=event_id,
+                            pad=pad)
 # set timing
 event = cat[0]
 origin = event.origins[0].time
-start = origin
+start = origin - pad
 end = origin + 2000
 year = start.year
 julday = start.julday
@@ -60,7 +62,7 @@ st.attach_response(inventories=inv)
 st.remove_response(output='VEL',water_level=100)
 
 # filter window
-tmin = 6
+tmin = 5
 tmax = 30
 freqmin = 1/tmax
 freqmax = 1/tmin
@@ -68,8 +70,8 @@ st.detrend("simple")
 st.taper(max_percentage=0.05)
 st.filter("bandpass",freqmin=freqmin,freqmax=freqmax,corners=3)
 
-tracestart = start
-traceend = start + 2000
+tracestart = origin
+traceend = origin + 700
 st.trim(starttime=tracestart,endtime=traceend)
 
 # ================================ SEPARATE DATA STREAMS =======================
@@ -107,7 +109,7 @@ ax1b.set_ylabel('E/2 (m/s)')
 for ax in [ax1,ax1a,ax1b]:
     ax.grid(which="both")
 
-plot_title = "{eid} Earthquake | {instr} | {otime} | {t0}-{t1} s | {T}".format(
+plot_title = "{eid} | {instr} | {otime} | {t0}-{t1} s | {T}".format(
             eid=event_id,
             otime=stats.starttime,
             instr=st[0].get_id()[:-4],
@@ -161,7 +163,7 @@ for i,seismo in enumerate(component_list):
     tover_plot.append(t_over)
     aover_plot.append(a_over)
 
-# ===================== SUBPLOT 3,3a,3b (amplitude criteria) ====================
+# ==================== SUBPLOT 3,3a,3b (amplitude criteria) ====================
 axes = [ax3,ax3a,ax3b]
 labels = ['Z','N+E','Z+N+E']
 for AX,DU,CL,TO,AO,LA,TH,SA in zip(axes,duration_a,component_list,
@@ -170,7 +172,7 @@ for AX,DU,CL,TO,AO,LA,TH,SA in zip(axes,duration_a,component_list,
 
     # plot
     AX.plot(t,CL,'k')
-    AX.scatter(TO,AO,c='r',marker='x',s=0.5,zorder=100)
+    AX.scatter(TO,AO,c='r',marker='x',s=0.2,zorder=100)
     AX.set_ylabel('{}'.format(LA))
     # set threshold line and annotation
     h_lab = "Threshold = {}% peak amplitude".format(
@@ -201,12 +203,12 @@ if not os.path.exists(figure_folder):
     os.makedirs(figure_folder)
 figure_name = "{0}_{1}-{2}.png".format(station,tmin,tmax)
 outpath = os.path.join(figure_folder,figure_name)
-# f.savefig(outpath,dpi=250)
-plt.show()
+f.savefig(outpath,dpi=250)
+# plt.show()
 
 # ================================ TEXT FILE ===================================
-with open(figure_folder + '{}.txt'.format(event_id), 'a+') as f:
-    f.write('{0}_time {1} {2} {3}\n'.format(station,int(sample_plot[0]),
+with open(figure_folder + '{}_{}-{}.txt'.format(event_id,tmin,tmax), 'a+') as f:
+    f.write('{0} {1} {2} {3}\n'.format(station,int(sample_plot[0]),
                                                     int(sample_plot[1]),
                                                     int(sample_plot[2])
                                                     ))

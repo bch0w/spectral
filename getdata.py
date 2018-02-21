@@ -220,7 +220,7 @@ def fdsn_download(station,channel,start,end=False,response=False,
 
     return st, response
 
-def event_stream(station,channel,event_id=False):
+def event_stream(station,channel,event_id=False,pad=False):
     """Given a GEONET event ID, return raw waveform streams and response files
     Waveforms can be from RDF or GEONET permanent stations, chooses
     correct downloading format based on requests. If no event_id given, full
@@ -235,6 +235,8 @@ def event_stream(station,channel,event_id=False):
     :type event_id: str
     :param event_id: GEONET event id for earthquakes, if default, function will
                     simply collect a catalog of events for a given time periods
+    :type pad: int
+    :param pad: time in seconds to pad beginning of data, should be positive
     """
     # parse arguments
     station_id = station.upper() # i.e. RD06 or PXZ
@@ -262,7 +264,8 @@ def event_stream(station,channel,event_id=False):
 
     for event in cat:
         origin = event.origins[0].time
-        if buffe
+        if pad:
+            origin = origin - abs(pad)
 
         # temporary station filepaths
         if choice == "rdf":
