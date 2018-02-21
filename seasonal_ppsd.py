@@ -39,7 +39,7 @@ month_dict = {"JAN":"001*031",
               "DEC":"335*365"}
 
 year = "2015"
-comp = "N"
+comp = "Z"
 npz_path = os.path.join(pathnames()['ppsd'],
                         "geonet_monthly_decimateby5",
                         year,

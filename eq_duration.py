@@ -31,10 +31,8 @@ mpl.rcParams['lines.linewidth'] = 1
 # set station and channel ID
 channel_dict = {"Z":"HH*","S":"BN*"}
 station = sys.argv[1].upper() # i.e. gkbs
+event_id = sys.argv[2] #2014p240655,2015p82263,2016p892721,2017p059122
 channel = channel_dict[station[-1]]
-
-# origin time per event
-event_id = "2015p822263"
 
 # origin = UTCDateTime('2016-11-13T11:02:56') # kaikoura
 
@@ -61,8 +59,8 @@ st.attach_response(inventories=inv)
 st.remove_response(output='VEL',water_level=100)
 
 # filter window
-tmin = 1
-tmax = 50
+tmin = 6
+tmax = 30
 freqmin = 1/tmax
 freqmax = 1/tmin
 st.detrend("simple")
@@ -70,7 +68,7 @@ st.taper(max_percentage=0.05)
 st.filter("bandpass",freqmin=freqmin,freqmax=freqmax,corners=3)
 
 tracestart = start + 200
-traceend = start + 700
+traceend = start + 1000
 st.trim(starttime=tracestart,endtime=traceend)
 
 # ================================ SEPARATE DATA STREAMS =======================
@@ -250,14 +248,14 @@ if not os.path.exists(figure_folder):
 figure_name = "{}_time.png".format(station)
 outpath = os.path.join(figure_folder,figure_name)
 f.savefig(outpath,dpi=250)
-# plt.show()
+plt.show()
 
 # ================================ TEXT FILE ===================================
-with open(figure_folder + 'durations.txt', 'a+') as f:
-    f.write('{0}_time {1} {2} {3}\n'.format(station,int(sample_plot[0]),
-                                                    int(sample_plot[1]),
-                                                    int(sample_plot[2])
-                                                    ))
+# with open(figure_folder + 'durations.txt', 'a+') as f:
+#     f.write('{0}_time {1} {2} {3}\n'.format(station,int(sample_plot[0]),
+#                                                     int(sample_plot[1]),
+#                                                     int(sample_plot[2])
+#                                                     ))
     # f.write('{0}_integral {1} {2} {3}\n'.format(station,
     #                                                     int(duration_i[0]),
     #                                                     int(duration_i[1]),

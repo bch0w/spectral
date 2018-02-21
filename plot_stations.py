@@ -45,6 +45,11 @@ inv = c.get_stations(network='NZ',
                     maxlongitude=lat_lon[3],
                     level="station")
 
+if choice == 'D':
+    event = c.get_events(eventid=event_id)[0]
+    event_lat,event_lon = event.origins[0].latitude,event.origins[0].longitude
+    event_mag = round(event.magnitudes[0].mag,2)
+
 # plot stations
 fig = inv.plot(label=label_dict[choice],
         marker='.',
@@ -81,10 +86,15 @@ fig = inv.plot(label=label_dict[choice],
 # plt.ylim(map_limy)
 
 # ========= plot low velocity overlay with a polygon =========
-nw_lat,nw_lon = -37.9281, 178.1972
-ne_lat,ne_lon = -38.7006, 179.5930
-se_lat,se_lon = -40.0229, 178.4043
-sw_lat,sw_lon = -39.2371, 176.9909
+# old coordinates
+    # nw_lat,nw_lon = -37.9281, 178.1972
+    # ne_lat,ne_lon = -38.7006, 179.5930
+    # se_lat,se_lon = -40.0229, 178.4043
+    # sw_lat,sw_lon = -39.2371, 176.9909
+nw_lat,nw_lon = -39.8764, 178.5385
+ne_lat,ne_lon = -39.0921, 177.1270
+se_lat,se_lon = -37.5630, 178.5248
+sw_lat,sw_lon = -38.3320, 179.9157
 x1,y1 = fig.bmap(nw_lon,nw_lat)
 x2,y2 = fig.bmap(ne_lon,ne_lat)
 x3,y3 = fig.bmap(se_lon,se_lat)
@@ -117,23 +127,62 @@ for sta in durstations:
     lats.append(sta_info.latitude)
     lons.append(sta_info.longitude)
 
+map_x,map_y = fig.bmap(lons,lats)
+
+# drop stations manual choice if they are too noisy to contribute
+if (event_id == "2015p822263") and (component != "vertical"):
+    drop_list = ["URZ"]
+elif event_id == "2017p059122":
+    drop_list = ["BFZ","PXZ"]
+else:
+    drop_list = []
+
+if drop_list:
+    # grab values for drop list
+    sx,sy,xds,xdu = zip(*(
+                (w,x,y,z) for w,x,y,z in zip(
+                    map_x,map_y,durstations,durations) if y in drop_list))
+    # new lists without dropped values
+    map_x,map_y,durstations,durations = zip(*(
+                (w,x,y,z) for w,x,y,z in zip(
+                    map_x,map_y,durstations,durations) if y not in drop_list))
+
 # set colors
 D = [(_/max(durations))**4 for _ in durations]
 cmap = plt.get_cmap('YlGn')
 colors = cmap(D)
 
 # plot onto basemap
-x,y = fig.bmap(lons,lats)
-scatter = fig.bmap.scatter(x,y,marker='o',s=100,zorder=1000,c=colors)
+scatter = fig.bmap.scatter(map_x,map_y,marker='o',s=65,zorder=1000,c=colors)
 for i,(sta,dur) in enumerate(zip(durstations,durations)):
     plt.annotate("{}/{}".format(sta,dur),
-                    xy=(x[i],y[i]),
-                    xytext=(x[i]+5000,y[i]+5000),
-                    fontsize=8)
-# set limits based off map - only works for predefined map, for more dynamic
-# call use fig.bmap(lon,lat)
-plt.xlim([370000,756892])
-plt.ylim([248581,563109])
+                    xy=(map_x[i],map_y[i]),
+                    xytext=(map_x[i]+5000,map_y[i]+5000),
+                    fontsize=6)
+# plot dropped stations
+if drop_list:
+    fig.bmap.scatter(sx,sy,marker='o',s=65,zorder=10001,c='r',edgecolor='k')
+    for i,(sta,dur) in enumerate(zip(xds,xdu)):
+        plt.annotate("{}/{}".format(sta,dur),
+                        xy=(sx[i],sx[i]),
+                        xytext=(sx[i]+5000,sy[i]+5000),
+                        fontsize=6)
+
+# plot event
+if choice == 'D':
+    eventx,eventy = fig.bmap(event_lon,event_lat)
+    fig.bmap.scatter(eventx,eventy,
+                        marker='o',
+                        s=100,
+                        c='orange',
+                        zorder=200,
+                        edgecolor='k')
+    plt.annotate("M{}".format(event_mag),
+                    xy=(eventx,eventy),
+                    xytext=(eventx-7500*2,eventy+7500),
+                    fontsize=8,
+                    zorder=200)
+
 plt.title('{name} {comp} component durations | {Eid}'.format(
             comp=component,
             name=text_dict[choice],
@@ -142,4 +191,4 @@ fname = "{comp}_{Eid}.png".format(comp=component,Eid=event_id)
 fullname = pathnames()['plots'] + "durations/{}".format(fname)
 plt.savefig(fullname,dpi=200)
 
-plt.show()
+# plt.show()
