@@ -262,6 +262,7 @@ def event_stream(station,channel,event_id=False):
 
     for event in cat:
         origin = event.origins[0].time
+        if buffe
 
         # temporary station filepaths
         if choice == "rdf":

@@ -34,19 +34,20 @@ station = sys.argv[1].upper() # i.e. gkbs
 event_id = sys.argv[2] #2014p240655,2015p82263,2016p892721,2017p059122
 channel = channel_dict[station[-1]]
 
-# origin = UTCDateTime('2016-11-13T11:02:56') # kaikoura
+# for determining amplitude threshold
+threshold_percentage = 0.125
 
+# origin = UTCDateTime('2016-11-13T11:02:56') # kaikoura
 
 # ================================ READ IN DATA ===============================
 st,inv,cat = event_stream(station=station,
                             channel=channel,
                             event_id=event_id)
-
 # set timing
 event = cat[0]
 origin = event.origins[0].time
-start = origin - 200
-end = origin + 1200
+start = origin
+end = origin + 2000
 year = start.year
 julday = start.julday
 
@@ -67,8 +68,8 @@ st.detrend("simple")
 st.taper(max_percentage=0.05)
 st.filter("bandpass",freqmin=freqmin,freqmax=freqmax,corners=3)
 
-tracestart = start + 200
-traceend = start + 1000
+tracestart = start
+traceend = start + 2000
 st.trim(starttime=tracestart,endtime=traceend)
 
 # ================================ SEPARATE DATA STREAMS =======================
@@ -106,19 +107,20 @@ ax1b.set_ylabel('E/2 (m/s)')
 for ax in [ax1,ax1a,ax1b]:
     ax.grid(which="both")
 
-plot_title = "{eid} Earthquake | {instr} | {otime} | {t0}-{t1} s".format(
+plot_title = "{eid} Earthquake | {instr} | {otime} | {t0}-{t1} s | {T}".format(
             eid=event_id,
             otime=stats.starttime,
             instr=st[0].get_id()[:-4],
             t0=tmin,
-            t1=tmax)
+            t1=tmax,
+            T="{}%".format(round(threshold_percentage * 100,2)))
 ax1.set_title(plot_title,fontsize=10)
 
 # ===================== AMPLITUDE PROCESSING FOR SUBPLOT 3 =====================
 duration_a,tover_plot,aover_plot,threshold_plot,sample_plot = [],[],[],[],[]
 component_list = [verticalsquared,horizontal,groundmotion]
 
-threshold_percentage = 0.1
+# for each component, vertical, horizontal and vector sum
 for i,seismo in enumerate(component_list):
     # find peak amplitude, set threshold
     peak_amp = seismo.max()
@@ -144,6 +146,7 @@ for i,seismo in enumerate(component_list):
             samples.append(len(s_edge))
             s_edge,a_edge = [s_over[i+1]],[a_over[i+1]]
         else:
+            # if the next sample is the same, keep going
             s_edge.append(S)
             a_edge.append(A)
 
@@ -167,7 +170,7 @@ for AX,DU,CL,TO,AO,LA,TH,SA in zip(axes,duration_a,component_list,
 
     # plot
     AX.plot(t,CL,'k')
-    AX.scatter(TO,AO,c='r',marker='x',s=1,zorder=100)
+    AX.scatter(TO,AO,c='r',marker='x',s=0.5,zorder=100)
     AX.set_ylabel('{}'.format(LA))
     # set threshold line and annotation
     h_lab = "Threshold = {}% peak amplitude".format(
@@ -189,55 +192,6 @@ for AX,DU,CL,TO,AO,LA,TH,SA in zip(axes,duration_a,component_list,
 
 ax3b.set_xlabel("Time (sec)")
 
-# ===================== INTEGRAL PROCESSING FOR SUBPLOT 3 =====================
-    # duration_i,energystart_plot,energyend_plot = [],[],[]
-    #
-    # thresh_max = 0.95
-    # thresh_min = 0.025
-    # component_list = [vertical,horizontal,groundmotion]
-    # for i,seismo in enumerate(component_list):
-    #     seismo **= 2
-    #
-    #     total_energy = np.trapz(seismo,t)
-    #     threshold = [thresh_min*total_energy, thresh_max*total_energy]
-    #
-    #     # iterate over waveform by 1 sec intervals
-    #     temp_energy = 0
-    #     energy_start = 0
-    #     while temp_energy < threshold[0]:
-    #         energy_start += samp_rate
-    #         temp_energy = np.trapz(seismo[0:energy_start],t[0:energy_start])
-    #
-    #     energy_end = energy_start
-    #     while temp_energy < threshold[1]:
-    #         energy_end += samp_rate
-    #         temp_energy = np.trapz(seismo[0:energy_end],t[0:energy_end])
-    #
-    #     energystart_plot.append(energy_start)
-    #     energyend_plot.append(energy_end)
-    #     duration_i.append((energy_end-energy_start)/samp_rate)
-    #
-    #
-    # # ===================== SUBPLOT 3,3a,3b (integral criteria) ====================
-    # axes = [ax3,ax3a,ax3b]
-    # labels = ['Z','N+E','Z+N+E']
-    # for AX,DU,CL,ES,EE,LA in zip(
-    #         axes,duration_i,component_list,energystart_plot,energyend_plot,labels):
-    #     # plot
-    #     AX.plot(t,CL**2,'k')
-    #     AX.plot(t[ES:EE],(CL**2)[ES:EE],'r',
-    #         label='{min}% < A^2 < {max}% E'.format(min=thresh_min*100,
-    #                                                             max=thresh_max*100))
-    #     AX.set_ylabel('{}'.format(LA))
-    #     ano_x = t[EE]
-    #     ano_y = (CL**2).max()/2
-    #     AX.annotate("Duration criteria: {}s".format(round(DU,2)),
-    #                                                 xy=(ano_x,ano_y),
-    #                                                 xytext=(ano_x,ano_y))
-    #     AX.grid()
-    #
-    # ax3b.set_xlabel("Time (sec)")
-
 # ====================== FINAL FIGURE ADJUSTMENTS ==============================
 plt.xlim([0,ano_x+100])
 plt.subplots_adjust(wspace=.5, hspace=0)
@@ -245,17 +199,17 @@ plt.subplots_adjust(wspace=.5, hspace=0)
 figure_folder = pathnames()["plots"]+ 'waveforms/{}/'.format(event_id)
 if not os.path.exists(figure_folder):
     os.makedirs(figure_folder)
-figure_name = "{}_time.png".format(station)
+figure_name = "{0}_{1}-{2}.png".format(station,tmin,tmax)
 outpath = os.path.join(figure_folder,figure_name)
-f.savefig(outpath,dpi=250)
+# f.savefig(outpath,dpi=250)
 plt.show()
 
 # ================================ TEXT FILE ===================================
-# with open(figure_folder + 'durations.txt', 'a+') as f:
-#     f.write('{0}_time {1} {2} {3}\n'.format(station,int(sample_plot[0]),
-#                                                     int(sample_plot[1]),
-#                                                     int(sample_plot[2])
-#                                                     ))
+with open(figure_folder + '{}.txt'.format(event_id), 'a+') as f:
+    f.write('{0}_time {1} {2} {3}\n'.format(station,int(sample_plot[0]),
+                                                    int(sample_plot[1]),
+                                                    int(sample_plot[2])
+                                                    ))
     # f.write('{0}_integral {1} {2} {3}\n'.format(station,
     #                                                     int(duration_i[0]),
     #                                                     int(duration_i[1]),

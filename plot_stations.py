@@ -35,7 +35,7 @@ c = Client('GEONET')
 north_island = [-45,-35,175,180]
 north_island_zoom = [-40,-37,176,178.5]
 new_zealand = [-50,-35,165,180]
-lat_lon = north_island
+lat_lon = new_zealand
 inv = c.get_stations(network='NZ',
                     station=sta_dict[choice],
                     channel=chan_dict[choice],
