@@ -109,17 +109,13 @@ if choice != 'D':
     sys.exit()
 
 # ========= manual plot scatterpoints - really hacked together =========
-text_file = pathnames()['spectral']+'duration/{}.txt'.format(event_id)
+text_file = pathnames()['spectral']+'duration/{}_5-30.txt'.format(event_id)
 durations,durstations,lats,lons = [],[],[],[]
 with open(text_file,'r') as f:
     for line in f:
         eachline = line.split(' ')
-        if "time" in eachline[0]:
-            station = eachline[0].split('_')[0]
-            durstations.append(station)
-            durations.append(float(eachline[comp_dic[component]]))
-        else:
-            continue
+        durstations.append(eachline[0])
+        durations.append(float(eachline[comp_dic[component]]))
 
 # grab latitude and longitude information
 for sta in durstations:
@@ -189,6 +185,6 @@ plt.title('{name} {comp} component durations | {Eid}'.format(
             Eid=event_id))
 fname = "{comp}_{Eid}.png".format(comp=component,Eid=event_id)
 fullname = pathnames()['plots'] + "durations/{}".format(fname)
-plt.savefig(fullname,dpi=200)
+# plt.savefig(fullname,dpi=200)
 
-# plt.show()
+plt.show()

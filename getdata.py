@@ -4,7 +4,7 @@ FDSN webservices via obspy (@VIC)
 """
 import os
 import glob
-from obspy import UTCDateTime
+from obspy import UTCDateTime, read_inventory
 from obspy.clients.fdsn import Client
 
 def pathnames():
@@ -14,9 +14,9 @@ def pathnames():
     """
     cwd = os.getcwd()
     if cwd == "/Users/chowbr/Documents/subduction/spectral":
-        where = "GNS"
-    elif cwd == "/seis/prj/fwi/bchow/spectral":
         where = "VIC"
+    elif cwd == "/seis/prj/fwi/bchow/spectral":
+        where = "GNS"
     else:
         where = "OTHER"
     path_dictionary = {"spectral":os.path.join(cwd,''),

@@ -10,11 +10,11 @@ for station in MXZ HAZ PUZ URZ MWZ RTZ KNZ BKZ PXZ BFZ RATZ TSZ WAZ KHEZ VRZ HIZ
 do                                                                               
 python eq_duration.py "${station}" 2015p822263                                   
 done  
-for station in MXZ HAZ PUZ URZ MWZ RTZ KNZ BKZ PXZ BFZ RATZ TSZ WAZ KHEZ VRZ HIZ TLZ TOZ OPRZ MRZ
-do                                                                               
-python eq_duration.py "${station}" 2014p240655                                   
-done  
-for station in MXZ HAZ PUZ URZ MWZ RTZ KNZ BKZ PXZ BFZ RATZ TSZ WAZ KHEZ VRZ HIZ TLZ TOZ OPRZ MRZ
-do                                                                               
-python eq_duration.py "${station}" 2017p059122
-done
+#for station in MXZ HAZ PUZ URZ MWZ RTZ KNZ BKZ PXZ BFZ RATZ TSZ WAZ KHEZ VRZ HIZ TLZ TOZ OPRZ MRZ
+#do                                                                               
+#python eq_duration.py "${station}" 2014p240655                                   
+#done  
+#for station in MXZ HAZ PUZ URZ MWZ RTZ KNZ BKZ PXZ BFZ RATZ TSZ WAZ KHEZ VRZ HIZ TLZ TOZ OPRZ MRZ
+#do                                                                               
+#python eq_duration.py "${station}" 2017p059122
+#done
