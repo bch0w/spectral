@@ -203,15 +203,15 @@ if not os.path.exists(figure_folder):
     os.makedirs(figure_folder)
 figure_name = "{0}_{1}-{2}.png".format(station,tmin,tmax)
 outpath = os.path.join(figure_folder,figure_name)
-# f.savefig(outpath,dpi=250)
-plt.show()
+f.savefig(outpath,dpi=250)
+# plt.show()
 
 # ================================ TEXT FILE ===================================
-# with open(figure_folder + '{}_{}-{}.txt'.format(event_id,tmin,tmax), 'a+') as f:
-#     f.write('{0} {1} {2} {3}\n'.format(station,int(sample_plot[0]),
-#                                                     int(sample_plot[1]),
-#                                                     int(sample_plot[2])
-#                                                     ))
+with open(figure_folder + '{}_{}-{}.txt'.format(event_id,tmin,tmax), 'a+') as f:
+    f.write('{0} {1} {2} {3}\n'.format(station,int(sample_plot[0]),
+                                                    int(sample_plot[1]),
+                                                    int(sample_plot[2])
+                                                    ))
     # f.write('{0}_integral {1} {2} {3}\n'.format(station,
     #                                                     int(duration_i[0]),
     #                                                     int(duration_i[1]),

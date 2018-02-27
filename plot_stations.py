@@ -3,9 +3,11 @@
 import sys
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+import numpy as np
 from getdata import pathnames
-from obspy.clients.fdsn import Client
+from obspy import read_inventory, read_events
 from matplotlib.patches import Polygon
+from obspy.geodetics import locations2degrees
 
 # ignore warnings
 import warnings
@@ -29,28 +31,8 @@ color_dict = {'Z':'b','S':'r','D':'r'}
 text_dict = {'Z':'Seismometer','S':'Accelerometer','D':'Seismometer'}
 label_dict = {'Z':True,'S':True,'D':False}
 
-
-# grab station information
-c = Client('GEONET')
-north_island = [-45,-35,175,180]
-north_island_zoom = [-40,-37,176,178.5]
-new_zealand = [-50,-35,165,180]
-lat_lon = new_zealand
-inv = c.get_stations(network='NZ',
-                    station=sta_dict[choice],
-                    channel=chan_dict[choice],
-                    minlatitude=lat_lon[0],
-                    maxlatitude=lat_lon[1],
-                    minlongitude=lat_lon[2],
-                    maxlongitude=lat_lon[3],
-                    level="station")
-
-if choice == 'D':
-    event = c.get_events(eventid=event_id)[0]
-    event_lat,event_lon = event.origins[0].latitude,event.origins[0].longitude
-    event_mag = round(event.magnitudes[0].mag,2)
-
-# plot stations
+# grab station information and plot
+inv = read_inventory(pathnames()["data"] + "new_zealand_geonet_stations.xml")
 fig = inv.plot(label=label_dict[choice],
         marker='.',
         projection="local",
@@ -86,11 +68,6 @@ fig = inv.plot(label=label_dict[choice],
 # plt.ylim(map_limy)
 
 # ========= plot low velocity overlay with a polygon =========
-# old coordinates
-    # nw_lat,nw_lon = -37.9281, 178.1972
-    # ne_lat,ne_lon = -38.7006, 179.5930
-    # se_lat,se_lon = -40.0229, 178.4043
-    # sw_lat,sw_lon = -39.2371, 176.9909
 nw_lat,nw_lon = -39.8764, 178.5385
 ne_lat,ne_lon = -39.0921, 177.1270
 se_lat,se_lon = -37.5630, 178.5248
@@ -108,12 +85,22 @@ if choice != 'D':
     plt.show()
     sys.exit()
 
-# ========= manual plot scatterpoints - really hacked together =========
-text_file = pathnames()['spectral']+'duration/{}_5-30.txt'.format(event_id)
+# ==================== PROCESSING FOR MAP =====================================
+event_pathname = pathnames()["data"] + event_id
+event = read_events(event_pathname,format="QUAKEML")[0]
+import ipdb;ipdb.set_trace()
+event_lat,event_lon = event.origins[0].latitude,event.origins[0].longitude
+event_mag = round(event.magnitudes[0].mag,2)
+
+# retrieve values from text file
+text_file = pathnames()['spectral']+'duration/{}_5-30_amplitudes.txt'.format(
+                                                                    event_id)
 durations,durstations,lats,lons = [],[],[],[]
 with open(text_file,'r') as f:
     for line in f:
         eachline = line.split(' ')
+        if "#" in eachline[0]:
+            continue
         durstations.append(eachline[0])
         durations.append(float(eachline[comp_dic[component]]))
 
@@ -123,68 +110,83 @@ for sta in durstations:
     lats.append(sta_info.latitude)
     lons.append(sta_info.longitude)
 
-map_x,map_y = fig.bmap(lons,lats)
-
-# drop stations manual choice if they are too noisy to contribute
-if (event_id == "2015p822263") and (component != "vertical"):
-    drop_list = ["URZ"]
-elif event_id == "2017p059122":
-    drop_list = ["BFZ","PXZ"]
-else:
-    drop_list = []
-
-if drop_list:
-    # grab values for drop list
-    sx,sy,xds,xdu = zip(*(
-                (w,x,y,z) for w,x,y,z in zip(
-                    map_x,map_y,durstations,durations) if y in drop_list))
-    # new lists without dropped values
-    map_x,map_y,durstations,durations = zip(*(
-                (w,x,y,z) for w,x,y,z in zip(
-                    map_x,map_y,durstations,durations) if y not in drop_list))
-
 # set colors
-D = [(_/max(durations))**4 for _ in durations]
-cmap = plt.get_cmap('YlGn')
+D = [(_/max(durations)) for _ in durations]
+cmap = plt.get_cmap('plasma')
 colors = cmap(D)
 
-# plot onto basemap
-scatter = fig.bmap.scatter(map_x,map_y,marker='o',s=65,zorder=1000,c=colors)
-for i,(sta,dur) in enumerate(zip(durstations,durations)):
-    plt.annotate("{}/{}".format(sta,dur),
+# determine station distances as colors
+distances = []
+for La,Lo in zip(lats,lons):
+    dist = locations2degrees(La,Lo,event_lat,event_lon)
+    dist *= (2.0 * 6371 * np.pi / 360.0)
+    distances.append(dist)
+dist_plot = distances
+distances = [_/max(distances) for _ in distances]
+cmap2 = plt.get_cmap('plasma_r')
+distance_colors = cmap2(distances)
+
+# ================================= PLOT ON BASEMAP ===========================
+# plot stations
+map_x,map_y = fig.bmap(lons,lats)
+scatter = fig.bmap.scatter(map_x,map_y,
+                            marker='v',
+                            s=150,
+                            zorder=1000,
+                            c=colors,
+                            edgecolor='k')
+
+# annotate stations
+for i,(sta,dur,ds) in enumerate(zip(durstations,durations,dist_plot)):
+    plt.annotate("{0}({1}mm/s)[{2}km]".format(sta,round(dur,2),int(ds)),
                     xy=(map_x[i],map_y[i]),
                     xytext=(map_x[i]+5000,map_y[i]+5000),
-                    fontsize=6)
-# plot dropped stations
-if drop_list:
-    fig.bmap.scatter(sx,sy,marker='o',s=65,zorder=10001,c='r',edgecolor='k')
-    for i,(sta,dur) in enumerate(zip(xds,xdu)):
-        plt.annotate("{}/{}".format(sta,dur),
-                        xy=(sx[i],sx[i]),
-                        xytext=(sx[i]+5000,sy[i]+5000),
-                        fontsize=6)
+                    fontsize=10,
+                    weight='bold',
+                    zorder=500)
 
 # plot event
-if choice == 'D':
-    eventx,eventy = fig.bmap(event_lon,event_lat)
-    fig.bmap.scatter(eventx,eventy,
-                        marker='o',
-                        s=100,
-                        c='orange',
-                        zorder=200,
-                        edgecolor='k')
-    plt.annotate("M{}".format(event_mag),
-                    xy=(eventx,eventy),
-                    xytext=(eventx-7500*2,eventy+7500),
-                    fontsize=8,
-                    zorder=200)
+eventx,eventy = fig.bmap(event_lon,event_lat)
+fig.bmap.scatter(eventx,eventy,
+                    marker='o',
+                    s=150,
+                    c='c',
+                    zorder=200,
+                    edgecolor='k')
+plt.annotate("M{}".format(event_mag),
+                xy=(eventx,eventy),
+                xytext=(eventx-7500*2,eventy+7500),
+                fontsize=12,
+                zorder=200,
+                weight='bold')
 
-plt.title('{name} {comp} component durations | {Eid}'.format(
+
+# connect event and stations with colored lines
+for X,Y,DC in zip(map_x,map_y,distance_colors):
+    dist = locations2degrees(La,Lo,event_lat,event_lon)
+    dist *= (2.0 * 6371 * np.pi / 360.0)
+    plt.annotate('', xy=(X,Y),
+                    xycoords='data',
+                    xytext=(eventx,eventy),
+                    textcoords='data',
+                    arrowprops=dict(arrowstyle="-",color=DC),
+                    alpha=0.25,
+                    zorder=1)
+
+# set limits via lat lon coordinates
+LLC = fig.bmap(173,-41)
+URC = fig.bmap(180,-37)
+plt.xlim([LLC[0],URC[0]])
+plt.ylim([LLC[1],URC[1]])
+
+# final figure adjustments
+plt.title('{name} {comp} peak amplitudes | {Eid}'.format(
             comp=component,
             name=text_dict[choice],
             Eid=event_id))
 fname = "{comp}_{Eid}.png".format(comp=component,Eid=event_id)
 fullname = pathnames()['plots'] + "durations/{}".format(fname)
+
 # plt.savefig(fullname,dpi=200)
 
 plt.show()

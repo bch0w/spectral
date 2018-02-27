@@ -1,4 +1,7 @@
-"""use obspy to create station maps
+"""PARED AND EDITED SCRIPT TO MAKE EQ DURATION MAPS FOR VERTICAL COMPONENT
+FIGURES FOR SLOW SLIP WORKSHOP PRESENTATION
+
+use obspy to create station maps
 """
 import sys
 import numpy as np
@@ -53,7 +56,7 @@ for event_id in event_list:
 all_durations,all_stations,all_lats,all_lons = [],[],[],[]
 for event_id in event_list:
     text_file = pathnames(
-                )['spectral']+'duration/forSSW/{}_5-30.txt'.format(event_id)
+                )['spectral']+'duration/forSSW/{}_amplitudes.txt'.format(event_id)
     durations,durstations,lats,lons = [],[],[],[]
     with open(text_file,'r') as f:
         for line in f:

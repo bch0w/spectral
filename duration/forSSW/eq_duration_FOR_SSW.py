@@ -1,4 +1,7 @@
 """19.2.18
+PARED AND EDITED SCRIPT TO MAKE EQ DURATION PLOTS FOR VERTICAL COMPONENT
+FIGURES FOR SLOW SLIP WORKSHOP PRESENTATION
+
 Plot waveforms of all three components for a given GEONET permanent station,
 or a temporary RDF station, with preprocessing and filtering set in the script.
 Also subplots of determining duration criteria, which is captured using an
@@ -23,6 +26,8 @@ import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 # global plot parameters
+# mpl.rcParams['text.usetex'] = True
+# mpl.rcParams['font',**{'family':'sans-serif','sans-serif':['Helvetica']}]
 mpl.rcParams['font.size'] = 15
 mpl.rcParams['lines.linewidth'] = 1
 
@@ -77,6 +82,7 @@ st.trim(starttime=tracestart,endtime=traceend)
 
 # ================================ SEPARATE DATA STREAMS =======================
 vertical = st.select(component='Z')[0].data
+vertical *= (10**3)
 
 stats = st[0].stats
 samp_rate = int(stats.sampling_rate)
@@ -85,23 +91,14 @@ t = np.linspace(0,stats.endtime-stats.starttime,stats.npts)
 
 # ================================ PLOTTING ====================================
 f,(ax1,ax3) = plt.subplots(2,
-                                    sharex=True,
-                                    sharey=False,
-                                    figsize=(9,5))
+                            sharex=True,
+                            sharey=False,
+                            figsize=(9,5))
 
 # ================================ SUBPLOT 1,1a,1b (waveform) ==================
 ax1.plot(t,vertical,linewidth=1.5,c='k')
-ax1.set_ylabel('Z (m/s)')
+ax1.set_ylabel('Vertical Velocity (mm/s)')
 ax1.grid(which="both")
-
-plot_title = "{eid} | {instr} | {otime} | {t0}-{t1} s | {T}".format(
-            eid=event_id,
-            otime=stats.starttime,
-            instr=st[0].get_id()[:-4],
-            t0=tmin,
-            t1=tmax,
-            T="{}%".format(round(threshold_percentage * 100,2)))
-ax1.set_title(plot_title,fontsize=10)
 
 # ===================== AMPLITUDE PROCESSING FOR SUBPLOT 3 =====================
 duration_a,tover_plot,aover_plot,threshold_plot,sample_plot = [],[],[],[],[]
@@ -150,7 +147,7 @@ aover_plot.append(a_over)
 axes = [ax3]
 component_list = [seismo]
 
-labels = ['Z']
+labels = ['']
 for AX,DU,CL,TO,AO,LA,TH,SA in zip(axes,duration_a,component_list,
                                 tover_plot,aover_plot,labels,
                                 threshold_plot,sample_plot):
@@ -180,9 +177,29 @@ for AX,DU,CL,TO,AO,LA,TH,SA in zip(axes,duration_a,component_list,
 ax3.set_xlabel("Time (sec)")
 
 # ====================== FINAL FIGURE ADJUSTMENTS ==============================
-plt.xlim([0,ano_x+100])
+plot_title = "{eid} | {instr} | {otime} | {t0}-{t1}s | {T} | {D}s | {P}".format(
+            eid=event_id,
+            otime=stats.starttime,
+            instr=st[0].get_id()[:-4],
+            t0=tmin,
+            t1=tmax,
+            T="{}%".format(round(threshold_percentage * 100,2)),
+            D=round(SA,2),
+            P=peak_amp)
+
+ax1.set_title(plot_title,fontsize=10)
+plt.xlim([0,500])
 plt.subplots_adjust(wspace=.5, hspace=0)
+
+figure_folder = pathnames()["plots"]+ 'waveforms/{}/'.format(event_id)
+if not os.path.exists(figure_folder):
+    os.makedirs(figure_folder)
+figure_name = "{0}_{1}-{2}.png".format(station,tmin,tmax)
+outpath = os.path.join(figure_folder,figure_name)
 
 
 # f.savefig(outpath,dpi=250)
-plt.show()
+# plt.show()
+
+with open(figure_folder + '{}_{}-{}_amplitudes.txt'.format(event_id,tmin,tmax), 'a+') as f:
+    f.write('{0} {1}\n'.format(station,peak_amp))

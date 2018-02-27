@@ -23,6 +23,7 @@ def pathnames():
                         "rdf":os.path.join(cwd,'..','RDF_Array',''),
                         "plots":os.path.join(cwd,'output_plots',''),
                         "ppsd":os.path.join(cwd,'ppsd_arrays',''),
+                        "data":os.path.join(cwd,'datafiles',''),
                         "where": where
                         }
 
@@ -320,3 +321,52 @@ def event_stream(station,channel,event_id=False,pad=False):
                                         response = True)
 
         return st, inv, cat
+
+def get_those_stations():
+    """misc station getter to be copy-pasted"""
+    from obspy.clients.fdsn import Client
+    c = Client("GEONET")
+    north_island = [-45,-35,175,180]
+    north_island_zoom = [-40,-37,176,178.5]
+    new_zealand = [-50,-35,165,180]
+    lat_lon = new_zealand
+    inv = c.get_stations(network='NZ',
+                        station=sta_dict[choice],
+                        channel=chan_dict[choice],
+                        minlatitude=lat_lon[0],
+                        maxlatitude=lat_lon[1],
+                        minlongitude=lat_lon[2],
+                        maxlongitude=lat_lon[3],
+                        level="station")
+    inv.write('STATION_PLACEHOLDER.xml',format='STATIONXML')
+
+def get_those_events():
+    """misc event getter to be copy-pasted"""
+    from obspy.clients.fdsn import Client
+    c = Client("GEONET")
+    # for full catalog
+    cat = c.get_events(starttime=t_start,
+                        endtime=t_end,
+                        minmagnitude=4,
+                        maxmagnitude=6,
+                        minlatitude=-50,
+                        maxlatitude=-35,
+                        minlongitude=165,
+                        maxlongitude=180,
+                        orderby="magnitude")
+    # for single event
+    from obspy.clients.fdsn import Client
+    c = Client("GEONET")
+    event_id = ""
+    cat = c.get_events(eventid=event_id)
+    cat.write("EVENT_PLACEHOLDER.xml",format="QUAKEML")
+
+
+
+
+
+
+
+
+
+    
