@@ -322,6 +322,21 @@ def event_stream(station,channel,event_id=False,pad=False):
 
         return st, inv, cat
 
+def get_moment_tensor(event_id):
+    """gets moment tensor as array from geonet CSV file"""
+    import csv
+    csvfile = pathnames()['spectral'] + "datafiles/GeoNet_CMT_solutions.csv"
+    with open(csvfile,'r') as f:
+        reader = csv.reader(f)
+        for i,row in enumerate(reader):
+            if i == 0:
+                tags = row
+            if event_id == row[0]:
+                values = [float(_) for _ in row[1:]]
+                row = [row[0]] + values
+                MT = dict(zip(tags,row))
+                return MT
+
 def get_those_stations():
     """misc station getter to be copy-pasted"""
     from obspy.clients.fdsn import Client
@@ -360,13 +375,3 @@ def get_those_events():
     event_id = ""
     cat = c.get_events(eventid=event_id)
     cat.write("EVENT_PLACEHOLDER.xml",format="QUAKEML")
-
-
-
-
-
-
-
-
-
-    

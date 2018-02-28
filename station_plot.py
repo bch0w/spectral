@@ -4,19 +4,21 @@ import sys
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import numpy as np
-from getdata import pathnames
+from getdata import pathnames, get_moment_tensor
 from obspy import read_inventory, read_events
 from matplotlib.patches import Polygon
 from obspy.geodetics import locations2degrees
+from obspy.imaging.beachball import beach
 
 # ignore warnings
 import warnings
 warnings.filterwarnings("ignore",category=mpl.cbook.mplDeprecation)
 
+
 # command line choices
 choice = sys.argv[1].upper() #s,z,d
 if choice == 'D':
-    event_id = sys.argv[2] #2014p240655,2015p822263,2016p892721,2017p059122
+    event_id = sys.argv[2] #2014p240655,2015p822263,2016p842451,2922302
     component = sys.argv[3].lower() #vertical,horizontal,groundmotion
 if choice not in ['S','Z','D']:
     sys.exit("\tChoice should be s(acc), z(seis) or d(dur)")
@@ -40,6 +42,7 @@ fig = inv.plot(label=label_dict[choice],
         color=color_dict[choice],
         size=6,
         show=False)
+ax = plt.gca()
 
 # ========= plot RDF station array =========
     # stations,lats,lons = [],[],[]
@@ -79,7 +82,7 @@ x4,y4 = fig.bmap(sw_lon,sw_lat)
 poly = Polygon([(x1,y1),(x2,y2),(x3,y3),(x4,y4)],
                 facecolor='red',edgecolor='k',
                 linewidth=1,alpha=0.2)
-plt.gca().add_patch(poly)
+ax.add_patch(poly)
 
 if choice != 'D':
     plt.show()
@@ -88,7 +91,6 @@ if choice != 'D':
 # ==================== PROCESSING FOR MAP =====================================
 event_pathname = pathnames()["data"] + event_id
 event = read_events(event_pathname,format="QUAKEML")[0]
-import ipdb;ipdb.set_trace()
 event_lat,event_lon = event.origins[0].latitude,event.origins[0].longitude
 event_mag = round(event.magnitudes[0].mag,2)
 
@@ -145,17 +147,23 @@ for i,(sta,dur,ds) in enumerate(zip(durstations,durations,dist_plot)):
                     weight='bold',
                     zorder=500)
 
+
 # plot event
 eventx,eventy = fig.bmap(event_lon,event_lat)
-fig.bmap.scatter(eventx,eventy,
-                    marker='o',
-                    s=150,
-                    c='c',
-                    zorder=200,
-                    edgecolor='k')
+MT = get_moment_tensor(event_id)
+FM = [MT['strike1'],MT['dip1'],MT['rake1']]
+b = beach(FM,xy=(eventx,eventy),width=3E4,linewidth=1,facecolor='r')
+b.set_zorder(10)
+ax.add_collection(b)
+# fig.bmap.scatter(eventx,eventy,
+#                     marker='o',
+#                     s=150,
+#                     c='c',
+#                     zorder=200,
+#                     edgecolor='k')
 plt.annotate("M{}".format(event_mag),
                 xy=(eventx,eventy),
-                xytext=(eventx-7500*2,eventy+7500),
+                xytext=(eventx,eventy),
                 fontsize=12,
                 zorder=200,
                 weight='bold')
@@ -187,6 +195,6 @@ plt.title('{name} {comp} peak amplitudes | {Eid}'.format(
 fname = "{comp}_{Eid}.png".format(comp=component,Eid=event_id)
 fullname = pathnames()['plots'] + "durations/{}".format(fname)
 
-# plt.savefig(fullname,dpi=200)
+plt.savefig(fullname,dpi=200)
 
 plt.show()
