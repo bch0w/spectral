@@ -8,10 +8,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.cm as mplcm
 import matplotlib.colors as colors
-
+from obspy.signal import PPSD
 from random import shuffle
 from getdata import pathnames
-from obspy.signal import PPSD
 from obspy.signal.spectral_estimation import get_nlnm, get_nhnm
 
 def color_cycle(ax,length,cmap):
@@ -27,12 +26,12 @@ def color_cycle(ax,length,cmap):
     ax.set_prop_cycle('color',colorrange)
 
 #  =================================== MAIN ===================================
-station_list = ['PUZ', 'TSZ', 'TLZ', 'HAZ', 'KNZ', 'TOZ', 'KHEZ', 'MKAZ', 'MRZ',
+station_list = ['PUZ', 'TSZ', 'TLZ', 'HAZ', 'KNZ', 'TOZ', 'KHEZ', 'MRZ',
                 'BFZ', 'WAZ', 'RTZ', 'KUZ', 'GRZ', 'BKZ', 'WCZ', 'URZ',
                 'MXZ', 'PXZ', 'OUZ', 'MWZ', 'RATZ', 'OPRZ', 'HIZ']
-                #'VRZ', 'WSRZ'
+                #'VRZ', 'WSRZ' 'MKAZ'
 
-npz_path = os.path.join(pathnames()['ppsd'],"geonet_db5_averages","")
+npz_path = os.path.join(pathnames()['ppsd'],"geonet_db5_summer1718","")
 periods = np.load(npz_path + "periods.npy")
 
 for component in ["Z","N","E","H"]:
@@ -58,7 +57,14 @@ for component in ["Z","N","E","H"]:
         if sta not in station_list:
             print(sta)
             continue
-        avg = np.load(fid)
+        _,ext = os.path.splitext(fid)
+        # read in data, could be npy or npz files
+        if ext == ".npy":
+            avg = np.load(fid)
+        elif ext == ".npz":
+            ppsd = PPSD.load_npz(fid)
+            avg = ppsd.get_percentile(percentile=50)[1]
+
         if sta in coastal:
             basin_avg.append(avg)
             basin_sta.append(sta)
@@ -84,6 +90,7 @@ for component in ["Z","N","E","H"]:
                         zorder=1)
 
 
+
     # take averages of all lines and plot
     average_of_basin_avg = np.median(np.array(basin_avg),axis=0)
     average_of_nonbasin_avg = np.median(np.array(nonbasin_avg),axis=0)
@@ -104,7 +111,7 @@ for component in ["Z","N","E","H"]:
     ax1.plot(nhnm_x,nhnm_y,'k',alpha=.8,zorder=1,linewidth=0.35)
 
     # plot parameters
-    ax1.set_title("2015 Geonet Permanent Seismometers\n"
+    ax1.set_title("Summer 17/18 Geonet Permanent Seismometers\n"
                 "Coastal vs. Noncoastal Stations {}".format(component))
     ax1.set_ylabel("Amplitude [m^2/s^4/Hz][dB]")
 
@@ -142,13 +149,12 @@ for component in ["Z","N","E","H"]:
                     color="gray",
                     zorder=1)
 
-    # doesnt work?
     ax2.hlines(y=0,xmin=1,xmax=100,
                 alpha=.9,linestyle='solid',color='k',linewidth=0.5,zorder=1)
 
     ax2.set_xscale("log")
     ax2.set_xlabel("Period (s)")
-    ax2.set_ylabel("Ampltidue [dB]")
+    ax2.set_ylabel("Baseline Variation [dB]")
 
     ax2.set_axisbelow(True)
     ax2.tick_params(which='both',direction='in',top=True,right=True)
@@ -166,5 +172,5 @@ for component in ["Z","N","E","H"]:
     plt.subplots_adjust(wspace=.5, hspace=.05)
     plt.tight_layout
     plt.savefig(pathnames()['plots']+
-                        "ppsd_plots/variations{}.png".format(component))
-    plt.show()
+                    "ppsd_plots/summer1718_variations{}.png".format(component))
+    # plt.show()

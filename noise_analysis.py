@@ -12,7 +12,7 @@ from obspy import read_inventory
 from obspy.signal import PPSD
 from obspy import UTCDateTime
 from obspy.imaging.cm import pqlx
-from getdata import geonet_internal, fdsn_download
+from getdata import geonet_internal, fdsn_download, pathnames
 
 # user input arguments
 parser = argparse.ArgumentParser(description='Download create PPSD for \
@@ -57,23 +57,23 @@ if network == 'NZ':
                                             channel=channel,
                                             start=start,
                                             end=end)
-    # else:
-        # data_files, resp_file =
+
 # RDF temporary network - includes all files, does not filter by time
 elif network == 'XX':
-    d1 = "/seis/prj/fwi/yoshi/RDF_Array/July2017_Sep2017/DATA_ALL/"
-    d2 = "/seis/prj/fwi/yoshi/RDF_Array/Sep2017_Nov2017/DATA_ALL"
-    d3 = "/seis/prj/fwi/bchow/RDF_Array/Nov2017_Jan2018/DATA_ALL/"
+    d1 = pathnames()["rdf"] + "July2017_Sep2017/DATA_ALL/"
+    d2 = pathnames()["rdf"] + "Sep2017_Nov2017/DATA_ALL"
+    d3 = pathnames()["rdf"] + "Nov2017_Jan2018/DATA_ALL/"
     data_files = []
     for D in [d1,d2,d3]:
         data_files += glob.glob(D + '{sta}*{cha}*'.format(sta=station,
                                                         cha=channel))
     data_files.sort()
     print("++ {} data files found".format(len(data_files)))
-    resp_file = "/seis/prj/fwi/bchow/RDF_Array/DATALESS.RDF.XX"
+    resp_file = pathnames()["rdf"] + "RDF_Array/DATALESS.RDF.XX"
 
 # read in response file, set decimate parameter
-inv = read_inventory(resp_file)
+print("Response: {}".format(resp_file[0]))
+inv = read_inventory(resp_file[0])
 
 # initialize PPSD with first datafile
 print("1/{} Initializing with data file: ".format(len(data_files)),
@@ -141,5 +141,5 @@ png_filepath = './output_plots/ppsd_plots/{}.png'.format(output_filename)
 ppsd.save_npz(npz_filepath)
 print("saved .npz file: ",npz_filepath)
 
-ppsd.plot(filename=png_filepath,cmap=pqlx,show_mean=True)
-print("saved .png file: ",png_filepath)
+# ppsd.plot(filename=png_filepath,cmap=pqlx,show_mean=True)
+# print("saved .png file: ",png_filepath)

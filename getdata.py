@@ -33,7 +33,7 @@ def geonet_internal(station,channel,start,end=False,response=True):
     """
     returns a list of pathnames for GEONET archives on GNS internal system.
     If response == True, also returns path for response.
-    If end not specified, returns a list of length 1 for day requested.
+    If end not specified, returns a list of length 1/seis/prj/fwi/yoshi/RDF_Array for day requested.
     Wildcards possible, however inventory returns a full list of instruments at
     a certain location, rather than a paired down list.
 
@@ -136,9 +136,10 @@ def geonet_internal(station,channel,start,end=False,response=True):
     NET,STA,LOC,CHA,SUFX,YEAR,JDAY = os.path.basename(
                                                 mseed_files[0]).split('.')
     if response:
-        response_filename = "RESP.{net}.{sta}.{loc}.*".format(net=NET,
+        response_filename = "RESP.{net}.{sta}.{loc}.{cha}".format(net=NET,
                                                             sta=STA,
-                                                            loc=LOC)
+                                                            loc=LOC,
+                                                            cha=CHA)
         response_filepath = glob.glob(
                                 os.path.join(resp_GNApath,response_filename))
         # print("++ response filepath")
