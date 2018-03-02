@@ -150,7 +150,7 @@ def geonet_internal(station,channel,start,end=False,response=True):
 
     return mseed_files, response_filepath
 
-def fdsn_download(station,channel,start,end=False,response=False,
+def fdsn_download(station,channel,start,network='NZ',end=False,response=False,
                                                     client="GEONET",cushion=0):
     """Download data via FDSN client for given station, channel and start
     and end times. Can output response as well. Return stream and response.
@@ -181,7 +181,7 @@ def fdsn_download(station,channel,start,end=False,response=False,
         end = start + 3600*24
 
     # set instrument id from arguments
-    instrument_id = 'NZ.{}.*.{}'.format(station,channel)
+    instrument_id = '{n}.{s}.*.{c}'.format(n=network,s=station,c=channel)
     # print("++ Requesting data for instrument: {}".format(instrument_id))
     net, sta, loc, cha = instrument_id.split('.')
 
