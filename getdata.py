@@ -13,17 +13,28 @@ def pathnames():
     correct pathname instead of setting them in every script
     """
     cwd = os.getcwd()
-    if cwd == "/Users/chowbr/Documents/subduction/spectral":
-        where = "VIC"
-    elif cwd == "/seis/prj/fwi/bchow/spectral":
+    base0 = cwd.split('/')[0]
+    base1 = cwd.split('/')[1]
+    base2 = cwd.split('/')[2]
+    basecheck = os.path.join(base0,base1,base2)
+    # if cwd == "/Users/chowbr/Documents/subduction/spectral":
+    #     where = "VIC"
+    # elif cwd == "/seis/prj/fwi/bchow/spectral":
+    #     where = "GNS"
+    # else:
+    #     where = "OTHER"
+    if basecheck == "seis/prj":
         where = "GNS"
-    else:
-        where = "OTHER"
-    path_dictionary = {"spectral":os.path.join(cwd,''),
-                        "rdf":os.path.join(cwd,'..','RDF_Array',''),
-                        "plots":os.path.join(cwd,'output_plots',''),
-                        "ppsd":os.path.join(cwd,'ppsd_arrays',''),
-                        "data":os.path.join(cwd,'datafiles',''),
+        cwd = "/seis/prj/fwi/bchow"
+    elif basecheck == "Users/chowbr":
+        where = "VIC"
+        cwd = "/Users/chowbr/Documents/subduction"
+    path_dictionary = {"spectral":os.path.join(cwd,'spectral',''),
+                        "rdf":os.path.join(cwd,'RDF_Array',''),
+                        "plots":os.path.join(cwd,'spectral','output_plots',''),
+                        "ppsd":os.path.join(cwd,'spectral','ppsd_arrays',''),
+                        "data":os.path.join(cwd,'spectral','datafiles',''),
+                        "kupe":os.path.join(cwd,'kupe',''),
                         "where": where
                         }
 
@@ -195,6 +206,7 @@ def fdsn_download(station,channel,start,network='NZ',end=False,response=False,
                             channel=cha,
                             starttime=start,
                             endtime=end)
+                            # attach_response=response)
 
     except Exception as e:
         print(e)
@@ -222,7 +234,7 @@ def fdsn_download(station,channel,start,network='NZ',end=False,response=False,
 
     return st, response
 
-def event_stream(station,channel,event_id=False,pad=False):
+def event_stream(station,channel,client="GEONET",event_id=False,pad=False):
     """Given a GEONET event ID, return raw waveform streams and response files
     Waveforms can be from RDF or GEONET permanent stations, chooses
     correct downloading format based on requests. If no event_id given, full
@@ -248,9 +260,9 @@ def event_stream(station,channel,event_id=False,pad=False):
     channel = channel.upper()
 
     # get event information
-    c = Client("GEONET")
+    event_client = Client("GEONET")
     if event_id:
-        cat = c.get_events(eventid=event_id)
+        cat = event_client.get_events(eventid=event_id)
     else:
         t_start = UTCDateTime("2017-320")
         t_end = UTCDateTime("2018-001")
@@ -319,7 +331,8 @@ def event_stream(station,channel,event_id=False,pad=False):
                 st, inv = fdsn_download(station=station_id,
                                         channel = channel[:2] + '*',
                                         start = origin,
-                                        response = True)
+                                        response = True,
+                                        client=client)
 
         return st, inv, cat
 
@@ -337,6 +350,7 @@ def get_moment_tensor(event_id):
                 row = [row[0]] + values
                 MT = dict(zip(tags,row))
                 return MT
+
 
 def get_those_stations():
     """misc station getter to be copy-pasted"""

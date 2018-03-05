@@ -45,6 +45,7 @@ st,inv,cat = event_stream(station=station,
                             channel=channel,
                             event_id=event_id,
                             pad=pad)
+import ipdb;ipdb.set_trace()
 # set timing
 event = cat[0]
 origin = event.origins[0].time

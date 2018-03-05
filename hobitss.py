@@ -27,12 +27,14 @@ for event in cat:
                                location="",
                                channel="*",
                                starttime=starttime,
-                               endtime=endtime)
+                               endtime=endtime,
+                               attach_response=True)
     LOBS_data = c.get_waveforms(network="YH",
                                station="LOBS*",
                                location="",
                                channel="HH*",
                                starttime=starttime,
-                               endtime=endtime)
+                               endtime=endtime,
+                               attach_response=True)
     EBS_data.plot(outfile='./output_plots/hobitss/{}_ebs.png'.format(eventid))
     LOBS_data.plot(outfile='./output_plots/hobitss/{}_lobs.png'.format(eventid))
