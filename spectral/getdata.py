@@ -25,10 +25,10 @@ def pathnames():
     #     where = "OTHER"
     if basecheck == "seis/prj":
         where = "GNS"
-        cwd = "/seis/prj/fwi/bchow"
+        cwd = "/seis/prj/fwi/bchow/spectral"
     elif basecheck == "Users/chowbr":
         where = "VIC"
-        cwd = "/Users/chowbr/Documents/subduction"
+        cwd = "/Users/chowbr/Documents/subduction/spectral"
     path_dictionary = {"spectral":os.path.join(cwd,'spectral',''),
                         "rdf":os.path.join(cwd,'RDF_Array',''),
                         "plots":os.path.join(cwd,'spectral','output_plots',''),
@@ -44,7 +44,7 @@ def geonet_internal(station,channel,start,end=False,response=True):
     """
     returns a list of pathnames for GEONET archives on GNS internal system.
     If response == True, also returns path for response.
-    If end not specified, returns a list of length 1/seis/prj/fwi/yoshi/RDF_Array for day requested.
+    If end not specified, returns a list of length 1 for day requested.
     Wildcards possible, however inventory returns a full list of instruments at
     a certain location, rather than a paired down list.
 
