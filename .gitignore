@@ -1,6 +1,11 @@
-NZ/
+#spectral
+spectra/NZ/
 __pycache__/
-ppsd_arrays/
-ppsd_arrays_OLD
-output_plots/
-datafiles/GCMT/
+spectral/ppsd_arrays/
+spectral/ppsd_arrays_OLD
+spectral/output_plots/
+spectral/datafiles/GCMT/
+#kupe
+kupe/DATA
+kupe/output_plots
+

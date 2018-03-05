@@ -1,0 +1,640 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<FDSNStationXML xmlns="http://www.fdsn.org/xml/station/1" schemaVersion="1.0">
+  <Source>GeoNet</Source>
+  <Sender>WEL(GNS_Test)</Sender>
+  <Module>Delta</Module>
+  <ModuleURI/>
+  <Created>2018-02-22T02:59:37</Created>
+  <Network code="NZ" restrictedStatus="open" startDate="1884-02-01T00:00:00">
+    <Description>New Zealand National Seismograph Network</Description>
+    <TotalNumberStations>2199</TotalNumberStations>
+    <SelectedNumberStations>39</SelectedNumberStations>
+    <Station code="BFZ" restrictedStatus="open" startDate="1996-04-03T00:00:00">
+      <Description>New Zealand National Seismograph Network</Description>
+      <Comment>
+        <Value>Location is given in WGS84</Value>
+      </Comment>
+      <Latitude datum="WGS84" unit="DEGREES">-40.679647283</Latitude>
+      <Longitude datum="WGS84" unit="DEGREES">176.246245098</Longitude>
+      <Elevation>283.0</Elevation>
+      <Site>
+        <Name>Birch Farm</Name>
+        <Description>15 km south of Pongaroa</Description>
+      </Site>
+      <CreationDate>1996-04-03T00:00:00</CreationDate>
+      <TotalNumberChannels>96</TotalNumberChannels>
+      <SelectedNumberChannels>18</SelectedNumberChannels>
+    </Station>
+    <Station code="BKZ" restrictedStatus="open" startDate="2004-02-11T00:00:00">
+      <Description>New Zealand National Seismograph Network</Description>
+      <Comment>
+        <Value>Location is given in WGS84</Value>
+      </Comment>
+      <Latitude datum="WGS84" unit="DEGREES">-39.165665643</Latitude>
+      <Longitude datum="WGS84" unit="DEGREES">176.492543736</Longitude>
+      <Elevation>706.0</Elevation>
+      <Site>
+        <Name>Black Stump Farm</Name>
+        <Description>51 km north-west of Napier</Description>
+      </Site>
+      <CreationDate>2004-02-11T00:00:00</CreationDate>
+      <TotalNumberChannels>33</TotalNumberChannels>
+      <SelectedNumberChannels>6</SelectedNumberChannels>
+    </Station>
+    <Station code="COVZ" restrictedStatus="open" startDate="1998-03-25T00:00:00">
+      <Description>Tongariro National Park volcano seismic network</Description>
+      <Comment>
+        <Value>Location is given in WGS84</Value>
+      </Comment>
+      <Latitude datum="WGS84" unit="DEGREES">-39.199914229</Latitude>
+      <Longitude datum="WGS84" unit="DEGREES">175.542401907</Longitude>
+      <Elevation>1133.0</Elevation>
+      <Site>
+        <Name>Chateau Observatory</Name>
+        <Description>26 km north-east of Ohakune</Description>
+      </Site>
+      <CreationDate>1998-03-25T00:00:00</CreationDate>
+      <TotalNumberChannels>39</TotalNumberChannels>
+      <SelectedNumberChannels>12</SelectedNumberChannels>
+    </Station>
+    <Station code="DUWZ" restrictedStatus="open" startDate="2003-12-10T00:00:00">
+      <Description>Wellington regional seismic network</Description>
+      <Comment>
+        <Value>Location is given in WGS84</Value>
+      </Comment>
+      <Latitude datum="WGS84" unit="DEGREES">-40.801714607</Latitude>
+      <Longitude datum="WGS84" unit="DEGREES">173.921645369</Longitude>
+      <Elevation>484.0</Elevation>
+      <Site>
+        <Name>D'Urville Island</Name>
+        <Description>16 km north-east of French Pass</Description>
+      </Site>
+      <CreationDate>2003-12-10T00:00:00</CreationDate>
+      <TotalNumberChannels>60</TotalNumberChannels>
+      <SelectedNumberChannels>9</SelectedNumberChannels>
+    </Station>
+    <Station code="ETVZ" restrictedStatus="open" startDate="2014-03-12T00:00:00">
+      <Description>Tongariro National Park volcano seismic network</Description>
+      <Comment>
+        <Value>Location is given in WGS84</Value>
+      </Comment>
+      <Latitude datum="WGS84" unit="DEGREES">-39.1357</Latitude>
+      <Longitude datum="WGS84" unit="DEGREES">175.7106</Longitude>
+      <Elevation>1236.0</Elevation>
+      <Site>
+        <Name>East Tongariro</Name>
+        <Description>17 km south-west of Turangi</Description>
+      </Site>
+      <CreationDate>2014-03-12T00:00:00</CreationDate>
+      <TotalNumberChannels>20</TotalNumberChannels>
+      <SelectedNumberChannels>6</SelectedNumberChannels>
+    </Station>
+    <Station code="FWVZ" restrictedStatus="open" startDate="1999-05-11T00:00:00">
+      <Description>Tongariro National Park volcano seismic network</Description>
+      <Comment>
+        <Value>Location is given in WGS84</Value>
+      </Comment>
+      <Latitude datum="WGS84" unit="DEGREES">-39.254945374</Latitude>
+      <Longitude datum="WGS84" unit="DEGREES">175.55295183</Longitude>
+      <Elevation>2043.0</Elevation>
+      <Site>
+        <Name>Far West</Name>
+        <Description>21 km north-east of Ohakune</Description>
+      </Site>
+      <CreationDate>1999-05-11T00:00:00</CreationDate>
+      <TotalNumberChannels>71</TotalNumberChannels>
+      <SelectedNumberChannels>18</SelectedNumberChannels>
+    </Station>
+    <Station code="GRZ" restrictedStatus="open" startDate="2010-05-13T00:00:00">
+      <Description>New Zealand National Seismograph Network</Description>
+      <Comment>
+        <Value>Location is given in WGS84</Value>
+      </Comment>
+      <Latitude datum="WGS84" unit="DEGREES">-36.2502</Latitude>
+      <Longitude datum="WGS84" unit="DEGREES">175.4578</Longitude>
+      <Elevation>146.0</Elevation>
+      <Site>
+        <Name>Great Barrier Island</Name>
+        <Description>67 km north of Whitianga</Description>
+      </Site>
+      <CreationDate>2010-05-13T00:00:00</CreationDate>
+      <TotalNumberChannels>45</TotalNumberChannels>
+      <SelectedNumberChannels>6</SelectedNumberChannels>
+    </Station>
+    <Station code="HAZ" restrictedStatus="open" startDate="2010-01-14T00:00:00">
+      <Description>New Zealand National Seismograph Network</Description>
+      <Comment>
+        <Value>Location is given in WGS84</Value>
+      </Comment>
+      <Latitude datum="WGS84" unit="DEGREES">-37.7561</Latitude>
+      <Longitude datum="WGS84" unit="DEGREES">177.7826</Longitude>
+      <Elevation>81.0</Elevation>
+      <Site>
+        <Name>Te Kaha</Name>
+        <Description>9 km east of Te Kaha</Description>
+      </Site>
+      <CreationDate>2010-01-14T00:00:00</CreationDate>
+      <TotalNumberChannels>33</TotalNumberChannels>
+      <SelectedNumberChannels>6</SelectedNumberChannels>
+    </Station>
+    <Station code="HIZ" restrictedStatus="open" startDate="2004-02-03T00:00:00">
+      <Description>New Zealand National Seismograph Network</Description>
+      <Comment>
+        <Value>Location is given in WGS84</Value>
+      </Comment>
+      <Latitude datum="WGS84" unit="DEGREES">-38.51292897</Latitude>
+      <Longitude datum="WGS84" unit="DEGREES">174.855686101</Longitude>
+      <Elevation>237.0</Elevation>
+      <Site>
+        <Name>Hauiti</Name>
+        <Description>8 km north of Mahoenui</Description>
+      </Site>
+      <CreationDate>2004-02-03T00:00:00</CreationDate>
+      <TotalNumberChannels>48</TotalNumberChannels>
+      <SelectedNumberChannels>9</SelectedNumberChannels>
+    </Station>
+    <Station code="KHEZ" restrictedStatus="open" startDate="2009-05-21T00:00:00">
+      <Description>Taranaki volcano seismic network</Description>
+      <Comment>
+        <Value>Location is given in WGS84</Value>
+      </Comment>
+      <Latitude datum="WGS84" unit="DEGREES">-39.2942</Latitude>
+      <Longitude datum="WGS84" unit="DEGREES">174.0145</Longitude>
+      <Elevation>929.0</Elevation>
+      <Site>
+        <Name>Kahui Hut</Name>
+        <Description>15 km south-east of Okato</Description>
+      </Site>
+      <CreationDate>2009-05-21T00:00:00</CreationDate>
+      <TotalNumberChannels>27</TotalNumberChannels>
+      <SelectedNumberChannels>6</SelectedNumberChannels>
+    </Station>
+    <Station code="KNZ" restrictedStatus="open" startDate="1998-10-19T00:00:00">
+      <Description>New Zealand National Seismograph Network</Description>
+      <Comment>
+        <Value>Location is given in WGS84</Value>
+      </Comment>
+      <Latitude datum="WGS84" unit="DEGREES">-39.021755222</Latitude>
+      <Longitude datum="WGS84" unit="DEGREES">177.673668799</Longitude>
+      <Elevation>32.0</Elevation>
+      <Site>
+        <Name>Kokohu</Name>
+        <Description>6 km north-west of Nuhaka</Description>
+      </Site>
+      <CreationDate>1998-10-19T00:00:00</CreationDate>
+      <TotalNumberChannels>72</TotalNumberChannels>
+      <SelectedNumberChannels>15</SelectedNumberChannels>
+    </Station>
+    <Station code="KUZ" restrictedStatus="open" startDate="1990-10-11T00:00:00">
+      <Description>New Zealand National Seismograph Network</Description>
+      <Comment>
+        <Value>Location is given in WGS84</Value>
+      </Comment>
+      <Latitude datum="WGS84" unit="DEGREES">-36.745228533</Latitude>
+      <Longitude datum="WGS84" unit="DEGREES">175.720872942</Longitude>
+      <Elevation>76.0</Elevation>
+      <Site>
+        <Name>Kuaotunu</Name>
+        <Description>8 km north of Whitianga</Description>
+      </Site>
+      <CreationDate>1990-10-11T00:00:00</CreationDate>
+      <TotalNumberChannels>21</TotalNumberChannels>
+      <SelectedNumberChannels>3</SelectedNumberChannels>
+    </Station>
+    <Station code="MAVZ" restrictedStatus="open" startDate="2008-02-07T00:00:00">
+      <Description>Tongariro National Park volcano seismic network</Description>
+      <Comment>
+        <Value>Location is given in NZGD2000</Value>
+      </Comment>
+      <Latitude datum="NZGD2000" unit="DEGREES">-39.2679133</Latitude>
+      <Longitude datum="NZGD2000" unit="DEGREES">175.5616533</Longitude>
+      <Elevation>2624.1</Elevation>
+      <Site>
+        <Name>Matarangi</Name>
+        <Description>21 km north-east of Ohakune</Description>
+      </Site>
+      <CreationDate>2008-02-07T00:00:00</CreationDate>
+      <TotalNumberChannels>52</TotalNumberChannels>
+      <SelectedNumberChannels>15</SelectedNumberChannels>
+    </Station>
+    <Station code="MKAZ" restrictedStatus="open" startDate="1995-01-10T00:00:00">
+      <Description>Auckland volcano seismic network</Description>
+      <Comment>
+        <Value>Location is given in NZGD2000</Value>
+      </Comment>
+      <Latitude datum="NZGD2000" unit="DEGREES">-37.10413</Latitude>
+      <Longitude datum="NZGD2000" unit="DEGREES">175.16117</Longitude>
+      <Elevation>140.0</Elevation>
+      <Site>
+        <Name>Moumoukai</Name>
+        <Description>19 km east of Drury</Description>
+      </Site>
+      <CreationDate>1995-01-10T00:00:00</CreationDate>
+      <TotalNumberChannels>13</TotalNumberChannels>
+      <SelectedNumberChannels>6</SelectedNumberChannels>
+    </Station>
+    <Station code="MRWZ" endDate="2008-08-28T00:00:00" restrictedStatus="open" startDate="2008-04-15T00:00:00">
+      <Description>Temporary sites</Description>
+      <Comment>
+        <Value>Location is given in WGS84</Value>
+      </Comment>
+      <Latitude datum="WGS84" unit="DEGREES">-41.226025</Latitude>
+      <Longitude datum="WGS84" unit="DEGREES">174.6982083</Longitude>
+      <Elevation>204.8</Elevation>
+      <Site>
+        <Name>Makara Bunker</Name>
+        <Description>9 km north-west of Wellington</Description>
+      </Site>
+      <CreationDate>2008-04-15T00:00:00</CreationDate>
+      <TerminationDate>2008-08-28T00:00:00</TerminationDate>
+      <TotalNumberChannels>12</TotalNumberChannels>
+      <SelectedNumberChannels>3</SelectedNumberChannels>
+    </Station>
+    <Station code="MRZ" restrictedStatus="open" startDate="1992-04-08T00:00:00">
+      <Description>New Zealand National Seismograph Network</Description>
+      <Comment>
+        <Value>Location is given in WGS84</Value>
+      </Comment>
+      <Latitude datum="WGS84" unit="DEGREES">-40.66054537</Latitude>
+      <Longitude datum="WGS84" unit="DEGREES">175.578526763</Longitude>
+      <Elevation>286.0</Elevation>
+      <Site>
+        <Name>Mangatainoka River</Name>
+        <Description>10 km west of Eketahuna</Description>
+      </Site>
+      <CreationDate>1992-04-08T00:00:00</CreationDate>
+      <TotalNumberChannels>61</TotalNumberChannels>
+      <SelectedNumberChannels>6</SelectedNumberChannels>
+    </Station>
+    <Station code="MWZ" restrictedStatus="open" startDate="2004-02-29T00:00:00">
+      <Description>New Zealand National Seismograph Network</Description>
+      <Comment>
+        <Value>Location is given in WGS84</Value>
+      </Comment>
+      <Latitude datum="WGS84" unit="DEGREES">-38.334001396</Latitude>
+      <Longitude datum="WGS84" unit="DEGREES">177.527779304</Longitude>
+      <Elevation>573.0</Elevation>
+      <Site>
+        <Name>Matawai</Name>
+        <Description>within 5 km of Matawai</Description>
+      </Site>
+      <CreationDate>2004-02-29T00:00:00</CreationDate>
+      <TotalNumberChannels>72</TotalNumberChannels>
+      <SelectedNumberChannels>6</SelectedNumberChannels>
+    </Station>
+    <Station code="MXZ" restrictedStatus="open" startDate="2004-02-29T00:00:00">
+      <Description>New Zealand National Seismograph Network</Description>
+      <Comment>
+        <Value>Location is given in WGS84</Value>
+      </Comment>
+      <Latitude datum="WGS84" unit="DEGREES">-37.562258507</Latitude>
+      <Longitude datum="WGS84" unit="DEGREES">178.306631253</Longitude>
+      <Elevation>106.0</Elevation>
+      <Site>
+        <Name>Matakaoa Point</Name>
+        <Description>9 km north-west of Te Araroa</Description>
+      </Site>
+      <CreationDate>2004-02-29T00:00:00</CreationDate>
+      <TotalNumberChannels>66</TotalNumberChannels>
+      <SelectedNumberChannels>9</SelectedNumberChannels>
+    </Station>
+    <Station code="NNZ" restrictedStatus="open" startDate="2003-08-12T00:00:00">
+      <Description>New Zealand National Seismograph Network</Description>
+      <Comment>
+        <Value>Location is given in WGS84</Value>
+      </Comment>
+      <Latitude datum="WGS84" unit="DEGREES">-41.217102661</Latitude>
+      <Longitude datum="WGS84" unit="DEGREES">173.379476754</Longitude>
+      <Elevation>130.0</Elevation>
+      <Site>
+        <Name>Nelson</Name>
+        <Description>10 km north-east of Nelson</Description>
+      </Site>
+      <CreationDate>2003-08-12T00:00:00</CreationDate>
+      <TotalNumberChannels>90</TotalNumberChannels>
+      <SelectedNumberChannels>15</SelectedNumberChannels>
+    </Station>
+    <Station code="NTVZ" restrictedStatus="open" startDate="2014-11-06T00:00:00">
+      <Description>Tongariro National Park volcano seismic network</Description>
+      <Comment>
+        <Value>Location is given in WGS84</Value>
+      </Comment>
+      <Latitude datum="WGS84" unit="DEGREES">-39.0984817</Latitude>
+      <Longitude datum="WGS84" unit="DEGREES">175.6759733</Longitude>
+      <Elevation>1260.0</Elevation>
+      <Site>
+        <Name>North Tongariro</Name>
+        <Description>15 km south-west of Turangi</Description>
+      </Site>
+      <CreationDate>2014-11-06T00:00:00</CreationDate>
+      <TotalNumberChannels>22</TotalNumberChannels>
+      <SelectedNumberChannels>6</SelectedNumberChannels>
+    </Station>
+    <Station code="OPRZ" restrictedStatus="open" startDate="2006-11-14T00:00:00">
+      <Description>Rotorua/Okataina volcano seismic network</Description>
+      <Comment>
+        <Value>Location is given in WGS84</Value>
+      </Comment>
+      <Latitude datum="WGS84" unit="DEGREES">-37.844300073</Latitude>
+      <Longitude datum="WGS84" unit="DEGREES">176.554929138</Longitude>
+      <Elevation>134.0</Elevation>
+      <Site>
+        <Name>Ohinepanea</Name>
+        <Description>18 km west of Matata</Description>
+      </Site>
+      <CreationDate>2006-11-14T00:00:00</CreationDate>
+      <TotalNumberChannels>21</TotalNumberChannels>
+      <SelectedNumberChannels>6</SelectedNumberChannels>
+    </Station>
+    <Station code="OTVZ" restrictedStatus="open" startDate="2004-11-18T00:00:00">
+      <Description>Tongariro National Park volcano seismic network</Description>
+      <Comment>
+        <Value>Location is given in WGS84</Value>
+      </Comment>
+      <Latitude datum="WGS84" unit="DEGREES">-39.163113759</Latitude>
+      <Longitude datum="WGS84" unit="DEGREES">175.665073554</Longitude>
+      <Elevation>1506.0</Elevation>
+      <Site>
+        <Name>Oturere</Name>
+        <Description>22 km south-west of Turangi</Description>
+      </Site>
+      <CreationDate>2004-11-18T00:00:00</CreationDate>
+      <TotalNumberChannels>35</TotalNumberChannels>
+      <SelectedNumberChannels>6</SelectedNumberChannels>
+    </Station>
+    <Station code="PUZ" restrictedStatus="open" startDate="1989-03-08T00:00:00">
+      <Description>New Zealand National Seismograph Network</Description>
+      <Comment>
+        <Value>Location is given in WGS84</Value>
+      </Comment>
+      <Latitude datum="WGS84" unit="DEGREES">-38.071547867</Latitude>
+      <Longitude datum="WGS84" unit="DEGREES">178.257209049</Longitude>
+      <Elevation>430.0</Elevation>
+      <Site>
+        <Name>Puketiti</Name>
+        <Description>9 km north-west of Tokomaru Bay</Description>
+      </Site>
+      <CreationDate>1989-03-08T00:00:00</CreationDate>
+      <TotalNumberChannels>54</TotalNumberChannels>
+      <SelectedNumberChannels>6</SelectedNumberChannels>
+    </Station>
+    <Station code="PWZ" endDate="2005-08-16T00:00:00" restrictedStatus="open" startDate="2001-01-30T00:00:00">
+      <Description>New Zealand National Seismograph Network</Description>
+      <Comment>
+        <Value>Location is given in WGS84</Value>
+      </Comment>
+      <Latitude datum="WGS84" unit="DEGREES">-40.029684442</Latitude>
+      <Longitude datum="WGS84" unit="DEGREES">176.861995223</Longitude>
+      <Elevation>66.0</Elevation>
+      <Site>
+        <Name>Pawanui</Name>
+        <Description>27 km east of Waipukurau</Description>
+      </Site>
+      <CreationDate>2001-01-30T00:00:00</CreationDate>
+      <TerminationDate>2005-08-16T00:00:00</TerminationDate>
+      <TotalNumberChannels>51</TotalNumberChannels>
+      <SelectedNumberChannels>12</SelectedNumberChannels>
+    </Station>
+    <Station code="PXZ" restrictedStatus="open" startDate="2005-08-21T00:00:00">
+      <Description>New Zealand National Seismograph Network</Description>
+      <Comment>
+        <Value>Location is given in WGS84</Value>
+      </Comment>
+      <Latitude datum="WGS84" unit="DEGREES">-40.030644463</Latitude>
+      <Longitude datum="WGS84" unit="DEGREES">176.862145221</Longitude>
+      <Elevation>103.0</Elevation>
+      <Site>
+        <Name>Pawanui</Name>
+        <Description>27 km east of Waipukurau</Description>
+      </Site>
+      <CreationDate>2005-08-21T00:00:00</CreationDate>
+      <TotalNumberChannels>36</TotalNumberChannels>
+      <SelectedNumberChannels>6</SelectedNumberChannels>
+    </Station>
+    <Station code="RATZ" restrictedStatus="open" startDate="1984-11-21T00:00:00">
+      <Description>Taupo volcano seismic network</Description>
+      <Comment>
+        <Value>Location is given in WGS84</Value>
+      </Comment>
+      <Latitude datum="WGS84" unit="DEGREES">-38.866498038</Latitude>
+      <Longitude datum="WGS84" unit="DEGREES">175.772175968</Longitude>
+      <Elevation>653.0</Elevation>
+      <Site>
+        <Name>Rangitukua</Name>
+        <Description>15 km north of Turangi</Description>
+      </Site>
+      <CreationDate>1984-11-21T00:00:00</CreationDate>
+      <TotalNumberChannels>21</TotalNumberChannels>
+      <SelectedNumberChannels>6</SelectedNumberChannels>
+    </Station>
+    <Station code="RTZ" restrictedStatus="open" startDate="2011-05-05T00:00:00">
+      <Description>New Zealand National Seismograph Network</Description>
+      <Comment>
+        <Value>Location is given in WGS84</Value>
+      </Comment>
+      <Latitude datum="WGS84" unit="DEGREES">-38.61544</Latitude>
+      <Longitude datum="WGS84" unit="DEGREES">176.980518</Longitude>
+      <Elevation>867.0</Elevation>
+      <Site>
+        <Name>Ruatahuna</Name>
+        <Description>31 km south-east of Murupara</Description>
+      </Site>
+      <CreationDate>2011-05-05T00:00:00</CreationDate>
+      <TotalNumberChannels>42</TotalNumberChannels>
+      <SelectedNumberChannels>9</SelectedNumberChannels>
+    </Station>
+    <Station code="TLZ" restrictedStatus="open" startDate="2009-05-07T00:00:00">
+      <Description>New Zealand National Seismograph Network</Description>
+      <Comment>
+        <Value>Location is given in WGS84</Value>
+      </Comment>
+      <Latitude datum="WGS84" unit="DEGREES">-38.3294</Latitude>
+      <Longitude datum="WGS84" unit="DEGREES">175.538</Longitude>
+      <Elevation>660.0</Elevation>
+      <Site>
+        <Name>Tolley Road</Name>
+        <Description>31 km west of Tokoroa</Description>
+      </Site>
+      <CreationDate>2009-05-07T00:00:00</CreationDate>
+      <TotalNumberChannels>24</TotalNumberChannels>
+      <SelectedNumberChannels>3</SelectedNumberChannels>
+    </Station>
+    <Station code="TMVZ" restrictedStatus="open" startDate="2013-05-14T00:00:00">
+      <Description>Tongariro National Park volcano seismic network</Description>
+      <Comment>
+        <Value>Location is given in WGS84</Value>
+      </Comment>
+      <Latitude datum="WGS84" unit="DEGREES">-39.11561</Latitude>
+      <Longitude datum="WGS84" unit="DEGREES">175.704064</Longitude>
+      <Elevation>1200.0</Elevation>
+      <Site>
+        <Name>Te Maari</Name>
+        <Description>15 km south-west of Turangi</Description>
+      </Site>
+      <CreationDate>2013-05-14T00:00:00</CreationDate>
+      <TotalNumberChannels>33</TotalNumberChannels>
+      <SelectedNumberChannels>9</SelectedNumberChannels>
+    </Station>
+    <Station code="TOZ" restrictedStatus="open" startDate="1998-10-15T00:00:00">
+      <Description>New Zealand National Seismograph Network</Description>
+      <Comment>
+        <Value>Location is given in WGS84</Value>
+      </Comment>
+      <Latitude datum="WGS84" unit="DEGREES">-37.73095563</Latitude>
+      <Longitude datum="WGS84" unit="DEGREES">175.501846822</Longitude>
+      <Elevation>85.0</Elevation>
+      <Site>
+        <Name>Tahuroa Road</Name>
+        <Description>9 km south of Morrinsville</Description>
+      </Site>
+      <CreationDate>1998-10-15T00:00:00</CreationDate>
+      <TotalNumberChannels>39</TotalNumberChannels>
+      <SelectedNumberChannels>6</SelectedNumberChannels>
+    </Station>
+    <Station code="TRVZ" restrictedStatus="open" startDate="2005-03-16T00:00:00">
+      <Description>Tongariro National Park volcano seismic network</Description>
+      <Comment>
+        <Value>Location is given in WGS84</Value>
+      </Comment>
+      <Latitude datum="WGS84" unit="DEGREES">-39.298816259</Latitude>
+      <Longitude datum="WGS84" unit="DEGREES">175.547821602</Longitude>
+      <Elevation>2062.0</Elevation>
+      <Site>
+        <Name>Turoa</Name>
+        <Description>17 km north-east of Ohakune</Description>
+      </Site>
+      <CreationDate>2005-03-16T00:00:00</CreationDate>
+      <TotalNumberChannels>37</TotalNumberChannels>
+      <SelectedNumberChannels>9</SelectedNumberChannels>
+    </Station>
+    <Station code="TSZ" restrictedStatus="open" startDate="2004-01-26T00:00:00">
+      <Description>New Zealand National Seismograph Network</Description>
+      <Comment>
+        <Value>Location is given in WGS84</Value>
+      </Comment>
+      <Latitude datum="WGS84" unit="DEGREES">-40.058553101</Latitude>
+      <Longitude datum="WGS84" unit="DEGREES">175.961123866</Longitude>
+      <Elevation>531.0</Elevation>
+      <Site>
+        <Name>Takapari Road</Name>
+        <Description>15 km east of Kimbolton</Description>
+      </Site>
+      <CreationDate>2004-01-26T00:00:00</CreationDate>
+      <TotalNumberChannels>36</TotalNumberChannels>
+      <SelectedNumberChannels>6</SelectedNumberChannels>
+    </Station>
+    <Station code="URZ" restrictedStatus="open" startDate="1990-10-09T00:00:00">
+      <Description>New Zealand National Seismograph Network</Description>
+      <Comment>
+        <Value>Location is given in WGS84</Value>
+      </Comment>
+      <Latitude datum="WGS84" unit="DEGREES">-38.259249093</Latitude>
+      <Longitude datum="WGS84" unit="DEGREES">177.110894471</Longitude>
+      <Elevation>95.0</Elevation>
+      <Site>
+        <Name>Urewera</Name>
+        <Description>12 km south of Waimana</Description>
+      </Site>
+      <CreationDate>1990-10-09T00:00:00</CreationDate>
+      <TotalNumberChannels>102</TotalNumberChannels>
+      <SelectedNumberChannels>24</SelectedNumberChannels>
+    </Station>
+    <Station code="VRZ" restrictedStatus="open" startDate="2003-11-26T00:00:00">
+      <Description>New Zealand National Seismograph Network</Description>
+      <Comment>
+        <Value>Location is given in WGS84</Value>
+      </Comment>
+      <Latitude datum="WGS84" unit="DEGREES">-39.12434088</Latitude>
+      <Longitude datum="WGS84" unit="DEGREES">174.758452563</Longitude>
+      <Elevation>166.0</Elevation>
+      <Site>
+        <Name>Vera Road</Name>
+        <Description>48 km north-east of Stratford</Description>
+      </Site>
+      <CreationDate>2003-11-26T00:00:00</CreationDate>
+      <TotalNumberChannels>72</TotalNumberChannels>
+      <SelectedNumberChannels>12</SelectedNumberChannels>
+    </Station>
+    <Station code="WAZ" restrictedStatus="open" startDate="2003-07-18T00:00:00">
+      <Description>New Zealand National Seismograph Network</Description>
+      <Comment>
+        <Value>Location is given in WGS84</Value>
+      </Comment>
+      <Latitude datum="WGS84" unit="DEGREES">-39.754644424</Latitude>
+      <Longitude datum="WGS84" unit="DEGREES">174.985532904</Longitude>
+      <Elevation>382.0</Elevation>
+      <Site>
+        <Name>Wanganui</Name>
+        <Description>21 km north of Whanganui</Description>
+      </Site>
+      <CreationDate>2003-07-18T00:00:00</CreationDate>
+      <TotalNumberChannels>30</TotalNumberChannels>
+      <SelectedNumberChannels>6</SelectedNumberChannels>
+    </Station>
+    <Station code="WHVZ" restrictedStatus="open" startDate="2009-03-25T00:00:00">
+      <Description>Tongariro National Park volcano seismic network</Description>
+      <Comment>
+        <Value>Location is given in WGS84</Value>
+      </Comment>
+      <Latitude datum="WGS84" unit="DEGREES">-39.2825</Latitude>
+      <Longitude datum="WGS84" unit="DEGREES">175.5886</Longitude>
+      <Elevation>2105.0</Elevation>
+      <Site>
+        <Name>Whangaehu Hut</Name>
+        <Description>21 km north-east of Ohakune</Description>
+      </Site>
+      <CreationDate>2009-03-25T00:00:00</CreationDate>
+      <TotalNumberChannels>13</TotalNumberChannels>
+      <SelectedNumberChannels>3</SelectedNumberChannels>
+    </Station>
+    <Station code="WIZ" restrictedStatus="open" startDate="1976-12-12T00:00:00">
+      <Description>Rotorua/Okataina volcano seismic network</Description>
+      <Comment>
+        <Value>Location is given in WGS84</Value>
+      </Comment>
+      <Latitude datum="WGS84" unit="DEGREES">-37.524510539</Latitude>
+      <Longitude datum="WGS84" unit="DEGREES">177.189301882</Longitude>
+      <Elevation>40.0</Elevation>
+      <Site>
+        <Name>White Island</Name>
+        <Description>within 5 km of White Island</Description>
+      </Site>
+      <CreationDate>1976-12-12T00:00:00</CreationDate>
+      <TotalNumberChannels>38</TotalNumberChannels>
+      <SelectedNumberChannels>9</SelectedNumberChannels>
+    </Station>
+    <Station code="WPVZ" endDate="2010-12-01T00:00:00" restrictedStatus="open" startDate="2003-12-10T00:00:00">
+      <Description>Tongariro National Park volcano seismic network</Description>
+      <Comment>
+        <Value>Location is given in WGS84</Value>
+      </Comment>
+      <Latitude datum="WGS84" unit="DEGREES">-39.20400432</Latitude>
+      <Longitude datum="WGS84" unit="DEGREES">175.545921935</Longitude>
+      <Elevation>1244.0</Elevation>
+      <Site>
+        <Name>Whakapapa</Name>
+        <Description>26 km north-east of Ohakune</Description>
+      </Site>
+      <CreationDate>2003-12-10T00:00:00</CreationDate>
+      <TerminationDate>2010-12-01T00:00:00</TerminationDate>
+      <TotalNumberChannels>9</TotalNumberChannels>
+      <SelectedNumberChannels>3</SelectedNumberChannels>
+    </Station>
+    <Station code="WSRZ" restrictedStatus="open" startDate="2013-04-08T00:00:00">
+      <Description>Rotorua/Okataina volcano seismic network</Description>
+      <Comment>
+        <Value>Location is given in WGS84</Value>
+      </Comment>
+      <Latitude datum="WGS84" unit="DEGREES">-37.51811</Latitude>
+      <Longitude datum="WGS84" unit="DEGREES">177.177805</Longitude>
+      <Elevation>292.4</Elevation>
+      <Site>
+        <Name>White Island Summit</Name>
+        <Description>within 5 km of White Island</Description>
+      </Site>
+      <CreationDate>2013-04-08T00:00:00</CreationDate>
+      <TotalNumberChannels>32</TotalNumberChannels>
+      <SelectedNumberChannels>6</SelectedNumberChannels>
+    </Station>
+  </Network>
+</FDSNStationXML>
