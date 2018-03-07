@@ -4,7 +4,7 @@ FDSN webservices via obspy (@VIC)
 """
 import os
 import glob
-from obspy import UTCDateTime, read_inventory
+from obspy import read, read_inventory, UTCDateTime
 from obspy.clients.fdsn import Client
 
 def pathnames():
@@ -30,12 +30,13 @@ def pathnames():
         where = "VIC"
         cwd = "/Users/chowbr/Documents/subduction/spectral"
     path_dictionary = {"spectral":os.path.join(cwd,'spectral',''),
-                        "rdf":os.path.join(cwd,'RDF_Array',''),
-                        "plots":os.path.join(cwd,'spectral','output_plots',''),
-                        "ppsd":os.path.join(cwd,'spectral','ppsd_arrays',''),
-                        "data":os.path.join(cwd,'spectral','datafiles',''),
-                        "kupe":os.path.join(cwd,'kupe',''),
-                        "where": where
+                "rdf":os.path.join(cwd,'RDF_Array',''),
+                "plots":os.path.join(cwd,'spectral','output_plots',''),
+                "ppsd":os.path.join(cwd,'spectral','ppsd_arrays',''),
+                "data":os.path.join(cwd,'spectral','datafiles',''),
+                "hobitss":os.path.join(cwd,'spectral','datafiles','hobitss',''),
+                "kupe":os.path.join(cwd,'kupe',''),
+                "where": where
                         }
 
     return path_dictionary
@@ -152,7 +153,7 @@ def geonet_internal(station,channel,start,end=False,response=True):
                                                             loc=LOC,
                                                             cha=CHA)
         response_filepath = glob.glob(
-                                os.path.join(resp_GNApath,response_filename))
+                                os.path.join(resp_GNApath,response_filename))[0]
         # print("++ response filepath")
     else:
         response_filepath = None
@@ -234,7 +235,8 @@ def fdsn_download(station,channel,start,network='NZ',end=False,response=False,
 
     return st, response
 
-def event_stream(station,channel,client="GEONET",event_id=False,pad=False):
+def event_stream(station,channel,event_id,client="GEONET",startpad=False,
+                                                                endpad=False):
     """Given a GEONET event ID, return raw waveform streams and response files
     Waveforms can be from RDF or GEONET permanent stations, chooses
     correct downloading format based on requests. If no event_id given, full
@@ -249,8 +251,10 @@ def event_stream(station,channel,client="GEONET",event_id=False,pad=False):
     :type event_id: str
     :param event_id: GEONET event id for earthquakes, if default, function will
                     simply collect a catalog of events for a given time periods
-    :type pad: int
-    :param pad: time in seconds to pad beginning of data, should be positive
+    :type startpad: int
+    :param startpad: time in seconds to pad beginning of data, positive
+    :type endpad: int
+    :param endpad: time in seconds from starttime to end cutoff
     """
     # parse arguments
     station_id = station.upper() # i.e. RD06 or PXZ
@@ -260,26 +264,19 @@ def event_stream(station,channel,client="GEONET",event_id=False,pad=False):
     channel = channel.upper()
 
     # get event information
-    event_client = Client("GEONET")
+    event_client = Client(client)
     if event_id:
         cat = event_client.get_events(eventid=event_id)
-    else:
-        t_start = UTCDateTime("2017-320")
-        t_end = UTCDateTime("2018-001")
-        cat = c.get_events(starttime=t_start,
-                            endtime=t_end,
-                            minmagnitude=4,
-                            maxmagnitude=6,
-                            minlatitude=-50,
-                            maxlatitude=-35,
-                            minlongitude=165,
-                            maxlongitude=180,
-                            orderby="magnitude")
+
 
     for event in cat:
         origin = event.origins[0].time
-        if pad:
-            origin = origin - abs(pad)
+        if startpad:
+            start = origin - startpad
+        if endpad:
+            end = start + endpad
+        else:
+            end = start + 1000
 
         # temporary station filepaths
         if choice == "rdf":
@@ -330,9 +327,13 @@ def event_stream(station,channel,client="GEONET",event_id=False,pad=False):
             else:
                 st, inv = fdsn_download(station=station_id,
                                         channel = channel[:2] + '*',
-                                        start = origin,
+                                        start = start,
+                                        end = end,
                                         response = True,
-                                        client=client)
+                                        client = client)
+
+            # trim regardless of get-method
+            st.trim(starttime=start,endtime=end)
 
         return st, inv, cat
 
@@ -387,6 +388,38 @@ def get_those_events():
     # for single event
     from obspy.clients.fdsn import Client
     c = Client("GEONET")
-    event_id = ""
+    event_id = "2015p822263"
     cat = c.get_events(eventid=event_id)
-    cat.write("EVENT_PLACEHOLDER.xml",format="QUAKEML")
+    # cat.write("EVENT_PLACEHOLDER.xml",format="QUAKEML")
+
+def station_and_event():
+    """copy paste script for plotting hobitss stations and event as beachball
+    """
+    import matplotlib.pyplot as plt
+    from getdata import get_moment_tensor
+    from obspy import read_inventory
+    from obspy.clients.fdsn import Client
+    from obspy.imaging.beachball import beach
+
+    eventid="2014p864702"
+    c = Client("GEONET")
+    inv = read_inventory('./datafiles/hobitss_stations.xml')
+
+    MT = get_moment_tensor(eventid)
+    fig = inv.plot(continental_fill_color='w',
+                    water_fill_color='w',
+                    show=False)
+
+    eventx,eventy = fig.bmap(MT['Longitude'],MT['Latitude'])
+    FM = [MT['strike1'],MT['dip1'],MT['rake1']]
+    b = beach(FM,xy=(eventx,eventy),width=3E4,linewidth=1,facecolor='r')
+    b.set_zorder(10)
+    ax = plt.gca()
+    ax.add_collection(b)
+    plt.annotate("M{}".format(MT['ML']),
+                    xy=(eventx,eventy),
+                    xytext=(eventx,eventy),
+                    fontsize=12,
+                    zorder=200,
+                    weight='bold')
+    plt.show()

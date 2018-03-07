@@ -14,7 +14,70 @@ from obspy.imaging.beachball import beach
 import warnings
 warnings.filterwarnings("ignore",category=mpl.cbook.mplDeprecation)
 
+def event_beachball(eventid,fig):
+    """plt event beachball on figure object
+    """
+    MT = get_moment_tensor(eventid)
+    eventx,eventy = fig.bmap(MT['Longitude'],MT['Latitude'])
+    FM = [MT['strike1'],MT['dip1'],MT['rake1']]
 
+    b = beach(FM,xy=(eventx,eventy),width=3E4,linewidth=1,facecolor='r')
+    b.set_zorder(10)
+    ax = plt.gca()
+    ax.add_collection(b)
+    plt.annotate("M{}".format(MT['ML']),
+                    xy=(eventx,eventy),
+                    xytext=(eventx,eventy),
+                    fontsize=12,
+                    zorder=200,
+                    weight='bold')
+
+def rdf_plot(fig):
+    """plot rdf on map - not tested
+    """
+    stations,lats,lons = [],[],[]
+    with open(pathnames()['rdf'] + 'rdf_locations.txt','r') as f:
+        station_lines = f.readlines()
+
+    for lines in station_lines[1:]:
+        splitlines = lines.split(',')
+        # stations.append("{n}/{s}".format(n=splitlines[0],s=splitlines[1]))
+        stations.append(splitlines[0])
+        lats.append(float(splitlines[2]))
+        lons.append(float(splitlines[3]))
+
+    # plot onto basemap
+    x,y = fig.bmap(lons,lats)
+    scatter = fig.bmap.scatter(x,y,marker='o',s=40,zorder=1000,c='g')
+    for i,sta in enumerate(stations):
+        plt.annotate(sta,xy=(x[i],y[i]),
+                        xytext=(x[i]+2500,y[i]+2500),
+                        fontsize=9,
+                        fontweight='bold')
+    import ipdb;ipdb.set_trace()
+
+    map_limx,map_limy = fig.bmap([175.75,178],[-39,-40.75])
+    plt.xlim(map_limx)
+    plt.ylim(map_limy)
+
+def low_velocity_wedge(fig):
+    """plot low velocity wedge on map
+    """
+    nw_lat,nw_lon = -39.8764, 178.5385
+    ne_lat,ne_lon = -39.0921, 177.1270
+    se_lat,se_lon = -37.5630, 178.5248
+    sw_lat,sw_lon = -38.3320, 179.9157
+    x1,y1 = fig.bmap(nw_lon,nw_lat)
+    x2,y2 = fig.bmap(ne_lon,ne_lat)
+    x3,y3 = fig.bmap(se_lon,se_lat)
+    x4,y4 = fig.bmap(sw_lon,sw_lat)
+    poly = Polygon([(x1,y1),(x2,y2),(x3,y3),(x4,y4)],
+                    facecolor='red',edgecolor='k',
+                    linewidth=1,alpha=0.2)
+    ax = plt.gca()
+    ax.add_patch(poly)
+
+# ================================== MAIN ====================================
 # command line choices
 choice = sys.argv[1].upper() #s,z,d
 if choice == 'D':
@@ -35,54 +98,23 @@ label_dict = {'Z':True,'S':True,'D':False}
 
 # grab station information and plot
 inv = read_inventory(pathnames()["data"] + "new_zealand_geonet_stations.xml")
-fig = inv.plot(label=label_dict[choice],
-        marker='.',
+inv += read_inventory(pathnames()["data"] + "hobitss/hobitss_stations.xml")
+
+fig = inv.plot(marker='.',
         projection="local",
         resolution = "i",
         color=color_dict[choice],
-        size=6,
-        show=False)
-ax = plt.gca()
+        size=25,
+        show=False,
+        continent_fill_color="white",
+        water_fill_color="white",
+        color_per_network=True,
+        label=False)
+        # label=label_dict[choice])
 
-# ========= plot RDF station array =========
-    # stations,lats,lons = [],[],[]
-    # with open(pathnames()['rdf'] + 'rdf_locations.txt','r') as f:
-    #     station_lines = f.readlines()
-    #
-    # for lines in station_lines[1:]:
-    #     splitlines = lines.split(',')
-    #     # stations.append("{n}/{s}".format(n=splitlines[0],s=splitlines[1]))
-    #     stations.append(splitlines[0])
-    #     lats.append(float(splitlines[2]))
-    #     lons.append(float(splitlines[3]))
-    #
-    # # plot onto basemap
-    # x,y = fig.bmap(lons,lats)
-    # scatter = fig.bmap.scatter(x,y,marker='o',s=40,zorder=1000,c='g')
-    # for i,sta in enumerate(stations):
-    #     plt.annotate(sta,xy=(x[i],y[i]),
-    #                     xytext=(x[i]+2500,y[i]+2500),
-    #                     fontsize=9,
-    #                     fontweight='bold')
-
-# manual set bounds
-# map_limx,map_limy = fig.bmap([175.75,178],[-39,-40.75])
-# plt.xlim(map_limx)
-# plt.ylim(map_limy)
-
-# ========= plot low velocity overlay with a polygon =========
-nw_lat,nw_lon = -39.8764, 178.5385
-ne_lat,ne_lon = -39.0921, 177.1270
-se_lat,se_lon = -37.5630, 178.5248
-sw_lat,sw_lon = -38.3320, 179.9157
-x1,y1 = fig.bmap(nw_lon,nw_lat)
-x2,y2 = fig.bmap(ne_lon,ne_lat)
-x3,y3 = fig.bmap(se_lon,se_lat)
-x4,y4 = fig.bmap(sw_lon,sw_lat)
-poly = Polygon([(x1,y1),(x2,y2),(x3,y3),(x4,y4)],
-                facecolor='red',edgecolor='k',
-                linewidth=1,alpha=0.2)
-ax.add_patch(poly)
+low_velocity_wedge(fig)
+event_beachball("2014p864702",fig)
+# event_beachball("2014p715167",fig)
 
 if choice != 'D':
     plt.show()
@@ -147,26 +179,6 @@ for i,(sta,dur,ds) in enumerate(zip(durstations,durations,dist_plot)):
                     weight='bold',
                     zorder=500)
 
-
-# plot event
-eventx,eventy = fig.bmap(event_lon,event_lat)
-MT = get_moment_tensor(event_id)
-FM = [MT['strike1'],MT['dip1'],MT['rake1']]
-b = beach(FM,xy=(eventx,eventy),width=3E4,linewidth=1,facecolor='r')
-b.set_zorder(10)
-ax.add_collection(b)
-# fig.bmap.scatter(eventx,eventy,
-#                     marker='o',
-#                     s=150,
-#                     c='c',
-#                     zorder=200,
-#                     edgecolor='k')
-plt.annotate("M{}".format(event_mag),
-                xy=(eventx,eventy),
-                xytext=(eventx,eventy),
-                fontsize=12,
-                zorder=200,
-                weight='bold')
 
 
 # connect event and stations with colored lines

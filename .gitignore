@@ -5,6 +5,7 @@ __pycache__/
 spectral/ppsd_arrays/
 spectral/ppsd_arrays_OLD
 spectral/output_plots/
+spectral/datafiles/hobitss/*.mseed
 spectral/datafiles/GCMT/
 #kupe
 kupe/DATA
