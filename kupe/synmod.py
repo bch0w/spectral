@@ -1,5 +1,9 @@
 """module containing functions pertaining to synthetic outputs of specfem
 """
+import sys
+sys.path.append('../spectral/')
+from getdata import pathnames
+
 def mt_transform(mt,method):
     """transform moment tensor between xyz and rtp coordinates
     acceptable mt formats:
@@ -50,7 +54,7 @@ def generate_CMTSOLUTION(event_id):
     mt = mt_transform(mt,method='xyz2rtp')
     fe = FlinnEngdahl()
     region = fe.get_region(MT['Longitude'],MT['Latitude'])
-    date = UTCDateTime(str(int(MT['Date'])))
+    date = UTCDateTime(MT['Date'])
     # first line
     header = "XXXX {Y} {M} {D} {H} {m} {S} {La} {Lo} {Dp} {Mb} {Ms} {N}".format(
             Y=date.year,
@@ -80,6 +84,76 @@ def generate_CMTSOLUTION(event_id):
         f.write("Mrp:\t{}\n".format(mt[4]))
         f.write("Mtp:\t{}\n".format(mt[5]))
 
+def get_GCMT_solution(event_id):
+    """retrieve GCMT solutions from the .ndk files for comparison against
+    converted MT from Ristau. Returns an obspy event object.
+    """
+    import os
+    from obspy import read_events, UTCDateTime
+    from getdata import get_moment_tensor
+
+    month_dict={4:"apr",12:"dec",1:"jan",6:"jun",5:"may",10:"oct",
+                8:"aug",2:"feb",7:"jul",3:"mar",11:"nov",9:"sep"}
+    MT = get_moment_tensor(event_id=event_id)
+    mw = MT["Mw"]
+    date = UTCDateTime(MT["Date"])
+    year = str(date.year)
+    month = date.month
+    fid = "{m}{y}.ndk".format(m=month_dict[month],y=year[2:])
+    filepath = os.path.join(pathnames()['data'],"GCMT",year,fid)
+    cat = read_events(filepath)
+    cat_filt = cat.filter("time > {}".format(str(date-300)),
+                          "time < {}".format(str(date+300)),
+                          "magnitude >= {}".format(mw-.5),
+                          "magnitude <= {}".format(mw+.5)
+                          )
+    if len(cat_filt) == 0:
+        print("No events found")
+        return
+    elif len(cat_filt) > 1:
+        print("{} events found, choose from list:".format(len(cat_filt)))
+        print(cat_filt)
+        choice = input("Event number: ")
+        event = cat_filt[choice]
+        return event
+    else:
+        event = cat_filt[0]
+        return event
+
+def mt_from_event(event):
+    """pull out the tensor components from obspy event object, return as dict
+    """
+    focmec = event.focal_mechanisms[0].moment_tensor.tensor
+    m_rr = focmec.m_rr
+    m_tt = focmec.m_tt
+    m_pp = focmec.m_pp
+    m_rt = focmec.m_rt
+    m_rp = focmec.m_rp
+    m_tp = focmec.m_tp
+
+    MT = {"Mrr":m_rr,"Mtt":m_tt,"Mpp":m_pp,
+          "Mrt":m_rt,"Mrp":m_rp,"Mtp":m_tp}
+
+    return MT
+
+def compare_beachballs(event_id):
+    """plot beachballs to compare GCMT and converted GEONET MT
+    """
+    from obspy.imaging.beachball import beachball
+    from getdata import get_moment_tensor
+    import matplotlib.pyplot as plt
+
+    MT = get_moment_tensor(event_id=event_id)
+    geonet_xyz = [MT['Mxx'],MT['Myy'],MT['Mzz'],MT['Mxy'],MT['Mxz'],MT['Myz']]
+    geonet_rtp = mt_transform(geonet_xyz,method='xyz2rtp')
+
+    gcmt = get_GCMT_solution(event_id=event_id)
+    GCMT = mt_from_event(gcmt)
+    gcmt_rtp = [GCMT['Mrr'],GCMT['Mtt'],GCMT['Mpp'],
+                GCMT['Mrt'],GCMT['Mrp'],GCMT['Mtp']]
+
+    geonet_b = beachball(geonet_rtp)
+    gcmt_b = beachball(gcmt_rtp)
 
 
 def stf_convolve(st,half_duration,window="bartlett"):

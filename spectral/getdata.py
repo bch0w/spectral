@@ -340,16 +340,21 @@ def event_stream(station,channel,event_id,client="GEONET",startpad=False,
 def get_moment_tensor(event_id):
     """gets moment tensor as array from geonet CSV file"""
     import csv
-    csvfile = pathnames()['spectral'] + "datafiles/GeoNet_CMT_solutions.csv"
+    csvfile = pathnames()['data'] + "GeoNet_CMT_solutions.csv"
     with open(csvfile,'r') as f:
         reader = csv.reader(f)
         for i,row in enumerate(reader):
             if i == 0:
                 tags = row
             if event_id == row[0]:
-                values = [float(_) for _ in row[1:]]
-                row = [row[0]] + values
-                MT = dict(zip(tags,row))
+                values = []
+                for t,v in zip(tags,row):
+                    if (t == "Date") or (t == "PublicID"):
+                        values.append(v)
+                    else:
+                        values.append(float(v))
+
+                MT = dict(zip(tags,values))
                 return MT
 
 
