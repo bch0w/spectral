@@ -1,14 +1,20 @@
 import os
 import sys
 sys.path.append('../modules/')
+import numpy as np
+from os.path import join
 from obspy import UTCDateTime, read, Stream
 
+# module functinos
 from getdata import pathnames, event_stream, get_moment_tensor
 from synmod import stf_convolve, get_GCMT_solution
-from procmod import preprocess
+from procmod import preprocess, trimstreams
 from plotmod import pretty_grids, align_yaxis
 
-from os.path import join
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+mpl.rcParams['font.size'] = 8
+mpl.rcParams['lines.linewidth'] = 1
 
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -17,7 +23,7 @@ print("==== Be aware: ignoring FutureWarnings ====")
 print("===========================================")
 
 # =================================== FUNC ====================================
-def initial_data_gather(event_id,code):
+def initial_data_gather(event_id,code,tmin,tmax):
     """gather event information, observation and synthetic traces,
     preprocess all traces accordingly and return one stream object with 6 traces
     """
@@ -48,24 +54,76 @@ def initial_data_gather(event_id,code):
                                             startpad=0,
                                             endpad=350)
 
-    # preprocessing, instrument response, STF convolution
+    # preprocessing, instrument response, STF convolution (synthetics)
     observationdata_proc = preprocess(observationdata,inv)
     syntheticdata_preproc = preprocess(syntheticdata)
     syntheticdata_proc = stf_convolve(syntheticdata_preproc,half_duration)
+    import ipdb;ipdb.set_trace()
     for tr in syntheticdata_proc:
         tr.stats.starttime = syn_start
 
-    # combine, common sampling rate
+    # combine, common sampling rate, filter, trim common time
     st_IDG = observationdata_proc + syntheticdata_proc
     st_IDG.resample(50)
+    st_IDG.filter('bandpass',freqmin=1/tmax,freqmax=1/tmin)
+    # trimstreams(st_IDG)
 
-    return st_IDG, MT
+    return st_IDG
+
+def plot_obsynth(st):
+    """plot streams in 3 subplot figure
+    """
+    f,(ax1,ax2,ax3) = plt.subplots(3,sharex=True,sharey=False,
+                                                    figsize=(9,5),dpi=200)
+    # create time axis
+    stats = st[0].stats
+    t = np.linspace(0,stats.endtime-stats.starttime,stats.npts)
+
+    # axes lists for plotting
+    ax1a,ax2a,ax3a = ax1.twinx(),ax2.twinx(),ax3.twinx()
+    axes = [ax1,ax2,ax3]
+    twin_axes = [ax1a,ax2a,ax3a]
+    obs_list = ["HHN","HHE","HHZ"]
+    syn_list = ["BXN","BXE","BXZ"]
+
+    # plot
+    for ax,tax,obs,syn in zip(axes,twin_axes,obs_list,syn_list):
+        obs_select = st.select(channel=obs)[0]
+        syn_select = st.select(channel=syn)[0]
+        A = ax.plot(t,obs_select.data,color='k',label=obs_select.get_id())
+        B = tax.plot(t,syn_select.data,color='r',label=syn_select.get_id())
+        lines = A+B
+        labels = [l.get_label() for l in lines]
+        ax.legend(lines,labels,prop={"size":5})
+        pretty_grids(ax)
+        pretty_grids(tax)
+        align_yaxis(ax,0,tax,0)
+
+    # final plot
+    ax1.set_title(event_id)
+    ax2.set_ylabel('HH* velocity (m/s)')
+    ax2a.set_ylabel('BX* velocity (m/s)')
+    ax3.set_xlabel('time (sec)')
+    plt.show()
+
+    return f
 
 
 # =================================== MAIN ====================================
+station_code = sys.argv[1].upper()
 event_id = "2014p240655"
-code = "NZ.PUZ..HHZ"
-st,mt = initial_data_gather(event_id,code)
+code = "NZ.{}..HHZ".format(station_code)
 
-st.filter('bandpass',freqmin=1/30,freqmax=1/5)
-st.plot()
+st = initial_data_gather(event_id,code,tmin=5,tmax=30)
+st.plot(equal_scale=False)
+# fig = plot_obsynth(st)
+
+
+
+
+
+
+
+
+
+import ipdb;ipdb.set_trace()

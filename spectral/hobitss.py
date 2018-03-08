@@ -46,9 +46,6 @@ def component_subplots(st,st_raw=False):
                         c='r',marker='x',s=0.05,zorder=4,
                         label="duration {} s".format(duration))
         ax.legend(prop={'size':5})
-        ax.ticklabel_format(style='sci',
-                                axis='y',
-                                scilimits=(0,0))
         pretty_grids(ax)
 
     # plot raw if available

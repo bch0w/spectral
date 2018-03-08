@@ -13,6 +13,21 @@ def preprocess(st,inv=False):
 
     return st_manipulate
 
+def trimstreams(st):
+    """trim streams to common start and end times
+    """
+    start_set,end_set = 0,1E10
+    for tr in st:
+        start_hold = tr.stats.starttime
+        end_hold = tr.stats.endtime
+        if start_hold > start_set:
+            start_set = start_hold
+        if end_hold < end_set:
+            end_set = end_hold
+
+    st.trim(start_set,end_set)
+
+
 def amplitude_threshold(t,tr,threshold_percentage):
     """based on some amplitude threshold, return all points that fall above,
     and the time length covered

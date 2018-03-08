@@ -174,7 +174,7 @@ def stf_convolve(st,half_duration,window="triang"):
     tukey (needs taper fraction)
     NOTE: bartlett window is a triangle that touches 0
     ========================================
-    :return st:
+    :return new_st:
     """
     import numpy as np
     from scipy import signal

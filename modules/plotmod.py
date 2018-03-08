@@ -16,6 +16,9 @@ def pretty_grids(input_ax):
                     linewidth='0.5',
                     color='k',
                     alpha=0.15)
+    input_ax.ticklabel_format(style='sci',
+                            axis='y',
+                            scilimits=(0,0))
 
 def align_yaxis(ax1,v1,ax2,v2):
     """adjust ax2 ylimit so that v2 in ax2 is aligned to v1 in ax1
