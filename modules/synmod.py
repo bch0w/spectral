@@ -1,6 +1,7 @@
 """module containing functions pertaining to synthetic outputs of specfem
 """
 import sys
+sys.path.append('../spectral/')
 from getdata import pathnames
 
 def mt_transform(mt,method):
@@ -37,6 +38,8 @@ def generate_CMTSOLUTION(event_id):
     """generate CMTSOLUTION file in the format of the Harvard CMT catalog
     using values from Ristau's moment tensor solutions
     """
+    import sys
+    sys.path.append("../spectral/")
     from obspy import UTCDateTime
     from getdata import get_moment_tensor
     from obspy.clients.fdsn import Client

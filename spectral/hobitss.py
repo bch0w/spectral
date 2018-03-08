@@ -1,5 +1,7 @@
 """script for looking at the hobitss data
 """
+import sys
+sys.path.append('../modules')
 import os
 import numpy as np
 import matplotlib.pyplot as plt
