@@ -36,6 +36,7 @@ def pathnames():
                 "data":os.path.join(cwd,'spectral','datafiles',''),
                 "hobitss":os.path.join(cwd,'spectral','datafiles','hobitss',''),
                 "kupe":os.path.join(cwd,'kupe',''),
+                "syns":os.path.join(cwd,'kupe','OUTPUT_FILES',''),
                 "where": where
                         }
 
@@ -273,6 +274,9 @@ def event_stream(station,channel,event_id,client="GEONET",startpad=False,
         origin = event.origins[0].time
         if startpad:
             start = origin - startpad
+        else:
+            start = origin
+
         if endpad:
             end = start + endpad
         else:
@@ -336,6 +340,52 @@ def event_stream(station,channel,event_id,client="GEONET",startpad=False,
             st.trim(starttime=start,endtime=end)
 
         return st, inv, cat
+
+def download_hobitss_data(event):
+    """download hobitss data via fdsn using obspy event object
+    """
+    # determine start and end of hobitss experiment
+    inv = read_inventory(pathnames()['hobitss'] + 'hobitss_stations.xml')
+    starts,ends = [],[]
+    for sta in inv[0]:
+        starts.append(sta[0].start_date)
+        ends.append(sta[0].end_date)
+    global_start = max(starts)
+    global_end = min(ends)
+
+    # event information for waveform gather
+    eventid = str(event.resource_id).split('/')[1]
+    starttime = event.origins[0].time - 100
+    endtime = starttime + 1500
+
+    # skip any event that falls outside the experiment
+    if (starttime <= global_start) or (endtime >= global_end):
+        print(eventid,"not within timeframe")
+        return
+
+    print(event)
+    c = Client("IRIS")
+    EBS_data = c.get_waveforms(network="YH",
+                               station="EBS*",
+                               location="",
+                               channel="*",
+                               starttime=starttime,
+                               endtime=endtime,
+                               attach_response=True)
+    LOBS_data = c.get_waveforms(network="YH",
+                               station="LOBS*",
+                               location="",
+                               channel="HH*",
+                               starttime=starttime,
+                               endtime=endtime,
+                               attach_response=True)
+
+    # write waveform data
+    EBS_data.write(pathnames()['hobitss'] + '{}_EBS.mseed'.format(eventid),
+                                                                format='MSEED')
+    LOBS_data.write(pathnames()['hobitss'] + '{}_LOBS.mseed'.format(eventid),
+                                                                format='MSEED')
+
 
 def get_moment_tensor(event_id):
     """gets moment tensor as array from geonet CSV file"""

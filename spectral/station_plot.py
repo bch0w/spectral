@@ -1,6 +1,7 @@
 """use obspy to create station maps
 """
 import sys
+sys.path.append('../modules/')
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import numpy as np
