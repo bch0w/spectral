@@ -361,19 +361,28 @@ def get_moment_tensor(event_id):
 def get_those_stations():
     """misc station getter to be copy-pasted"""
     from obspy.clients.fdsn import Client
-    c = Client("GEONET")
+    c = Client("IRIS")
     north_island = [-45,-35,175,180]
     north_island_zoom = [-40,-37,176,178.5]
     new_zealand = [-50,-35,165,180]
     lat_lon = new_zealand
-    inv = c.get_stations(network='NZ',
-                        station=sta_dict[choice],
-                        channel=chan_dict[choice],
-                        minlatitude=lat_lon[0],
-                        maxlatitude=lat_lon[1],
-                        minlongitude=lat_lon[2],
-                        maxlongitude=lat_lon[3],
+    # inv = c.get_stations(network='NZ',
+    #                     station=sta_dict[choice],
+    #                     channel=chan_dict[choice],
+    #                     minlatitude=lat_lon[0],
+    #                     maxlatitude=lat_lon[1],
+    #                     minlongitude=lat_lon[2],
+    #                     maxlongitude=lat_lon[3],
+    #                     level="station")
+    inv = c.get_stations(network='YH',
+                        station="LOBS*",
+                        location='',
                         level="station")
+    inv += c.get_stations(network='YH',
+                        station="EBS*",
+                        location='',
+                        level="station")
+
     inv.write('STATION_PLACEHOLDER.xml',format='STATIONXML')
 
 def get_those_events():
