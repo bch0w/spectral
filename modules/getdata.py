@@ -25,18 +25,22 @@ def pathnames():
     #     where = "OTHER"
     if basecheck == "seis/prj":
         where = "GNS"
-        cwd = "/seis/prj/fwi/bchow/spectral"
+        base = "/seis/prj/fwi/bchow/spectral"
     elif basecheck == "Users/chowbr":
         where = "VIC"
-        cwd = "/Users/chowbr/Documents/subduction/spectral"
-    path_dictionary = {"spectral":os.path.join(cwd,'spectral',''),
-                "rdf":os.path.join(cwd,'RDF_Array',''),
-                "plots":os.path.join(cwd,'spectral','output_plots',''),
-                "ppsd":os.path.join(cwd,'spectral','ppsd_arrays',''),
-                "data":os.path.join(cwd,'spectral','datafiles',''),
-                "hobitss":os.path.join(cwd,'spectral','datafiles','hobitss',''),
-                "kupe":os.path.join(cwd,'kupe',''),
-                "syns":os.path.join(cwd,'kupe','OUTPUT_FILES',''),
+        base = "/Users/chowbr/Documents/subduction/spectral"
+
+    common = os.path.join(base,'common')
+    path_dictionary = {"spectral":os.path.join(base,'spectral',''),
+                "kupe":os.path.join(base,'kupe',''),
+                "rdf":os.path.join(common,'DATA','RDF_Array',''),
+                "plots":os.path.join(common,'OUTPUT_PLOTS',''),
+                "spectralplots":os.path.join(common,'OUTPUT_PLOTS','spectral',''),
+                "kupeplots":os.path.join(common,'OUTPUT_PLOTS','kupe',''),
+                "ppsd":os.path.join(common,'DATA','ppsd_arrays',''),
+                "data":os.path.join(common,'DATA',''),
+                "hobitss":os.path.join(common,'DATA','hobitss_mseeds',''),
+                "syns":os.path.join(base,'kupe','output_kupe',''),
                 "where": where
                         }
 

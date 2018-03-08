@@ -1,13 +1,7 @@
 .DS_Store
+common
 #spectral
-spectral/NZ/
 __pycache__/
-spectral/ppsd_arrays/
-spectral/ppsd_arrays_OLD
-spectral/output_plots/
-spectral/datafiles/hobitss/*.mseed
-spectral/datafiles/GCMT/
 #kupe
-kupe/DATA/tomo_files/
-kupe/OUTPUT_FILES
-kupe/output_plots
+kupe/output_kupe/
+kupe/simulation_data/tomo_files/
