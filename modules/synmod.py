@@ -33,53 +33,6 @@ def mt_transform(mt,method):
     else:
         print("Invalid transformation method")
 
-def generate_CMTSOLUTION(event_id):
-    """generate CMTSOLUTION file in the format of the Harvard CMT catalog
-    using values from Ristau's moment tensor solutions
-    """
-    from obspy import UTCDateTime
-    from getdata import get_moment_tensor
-    from obspy.clients.fdsn import Client
-    from obspy.geodetics import FlinnEngdahl
-
-    c = Client('IRIS')
-
-    # moment tensor dictionary, put tensor in proper units, prepare entries
-    MT = get_moment_tensor(event_id=event_id)
-    mt = [MT['Mxx'],MT['Myy'],MT['Mzz'],MT['Mxy'],MT['Mxz'],MT['Myz']]
-    mt = [_*(1E20) for _ in mt]
-    mt = mt_transform(mt,method='xyz2rtp')
-    fe = FlinnEngdahl()
-    region = fe.get_region(MT['Longitude'],MT['Latitude'])
-    date = UTCDateTime(MT['Date'])
-    # first line
-    header = "XXXX {Y} {M} {D} {H} {m} {S} {La} {Lo} {Dp} {Mb} {Ms} {N}".format(
-            Y=date.year,
-            M=date.month,
-            D=date.day,
-            H=date.hour,
-            m=date.minute,
-            S=date.second,
-            La=MT['Latitude'],
-            Lo=MT['Longitude'],
-            Dp=MT['CD'],
-            Mb=0,
-            Ms=0,
-            N=region)
-    # write to solution file
-    with open('./CMTSOLUTIONS/{}CMTSOLUTION'.format(event_id),'w') as f:
-        f.write(header+'\n')
-        f.write("event name:\t {}\n".format(event_id))
-        f.write("time shift:\t 0\nhalf duration: 0\n")
-        f.write("latorUTM:\t {}\n".format(MT['Latitude']))
-        f.write("longorUTM:\t {}\n".format(MT['Longitude']))
-        f.write("depth:\t{}\n".format(MT['CD']))
-        f.write("Mrr:\t{}\n".format(mt[0]))
-        f.write("Mtt:\t{}\n".format(mt[1]))
-        f.write("Mpp:\t{}\n".format(mt[2]))
-        f.write("Mrt:\t{}\n".format(mt[3]))
-        f.write("Mrp:\t{}\n".format(mt[4]))
-        f.write("Mtp:\t{}\n".format(mt[5]))
 
 def get_GCMT_solution(event_id):
     """retrieve GCMT solutions from the .ndk files for comparison against

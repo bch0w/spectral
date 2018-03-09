@@ -17,6 +17,11 @@ errors = 0
 for fname in all_files:
     try:
         basename = os.path.basename(fname)
+        output_name = "{}.mseed".format(basename)
+        output_file = os.path.join(dirname,output_name)
+        if os.path.exists(output_file):
+            continue
+
         time = np.loadtxt(fname=fname, usecols=0)
         data = np.loadtxt(fname=fname, usecols=1)
         # assuming dt is constant after 3 decimal points
@@ -33,8 +38,7 @@ for fname in all_files:
                  }
         st = Stream([Trace(data=data,header=stats)])
 
-        output_name = "{}.mseed".format(basename)
-        output_file = os.path.join(dirname,output_name)
+
         st.write(output_name,format="MSEED")
     except KeyboardInterrupt:
         sys.exit()

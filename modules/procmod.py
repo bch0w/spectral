@@ -1,6 +1,6 @@
 """module file for processing data
 """
-def preprocess(st,inv=False):
+def preprocess(st,inv=False,output="VEL"):
     """preprocess waveform data
     """
     st_manipulate = st.copy()
@@ -9,7 +9,7 @@ def preprocess(st,inv=False):
     st_manipulate.taper(max_percentage=0.05)
     if inv:
         st_manipulate.attach_response(inv)
-        st_manipulate.remove_response(output="VEL",water_level=0)
+        st_manipulate.remove_response(output=output,water_level=0)
 
     return st_manipulate
 

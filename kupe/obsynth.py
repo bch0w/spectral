@@ -3,7 +3,7 @@ import sys
 sys.path.append('../modules/')
 import numpy as np
 from os.path import join
-from obspy import UTCDateTime, read, Stream
+from obspy import UTCDateTime, read, Stream, read_events
 
 # module functinos
 from getdata import pathnames, event_stream, get_moment_tensor
@@ -36,7 +36,12 @@ def initial_data_gather(event_id,code,tmin,tmax):
     moment_tensor = MT.focal_mechanisms[0].moment_tensor
     half_duration = (moment_tensor.source_time_function['duration'])/2
     mt_geonet = get_moment_tensor(event_id)
-    syn_start = UTCDateTime(mt_geonet['Date'])
+
+    # event time from CMTSOLUTION used in simulation
+    CMTpath = join(pathnames()['data'],
+                    'KUPEDATA','CMTSOLUTIONS','{}CMTSOLUTION'.format(event_id))
+    CMTSOL = read_events(CMTpath)
+    syn_start = CMTSOL[0].origins[0].time
 
     # grab synthetic data locally
     syntheticdata_path = join(pathnames()['syns'],event_id,'')
@@ -55,18 +60,18 @@ def initial_data_gather(event_id,code,tmin,tmax):
                                             endpad=350)
 
     # preprocessing, instrument response, STF convolution (synthetics)
-    observationdata_proc = preprocess(observationdata,inv)
+    observationdata_proc = preprocess(observationdata,inv=inv,output='DISP')
     syntheticdata_preproc = preprocess(syntheticdata)
     syntheticdata_proc = stf_convolve(syntheticdata_preproc,half_duration)
-    import ipdb;ipdb.set_trace()
     for tr in syntheticdata_proc:
         tr.stats.starttime = syn_start
 
+    syntheticdata_proc.integrate()
     # combine, common sampling rate, filter, trim common time
     st_IDG = observationdata_proc + syntheticdata_proc
     st_IDG.resample(50)
     st_IDG.filter('bandpass',freqmin=1/tmax,freqmax=1/tmin)
-    # trimstreams(st_IDG)
+    trimstreams(st_IDG)
 
     return st_IDG
 
@@ -115,15 +120,8 @@ event_id = "2014p240655"
 code = "NZ.{}..HHZ".format(station_code)
 
 st = initial_data_gather(event_id,code,tmin=5,tmax=30)
-st.plot(equal_scale=False)
-# fig = plot_obsynth(st)
+# st.plot(equal_scale=False)
+fig = plot_obsynth(st)
 
 
-
-
-
-
-
-
-
-import ipdb;ipdb.set_trace()
+# import ipdb;ipdb.set_trace()
