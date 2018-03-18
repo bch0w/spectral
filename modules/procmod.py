@@ -1,17 +1,24 @@
 """module file for processing data
 """
-def preprocess(st,inv=False,output="VEL"):
-    """preprocess waveform data
+def preprocess(st,resample=50,inv=False,output="VEL"):
+    """preprocess waveform data:
+    resample, demean, detrend, taper, remv. resp. (if applicable)
     """
     st_manipulate = st.copy()
+    st_manipulate.resample(resample)
     st_manipulate.detrend("demean")
     st_manipulate.detrend("linear")
     st_manipulate.taper(max_percentage=0.05)
     if inv:
+        pre_filt = [1/100,1/90,25,30]
         st_manipulate.attach_response(inv)
-        st_manipulate.remove_response(output=output,water_level=0)
+        st_manipulate.remove_response(output=output,
+                                      pre_filt=pre_filt,
+                                      water_level=60,
+                                      plot=False)
 
     return st_manipulate
+
 
 def trimstreams(st):
     """trim streams to common start and end times
@@ -68,3 +75,6 @@ def amplitude_threshold(t,tr,threshold_percentage):
         t_over.append(t[S])
 
     return t_over,a_over,duration_in_seconds
+
+if __name__ == "__main__":
+    print('what?')

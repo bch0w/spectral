@@ -1,7 +1,7 @@
 """module containing functions pertaining to synthetic outputs of specfem
 """
 import sys
-from getdata import pathnames
+from getdata import pathnames, get_GCMT_solution
 
 def mt_transform(mt,method):
     """transform moment tensor between xyz and rtp coordinates
@@ -33,42 +33,6 @@ def mt_transform(mt,method):
     else:
         print("Invalid transformation method")
 
-
-def get_GCMT_solution(event_id):
-    """retrieve GCMT solutions from the .ndk files for comparison against
-    converted MT from Ristau. Returns an obspy event object.
-    """
-    import os
-    from obspy import read_events, UTCDateTime
-    from getdata import get_moment_tensor
-
-    month_dict={4:"apr",12:"dec",1:"jan",6:"jun",5:"may",10:"oct",
-                8:"aug",2:"feb",7:"jul",3:"mar",11:"nov",9:"sep"}
-    MT = get_moment_tensor(event_id=event_id)
-    mw = MT["Mw"]
-    date = UTCDateTime(MT["Date"])
-    year = str(date.year)
-    month = date.month
-    fid = "{m}{y}.ndk".format(m=month_dict[month],y=year[2:])
-    filepath = os.path.join(pathnames()['data'],"GCMT",year,fid)
-    cat = read_events(filepath)
-    cat_filt = cat.filter("time > {}".format(str(date-300)),
-                          "time < {}".format(str(date+300)),
-                          "magnitude >= {}".format(mw-.5),
-                          "magnitude <= {}".format(mw+.5)
-                          )
-    if len(cat_filt) == 0:
-        print("No events found")
-        return
-    elif len(cat_filt) > 1:
-        print("{} events found, choose from list:".format(len(cat_filt)))
-        print(cat_filt)
-        choice = input("Event number: ")
-        event = cat_filt[choice]
-        return event
-    else:
-        event = cat_filt[0]
-        return event
 
 def mt_from_event(event):
     """pull out the tensor components from obspy event object, return as dict
@@ -106,7 +70,7 @@ def compare_beachballs(event_id):
     gcmt_b = beachball(gcmt_rtp)
 
 
-def stf_convolve(st,half_duration,window="triang"):
+def stf_convolve(st,half_duration,window="bartlett"):
     """convolve source time function with a stream
     :type st: obspy.stream
     :param st: stream object containing traces of data
@@ -132,12 +96,19 @@ def stf_convolve(st,half_duration,window="triang"):
     import numpy as np
     from scipy import signal
 
-    # set up window
+    # set up windowtriang
     npts = st[0].stats.npts
     sampling_rate = st[0].stats.sampling_rate
     half_duration_in_samples = round(half_duration * sampling_rate)
     stf = signal.get_window(window=window,
-                            Nx=half_duration_in_samples * 2)
+                            Nx=(half_duration_in_samples * 2) -1)
+
+    # make sure window touches 0 at the end
+    if stf[-1] != 0:
+        stf = np.append(stf,0)
+
+    # normalize to keep area of window equal one
+    stf *= (2/len(stf))
 
     # convolve
     new_st = st.copy()
@@ -146,3 +117,6 @@ def stf_convolve(st,half_duration,window="triang"):
         tr.data = new_data
 
     return new_st
+
+if __name__ == "__main__":
+    print('what?')

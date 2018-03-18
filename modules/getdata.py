@@ -39,6 +39,7 @@ def pathnames():
                 "kupeplots":os.path.join(common,'OUTPUT_PLOTS','kupe',''),
                 "ppsd":os.path.join(common,'DATA','ppsd_arrays',''),
                 "data":os.path.join(common,'DATA',''),
+                "kupedata":os.path.join(common,'DATA','KUPEDATA',''),
                 "hobitss":os.path.join(common,'DATA','hobitss_mseeds',''),
                 "syns":os.path.join(base,'kupe','output_kupe',''),
                 "where": where
@@ -411,23 +412,58 @@ def get_moment_tensor(event_id):
                 MT = dict(zip(tags,values))
                 return MT
 
+def get_GCMT_solution(event_id):
+    """retrieve GCMT solutions from the .ndk files for comparison against
+    converted MT from Ristau. Returns an obspy event object.
+    """
+    import os
+    from obspy import read_events, UTCDateTime
+    from getdata import get_moment_tensor
+
+    month_dict={4:"apr",12:"dec",1:"jan",6:"jun",5:"may",10:"oct",
+                8:"aug",2:"feb",7:"jul",3:"mar",11:"nov",9:"sep"}
+    MT = get_moment_tensor(event_id=event_id)
+    mw = MT["Mw"]
+    date = UTCDateTime(MT["Date"])
+    year = str(date.year)
+    month = date.month
+    fid = "{m}{y}.ndk".format(m=month_dict[month],y=year[2:])
+    filepath = os.path.join(pathnames()['data'],"GCMT",year,fid)
+    cat = read_events(filepath)
+    cat_filt = cat.filter("time > {}".format(str(date-300)),
+                          "time < {}".format(str(date+300)),
+                          "magnitude >= {}".format(mw-.5),
+                          "magnitude <= {}".format(mw+.5)
+                          )
+    if len(cat_filt) == 0:
+        print("No events found")
+        return
+    elif len(cat_filt) > 1:
+        print("{} events found, choose from list:".format(len(cat_filt)))
+        print(cat_filt)
+        choice = input("Event number: ")
+        event = cat_filt[choice]
+        return event
+    else:
+        event = cat_filt[0]
+        return event
 
 def get_those_stations():
     """misc station getter to be copy-pasted"""
     from obspy.clients.fdsn import Client
-    c = Client("IRIS")
-    north_island = [-45,-35,175,180]
+    c = Client("GEONET")
+    north_island = [-42,-34,173,180]
     north_island_zoom = [-40,-37,176,178.5]
     new_zealand = [-50,-35,165,180]
-    lat_lon = new_zealand
-    # inv = c.get_stations(network='NZ',
-    #                     station=sta_dict[choice],
-    #                     channel=chan_dict[choice],
-    #                     minlatitude=lat_lon[0],
-    #                     maxlatitude=lat_lon[1],
-    #                     minlongitude=lat_lon[2],
-    #                     maxlongitude=lat_lon[3],
-    #                     level="station")
+    lat_lon = north_island
+    inv = c.get_stations(network='NZ',
+                        station='*S',
+                        # channel='',
+                        minlatitude=lat_lon[0],
+                        maxlatitude=lat_lon[1],
+                        minlongitude=lat_lon[2],
+                        maxlongitude=lat_lon[3],
+                        level="station")
     inv = c.get_stations(network='YH',
                         station="LOBS*",
                         location='',
@@ -491,3 +527,6 @@ def station_and_event():
                     zorder=200,
                     weight='bold')
     plt.show()
+
+if __name__ == "__main__":
+    print('what?')

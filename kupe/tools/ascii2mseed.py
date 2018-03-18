@@ -7,11 +7,18 @@ python /path/to/ascii_to_mseed.py
 import os
 import glob
 import numpy as np
-from obspy import UTCDateTime, read, Trace, Stream
+from obspy import UTCDateTime, read, Trace, Stream, read_events
 
 dirname = os.getcwd()
 all_files = glob.glob(os.path.join(dirname,'*.sem?'))
 print("{} files found".format(len(all_files)))
+
+cmtfilepath = glob.glob(os.path.join(dirname,'*CMTSOLUTION'))[0]
+cmtfile = read_events(cmtfilepath,format='CMTSOLUTION')
+if not cmtfile:
+    sys.exit('CMTSOLUTION file required in folder')
+starttime = cmtfile[0].origins[0].time
+
 
 errors = 0
 for fname in all_files:
@@ -32,6 +39,7 @@ for fname in all_files:
                  "station":station,
                  "location":"",
                  "channel":channel,
+                 "starttime":starttime,
                  "npts":len(data),
                  "delta":delta,
                  "mseed":{"dataquality":'D'}
