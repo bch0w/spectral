@@ -41,7 +41,7 @@ def pathnames():
                 "data":os.path.join(common,'DATA',''),
                 "kupedata":os.path.join(common,'DATA','KUPEDATA',''),
                 "hobitss":os.path.join(common,'DATA','hobitss_mseeds',''),
-                "syns":os.path.join(base,'kupe','output_kupe',''),
+                "syns":os.path.join(base,'DATA','MSEED','SYNTHETICS',''),
                 "where": where
                         }
 

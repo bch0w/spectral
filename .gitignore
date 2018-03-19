@@ -4,6 +4,6 @@ common
 #spectral
 __pycache__/
 #kupe
-kupe/output_kupe/
-kupe/simulation_data/tomo_files/
 kupe/test_perl
+kupe/tools/perl_scripts
+kupe/simulation_data/tomo_files/
