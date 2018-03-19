@@ -42,7 +42,7 @@ def pathnames():
                 "data":os.path.join(common,'DATA',''),
                 "kupedata":os.path.join(common,'DATA','KUPEDATA',''),
                 "hobitss":os.path.join(common,'DATA','hobitss_mseeds',''),
-                "mseeds":os.path.join(common,'DATA','MSEEDS',''),
+                "mseed":os.path.join(common,'DATA','MSEED',''),
                 "syns":os.path.join(base,'DATA','MSEED','SYNTHETICS',''),
                 "where": where
                         }
@@ -172,129 +172,102 @@ def geonet_internal(station,channel,start,end=False,response=True):
 
     return mseed_files, response_filepath
 
-def fdsn_download(station,channel,start,network='NZ',end=False,response=False,
-                                                    client="GEONET",cushion=0):
+def fdsn_download(code,event_id=False,response=False,
+                                        client="GEONET",cushion=500):
     """Download data via FDSN client for given station, channel and start
     and end times. Can output response as well. Return stream and response.
-    :type station: str
-    :param station: station name i.e. GKBS (case-insensitive)
-    :type channel: str
-    :param channel: channel of interest, i.e. BHN, HHE (case-insensitive)
+    :type code: str
+    :param code: instrument code in the format NN.SSSS.LL.CCC i.e. NZ.PUZ..HHZ
     :type start: str
     :param start: starttime for data request
     :type end: str
-    :param end: endtime for data request
+    :param end: endtime for data request, default 2 hours after start + cushion
     :type response: bool
     :param response: whether or not to return the response information, if not,
                     just returns bool False
     :type client: str
     :param client: client that fdsn searches for data
     :type cushion: int
-    :param cushion: padding on start and end time
+    :param cushion: padding on start and end time, default 500s
     """
-    station = station.upper()
-    folders = 1 # corresponds to number of channels
-    if channel[-1] == "*":
-        folders = 3
-    start = UTCDateTime(start) - cushion
-    if end:
-        end = UTCDateTime(end) + cushion
-    else:
-        end = start + 3600*24
+    print("++fdsn_download++")
+    # set timing
+    if event_id:
+        cat = get_quakeml(event_id)
+        event = cat[0]
+        starttime = event.origins[0].time - cushion
+        endtime = starttime + 3600*2 + cushion
+    elif start:
+        starttime = UTCDateTime(start) - cushion
+        if end:
+            endtime = UTCDateTime(end) + cushion
+        else:
+            endtime = start + 3600*2 + cushion
 
     # set instrument id from arguments
-    instrument_id = '{n}.{s}.*.{c}'.format(n=network,s=station,c=channel)
-    # print("++ Requesting data for instrument: {}".format(instrument_id))
-    net, sta, loc, cha = instrument_id.split('.')
+    net,sta,loc,cha = code.split('.')
 
-    # initiate downloading of data
-    c = Client(client)
-    err_num = 0
-    try:
-        st = c.get_waveforms(network=net,
-                            station=sta,
-                            location=loc,
-                            channel=cha,
-                            starttime=start,
-                            endtime=end)
-                            # attach_response=response)
+    # special sets for hobitss data
+    if net == 'YH':
+        # skip any event that falls outside the hobitss timeframe
+        global_start = UTCDateTime("2014-05-13T12:49:00.000000Z")
+        global_end = UTCDateTime("2015-06-20T13:55:00.000000Z")
+        if (starttime <= global_start) or (endtime >= global_end):
+            print(eventid,"not within Hobitss timeframe")
+            return
+        client = "IRIS"
 
-    except Exception as e:
-        print(e)
-        err_num += 1
-        if err_num > 5:
-            print("errored out")
-            a=1/0
-        pass
-
-    if response:
-        # fetch response file
-        # print("++ Requesting response information")
-        try:
-            response = c.get_stations(network=net,
-                                station=sta,
-                                location='*',
-                                channel='*',
-                                starttime=start,
-                                endtime=end,
-                                level='response')
-        except Exception as e:
-            print(e)
-            pass
-
-
-    return st, response
-
-
-def get_hobitss_data(event_id,save=False,choice="LOBS"):
-    """grab hobitss data internally, or if not possible, download hobitss data
-    via fdsn. return stream and inventory objects
-    """
-    # determine start and end of hobitss experiment
-    choice = choice.upper()
-
-    # hobitss experiment start and end time
-    global_start = UTCDateTime("2014-05-13T12:49:00.000000Z")
-    global_end = UTCDateTime("2015-06-20T13:55:00.000000Z")
-
-    # event information for waveform gather
-    cat = get_quakeml(event_id)
-    event = cat[0]
-    starttime = event.origins[0].time -
-    endtime = starttime + 7200
-
-    # skip any event that falls outside the experiment
-    if (starttime <= global_start) or (endtime >= global_end):
-        print(eventid,"not within timeframe")
-        return
-
-    # grab waveform data
-    data_path = pathnames()['hobitss'] + '{e}_{c}.mseed'.format(e=event_id,
-                                                            c=choice)
+    # search for data internal
+    data_path = pathnames()['mseed'] + '{n}/{e}_{s}.mseed'.format(n=net,
+                                                                 e=event_id,
+                                                                 s=sta)
     try:
         st = read(data_path)
     except Exception as e:
-        print("{} not found, querying FDSN".format(data_path))
-        c = Client("IRIS")
-        st = c.get_waveforms(network="YH",
-                               station="{}*".format(choice),
-                               location="",
-                               channel="HH*",
-                               starttime=starttime,
-                               endtime=endtime,
-                               attach_response=True)
-        # write waveform data
-        if save:
-            EBS_data.write(pathnames()['hobitss'] + '{}_EBS.mseed'.format(event_id),
-                                                                    format='MSEED')
-            LOBS_data.write(pathnames()['hobitss'] + '{}_LOBS.mseed'.format(
-                                                          event_id),format='MSEED')
+        print("internal mseed not found, querying fdsn...")
 
-    # response information
-    resp_path = pathnames()['hobitss'] + 'hobitts_stations.xml'
-    inv = read_inventory(resp_path)
+        # initiate downloading of data
+        c = Client(client)
+        err_num = 0
+        try:
+            st = c.get_waveforms(network=net,
+                                station=sta,
+                                location=loc,
+                                channel=cha,
+                                starttime=starttime,
+                                endtime=endtime)
+            st.write(data_path,format="MSEED")
+            print('\t',data_path)
+        except Exception as e:
+            print(e)
+            a=1/0
 
-    return st, inv
+    if response:
+        resp_path = pathnames()['data'] + 'STATIONXML/{n}.{s}.xml'.format(n=net,
+                                                                          s=sta)
+        try:
+            inv = read_inventory(resp_path)
+        except Exception as e:
+            print("internal resp not found, querying fdsn...")
+            try:
+                inv = c.get_stations(network=net,
+                                    station=sta,
+                                    location='*',
+                                    channel='*',
+                                    starttime=starttime,
+                                    endtime=endtime,
+                                    level='response')
+                inv.write(resp_path,format="STATIONXML")
+                print('\t',resp_path)
+            except Exception as e:
+                print(e)
+                pass
+
+        return st, inv
+
+    else:
+        return st
+
 
 def event_stream(station,channel,event_id,client="GEONET",startpad=False,
                                                                 endpad=False):
@@ -409,11 +382,11 @@ def get_quakeml(event_id):
     try:
         cat = read_events(event_path)
     except Exception as e:
-        print("QUAKEML not found, fetching",end='... ')
+        print("QUAKEML not found, querying fdsn... ")
         event_client = Client("GEONET")
         cat = event_client.get_events(eventid=event_id)
         cat.write(event_path,format="QUAKEML")
-        print(event_path)
+        print('\t',event_path)
 
     return cat
 
