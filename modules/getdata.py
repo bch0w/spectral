@@ -7,6 +7,7 @@ import glob
 from obspy import read, read_events, read_inventory, UTCDateTime
 from obspy.clients.fdsn import Client
 
+# ============================== INTERNAL SCRIPTS =============================
 def pathnames():
     """
     simplify pathname calling between computers, call function to return the
@@ -41,11 +42,14 @@ def pathnames():
                 "data":os.path.join(common,'DATA',''),
                 "kupedata":os.path.join(common,'DATA','KUPEDATA',''),
                 "hobitss":os.path.join(common,'DATA','hobitss_mseeds',''),
+                "mseeds":os.path.join(common,'DATA','MSEEDS',''),
                 "syns":os.path.join(base,'DATA','MSEED','SYNTHETICS',''),
                 "where": where
                         }
 
     return path_dictionary
+
+# ============================== WAVEFORM DOWNLOAD =============================
 
 def geonet_internal(station,channel,start,end=False,response=True):
     """
@@ -241,21 +245,56 @@ def fdsn_download(station,channel,start,network='NZ',end=False,response=False,
 
     return st, response
 
-def get_quakeml(event_id):
-    """get quakeml file for event information, save internally if not already
-    present in filesystem
-    """
-    event_path = pathnames()['data'] + 'QUAKEML/{}.xml'.format(event_id)
-    try:
-        cat = read_events(event_path)
-    except Exception as e:
-        print("QUAKEML not found, fetching",end='... ')
-        event_client = Client("GEONET")
-        cat = event_client.get_events(eventid=event_id)
-        cat.write(event_path,format="QUAKEML")
-        print(event_path)
 
-    return cat
+def get_hobitss_data(event_id,save=False,choice="LOBS"):
+    """grab hobitss data internally, or if not possible, download hobitss data
+    via fdsn. return stream and inventory objects
+    """
+    # determine start and end of hobitss experiment
+    choice = choice.upper()
+
+    # hobitss experiment start and end time
+    global_start = UTCDateTime("2014-05-13T12:49:00.000000Z")
+    global_end = UTCDateTime("2015-06-20T13:55:00.000000Z")
+
+    # event information for waveform gather
+    cat = get_quakeml(event_id)
+    event = cat[0]
+    starttime = event.origins[0].time -
+    endtime = starttime + 7200
+
+    # skip any event that falls outside the experiment
+    if (starttime <= global_start) or (endtime >= global_end):
+        print(eventid,"not within timeframe")
+        return
+
+    # grab waveform data
+    data_path = pathnames()['hobitss'] + '{e}_{c}.mseed'.format(e=event_id,
+                                                            c=choice)
+    try:
+        st = read(data_path)
+    except Exception as e:
+        print("{} not found, querying FDSN".format(data_path))
+        c = Client("IRIS")
+        st = c.get_waveforms(network="YH",
+                               station="{}*".format(choice),
+                               location="",
+                               channel="HH*",
+                               starttime=starttime,
+                               endtime=endtime,
+                               attach_response=True)
+        # write waveform data
+        if save:
+            EBS_data.write(pathnames()['hobitss'] + '{}_EBS.mseed'.format(event_id),
+                                                                    format='MSEED')
+            LOBS_data.write(pathnames()['hobitss'] + '{}_LOBS.mseed'.format(
+                                                          event_id),format='MSEED')
+
+    # response information
+    resp_path = pathnames()['hobitss'] + 'hobitts_stations.xml'
+    inv = read_inventory(resp_path)
+
+    return st, inv
 
 def event_stream(station,channel,event_id,client="GEONET",startpad=False,
                                                                 endpad=False):
@@ -359,56 +398,24 @@ def event_stream(station,channel,event_id,client="GEONET",startpad=False,
 
         return st, inv, cat
 
-def get_hobitss_data(event_id,save=False):
-    """download hobitss data via fdsn using obspy event object
+
+# ============================== EVENT INFO DOWNLOAD ==========================
+
+def get_quakeml(event_id):
+    """get quakeml file for event information, save internally if not already
+    present in filesystem
     """
-    # determine start and end of hobitss experiment
-    inv = read_inventory(pathnames()['hobitss'] + 'hobitss_stations.xml')
-    starts,ends = [],[]
-    for sta in inv[0]:
-        starts.append(sta[0].start_date)
-        ends.append(sta[0].end_date)
-    global_start = max(starts)
-    global_end = min(ends)
+    event_path = pathnames()['data'] + 'QUAKEML/{}.xml'.format(event_id)
+    try:
+        cat = read_events(event_path)
+    except Exception as e:
+        print("QUAKEML not found, fetching",end='... ')
+        event_client = Client("GEONET")
+        cat = event_client.get_events(eventid=event_id)
+        cat.write(event_path,format="QUAKEML")
+        print(event_path)
 
-    # event information for waveform gather
-    cat = get_quakeml(event_id)
-    event = cat[0]
-    starttime = event.origins[0].time
-    endtime = starttime + 7200
-
-    # skip any event that falls outside the experiment
-    if (starttime <= global_start) or (endtime >= global_end):
-        print(eventid,"not within timeframe")
-        return
-# need to try to read in data here otherwise use iris client
-
-
-    c = Client("IRIS")
-    # EBS_data = c.get_waveforms(network="YH",
-    #                            station="EBS*",
-    #                            location="",
-    #                            channel="*",
-    #                            starttime=starttime,
-    #                            endtime=endtime,
-    #                            attach_response=True)
-    LOBS_data = c.get_waveforms(network="YH",
-                               station="LOBS*",
-                               location="",
-                               channel="HH*",
-                               starttime=starttime,
-                               endtime=endtime,
-                               attach_response=True)
-
-    # write waveform data
-    if save:
-        EBS_data.write(pathnames()['hobitss'] + '{}_EBS.mseed'.format(event_id),
-                                                                format='MSEED')
-        LOBS_data.write(pathnames()['hobitss'] + '{}_LOBS.mseed'.format(
-                                                      event_id),format='MSEED')
-
-    return EBS_data
-
+    return cat
 
 def get_moment_tensor(event_id):
     """gets moment tensor as array from geonet CSV file"""
@@ -465,6 +472,8 @@ def get_GCMT_solution(event_id):
     else:
         event = cat_filt[0]
         return event
+
+# ============================== COPY-PASTE SCRIPTS ============================
 
 def get_those_stations():
     """misc station getter to be copy-pasted"""
