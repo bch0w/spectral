@@ -181,10 +181,10 @@ if __name__ == "__main__":
     event_id = "2014p240655"
 
     for station_code in station_names:
-        try:
-            code = "NZ.{}..HH?".format(station_code)
-            st = initial_data_gather(event_id,code,tmin=5,tmax=30)
-            fig = plot_obsynth(st,twinax=False,save=True)
-        except Exception as e:
-            print(e)
-            continue
+        # try:
+        code = "NZ.{}..HH?".format(station_code)
+        st = initial_data_gather(event_id,code,tmin=5,tmax=30)
+        fig = plot_obsynth(st,twinax=False,save=False)
+        # except Exception as e:
+        #     print(e)
+        #     continue

@@ -4,7 +4,7 @@ FDSN webservices via obspy (@VIC)
 """
 import os
 import glob
-from obspy import read, read_inventory, UTCDateTime
+from obspy import read, read_events, read_inventory, UTCDateTime
 from obspy.clients.fdsn import Client
 
 def pathnames():
@@ -24,7 +24,7 @@ def pathnames():
     # else:
     #     where = "OTHER"
     if basecheck == "seis/prj":
-        where = "GNS"
+        where = "VIC"
         base = "/seis/prj/fwi/bchow/spectral"
     elif basecheck == "Users/chowbr":
         where = "VIC"
@@ -241,6 +241,22 @@ def fdsn_download(station,channel,start,network='NZ',end=False,response=False,
 
     return st, response
 
+def get_quakeml(event_id):
+    """get quakeml file for event information, save internally if not already
+    present in filesystem
+    """
+    event_path = pathnames()['data'] + 'QUAKEML/{}.xml'.format(event_id)
+    try:
+        cat = read_events(event_path)
+    except Exception as e:
+        print("QUAKEML not found, fetching",end='... ')
+        event_client = Client("GEONET")
+        cat = event_client.get_events(eventid=event_id)
+        cat.write(event_path,format="QUAKEML")
+        print(event_path)
+
+    return cat
+
 def event_stream(station,channel,event_id,client="GEONET",startpad=False,
                                                                 endpad=False):
     """Given a GEONET event ID, return raw waveform streams and response files
@@ -269,13 +285,10 @@ def event_stream(station,channel,event_id,client="GEONET",startpad=False,
         choice = "rdf"
     channel = channel.upper()
 
-    # get event information
-    event_client = Client(client)
-    if event_id:
-        cat = event_client.get_events(eventid=event_id)
-
+    cat = get_quakeml(event_id)
 
     for event in cat:
+        # set start and end times
         origin = event.origins[0].time
         if startpad:
             start = origin - startpad
@@ -314,23 +327,23 @@ def event_stream(station,channel,event_id,client="GEONET",startpad=False,
         # grab geonet data either internally or via fdsn
         elif choice == "geonet":
             if pathnames()["where"] == "GNS":
-                path_vert, resp_vert = geonet_internal(station=station_id,
-                                            channel= channel[:2] + 'Z',
+                st_list,resp_list = [],[]
+                for comp in ['N','E','Z']:
+                    path_st, path_resp = geonet_internal(station=station_id,
+                                            channel= channel[:2] + comp,
                                             start = origin,
                                             response = True)
-                path_north, resp_north = geonet_internal(station=station_id,
-                                            channel= channel[:2] + 'N',
-                                            start = origin,
-                                            response = True)
-                path_east, resp_east = geonet_internal(station=station_id,
-                                            channel= channel[:2] + 'E',
-                                            start = origin,
-                                            response = True)
-                inv = read_inventory(resp_vert)
-                inv += read_inventory(resp_north)
-                inv += read_inventory(resp_east)
-                st = (read(path_vert[0]) + read(path_north[0]) +
-                                                            read(path_east[0]))
+                    st_list += path_st
+                    resp_list.append(path_resp)
+
+                inv = (read_inventory(resp_list[0]) +
+                        read_inventory(resp_list[1]) +
+                        read_inventory(resp_list[2])
+                        )
+                st = (read(st_list[0]) +
+                        read(st_list[1]) +
+                        read(st_list[2])
+                        )
 
             # if not working on GNS computer
             else:
@@ -346,7 +359,7 @@ def event_stream(station,channel,event_id,client="GEONET",startpad=False,
 
         return st, inv, cat
 
-def download_hobitss_data(event):
+def get_hobitss_data(event_id,save=False):
     """download hobitss data via fdsn using obspy event object
     """
     # determine start and end of hobitss experiment
@@ -359,24 +372,26 @@ def download_hobitss_data(event):
     global_end = min(ends)
 
     # event information for waveform gather
-    eventid = str(event.resource_id).split('/')[1]
-    starttime = event.origins[0].time - 100
-    endtime = starttime + 1500
+    cat = get_quakeml(event_id)
+    event = cat[0]
+    starttime = event.origins[0].time
+    endtime = starttime + 7200
 
     # skip any event that falls outside the experiment
     if (starttime <= global_start) or (endtime >= global_end):
         print(eventid,"not within timeframe")
         return
+# need to try to read in data here otherwise use iris client
 
-    print(event)
+
     c = Client("IRIS")
-    EBS_data = c.get_waveforms(network="YH",
-                               station="EBS*",
-                               location="",
-                               channel="*",
-                               starttime=starttime,
-                               endtime=endtime,
-                               attach_response=True)
+    # EBS_data = c.get_waveforms(network="YH",
+    #                            station="EBS*",
+    #                            location="",
+    #                            channel="*",
+    #                            starttime=starttime,
+    #                            endtime=endtime,
+    #                            attach_response=True)
     LOBS_data = c.get_waveforms(network="YH",
                                station="LOBS*",
                                location="",
@@ -386,10 +401,13 @@ def download_hobitss_data(event):
                                attach_response=True)
 
     # write waveform data
-    EBS_data.write(pathnames()['hobitss'] + '{}_EBS.mseed'.format(eventid),
+    if save:
+        EBS_data.write(pathnames()['hobitss'] + '{}_EBS.mseed'.format(event_id),
                                                                 format='MSEED')
-    LOBS_data.write(pathnames()['hobitss'] + '{}_LOBS.mseed'.format(eventid),
-                                                                format='MSEED')
+        LOBS_data.write(pathnames()['hobitss'] + '{}_LOBS.mseed'.format(
+                                                      event_id),format='MSEED')
+
+    return EBS_data
 
 
 def get_moment_tensor(event_id):
