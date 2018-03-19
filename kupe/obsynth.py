@@ -12,12 +12,6 @@ import procmod
 import plotmod
 from getdata import pathnames
 
-# from getdata import pathnames, event_stream, \
-#                     get_moment_tensor, get_GCMT_solution
-# from synmod import stf_convolve
-# from procmod import preprocess, trimstreams
-# from plotmod import pretty_grids, align_yaxis
-
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 mpl.rcParams['font.size'] = 8
@@ -30,13 +24,12 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 # print("===========================================")
 
 # =================================== FUNC ====================================
-def initial_data_gather(event_id,code,tmin,tmax):
+def initial_data_gather(code,event_id,tmin,tmax):
     """gather event information, observation and synthetic traces,
     preprocess all traces accordingly and return one stream object with 6 traces
     """
     # station information
-    network,station,location,channel = code.split('.')
-    component = channel[-1]
+    net,sta,loc,cha = code.split('.')
 
     # event information
     time_shift, half_duration = synmod.tshift_halfdur(event_id)
@@ -45,17 +38,16 @@ def initial_data_gather(event_id,code,tmin,tmax):
     syntheticdata_path = join(pathnames()['syns'],event_id,'')
     syntheticdata = Stream()
     for c in ["N","E","Z"]:
-        syntheticdata_filename = "{n}.{s}.BX{co}.semv.mseed".format(n=network,
-                                                                s=station,
+        syntheticdata_filename = "{n}.{s}.BX{co}.semv.mseed".format(n=net,
+                                                                s=sta,
                                                                 co=c)
         syntheticdata += read(join(syntheticdata_path,syntheticdata_filename))
 
     # grab observation data
-    observationdata,inv,cat = getdata.event_stream(station=station,
-                                            channel=channel,
-                                            event_id=event_id,
-                                            startpad=0,
-                                            endpad=350)
+    observationdata,inv,cat = getdata.event_stream(code=code,
+                                                    event_id=event_id,
+                                                    startpad=0,
+                                                    endpad=350)
 
     # preprocessing, instrument response, STF convolution (synthetics)
     observationdata_proc = procmod.preprocess(observationdata,
@@ -85,6 +77,7 @@ def plot_obsynth(st,twinax=False,save=False):
                                                     figsize=(9,5),dpi=200)
     # create time axis
     stats = st[0].stats
+    net,sta,loc,cha = st[0].get_id().split('.')
     t = np.linspace(0,stats.endtime-stats.starttime,stats.npts)
 
     # axes lists for plotting
@@ -93,9 +86,11 @@ def plot_obsynth(st,twinax=False,save=False):
     if twinax:
         ax1a,ax2a,ax3a = ax1.twinx(),ax2.twinx(),ax3.twinx()
         twin_axes = [ax1a,ax2a,ax3a]
-        ax2a.set_ylabel('BX* velocity (m/s)')
+        ax2a.set_ylabel("velocity (m/s)")
 
     obs_list = ["HHN","HHE","HHZ"]
+    if net == "YH":
+        obs_list = ["HH1","HH2","HHZ"]
     syn_list = ["BXN","BXE","BXZ"]
 
     # plot
@@ -114,7 +109,7 @@ def plot_obsynth(st,twinax=False,save=False):
     # final plot
     ax1.set_xlim([t.min(),t.max()])
     ax1.set_title("{e} {s}".format(e=event_id,s=stats.station))
-    ax2.set_ylabel("HH* velocity (m/s)")
+    ax2.set_ylabel("velocity (m/s)")
     ax3.set_xlabel("time (sec)")
 
     if save:
@@ -178,13 +173,15 @@ if __name__ == "__main__":
     station_name_path = (pathnames()['data'] +
                                 'STATIONXML/north_island_BB_station_names.npy')
     station_names = np.load(station_name_path)
-    event_id = "2014p240655"
+    station_names = ["LOBS1","LOBS2","LOBS3","LOBS4"]
+    event_id = "2014p715167"
 
     for station_code in station_names:
         # try:
-        code = "NZ.{}..HH?".format(station_code)
-        st = initial_data_gather(event_id,code,tmin=5,tmax=30)
-        fig = plot_obsynth(st,twinax=False,save=False)
+        # code = "NZ.{}.*.HH?".format(station_code)
+        code = "YH.{}.*.HH?".format(station_code)
+        st = initial_data_gather(code,event_id,tmin=5,tmax=30)
+        fig = plot_obsynth(st,twinax=True,save=False)
         # except Exception as e:
         #     print(e)
         #     continue

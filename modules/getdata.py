@@ -43,7 +43,7 @@ def pathnames():
                 "kupedata":os.path.join(common,'DATA','KUPEDATA',''),
                 "hobitss":os.path.join(common,'DATA','hobitss_mseeds',''),
                 "mseed":os.path.join(common,'DATA','MSEED',''),
-                "syns":os.path.join(base,'DATA','MSEED','SYNTHETICS',''),
+                "syns":os.path.join(common,'DATA','MSEED','SYN',''),
                 "where": where
                         }
 
@@ -190,7 +190,6 @@ def fdsn_download(code,event_id=False,response=False,
     :type cushion: int
     :param cushion: padding on start and end time, default 500s
     """
-    print("++fdsn_download++")
     # set timing
     if event_id:
         cat = get_quakeml(event_id)
@@ -224,7 +223,8 @@ def fdsn_download(code,event_id=False,response=False,
     try:
         st = read(data_path)
     except Exception as e:
-        print("internal mseed not found, querying fdsn...")
+        print("[getdata.fdsn_download] internal mseed not found,"
+                                                            " querying fdsn...")
 
         # initiate downloading of data
         c = Client(client)
@@ -237,7 +237,7 @@ def fdsn_download(code,event_id=False,response=False,
                                 starttime=starttime,
                                 endtime=endtime)
             st.write(data_path,format="MSEED")
-            print('\t',data_path)
+            print('\t++',data_path)
         except Exception as e:
             print(e)
             a=1/0
@@ -248,7 +248,8 @@ def fdsn_download(code,event_id=False,response=False,
         try:
             inv = read_inventory(resp_path)
         except Exception as e:
-            print("internal resp not found, querying fdsn...")
+            print("[getdata.fdsn_download] internal resp not found,"
+                                                            " querying fdsn...")
             try:
                 inv = c.get_stations(network=net,
                                     station=sta,
@@ -258,7 +259,7 @@ def fdsn_download(code,event_id=False,response=False,
                                     endtime=endtime,
                                     level='response')
                 inv.write(resp_path,format="STATIONXML")
-                print('\t',resp_path)
+                print('\t++',resp_path)
             except Exception as e:
                 print(e)
                 pass
@@ -269,8 +270,7 @@ def fdsn_download(code,event_id=False,response=False,
         return st
 
 
-def event_stream(station,channel,event_id,client="GEONET",startpad=False,
-                                                                endpad=False):
+def event_stream(code,event_id,client="GEONET",startpad=False,endpad=False):
     """Given a GEONET event ID, return raw waveform streams and response files
     Waveforms can be from RDF or GEONET permanent stations, chooses
     correct downloading format based on requests. If no event_id given, full
@@ -290,14 +290,13 @@ def event_stream(station,channel,event_id,client="GEONET",startpad=False,
     :type endpad: int
     :param endpad: time in seconds from starttime to end cutoff
     """
-    # parse arguments
-    station_id = station.upper() # i.e. RD06 or PXZ
-    choice = "geonet"
-    if station_id[:2] == "RD":
-        choice = "rdf"
-    channel = channel.upper()
-
+    net,sta,loc,cha = code.split('.')
     cat = get_quakeml(event_id)
+
+    # determine if RDF data or other
+    choice = "NOTRDF"
+    if sta[:2] == "RD":
+        choice = "RDF"
 
     for event in cat:
         # set start and end times
@@ -312,39 +311,15 @@ def event_stream(station,channel,event_id,client="GEONET",startpad=False,
         else:
             end = start + 1000
 
-        # temporary station filepaths
-        if choice == "rdf":
-            d1 = pathnames()['rdf'] + "July2017_Sep2017/DATA_ALL/"
-            d2 = pathnames()['rdf'] + "Sep2017_Nov2017/DATA_ALL/"
-            d3 = pathnames()['rdf'] + "Nov2017_Jan2018/DATA_ALL/"
-            date_search = "{year}.{jday}".format(
-                                            year=origin.year,jday=origin.julday)
-            path_vert,path_north,path_east = [],[],[]
-            for search in [d1,d2,d3]:
-                path_vert += glob.glob(search+"{sta}.{date}*HHZ*".format(
-                                                            sta=station_id,
-                                                            date=date_search))
-                path_north += glob.glob(search+"{sta}.{date}*HHN*".format(
-                                                            sta=station_id,
-                                                            date=date_search))
-                path_east += glob.glob(search+"{sta}.{date}*HHE*".format(
-                                                            sta=station_id,
-                                                            date=date_search))
-
-            st = read(path_vert[0]) + read(path_north[0]) + read(path_east[0])
-            resp_filepath = pathnames()['rdf'] + "DATALESS.RDF.XX"
-            inv = read_inventory(resp_filepath)
-
-
         # grab geonet data either internally or via fdsn
-        elif choice == "geonet":
+        if choice == "NOTRDF":
             if pathnames()["where"] == "GNS":
                 st_list,resp_list = [],[]
                 for comp in ['N','E','Z']:
-                    path_st, path_resp = geonet_internal(station=station_id,
-                                            channel= channel[:2] + comp,
-                                            start = origin,
-                                            response = True)
+                    path_st, path_resp = geonet_internal(station=sta,
+                                            channel=cha[:2] + comp,
+                                            start=origin,
+                                            response=True)
                     st_list += path_st
                     resp_list.append(path_resp)
 
@@ -359,17 +334,44 @@ def event_stream(station,channel,event_id,client="GEONET",startpad=False,
 
             # if not working on GNS computer
             else:
-                st, inv = fdsn_download(station=station_id,
-                                        channel = channel[:2] + '*',
-                                        start = start,
-                                        end = end,
-                                        response = True,
-                                        client = client)
+                st, inv = fdsn_download(code=code,
+                                        event_id=event_id,
+                                        response=True)
 
             # trim regardless of get-method
             st.trim(starttime=start,endtime=end)
 
+        # temporary station filepaths
+        if choice == "RDF":
+            st, inv = get_rdf_data(origin)
+
         return st, inv, cat
+
+def get_rdf_data(origin):
+    """get data from RDF array internally UNTESTED, needs work probably
+    """
+    d1 = pathnames()['rdf'] + "July2017_Sep2017/DATA_ALL/"
+    d2 = pathnames()['rdf'] + "Sep2017_Nov2017/DATA_ALL/"
+    d3 = pathnames()['rdf'] + "Nov2017_Jan2018/DATA_ALL/"
+    date_search = "{year}.{jday}".format(
+                                    year=origin.year,jday=origin.julday)
+    path_vert,path_north,path_east = [],[],[]
+    for search in [d1,d2,d3]:
+        path_vert += glob.glob(search+"{sta}.{date}*HHZ*".format(
+                                                    sta=station_id,
+                                                    date=date_search))
+        path_north += glob.glob(search+"{sta}.{date}*HHN*".format(
+                                                    sta=station_id,
+                                                    date=date_search))
+        path_east += glob.glob(search+"{sta}.{date}*HHE*".format(
+                                                    sta=station_id,
+                                                    date=date_search))
+
+    st = read(path_vert[0]) + read(path_north[0]) + read(path_east[0])
+    resp_filepath = pathnames()['rdf'] + "DATALESS.RDF.XX"
+    inv = read_inventory(resp_filepath)
+
+    return st, inv
 
 
 # ============================== EVENT INFO DOWNLOAD ==========================
@@ -382,11 +384,12 @@ def get_quakeml(event_id):
     try:
         cat = read_events(event_path)
     except Exception as e:
-        print("QUAKEML not found, querying fdsn... ")
+        print("[getdata.get_quakeml] internal quakeml not found,"
+                                                        " querying fdsn... ")
         event_client = Client("GEONET")
         cat = event_client.get_events(eventid=event_id)
         cat.write(event_path,format="QUAKEML")
-        print('\t',event_path)
+        print('\t++',event_path)
 
     return cat
 
@@ -457,8 +460,8 @@ def get_those_stations():
     new_zealand = [-50,-35,165,180]
     lat_lon = north_island
     inv = c.get_stations(network='NZ',
-                        station='*S',
-                        # channel='',
+                        station='*Z',
+                        channel='HH*',
                         minlatitude=lat_lon[0],
                         maxlatitude=lat_lon[1],
                         minlongitude=lat_lon[2],
