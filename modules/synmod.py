@@ -1,7 +1,9 @@
 """module containing functions pertaining to synthetic outputs of specfem
 """
 import sys
-from getdata import pathnames, get_GCMT_solution
+import getdata
+from getdata import pathnames
+from obspy import read_events
 
 def mt_transform(mt,method):
     """transform moment tensor between xyz and rtp coordinates
@@ -61,7 +63,7 @@ def compare_beachballs(event_id):
     geonet_xyz = [MT['Mxx'],MT['Myy'],MT['Mzz'],MT['Mxy'],MT['Mxz'],MT['Myz']]
     geonet_rtp = mt_transform(geonet_xyz,method='xyz2rtp')
 
-    gcmt = get_GCMT_solution(event_id=event_id)
+    gcmt = getdata.get_GCMT_solution(event_id=event_id)
     GCMT = mt_from_event(gcmt)
     gcmt_rtp = [GCMT['Mrr'],GCMT['Mtt'],GCMT['Mpp'],
                 GCMT['Mrt'],GCMT['Mrp'],GCMT['Mtp']]
@@ -70,14 +72,16 @@ def compare_beachballs(event_id):
     gcmt_b = beachball(gcmt_rtp)
 
 
-def stf_convolve(st,half_duration,window="bartlett"):
-    """convolve source time function with a stream
+def stf_convolve(st,half_duration,window="bartlett",time_shift=False):
+    """convolve source time function with a stream, time shift if needed
     :type st: obspy.stream
     :param st: stream object containing traces of data
     :type half_duration: float
     :param half_duration: half duration of stf in seconds
     :type window: str
     :param window: window type to return
+    :type time_shift: float
+    :param time_shift: change the starttime
     ========================================
     boxcar, triang, blackman, hamming, hann,
     bartlett, flattop, parzen, bohman,
@@ -110,13 +114,40 @@ def stf_convolve(st,half_duration,window="bartlett"):
     # normalize to keep area of window equal one
     stf *= (2/len(stf))
 
-    # convolve
+    # convolve and time shift if necessary
     new_st = st.copy()
     for tr in new_st:
+        if time_shift:
+            tr.stats.starttime = tr.stats.starttime + time_shift
         new_data = np.convolve(tr.data,stf,mode="same")
         tr.data = new_data
 
+
     return new_st
+
+def tshift_halfdur(event_id):
+    """get the absolute time shift between centroid time and hypocenter time to
+    shift the synthetic seismogram into absolute time using the equation
+    t_abs = t_pde + time shift + t_syn
+    also get the half duration from the GCMT solution
+    """
+    # time shift
+    MT = getdata.get_GCMT_solution(event_id)
+    CMTSOLUTIONPATH = (pathnames()['kupedata'] +
+                                'CMTSOLUTIONS/{}CMTSOLUTION'.format(event_id))
+    CMTSOLUTION = read_events(CMTSOLUTIONPATH)
+
+    CMTSOLUTION_time = CMTSOLUTION[0].origins[0].time
+    CENTROID_time = [i.time for i in MT.origins
+                                            if i.origin_type == "centroid"][0]
+
+    time_shift = abs(CMTSOLUTION_time - CENTROID_time)
+
+    # half duration
+    moment_tensor = MT.focal_mechanisms[0].moment_tensor
+    half_duration = (moment_tensor.source_time_function['duration'])/2
+
+    return time_shift, half_duration
 
 if __name__ == "__main__":
     print('what?')

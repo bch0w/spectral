@@ -10,10 +10,10 @@ def preprocess(st,resample=50,inv=False,output="VEL"):
     st_manipulate.detrend("linear")
     st_manipulate.taper(max_percentage=0.05)
     if inv:
-        pre_filt = [1/100,1/90,25,30]
+        # pre_filt = [1/100,1/90,25,30]
         st_manipulate.attach_response(inv)
         st_manipulate.remove_response(output=output,
-                                      pre_filt=pre_filt,
+                                      # pre_filt=pre_filt,
                                       water_level=60,
                                       plot=False)
 

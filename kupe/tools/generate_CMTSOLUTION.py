@@ -4,7 +4,7 @@ entries with more precise GEONET information and MT from John Ristau
 """
 
 import sys
-sys.path.append('../modules/')
+sys.path.append('../../modules/')
 from getdata import get_moment_tensor, pathnames
 from synmod import mt_transform
 from obspy.clients.fdsn import Client
@@ -17,8 +17,7 @@ def generate_CMTSOLUTION(event_id):
     -CMT information taken from GCMT catalog
     NOTE: template stolen from obspy
     """
-
-
+    
     # grab moment tensor information from Ristau's solutions
     MT = get_moment_tensor(event_id=event_id)
     if not MT:

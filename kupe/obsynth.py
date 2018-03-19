@@ -3,7 +3,7 @@ import sys
 sys.path.append('../modules/')
 import numpy as np
 from os.path import join
-from obspy import UTCDateTime, read, Stream, read_events
+from obspy import UTCDateTime, read, Stream
 
 # module functions
 import getdata
@@ -30,22 +30,6 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 # print("===========================================")
 
 # =================================== FUNC ====================================
-def get_time_shift(event_id):
-    """get the time shift between centroid time and hypocenter time to
-    shift the synthetic seismogram into absolute time using the equation
-    t_abs = t_pde + time shift + t_syn
-    """
-    MT = getdata.get_GCMT_solution(event_id)
-    CMTSOLUTIONPATH = (pathnames()['kupedata'] +
-                                'CMTSOLUTIONS/{}CMTSOLUTION'.format(event_id))
-    CMTSOLUTION = read_events(CMTSOLUTIONPATH)
-
-    CMTSOLUTION_time = CMTSOLUTION[0].origins[0].time
-    CENTROID_time = [i.time for i in MT.origins
-                                            if i.origin_type == "centroid"][0]
-
-    time_shift = abs(CMTSOLUTION_time - CENTROID_time)
-
 def initial_data_gather(event_id,code,tmin,tmax):
     """gather event information, observation and synthetic traces,
     preprocess all traces accordingly and return one stream object with 6 traces
@@ -55,9 +39,7 @@ def initial_data_gather(event_id,code,tmin,tmax):
     component = channel[-1]
 
     # event information
-    MT = get_data.get_GCMT_solution(event_id)
-    moment_tensor = MT.focal_mechanisms[0].moment_tensor
-    half_duration = (moment_tensor.source_time_function['duration'])/2
+    time_shift, half_duration = synmod.tshift_halfdur(event_id)
 
     # grab synthetic data locally
     syntheticdata_path = join(pathnames()['syns'],event_id,'')
@@ -69,7 +51,7 @@ def initial_data_gather(event_id,code,tmin,tmax):
         syntheticdata += read(join(syntheticdata_path,syntheticdata_filename))
 
     # grab observation data
-    observationdata,inv,cat = get_data.event_stream(station=station,
+    observationdata,inv,cat = getdata.event_stream(station=station,
                                             channel=channel,
                                             event_id=event_id,
                                             startpad=0,
@@ -79,22 +61,24 @@ def initial_data_gather(event_id,code,tmin,tmax):
     observationdata_proc = procmod.preprocess(observationdata,
                                                 inv=inv,
                                                 output='DISP')
+    syntheticdata_preproc = synmod.stf_convolve(st=syntheticdata,
+                                                 half_duration=half_duration,
+                                                 time_shift=time_shift)
+    syntheticdata_proc = procmod.preprocess(syntheticdata_preproc)
 
-    syntheticdata_preproc = procmod.preprocess(syntheticdata)
-    syntheticdata_proc = synmod.stf_convolve(syntheticdata_preproc,
-                                                            half_duration)
 
     # combine, common sampling rate, filter, trim common time
     st_IDG = observationdata_proc + syntheticdata_proc
+    procmod.trimstreams(st_IDG)
+
     st_IDG.filter('bandpass',freqmin=1/tmax,
                              freqmax=1/tmin,
                              corners=2,
                              zerophase=True)
-    procmod.trimstreams(st_IDG)
 
     return st_IDG
 
-def plot_obsynth(st,twinax=False):
+def plot_obsynth(st,twinax=False,save=False):
     """plot 6 streams in 3 subplot figure
     """
     f,(ax1,ax2,ax3) = plt.subplots(3,sharex=True,sharey=False,
@@ -128,9 +112,16 @@ def plot_obsynth(st,twinax=False):
         plotmod.align_yaxis(ax,0,tax,0)
 
     # final plot
-    ax1.set_title(event_id)
-    ax2.set_ylabel('HH* velocity (m/s)')
-    ax3.set_xlabel('time (sec)')
+    ax1.set_xlim([t.min(),t.max()])
+    ax1.set_title("{e} {s}".format(e=event_id,s=stats.station))
+    ax2.set_ylabel("HH* velocity (m/s)")
+    ax3.set_xlabel("time (sec)")
+
+    if save:
+        figtitle = "{e}_{s}.png".format(e=event_id,s=stats.station)
+        figfolder = join(pathnames()['kupeplots'],"obsynth_plots",figtitle)
+        plt.savefig(figfolder,dpi=200)
+
     plt.show()
 
     return f
@@ -193,9 +184,7 @@ if __name__ == "__main__":
         try:
             code = "NZ.{}..HH?".format(station_code)
             st = initial_data_gather(event_id,code,tmin=5,tmax=30)
-            fig = plot_obsynth(st,twinax=False)
+            fig = plot_obsynth(st,twinax=False,save=True)
         except Exception as e:
             print(e)
             continue
-
-    # import ipdb;ipdb.set_trace()
