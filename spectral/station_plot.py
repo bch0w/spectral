@@ -26,10 +26,10 @@ def event_beachball(eventid,fig):
     b.set_zorder(10)
     ax = plt.gca()
     ax.add_collection(b)
-    plt.annotate("M{}".format(MT['ML']),
+    plt.annotate("{}".format(eventid),
                     xy=(eventx,eventy),
                     xytext=(eventx,eventy),
-                    fontsize=12,
+                    fontsize=7,
                     zorder=200,
                     weight='bold')
 
@@ -98,8 +98,10 @@ text_dict = {'Z':'Seismometer','S':'Accelerometer','D':'Seismometer'}
 label_dict = {'Z':True,'S':True,'D':False}
 
 # grab station information and plot
-inv = read_inventory(pathnames()["data"] + "new_zealand_geonet_stations.xml")
-inv += read_inventory(pathnames()["data"] + "hobitss/hobitss_stations.xml")
+inv = read_inventory(pathnames()["data"] +
+                            "STATIONXML/new_zealand_geonet_stations.xml")
+inv += read_inventory(pathnames()["data"] +
+                            "STATIONXML/hobitss_stations.xml")
 
 fig = inv.plot(marker='.',
         projection="local",
@@ -114,8 +116,9 @@ fig = inv.plot(marker='.',
         # label=label_dict[choice])
 
 low_velocity_wedge(fig)
-event_beachball("2014p864702",fig)
-# event_beachball("2014p715167",fig)
+for EID in ["2014p864702","2014p715167","2014p240655",
+                                        "2015p822263","2014p051675"]:
+    event_beachball(EID,fig)
 
 if choice != 'D':
     plt.show()

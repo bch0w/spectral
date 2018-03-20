@@ -153,16 +153,16 @@ def perl_vs_personal(st):
     plt.show()
     stats = st[0].stats
 
-        # import glob
-        # st_sac_file = glob.glob('/seis/prj/fwi/bchow/spectral/kupe/test_perl/*.bp')
-        # sac_stream = Stream()
-        # for sac in st_sac_file:
-        #     sac_file = read(sac)
-        #     sac_file[0].stats.location = 'SAC'
-        #     sac_stream += sac_file
-        # st_new = st + sac_stream
-        # st_new.resample(50)
-        # fig = perl_vs_personal(st_new)
+    # import glob
+    # st_sac_file = glob.glob('/seis/prj/fwi/bchow/spectral/kupe/test_perl/*.bp')
+    # sac_stream = Stream()
+    # for sac in st_sac_file:
+    #     sac_file = read(sac)
+    #     sac_file[0].stats.location = 'SAC'
+    #     sac_stream += sac_file
+    # st_new = st + sac_stream
+    # st_new.resample(50)
+    # fig = perl_vs_personal(st_new)
 
     return f
 
@@ -173,15 +173,13 @@ if __name__ == "__main__":
     station_name_path = (pathnames()['data'] +
                                 'STATIONXML/north_island_BB_station_names.npy')
     station_names = np.load(station_name_path)
-    station_names = ["LOBS1","LOBS2","LOBS3","LOBS4"]
-    event_id = "2014p715167"
+    event_id = "2014p240655"
 
     for station_code in station_names:
         # try:
-        # code = "NZ.{}.*.HH?".format(station_code)
-        code = "YH.{}.*.HH?".format(station_code)
-        st = initial_data_gather(code,event_id,tmin=5,tmax=30)
-        fig = plot_obsynth(st,twinax=True,save=False)
+        code = "NZ.{}.*.HH?".format(station_code)
+        st = initial_data_gather(code,event_id,tmin=6,tmax=30)
+        fig = plot_obsynth(st,twinax=False,save=False)
         # except Exception as e:
         #     print(e)
         #     continue

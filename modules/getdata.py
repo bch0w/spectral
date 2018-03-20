@@ -33,19 +33,19 @@ def pathnames():
 
     common = os.path.join(base,'common')
     path_dictionary = {"spectral":os.path.join(base,'spectral',''),
-                "kupe":os.path.join(base,'kupe',''),
-                "rdf":os.path.join(common,'DATA','RDF_Array',''),
-                "plots":os.path.join(common,'OUTPUT_PLOTS',''),
-                "spectralplots":os.path.join(common,'OUTPUT_PLOTS','spectral',''),
-                "kupeplots":os.path.join(common,'OUTPUT_PLOTS','kupe',''),
-                "ppsd":os.path.join(common,'DATA','ppsd_arrays',''),
-                "data":os.path.join(common,'DATA',''),
-                "kupedata":os.path.join(common,'DATA','KUPEDATA',''),
-                "hobitss":os.path.join(common,'DATA','hobitss_mseeds',''),
-                "mseed":os.path.join(common,'DATA','MSEED',''),
-                "syns":os.path.join(common,'DATA','MSEED','SYN',''),
-                "where": where
-                        }
+            "kupe":os.path.join(base,'kupe',''),
+            "rdf":os.path.join(common,'DATA','RDF_Array',''),
+            "plots":os.path.join(common,'OUTPUT_PLOTS',''),
+            "spectralplots":os.path.join(common,'OUTPUT_PLOTS','spectral',''),
+            "kupeplots":os.path.join(common,'OUTPUT_PLOTS','kupe',''),
+            "ppsd":os.path.join(common,'DATA','ppsd_arrays',''),
+            "data":os.path.join(common,'DATA',''),
+            "kupedata":os.path.join(common,'DATA','KUPEDATA',''),
+            "hobitss":os.path.join(common,'DATA','hobitss_mseeds',''),
+            "mseed":os.path.join(common,'DATA','MSEED',''),
+            "syns":os.path.join(common,'DATA','MSEED','SYN',''),
+            "where": where
+                    }
 
     return path_dictionary
 
