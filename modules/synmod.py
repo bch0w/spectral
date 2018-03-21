@@ -67,9 +67,27 @@ def compare_beachballs(event_id):
     GCMT = mt_from_event(gcmt)
     gcmt_rtp = [GCMT['Mrr'],GCMT['Mtt'],GCMT['Mpp'],
                 GCMT['Mrt'],GCMT['Mrp'],GCMT['Mtp']]
+    gcmt_xyz = mt_transform(geonet_rtp,method='rtp2xyz')
 
-    geonet_b = beachball(geonet_rtp)
-    gcmt_b = beachball(gcmt_rtp)
+    bp = pathnames()['kupeplots'] + 'beachballs/{e}_{o}_{c}.png'
+    
+    geonet_xyz_b = beachball(geonet_xyz,outfile=bp.format(e=event_id,
+                                                          o='geonet',
+                                                          c='xyz',
+                                                          ))
+    geonet_rtp_b = beachball(geonet_rtp,outfile=bp.format(e=event_id,
+                                                          o='geonet',
+                                                          c='rtp',
+                                                          ))
+    gcmt_rtp_b = beachball(gcmt_rtp,outfile=bp.format(e=event_id,
+                                                      o='gcmt',
+                                                      c='rtp',
+                                                      ))
+    gcmt_xyz_b = beachball(gcmt_xyz,outfile=bp.format(e=event_id,
+                                                      o='gcmt',
+                                                      c='xyz',
+                                                      ))
+    plt.close("all")
 
 
 def stf_convolve(st,half_duration,window="bartlett",time_shift=False):

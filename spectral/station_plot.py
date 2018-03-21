@@ -99,9 +99,9 @@ label_dict = {'Z':True,'S':True,'D':False}
 
 # grab station information and plot
 inv = read_inventory(pathnames()["data"] +
-                            "STATIONXML/new_zealand_geonet_stations.xml")
+                    "STATIONXML/plotNZ_ALL_BB_seismometers_stations_only.xml")
 inv += read_inventory(pathnames()["data"] +
-                            "STATIONXML/hobitss_stations.xml")
+                            "STATIONXML/plotYH_HOBITSS_stations_only.xml")
 
 fig = inv.plot(marker='.',
         projection="local",

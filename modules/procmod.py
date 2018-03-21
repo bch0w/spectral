@@ -19,7 +19,6 @@ def preprocess(st,resample=50,inv=False,output="VEL"):
 
     return st_manipulate
 
-
 def trimstreams(st):
     """trim streams to common start and end times
     """
@@ -75,6 +74,7 @@ def amplitude_threshold(t,tr,threshold_percentage):
         t_over.append(t[S])
 
     return t_over,a_over,duration_in_seconds
+
 
 if __name__ == "__main__":
     print('what?')
