@@ -1,5 +1,6 @@
 import os
 import sys
+import traceback
 sys.path.append('../modules/')
 import numpy as np
 from os.path import join
@@ -109,14 +110,24 @@ def initial_data_gather(code,event_id,bounds,plotmap=False):
     tmin,tmax = bounds
 
     # grab synthetic data locally
-    # syntheticdata_path = join(pathnames()['syns'],event_id,'')
-    syntheticdata_path = join(pathnames()['syns'],event_id,"with_GCMT_solution",'')
+    syntheticdata_path = join(pathnames()['syns'],event_id,'')
+    # ======================== GCMT ADDITION ==========================
+    syntheticdata_path_PART2 = join(pathnames()['syns'],event_id,
+                                                    "with_GCMT_solution",'')
+    # ======================== GCMT ADDITION ==========================
+
     syntheticdata = Stream()
     for c in ["N","E","Z"]:
         syntheticdata_filename = "{n}.{s}.BX{co}.semv.mseed".format(n=net,
                                                                 s=sta,
                                                                 co=c)
         syntheticdata += read(join(syntheticdata_path,syntheticdata_filename))
+        # ======================== GCMT ADDITION ==========================
+        syntheticdata_PART2 = read(join(syntheticdata_path_PART2,
+                                                        syntheticdata_filename))
+        syntheticdata_PART2[0].stats.location = "withGCMT"
+        syntheticdata += syntheticdata_PART2
+        # ======================== GCMT ADDITION ==========================
 
     # grab observation data
     observationdata,inv,cat = getdata.event_stream(code=code,
@@ -139,9 +150,9 @@ def initial_data_gather(code,event_id,bounds,plotmap=False):
     syntheticdata_proc = procmod.preprocess(syntheticdata_preproc)
 
     # rotate to theoretical backazimuth
-    BAz = find_BAz(inv,cat)
-    observationdata_proc.rotate(method='NE->RT',back_azimuth=BAz)
-    syntheticdata_proc.rotate(method='NE->RT',back_azimuth=BAz)
+    # BAz = find_BAz(inv,cat)
+    # observationdata_proc.rotate(method='NE->RT',back_azimuth=BAz)
+    # syntheticdata_proc.rotate(method='NE->RT',back_azimuth=BAz)
 
     # combine, common sampling rate, filter, trim common time
     st_IDG = observationdata_proc + syntheticdata_proc
@@ -157,6 +168,7 @@ def initial_data_gather(code,event_id,bounds,plotmap=False):
 def plot_obsynth(st,bounds,twinax=False,save=False,show=True):
     """plot 6 streams in 3 subplot figure
     """
+    c1,c2,c3 = "Z","N","E"
     f,(ax1,ax2,ax3) = plt.subplots(3,sharex=True,sharey=False,
                                                     figsize=(9,5),dpi=200)
     # create time axis
@@ -172,19 +184,31 @@ def plot_obsynth(st,bounds,twinax=False,save=False,show=True):
         twin_axes = [ax1a,ax2a,ax3a]
         ax2a.set_ylabel("velocity (m/s)")
 
-    obs_list = ["HHZ","HHR","HHT"]
+    obs_list = ["HH{}".format(c1),"HH{}".format(c2),"HH{}".format(c3)]
     if net == "YH":
-        obs_list = ["HH1","HH2","HHZ"]
-    syn_list = ["BXZ","BXR","BXT"]
+        obs_list = ["HHZ","HH1","HH2"]
+    syn_list = ["BX{}".format(c1),"BX{}".format(c2),"BX{}".format(c3)]
+    # obs_list = ["HHZ","HHR","HHT"]
+    # if net == "YH":
+    #     obs_list = ["HH1","HH2","HHZ"]
+    # syn_list = ["BXZ","BXR","BXT"]
 
     # plot
     for ax,tax,obs,syn in zip(axes,twin_axes,obs_list,syn_list):
         obs_select = st.select(channel=obs)[0]
-        syn_select = st.select(channel=syn)[0]
+        # syn_select = st.select(channel=syn)[0]
+        # ======================== GCMT ADDITION ==========================
+        syn_select = st.select(channel=syn)
+        syn_select_PART2 = syn_select.select(location="withGCMT")[0]
+        syn_select = syn_select.select(location="")[0]
+        C = tax.plot(t,syn_select_PART2.data,color='r',label=syn_select_PART2.get_id(),
+                                                linestyle='--')
+        # ======================== GCMT ADDITION ==========================
+
         A = ax.plot(t,obs_select.data,color='k',label=obs_select.get_id())
         B = tax.plot(t,syn_select.data,color='r',label=syn_select.get_id())
         plotmod.pretty_grids(ax)
-        lines = A+B
+        lines = A+B+C
         labels = [l.get_label() for l in lines]
         ax.legend(lines,labels,prop={"size":5})
         plotmod.pretty_grids(tax)
@@ -198,9 +222,9 @@ def plot_obsynth(st,bounds,twinax=False,save=False,show=True):
                                                     t1=bounds[1])
                                                     )
 
-    ax1.set_ylabel("Z")
-    ax2.set_ylabel("velocity (m/s)\nR")
-    ax3.set_ylabel("T")
+    ax1.set_ylabel(c1)
+    ax2.set_ylabel("velocity (m/s)\n{}".format(c2))
+    ax3.set_ylabel(c3)
 
     ax3.set_xlabel("time (sec)")
 
@@ -222,6 +246,8 @@ if __name__ == "__main__":
     station_name_path = (pathnames()['data'] +
                                 'STATIONXML/NAMESOF_NZ_NI_BB_seismometers.npy')
     station_names = np.load(station_name_path)
+    station_names = ['BFZ','BKZ','HAZ','HIZ','KNZ','MRZ','MWZ','OPRZ','PUZ',
+                        'PXZ','RTZ','TLZ','TOZ','TSZ','VRZ','WAZ']
     event_id = "2014p240655"
 
     for station_code in station_names:
@@ -230,11 +256,13 @@ if __name__ == "__main__":
             bounds = [6,30]
             st = initial_data_gather(code,event_id,
                                     bounds=bounds,
-                                    plotmap=True)
+                                    plotmap=False)
             fig = plot_obsynth(st,bounds=bounds,
                                     twinax=False,
-                                    save=False,
-                                    show=True)
+                                    save=True,
+                                    show=False)
         except Exception as e:
-            print(e)
+            print("="*79)
+            traceback.print_exc()
+            print("="*79)
             continue
