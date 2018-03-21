@@ -213,7 +213,7 @@ def fdsn_download(code,event_id=False,response=False,
         global_end = UTCDateTime("2015-06-20T13:55:00.000000Z")
         if (starttime <= global_start) or (endtime >= global_end):
             print(eventid,"not within Hobitss timeframe")
-            return
+            return None, None
         client = "IRIS"
 
     # search for data internal
@@ -240,34 +240,49 @@ def fdsn_download(code,event_id=False,response=False,
             print('\t++',data_path)
         except Exception as e:
             print(e)
-            a=1/0
 
     if response:
-        resp_path = pathnames()['data'] + 'STATIONXML/{n}.{s}.xml'.format(n=net,
-                                                                          s=sta)
-        try:
-            inv = read_inventory(resp_path)
-        except Exception as e:
+        # check existing stationxml files
+        response_dict = {"NZ":"NZ_NI_BB_seismometers.xml",
+                         "YH":"YH_LOBS.xml"}
+
+        resp_path = (pathnames()['data'] +
+                                    'STATIONXML/{}'.format(response_dict[net]))
+        inv_full = read_inventory(resp_path)
+        inv_check = inv_full.select(station=sta)
+
+        if len(inv_check) > 0:
+            inv = inv_check
+        else:
             print("[getdata.fdsn_download] internal resp not found,"
                                                             " querying fdsn...")
             try:
-                inv = c.get_stations(network=net,
-                                    station=sta,
-                                    location='*',
-                                    channel='*',
-                                    starttime=starttime,
-                                    endtime=endtime,
-                                    level='response')
-                inv.write(resp_path,format="STATIONXML")
+                c = Client(client)
+                inv_get = c.get_stations(network=net,
+                                        station=sta,
+                                        location=loc,
+                                        channel=cha,
+                                        starttime=starttime,
+                                        endtime=endtime,
+                                        level='response')
+                inv_full += inv_get[0]
+                # ============================================================
+                # !!! writes into a new network, even if network is the same
+                # !!! okay if you use the inv.select command, but
+                # !!! aesthetically annoying
+                inv_full.write(resp_path,format="STATIONXML")
+                # ============================================================
+                inv = inv_get
                 print('\t++',resp_path)
             except Exception as e:
                 print(e)
-                pass
+                return st, None
 
         return st, inv
 
+
     else:
-        return st
+        return st, None
 
 
 def event_stream(code,event_id,client="GEONET",startpad=False,endpad=False):
@@ -458,15 +473,15 @@ def get_those_stations():
     north_island = [-42,-34,173,180]
     north_island_zoom = [-40,-37,176,178.5]
     new_zealand = [-50,-35,165,180]
-    lat_lon = north_island
+    lat_lon = new_zealand
     inv = c.get_stations(network='NZ',
-                        station='*Z',
+                        station='*',
                         channel='HH*',
                         minlatitude=lat_lon[0],
                         maxlatitude=lat_lon[1],
                         minlongitude=lat_lon[2],
                         maxlongitude=lat_lon[3],
-                        level="station")
+                        level="response")
     inv = c.get_stations(network='YH',
                         station="LOBS*",
                         location='',
