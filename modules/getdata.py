@@ -481,7 +481,8 @@ def get_those_stations():
                         maxlatitude=lat_lon[1],
                         minlongitude=lat_lon[2],
                         maxlongitude=lat_lon[3],
-                        level="response")
+                        level="station")
+    c = Client("IRIS")
     inv = c.get_stations(network='YH',
                         station="LOBS*",
                         location='',

@@ -4,6 +4,7 @@ sys.path.append('../modules/')
 import numpy as np
 from os.path import join
 from obspy import UTCDateTime, read, Stream
+from obspy.geodetics.base import gps2dist_azimuth
 
 # module functions
 import getdata
@@ -19,12 +20,82 @@ mpl.rcParams['lines.linewidth'] = 1
 
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.filterwarnings("ignore", category=mpl.cbook.mplDeprecation)
+
 # print("===========================================")
 # print("==== Be aware: ignoring FutureWarnings ====")
 # print("===========================================")
 
 # =================================== FUNC ====================================
-def initial_data_gather(code,event_id,tmin,tmax):
+def find_BAz(inv,cat):
+    """get backazimuth
+    """
+    station_lat = inv[0][0].latitude
+    station_lon = inv[0][0].longitude
+    event_lat = cat[0].origins[0].latitude
+    event_lon = cat[0].origins[0].longitude
+    BAz = gps2dist_azimuth(event_lat,event_lon,station_lat,station_lon)[2]
+
+    return BAz
+
+def plot_event_station(inv,cat):
+    """plot event and station along with line connection and station-receiver
+    distance for quick visualization
+    """
+
+    # plot station on a map
+    fig = inv.plot(marker='v',
+            projection="local",
+            resolution = "i",
+            size=50,
+            show=False,
+            continent_fill_color="white",
+            water_fill_color="white",
+            color_per_network=True,
+            label=False)
+
+    # convert station and event information to map coords
+    station_lat = inv[0][0].latitude
+    station_lon = inv[0][0].longitude
+    station_x,station_y = fig.bmap(station_lon,station_lat)
+    event_lat = cat[0].origins[0].latitude
+    event_lon = cat[0].origins[0].longitude
+    event_x,event_y = fig.bmap(event_lon,event_lat)
+
+    # annotate station code
+    stationcode = inv[0][0].code
+    plt.annotate(stationcode,
+                xy=(station_x,station_y),
+                xytext=(station_x,station_y),
+                fontsize=10,
+                weight='bold',
+                zorder=100)
+
+    # plot event
+    scatter = fig.bmap.scatter(event_x,event_y,
+                                marker='o',
+                                s=150,
+                                zorder=50,
+                                edgecolor='k')
+    magnitude = round(cat[0].magnitudes[0].mag,2)
+    plt.annotate(magnitude,
+                xy=(event_x,event_y),
+                xytext=(event_x,event_y),
+                fontsize=10,
+                weight='bold',
+                zorder=100)
+
+    # connect station and event by arrow
+    dist_azi = gps2dist_azimuth(event_lat,event_lon,station_lat,station_lon)
+    epi_dist = round(dist_azi[0],2)
+    BAz = round(dist_azi[2],2)
+    plt.title("Epicentral Distance: {} | BAz: {}".format(epi_dist,BAz))
+
+
+    plt.show()
+
+
+def initial_data_gather(code,event_id,bounds,plotmap=False):
     """gather event information, observation and synthetic traces,
     preprocess all traces accordingly and return one stream object with 6 traces
     """
@@ -34,8 +105,12 @@ def initial_data_gather(code,event_id,tmin,tmax):
     # event information
     time_shift, half_duration = synmod.tshift_halfdur(event_id)
 
+    # filter bounds
+    tmin,tmax = bounds
+
     # grab synthetic data locally
-    syntheticdata_path = join(pathnames()['syns'],event_id,'')
+    # syntheticdata_path = join(pathnames()['syns'],event_id,'')
+    syntheticdata_path = join(pathnames()['syns'],event_id,"with_GCMT_solution",'')
     syntheticdata = Stream()
     for c in ["N","E","Z"]:
         syntheticdata_filename = "{n}.{s}.BX{co}.semv.mseed".format(n=net,
@@ -49,6 +124,11 @@ def initial_data_gather(code,event_id,tmin,tmax):
                                                     startpad=0,
                                                     endpad=350)
 
+    # plot event and station on a map
+    if plotmap:
+        plot_event_station(inv,cat)
+
+
     # preprocessing, instrument response, STF convolution (synthetics)
     observationdata_proc = procmod.preprocess(observationdata,
                                                 inv=inv,
@@ -58,6 +138,10 @@ def initial_data_gather(code,event_id,tmin,tmax):
                                                  time_shift=time_shift)
     syntheticdata_proc = procmod.preprocess(syntheticdata_preproc)
 
+    # rotate to theoretical backazimuth
+    BAz = find_BAz(inv,cat)
+    observationdata_proc.rotate(method='NE->RT',back_azimuth=BAz)
+    syntheticdata_proc.rotate(method='NE->RT',back_azimuth=BAz)
 
     # combine, common sampling rate, filter, trim common time
     st_IDG = observationdata_proc + syntheticdata_proc
@@ -70,7 +154,7 @@ def initial_data_gather(code,event_id,tmin,tmax):
 
     return st_IDG
 
-def plot_obsynth(st,twinax=False,save=False):
+def plot_obsynth(st,bounds,twinax=False,save=False,show=True):
     """plot 6 streams in 3 subplot figure
     """
     f,(ax1,ax2,ax3) = plt.subplots(3,sharex=True,sharey=False,
@@ -88,10 +172,10 @@ def plot_obsynth(st,twinax=False,save=False):
         twin_axes = [ax1a,ax2a,ax3a]
         ax2a.set_ylabel("velocity (m/s)")
 
-    obs_list = ["HHN","HHE","HHZ"]
+    obs_list = ["HHZ","HHR","HHT"]
     if net == "YH":
         obs_list = ["HH1","HH2","HHZ"]
-    syn_list = ["BXN","BXE","BXZ"]
+    syn_list = ["BXZ","BXR","BXT"]
 
     # plot
     for ax,tax,obs,syn in zip(axes,twin_axes,obs_list,syn_list):
@@ -108,8 +192,16 @@ def plot_obsynth(st,twinax=False,save=False):
 
     # final plot
     ax1.set_xlim([t.min(),t.max()])
-    ax1.set_title("{e} {s}".format(e=event_id,s=stats.station))
-    ax2.set_ylabel("velocity (m/s)")
+    ax1.set_title("{e} {s} [{t0}-{t1}s]".format(e=event_id,
+                                                    s=stats.station,
+                                                    t0=bounds[0],
+                                                    t1=bounds[1])
+                                                    )
+
+    ax1.set_ylabel("Z")
+    ax2.set_ylabel("velocity (m/s)\nR")
+    ax3.set_ylabel("T")
+
     ax3.set_xlabel("time (sec)")
 
     if save:
@@ -117,52 +209,9 @@ def plot_obsynth(st,twinax=False,save=False):
         figfolder = join(pathnames()['kupeplots'],"obsynth_plots",figtitle)
         plt.savefig(figfolder,dpi=200)
 
-    plt.show()
+    if show:
+        plt.show()
 
-    return f
-
-def perl_vs_personal(st):
-    """plot 6 streams in 3 subplot figure
-    """
-    f,(ax1,ax2,ax3) = plt.subplots(3,sharex=True,sharey=False,
-                                                    figsize=(9,5),dpi=200)
-    # create time axis
-    stats = st[0].stats
-    t = np.linspace(0,stats.endtime-stats.starttime,stats.npts)
-
-    # axes lists for plotting
-    axes = [ax1,ax2,ax3]
-    obs_list = ["HHN","HHE","HHZ"]
-    syn_list = ["BXN","BXE","BXZ"]
-
-    # plot    # check
-    for ax,syn in zip(axes,syn_list):
-        obs_streams = st.select(location="")
-        obs_select = obs_streams.select(channel=syn)[0]
-        syn_streams = st.select(location="SAC")
-        syn_select = syn_streams.select(channel=syn)[0]
-        A = ax.plot(t,obs_select.data,color='k',label=obs_select.get_id())
-        B = ax.plot(t,syn_select.data,color='r',label=syn_select.get_id())
-        ax.legend(prop={"size":5})
-        plotmod.pretty_grids(ax)
-
-    # final plot
-    ax1.set_title(event_id)
-    ax2.set_ylabel('velocity (m/s)')
-    ax3.set_xlabel('time (sec)')
-    plt.show()
-    stats = st[0].stats
-
-    # import glob
-    # st_sac_file = glob.glob('/seis/prj/fwi/bchow/spectral/kupe/test_perl/*.bp')
-    # sac_stream = Stream()
-    # for sac in st_sac_file:
-    #     sac_file = read(sac)
-    #     sac_file[0].stats.location = 'SAC'
-    #     sac_stream += sac_file
-    # st_new = st + sac_stream
-    # st_new.resample(50)
-    # fig = perl_vs_personal(st_new)
 
     return f
 
@@ -171,15 +220,21 @@ def perl_vs_personal(st):
 if __name__ == "__main__":
     # station_code = sys.argv[1].upper()
     station_name_path = (pathnames()['data'] +
-                                'STATIONXML/north_island_BB_station_names.npy')
+                                'STATIONXML/NAMESOF_NZ_NI_BB_seismometers.npy')
     station_names = np.load(station_name_path)
     event_id = "2014p240655"
 
     for station_code in station_names:
-        # try:
-        code = "NZ.{}.*.HH?".format(station_code)
-        st = initial_data_gather(code,event_id,tmin=6,tmax=30)
-        fig = plot_obsynth(st,twinax=False,save=False)
-        # except Exception as e:
-        #     print(e)
-        #     continue
+        try:
+            code = "NZ.{}.*.HH?".format(station_code)
+            bounds = [6,30]
+            st = initial_data_gather(code,event_id,
+                                    bounds=bounds,
+                                    plotmap=True)
+            fig = plot_obsynth(st,bounds=bounds,
+                                    twinax=False,
+                                    save=False,
+                                    show=True)
+        except Exception as e:
+            print(e)
+            continue
