@@ -134,7 +134,6 @@ def initial_data_gather(code,event_id,bounds,plotmap=False):
                                                     event_id=event_id,
                                                     startpad=0,
                                                     endpad=350)
-
     # plot event and station on a map
     if plotmap:
         plot_event_station(inv,cat)
@@ -246,8 +245,9 @@ if __name__ == "__main__":
     station_name_path = (pathnames()['data'] +
                                 'STATIONXML/NAMESOF_NZ_NI_BB_seismometers.npy')
     station_names = np.load(station_name_path)
-    station_names = ['BFZ','BKZ','HAZ','HIZ','KNZ','MRZ','MWZ','OPRZ','PUZ',
-                        'PXZ','RTZ','TLZ','TOZ','TSZ','VRZ','WAZ']
+    # station_names = ['BFZ','BKZ','HAZ','HIZ','KNZ','MRZ','MWZ','OPRZ','PUZ',
+    #                     'PXZ','RTZ','TLZ','TOZ','TSZ','VRZ','WAZ']
+    station_names = ['KNZ']
     event_id = "2014p240655"
 
     for station_code in station_names:
@@ -256,7 +256,7 @@ if __name__ == "__main__":
             bounds = [6,30]
             st = initial_data_gather(code,event_id,
                                     bounds=bounds,
-                                    plotmap=False)
+                                    plotmap=True)
             fig = plot_obsynth(st,bounds=bounds,
                                     twinax=False,
                                     save=True,

@@ -43,49 +43,18 @@ def one_time_collect_stations():
 
     inv.write("station_massive.xml",format="STATIONXML")
 
-def events_by_radius():
+def collect_events():
     c = Client("GEONET")
     new_zealand = [-50,-35,165,180]
-    lat_lon = new_zealand
-    # all M5-6 events in New Zealand
-    cat = c.get_events(starttime="2006-01-01T00:00:00",
+    kaikoura_to_east_cape = [-43,-37,172,180]
+    lat_lon = kaikoura_to_east_cape
+    cat = c.get_events(starttime="2005-01-01T00:00:00",
                         endtime=UTCDateTime(),
-                        minmagnitude=5,
+                        minmagnitude=4.5,
                         maxmagnitude=6,
+                        maxdepth=80,
                         minlatitude=lat_lon[0],
                         maxlatitude=lat_lon[1],
                         minlongitude=lat_lon[2],
                         maxlongitude=lat_lon[3],
                         orderby="magnitude")
-    for net in inv:
-        for sta in net:
-            lat = sta.latitude
-            lon = sta.longitude
-            start = sta.creation_date
-            end = sta.termination_date
-            if not end:
-                end = UTCDateTime()
-            # 4 <= M <= 5
-            cat += c.get_events(starttime=start,
-                                endtime=end,
-                                minmagnitude=4,
-                                maxmagnitude=5,
-                                latitude=lat,
-                                longitude=lon,
-                                maxradius=3)
-            # 3 <= M <= 4
-            cat += c.get_events(starttime=start,
-                                endtime=end,
-                                minmagnitude=3,
-                                maxmagnitude=4,
-                                latitude=lat,
-                                longitude=lon,
-                                maxradius=2)
-            # 2 <= M <= 3
-            cat += c.get_events(starttime=start,
-                                endtime=end,
-                                minmagnitude=2,
-                                maxmagnitude=3,
-                                latitude=lat,
-                                longitude=lon,
-                                maxradius=1)
