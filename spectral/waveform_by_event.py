@@ -1,197 +1,87 @@
-"""5/2/18 Plot waveforms of temporary stations for a given event
+"""Plot waveforms for a given event
 """
 import os
 import sys
-import glob
-import argparse
+import traceback
+sys.path.append('../modules/')
 import numpy as np
-import matplotlib.pyplot as plt
-from getdata import geonet_internal, pathnames, fdsn_download, event_stream
-from obspy import read, read_inventory, UTCDateTime
-from obspy.clients.fdsn import Client
-from obspy.geodetics import locations2degrees
+from os.path import join
+from obspy import UTCDateTime, read, Stream
+from obspy.geodetics.base import gps2dist_azimuth
 
-# ignore warnings
+# module functions
+import getdata
+import procmod
+import plotmod
+from getdata import pathnames
+
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+mpl.rcParams['font.size'] = 8
+mpl.rcParams['lines.linewidth'] = 1
+
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.filterwarnings("ignore", category=mpl.cbook.mplDeprecation)
 
-# user input arguments
-parser = argparse.ArgumentParser(description='Plot waveforms for earthquake\
-data, example call $ python waveform_by_event.py --station TBAS --channel\
- BNZ --end 2015-02-01 --unit vel')
-parser.add_argument('--station', help='Station choice, default = RD01',type=str,
-                    default='RD01')
-parser.add_argument('--channel', help='Instrument channel for choice geonet\
-                    , i.e. BN1/HHZ, ignores component, default = HHZ',
-                    type=str, default='HHZ')
-parser.add_argument('--unit', help='Units of waveforms, [vel]/disp/acc',
-                    type=str,default='VEL')
-parser.add_argument('--start', help='Starttime for catalog, default=\
-                    2017-320',type=str, default='2017-320')
-parser.add_argument('--end', help='Endtime, default = 2018-001',type=str,
-                    default='2018-001')
+# =================================== FUNC ====================================
+def plot_streams(st,bounds,save=False,show=True):
+    """plot 6 streams in 3 subplot figure
+    """
+    c1,c2,c3 = "Z","N","E"
+    f,(ax1,ax2,ax3) = plt.subplots(3,sharex=True,sharey=False,
+                                                    figsize=(9,5),dpi=200)
+    # create time axis
+    stats = st[0].stats
+    net,sta,loc,cha = st[0].get_id().split('.')
+    t = np.linspace(0,stats.endtime-stats.starttime,stats.npts)
 
-# parse arguments
-arg = parser.parse_args()
-station_id = arg.station.upper() # i.e. RD06 or PXZ
-channel = arg.channel.upper()
-response_output = arg.unit.upper() # i.e. "VEL" or "DISP" or "ACC"
-t_start = UTCDateTime(arg.start)
-t_end = UTCDateTime(arg.end)
+    # axes lists for plotting
+    axes = [ax1,ax2,ax3]
+    obs_list = ["HH{}".format(c1),"HH{}".format(c2),"HH{}".format(c3)]
 
-# list of earthquakes to look at
-event_list = ["2017p852531", # M4.8 36km; W of Wellington
-              "2017p851921", # M4.1 39km; NW of Palmy, might be too close
-              "2017p860319", # M4.3 15km; NE of Masterton
-              "2017p861155", # M4.7 11km; SW of Wellington
-              "2017p968142", # M4.1 16km; W of Mt Ruapehu
-              "2017p879247"] # M4.7 40km; N of Bay of Plenty
-# event_id = "2017p916322"
-event_id = False
+    # plot
+    for ax,obs in zip(axes,obs_list):
+        obs_select = st.select(channel=obs)[0]
+        A = ax.plot(t,obs_select.data,color='k',label=obs_select.get_id())
+        plotmod.pretty_grids(ax)
 
-# get event information
-c = Client("GEONET")
-if event_id:
-    cat = c.get_events(eventid=event_id)
-else:
-    t_start = UTCDateTime("2017-320")
-    t_end = UTCDateTime("2018-001")
-    cat = c.get_events(starttime=t_start,
-                        endtime=t_end,
-                        minmagnitude=4,
-                        maxmagnitude=6,
-                        minlatitude=-50,
-                        maxlatitude=-35,
-                        minlongitude=165,
-                        maxlongitude=180,
-                        orderby="magnitude")
+    # final plot
+    ax1.set_xlim([t.min(),t.max()])
+    ax1.set_title("{e} {s} [{t0}-{t1}s]".format(e=event_id,
+                                                    s=stats.station,
+                                                    t0=bounds[0],
+                                                    t1=bounds[1])
+                                                    )
 
-print("{} events found".format(len(cat)))
-for event in cat:
-    # grab earthquake data - magnitude is M, ignore Ml and Mlv
-    event_id = event.resource_id.id.split('/')[1]
-    origin = event.origins[0].time
-    magnitude = event.magnitudes[2].mag
-    latitude = event.origins[0].latitude
-    longitude = event.origins[0].longitude
+    ax1.set_ylabel(c1)
+    ax2.set_ylabel("velocity (m/s)\n{}".format(c2))
+    ax3.set_ylabel(c3)
+    ax3.set_xlabel("time (sec)")
 
-    # download data
-    st,inv,cat = event_stream(station=station_id,
-                                channel=channel,
-                                event_id=event_id)
+    if save:
+        figtitle = "{e}_{s}.png".format(e=event_id,s=stats.station)
+        figfolder = join(pathnames()['kupeplots'],"obsynth_plots",figtitle)
+        plt.savefig(figfolder,dpi=200)
 
+    if show:
+        plt.show()
 
-    # preprocessing
-    pushback = -50
-    # st.merge()
-    st.trim(starttime=origin+pushback,endtime=origin+60*7.5)
-    st.detrend('linear')
-    st.taper(max_percentage=0.05)
-    st.attach_response(inv)
-    st.remove_response(output=response_output,water_level=60)
+    return f
 
-    # create time axis for plotting, initiate figure
-    try:
-        stats = st[0].stats
-    except IndexError:
-        # if data massing, skip over
-        print(origin)
-        continue
-    t = np.linspace(pushback,stats.endtime-stats.starttime,stats.npts)
-    f,(ax1,ax2,ax3) = plt.subplots(3,figsize=(9,5),
-                                     sharex=True,
-                                     sharey=True,
-                                     dpi=200)
-
-    # clean up trace
-    st_temp = st.copy()
-    st_temp.detrend('linear')
-    st_temp.taper(max_percentage=0.05)
-    if channel[0] == 'E':
-        hp_cutoff = 1/10
-    else:
-        hp_cutoff = 1/30
-    st_temp.filter('highpass',freq=hp_cutoff,corners=3,zerophase=True)
-
-    # signal to noise ratio
-    samp_rate = int(st_temp[0].stats.sampling_rate)
-    noise_data = st_temp.select(component='Z')[0].data[0:-pushback*samp_rate]
-    noise_data = np.sqrt(noise_data**2)
-    noise_mean = noise_data.mean()
-    peak_signal = st_temp.select(component='Z')[0].data.max()
-    signal_noise_ratio = peak_signal/noise_mean
-    print("Signal to noise ratio ",signal_noise_ratio)
-
-    # filter bands
-    alpha = 0.4
-    linewidth = 0.5
-    for i in [1,3,6,10]:
-        for ax,co in zip([ax1,ax2,ax3],['N','E','Z']):
-
-            # for each filter band, plot each component trace
-            st_filter = st_temp.copy()
-            st_filter.filter('lowpass',freq=1/i,corners=3,zerophase=True)
-
-            # plot the raw seismograms in the background, only once
-            if i == 1:
-                ax.plot(t,st_temp.select(component=co)[0].data,
-                            linewidth=0.4,
-                            alpha=0.2,
-                            label="raw".format(round(1/i,2),i),
-                            zorder=i,
-                            color='gray')
-
-            # plot filtered waveform
-            ax.plot(t,st_filter.select(component=co)[0].data,
-                        linewidth=linewidth,
-                        alpha=alpha,
-                        label="{}Hz/{}s lowpass".format(round(1/i,2),i),
-                        zorder=i+1)
-            if i == 3:
-                ax.set_ylim([min(st_filter[0].data),max(st_filter[0].data)])
-
-
-        alpha+=0.2
-        linewidth+=0.2
-        # print("Lowpass at {} s".format(st_filter[0].data.max()))
-
-    # ax.set_ylim([-0.000023,0.000023])
-    # determine ylimits with min/max raw trace values
-        # maxs,mins = [],[]
-        # for co in ['N','E','Z']:
-        #     maxs.append(max(st_temp.select(component=co)[0].data))
-        #     mins.append(min(st_temp.select(component=co)[0].data))
-        # ymin = min(mins)
-        # ymax= max(maxs)
-        # ax.set_ylim([ymin,ymax])
-        # print("min: {} counts/max: {} counts".format(ymin,ymax))
-
-
-    ax3.set_xlabel('Time (sec)')
-    unit_dict = {"VEL":"m/s","DISP":"m"}
-    ax1.set_ylabel('North {} ({})'.format(response_output,
-                                            unit_dict[response_output]))
-    ax2.set_ylabel('East {} ({})'.format(response_output,
-                                            unit_dict[response_output]))
-    ax3.set_ylabel('Vertical {} ({})'.format(response_output,
-                                            unit_dict[response_output]))
-    ax1.set_title("{s} | {e} | {o} | M{m}".format(s=station_id,
-                                                            e=event_id,
-                                                            o=origin,
-                                                            m=magnitude))
-                                                            # d=distance))
-    for ax in [ax1,ax2,ax3]: ax.grid(True)
-    ax2.legend(loc='best',prop={'size':7})
-    ax2.set_zorder(100)
-    basepath = pathnames()['plots'] + "waveforms/"
-    if not os.path.exists(basepath+event_id):
-        os.makedirs(basepath+event_id)
-    figure_name = os.path.join(basepath,event_id,"{0}_{1}_{2}.png".format(
-                                                event_id,
-                                                station_id,
-                                                response_output))
-    # print(figure_name)
-    # plt.subplots_adjust(wspace=.5, hspace=0)
-    # plt.savefig(figure_name)
-
-    plt.show()
+# =================================== MAIN ====================================
+for i in [6,9,10]:
+    code = "XX.RD{:0>2}.10.*".format(i)
+    # event_id = "2018p130600"
+    event_id = "2018p093947"
+    bounds = [2,30]
+    st,inv,cat = getdata.event_stream(code=code,
+                                        event_id=event_id)
+    # plotmod.plot_event_station(inv,cat)
+    origin_time = cat[0].origins[0].time
+    st.trim(origin_time,origin_time+300)
+    st_proc = procmod.preprocess(st,inv=inv)
+    st_proc.filter("bandpass",freqmin=1/bounds[1],freqmax=1/bounds[0])
+    plot_streams(st_proc,bounds=bounds,show=True,save=False)
+    # except Exception as e:
+    #     continue

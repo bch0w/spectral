@@ -14,7 +14,7 @@ which events belong to which stations (excel file?)
 -run detection algorithm on all station data?
 -run flexwin on all picks for optimum window choice?
 """
-from obspy import UTCDateTime
+from obspy import UTCDateTime, read_inventory
 from obspy.clients.fdsn import Client
 
 def one_time_collect_stations():
@@ -41,6 +41,20 @@ def one_time_collect_stations():
                         location='',
                         level="response")
 
+    # SAHKE not working 23.03
+    new_zealand = [-50,-35,165,180]
+    lat_lon = new_zealand
+    inv = c.get_stations(network="XX",
+                        station="*",
+                        starttime="2009-310",
+                        endtime="2010-120",
+                        minlatitude=lat_lon[0],
+                        maxlatitude=lat_lon[1],
+                        minlongitude=lat_lon[2],
+                        maxlongitude=lat_lon[3],
+                        location='',
+                        level="station")
+
     inv.write("station_massive.xml",format="STATIONXML")
 
 def collect_events():
@@ -58,3 +72,8 @@ def collect_events():
                         minlongitude=lat_lon[2],
                         maxlongitude=lat_lon[3],
                         orderby="magnitude")
+
+
+
+if __name__ == "__main__":
+    cat = pathnames()['data'] + 'QUAKEML/kaikoura_to_east_cape.xml'

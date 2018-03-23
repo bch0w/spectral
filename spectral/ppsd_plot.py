@@ -1,5 +1,6 @@
 import os
 import sys
+sys.path.append('../modules')
 import glob
 import numpy as np
 import matplotlib.pyplot as plt
@@ -10,6 +11,10 @@ from random import shuffle
 from getdata import pathnames
 from obspy.signal import PPSD
 from obspy.signal.spectral_estimation import get_nlnm, get_nhnm
+
+import matplotlib as mpl
+mpl.rcParams['font.size'] = 8
+mpl.rcParams['lines.linewidth'] = 1
 
 def color_cycle(ax,length,cmap):
     """sets up a cycle of colors to be used in figures with many lines
@@ -24,33 +29,33 @@ def color_cycle(ax,length,cmap):
     ax.set_prop_cycle('color',colorrange)
 
 # naming conventions
-# station_dict = {"RD01":"PRWZ", "RD02":"ANWZ", "RD03":"TURI", "RD04":"PORA",
-#                 "RD05":"MNHR", "RD06":"DNVZ", "RD07":"WPAW", "RD08":"RAKW",
-#                 "RD09":"MCHZ", "RD10":"CKHZ", "RD11":"KAHU", "RD12":"KWHZ",
-#                 "RD13":"KERE", "RD14":"PNUI", "RD15":"WPUK", "RD16":"OROA",
-#                 "RD17":"TEAC", "RD18":"RANC"}
-# colocated short period sensors
-station_dict = {"RD01":"PRWZ", "RD02":"ANWZ", "RD03":"", "RD04":"PRHZ",
-                "RD05":"", "RD06":"DVHZ", "RD07":"", "RD08":"",
-                "RD09":"MCHZ", "RD10":"CKHZ", "RD11":"KAHZ", "RD12":"KWHZ",
-                "RD13":"KRHZ", "RD14":"PNHZ", "RD15":"WPHZ", "RD16":"",
-                "RD17":"", "RD18":""}
+station_dict = {"RD01":"PRWZ", "RD02":"ANWZ", "RD03":"TURI", "RD04":"PORA",
+                "RD05":"MNHR", "RD06":"DNVZ", "RD07":"WPAW", "RD08":"RAKW",
+                "RD09":"MCHZ", "RD10":"CKHZ", "RD11":"KAHU", "RD12":"KWHZ",
+                "RD13":"KERE", "RD14":"PNUI", "RD15":"WPUK", "RD16":"OROA",
+                "RD17":"TEAC", "RD18":"RANC"}
+# # colocated short period sensors
+# station_dict = {"RD01":"PRWZ", "RD02":"ANWZ", "RD03":"", "RD04":"PRHZ",
+#                 "RD05":"", "RD06":"DVHZ", "RD07":"", "RD08":"",
+#                 "RD09":"MCHZ", "RD10":"CKHZ", "RD11":"KAHZ", "RD12":"KWHZ",
+#                 "RD13":"KRHZ", "RD14":"PNHZ", "RD15":"WPHZ", "RD16":"",
+#                 "RD17":"", "RD18":""}
 
 month_dict = {"001*031":"JAN","032*059":"FEB","060*090":"MAR","091*120":"APR",
                 "121*151":"MAY","152*181":"JUN","182*212":"JUL","213*243":"AUG",
                 "244*273":"SEP","274*304":"OCT","305*334":"NOV","335-365":"DEC"}
 
 # set path
-npz_path = pathnames()['ppsd'] + "/RDF_decimateby5/" #temp array
+npz_path = pathnames()['ppsd']  #temp array
 # npz_files = glob.glob(npz_path + "*.npz")
 rdf_files = glob.glob(npz_path + "RD*.npz")
-ehz_files = glob.glob(npz_path + "*EHZ*.npz")
+# ehz_files = glob.glob(npz_path + "*EHZ*.npz")
 
 rdf_files.sort()
-ehz_files.sort()
+# ehz_files.sort()
 
 # start figure
-f = plt.figure(dpi=200)
+f = plt.figure(figsize=(9,5),dpi=200)
 ax = f.add_subplot(111)
 
 # unique colors and linestyles
@@ -74,23 +79,22 @@ for i,fid in enumerate(rdf_files):
     avg = ppsd.get_percentile(percentile=50)
     plt.plot(avg[0],avg[1],
                 linestyle=linestyle,
-                linewidth=linewidth,
                 zorder=zorder,
-                label="{}".format(sta))
+                label="{} {}".format(sta,station_dict[sta]))
 
-colorrange = [cr[1],cr[9],cr[5],cr[10],cr[12],cr[11],cr[8],cr[13],cr[3],cr[0],cr[14]]
-for i,fid in enumerate(ehz_files):
-    sta,cha,year = os.path.basename(fid).split(".")[:3]
-    ppsd = PPSD.load_npz(fid)
-    # avg = ppsd.get_mode()
-    avg = ppsd.get_percentile(percentile=50)
-
-    plt.plot(avg[0],avg[1],
-                linestyle='solid',
-                linewidth=0.5,
-                color=colorrange[i],
-                zorder=3,
-                label="{}".format(sta))
+# colorrange = [cr[1],cr[9],cr[5],cr[10],cr[12],cr[11],cr[8],cr[13],cr[3],cr[0],cr[14]]
+# for i,fid in enumerate(ehz_files):
+#     sta,cha,year = os.path.basename(fid).split(".")[:3]
+#     ppsd = PPSD.load_npz(fid)
+#     # avg = ppsd.get_mode()
+#     avg = ppsd.get_percentile(percentile=50)
+#
+#     plt.plot(avg[0],avg[1],
+#                 linestyle='solid',
+#                 linewidth=0.5,
+#                 color=colorrange[i],
+#                 zorder=3,
+#                 label="{}".format(sta))
 
 # plot lines for noise models and microseisms
 nlnm_x,nlnm_y = get_nlnm()
@@ -117,7 +121,7 @@ plt.xlabel("Period (s)")
 plt.ylabel("Amplitude [m^2/s^4/Hz][dB]")
 # plt.title("Mean values of year-long PPSD\'s for GEONET permanent seismometers\n"
 #             "Year: 2015 | Sampling Rate: 10 Hz | # Stations: {}".format(len(npz_files)))
-plt.title("Median values of PPSD for RDF stations and colocated short-period sensors")
+plt.title("Median values of PPSD for RDF stations Jan through Mar 2018")
 plt.grid()
 # plt.savefig(figure_savename)
 plt.show()

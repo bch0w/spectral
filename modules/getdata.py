@@ -34,6 +34,7 @@ def pathnames():
     common = os.path.join(base,'common')
     path_dictionary = {"spectral":os.path.join(base,'spectral',''),
             "kupe":os.path.join(base,'kupe',''),
+            "RDF":os.path.join(base,'..','RDF',''),
             "rdf":os.path.join(common,'DATA','RDF_Array',''),
             "plots":os.path.join(common,'OUTPUT_PLOTS',''),
             "spectralplots":os.path.join(common,'OUTPUT_PLOTS','spectral',''),
@@ -310,7 +311,7 @@ def event_stream(code,event_id,client="GEONET",startpad=False,endpad=False):
 
     # determine if RDF data or other
     choice = "NOTRDF"
-    if sta[:2] == "RD":
+    if net == "XX":
         choice = "RDF"
 
     for event in cat:
@@ -358,35 +359,117 @@ def event_stream(code,event_id,client="GEONET",startpad=False,endpad=False):
 
         # temporary station filepaths
         if choice == "RDF":
-            st, inv = get_rdf_data(origin)
+            st_list,resp_list = [],[]
+            for comp in ['N','E','Z']:
+                path_st, path_resp = rdf_internal(station=sta,
+                                        channel=cha[:2] + comp,
+                                        start=origin,
+                                        response=True)
+                st_list += path_st
+            st = (read(st_list[0]) +
+                    read(st_list[1]) +
+                    read(st_list[2])
+                    )
+            inv = read_inventory(path_resp)
 
         return st, inv, cat
 
-def get_rdf_data(origin):
-    """get data from RDF array internally UNTESTED, needs work probably
+def rdf_internal(station,channel,start,end=False,response=True):
     """
-    d1 = pathnames()['rdf'] + "July2017_Sep2017/DATA_ALL/"
-    d2 = pathnames()['rdf'] + "Sep2017_Nov2017/DATA_ALL/"
-    d3 = pathnames()['rdf'] + "Nov2017_Jan2018/DATA_ALL/"
-    date_search = "{year}.{jday}".format(
-                                    year=origin.year,jday=origin.julday)
-    path_vert,path_north,path_east = [],[],[]
-    for search in [d1,d2,d3]:
-        path_vert += glob.glob(search+"{sta}.{date}*HHZ*".format(
-                                                    sta=station_id,
-                                                    date=date_search))
-        path_north += glob.glob(search+"{sta}.{date}*HHN*".format(
-                                                    sta=station_id,
-                                                    date=date_search))
-        path_east += glob.glob(search+"{sta}.{date}*HHE*".format(
-                                                    sta=station_id,
-                                                    date=date_search))
+    returns a list of pathnames for RDF data. Copied from geonet_internal
+    If response == True, also returns path for response.
+    If end not specified, returns a list of length 1 for day requested.
+    Wildcards possible, however inventory returns a full list of instruments at
+    a certain location, rather than a paired down list.
 
-    st = read(path_vert[0]) + read(path_north[0]) + read(path_east[0])
-    resp_filepath = pathnames()['rdf'] + "DATALESS.RDF.XX"
-    inv = read_inventory(resp_filepath)
+    :type station: str
+    :param station: station name i.e. GKBS (case-insensitive)
+    :type channel: str
+    :param channel: channel of interest, i.e. BHN, HHE (case-insensitive)
+    :type start: str
+    :param start: starttime for data request
+    :type end: str
+    :param end: endtime for data request
+    :type response: bool
+    :param response: return response filepath
+    :rtype mseed_files: list of str
+    :return mseed_files: list of absolute filepaths to requested data
+    :rtype response_filepath: str or None
+    :return response_filepath: if requested, filepath of response
+    """
+    # channel naming convention based on instrument type
+    station = station.upper()
+    channel = channel.upper()
+    start = UTCDateTime(start)
 
-    return st, inv
+    # filepaths direct to GeoNet Archives path
+    mseed_RDFpath = pathnames()['RDF'] + '{year}/XX/{sta}/{ch}/'.format(
+                                                                year=start.year,
+                                                                sta=station,
+                                                                ch=channel)
+    resp_filepath = pathnames()['RDF'] + 'XX.RDF.DATALESS'
+
+    # check if data spans more than one day
+    if type(end) != bool:
+        end = UTCDateTime(end)
+        # if data only spans one year
+        if start.year == end.year:
+            list_of_files = glob.glob(mseed_RDFpath + '*')
+            list_of_files.sort()
+            # match start and end dates to filepaths
+            start_file_match = glob.glob(mseed_RDFpath + "*{date}".format(
+                                date=start.format_seed().replace(',','.')))[0]
+            end_file_match = glob.glob(mseed_RDFpath + "*{date}".format(
+                                date=end.format_seed().replace(',','.')))[0]
+            # determine indices for start and end files
+            start_file_index = list_of_files.index(start_file_match)
+            end_file_index = list_of_files.index(end_file_match)
+            # list of files for return
+            mseed_files = list_of_files[start_file_index:end_file_index]
+        # if data spans multiple years
+        else:
+            # first year
+            first_year_files = glob.glob(mseed_RDFpath + '*')
+            first_year_files.sort()
+            start_file_match = glob.glob(mseed_RDFpath + "*{date}".format(
+                                date=start.format_seed().replace(',','.')))[0]
+            start_file_index = first_year_files.index(start_file_match)
+            mseed_files = first_year_files[start_file_index:]
+            # if years in middle
+            if end.year - start.year > 1:
+                for year_iter in range(start.year+1,end.year,1):
+                    pth_iter = (pathnames()['RDF'] +
+                                        '{year}/NZ/{sta}/{ch}/'.format(
+                                                                year=year_iter,
+                                                                sta=station,
+                                                                ch=channel))
+                    mseed_files += glob.glob(pth_iter + '*')
+            # last year
+            RDFpath_last = pathnames()['RDF'] + '{year}/NZ/{sta}/{ch}/'.format(
+                                                                year=end.year,
+                                                                sta=station,
+                                                                ch=channel)
+            last_year_files = glob.glob(RDFpath_last + '*')
+            last_year_files.sort()
+            end_file_match = glob.glob(RDFpath_last + "*{date}".format(
+                                    date=end.format_seed().replace(',','.')))[0]
+            end_file_index = last_year_files.index(end_file_match)
+            mseed_files += last_year_files[:end_file_index]
+
+        days_between = int((end-start)/86400)
+    # if data only needed for one day
+    else:
+        mseed_files = glob.glob(mseed_RDFpath +'*{year}.{day:0>3}'.format(
+                                                            year=start.year,
+                                                            day=start.julday))
+        days_between = 1
+
+    mseed_files.sort()
+
+    if response:
+        return mseed_files, resp_filepath
+    else:
+        return mseed_files, None
 
 
 # ============================== EVENT INFO DOWNLOAD ==========================
@@ -463,6 +546,9 @@ def get_GCMT_solution(event_id):
     else:
         event = cat_filt[0]
         return event
+
+def cat_to_csv(cat):
+    
 
 # ============================== COPY-PASTE SCRIPTS ============================
 

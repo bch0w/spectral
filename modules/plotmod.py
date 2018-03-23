@@ -1,6 +1,7 @@
 """module file for plotting functions
 """
 import getdata
+import matplotlib.pyplot as plt
 
 def pretty_grids(input_ax):
     """make dem grids pretty
@@ -88,3 +89,79 @@ def compare_beachballs(event_id):
                                                       c='xyz',
                                                       ))
     plt.close("all")
+
+
+
+def plot_event_station(inv,cat):
+    """plot event and station along with line connection and station-receiver
+    distance for quick visualization
+    """
+    from obspy.geodetics.base import gps2dist_azimuth
+    # plot station on a map
+    fig = inv.plot(marker='v',
+            projection="local",
+            resolution = "i",
+            size=50,
+            show=False,
+            continent_fill_color="white",
+            water_fill_color="white",
+            color_per_network=True,
+            label=False)
+
+    # convert station and event information to map coords
+    station_lat = inv[0][0].latitude
+    station_lon = inv[0][0].longitude
+    station_x,station_y = fig.bmap(station_lon,station_lat)
+    event_lat = cat[0].origins[0].latitude
+    event_lon = cat[0].origins[0].longitude
+    event_x,event_y = fig.bmap(event_lon,event_lat)
+
+    # annotate station code
+    # !!!!!!!!!!!!!!!!!!!!!!!!! only for waveform_by_event.py
+    # for INV in inv[0]:
+    #     station_lat = INV.latitude
+    #     station_lon = INV.longitude
+    #     station_x,station_y = fig.bmap(station_lon,station_lat)
+    #     stationcode = INV.code
+    #     dist_azi = gps2dist_azimuth(event_lat,event_lon,station_lat,station_lon)
+    #     epi_dist = round(dist_azi[0]*1E-3,2)
+    #     BAz = round(dist_azi[2],2)
+    #     anno_template = "{}\n{}km".format(stationcode,epi_dist)
+    #     plt.annotate(anno_template,
+    #                 xy=(station_x,station_y),
+    #                 xytext=(station_x,station_y),
+    #                 fontsize=10,
+    #                 weight='bold',
+    #                 zorder=100)
+    # !!!!!!!!!!!!!!!!!!!!!!!!!
+
+    stationcode = inv[0][0].code
+    plt.annotate(stationcode,
+                xy=(station_x,station_y),
+                xytext=(station_x,station_y),
+                fontsize=10,
+                weight='bold',
+                zorder=100)
+
+    # plot event
+    scatter = fig.bmap.scatter(event_x,event_y,
+                                marker='o',
+                                s=150,
+                                zorder=50,
+                                edgecolor='k')
+    magnitude = round(cat[0].magnitudes[0].mag,2)
+    plt.annotate(magnitude,
+                xy=(event_x,event_y),
+                xytext=(event_x,event_y),
+                fontsize=10,
+                weight='bold',
+                zorder=100)
+
+    # connect station and event by arrow
+    dist_azi = gps2dist_azimuth(event_lat,event_lon,station_lat,station_lon)
+    epi_dist = round(dist_azi[0]*1E-3,2)
+    BAz = round(dist_azi[2],2)
+    plt.title("Epicentral Distance: {} km | BAz: {}".format(epi_dist,BAz))
+
+
+    plt.show()
