@@ -181,5 +181,5 @@ for event in event_list:
     event_work.append(event)
 
 for i,j in zip(event_work,check_list):
-    print(i,j)
+    print(os.path.basename(i),j)
 import ipdb;ipdb.set_trace()
