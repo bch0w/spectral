@@ -91,7 +91,6 @@ def compare_beachballs(event_id):
     plt.close("all")
 
 
-
 def plot_event_station(inv,cat):
     """plot event and station along with line connection and station-receiver
     distance for quick visualization

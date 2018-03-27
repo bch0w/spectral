@@ -17,51 +17,14 @@ which events belong to which stations (excel file?)
 from obspy import UTCDateTime, read_inventory
 from obspy.clients.fdsn import Client
 
-def one_time_collect_stations():
-    # geonet permanent stations
-    c = Client("GEONET")
-    north_island = [-42,-34,173,180]
-    lat_lon = north_island
-    inv = c.get_stations(network='NZ',
-                        station='*',
-                        channel='HH*',
-                        minlatitude=lat_lon[0],
-                        maxlatitude=lat_lon[1],
-                        minlongitude=lat_lon[2],
-                        maxlongitude=lat_lon[3],
-                        level="response")
-    # hobitss stations
-    c = Client("IRIS")
-    inv += c.get_stations(network='YH',
-                        station="LOBS*",
-                        location='',
-                        level="response")
-    inv += c.get_stations(network='YH',
-                        station="EBS*",
-                        location='',
-                        level="response")
-
-    # SAHKE not working 23.03
-    new_zealand = [-50,-35,165,180]
-    lat_lon = new_zealand
-    inv = c.get_stations(network="XX",
-                        station="*",
-                        starttime="2009-310",
-                        endtime="2010-120",
-                        minlatitude=lat_lon[0],
-                        maxlatitude=lat_lon[1],
-                        minlongitude=lat_lon[2],
-                        maxlongitude=lat_lon[3],
-                        location='',
-                        level="station")
-
-    inv.write("station_massive.xml",format="STATIONXML")
+import getdata
 
 def collect_events():
     c = Client("GEONET")
     new_zealand = [-50,-35,165,180]
     kaikoura_to_east_cape = [-43,-37,172,180]
-    lat_lon = kaikoura_to_east_cape
+    blenheim_to_east_cape = [-41.5,-37,172,180]
+    lat_lon = blenheim_to_east_cape
     cat = c.get_events(starttime="2005-01-01T00:00:00",
                         endtime=UTCDateTime(),
                         minmagnitude=4.5,
@@ -72,6 +35,7 @@ def collect_events():
                         minlongitude=lat_lon[2],
                         maxlongitude=lat_lon[3],
                         orderby="magnitude")
+
 
 
 

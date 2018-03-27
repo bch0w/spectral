@@ -25,7 +25,7 @@ def pathnames():
     # else:
     #     where = "OTHER"
     if basecheck == "seis/prj":
-        where = "VIC"
+        where = "GNS"
         base = "/seis/prj/fwi/bchow/spectral"
     elif basecheck == "Users/chowbr":
         where = "VIC"
@@ -54,6 +54,8 @@ def pathnames():
 
 def geonet_internal(station,channel,start,end=False,response=True):
     """
+    NOTE: finicky, code requires some specification of components, i.e. HH?,
+          cannot be a full wildcard
     returns a list of pathnames for GEONET archives on GNS internal system.
     If response == True, also returns path for response.
     If end not specified, returns a list of length 1 for day requested.
@@ -76,6 +78,7 @@ def geonet_internal(station,channel,start,end=False,response=True):
     :return response_filepath: if requested, filepath of response
     """
     # channel naming convention based on instrument type
+    # print("[getdata.geonet_interal]")
     station = station.upper()
     channel = channel.upper()
     start = UTCDateTime(start)
@@ -191,6 +194,7 @@ def fdsn_download(code,event_id=False,response=False,
     :type cushion: int
     :param cushion: padding on start and end time, default 500s
     """
+    # print("[getdata.fdsn_download]")
     # set timing
     if event_id:
         cat = get_quakeml(event_id)
@@ -284,7 +288,6 @@ def fdsn_download(code,event_id=False,response=False,
 
     else:
         return st, None
-
 
 def event_stream(code,event_id,client="GEONET",startpad=False,endpad=False):
     """Given a GEONET event ID, return raw waveform streams and response files
@@ -547,10 +550,58 @@ def get_GCMT_solution(event_id):
         event = cat_filt[0]
         return event
 
-def cat_to_csv(cat):
-    
 
 # ============================== COPY-PASTE SCRIPTS ============================
+def make_stationxml():
+    import obspy
+    from obspy import read_inventory
+    from obspy.core.inventory import Inventory, Network, Station, Channel, Site
+
+    inv = Inventory(
+        networks=[],
+        source="Chow")
+
+    net = Network(
+        code="XX",
+        stations=[],
+        description="RDF Temporary Deployment",
+        start_date=obspy.UTCDateTime(2016, 7, 18))
+
+    resp = read_inventory('XX.RDF.DATALESS')
+    for STA in resp[0]:
+        code = STA.code
+        lat = STA.latitude
+        lon = STA.longitude
+        start = STA.start_date
+        sta = Station(
+            code=code,
+            latitude=lat,
+            longitude=lon,
+            elevation=0,
+            creation_date=start,
+            site=Site(name=code))
+        for CHA in STA:
+            chacode = CHA.code
+            loc = CHA.location_code
+            SR = CHA.sample_rate
+            cha = Channel(
+                code=chacode,
+                location_code=loc,
+                latitude=lat,
+                longitude=lon,
+                elevation=0,
+                depth=0.0,
+                azimuth=0.0,
+                dip=-90.0,
+                sample_rate=SR)
+            sta.channels.append(cha)
+        net.stations.append(sta)
+
+    # Now tie it all together.
+    cha.response = resp
+    inv.networks.append(net)
+
+    inv.write("RDF.xml", format="stationxml", validate=True)
 
 def get_those_stations():
     """misc station getter to be copy-pasted"""
@@ -559,7 +610,26 @@ def get_those_stations():
     north_island = [-42,-34,173,180]
     north_island_zoom = [-40,-37,176,178.5]
     new_zealand = [-50,-35,165,180]
+    WPUK = [-40.0643,176.441]
     lat_lon = new_zealand
+    center_lat_lon = WPUK
+    # RDF surround
+    inv = c.get_stations(network='NZ',
+                        station='*S',
+                        channel='*',
+                        latitude=center_lat_lon[0],
+                        longitude=center_lat_lon[1],
+                        maxradius=.8,
+                        level="station")
+    inv += c.get_stations(network='NZ',
+                        station='*Z',
+                        channel='*',
+                        latitude=center_lat_lon[0],
+                        longitude=center_lat_lon[1],
+                        maxradius=.8,
+                        level="station")
+
+    # NZ seismometers
     inv = c.get_stations(network='NZ',
                         station='*',
                         channel='HH*',
@@ -568,6 +638,7 @@ def get_those_stations():
                         minlongitude=lat_lon[2],
                         maxlongitude=lat_lon[3],
                         level="station")
+    # HOBITSS
     c = Client("IRIS")
     inv = c.get_stations(network='YH',
                         station="LOBS*",
@@ -578,8 +649,21 @@ def get_those_stations():
                         location='',
                         level="station")
 
-    inv.write('STATION_PLACEHOLDER.xml',format='STATIONXML')
+    # SAHKE
+    new_zealand = [-50,-35,165,180]
+    c = Client("IRIS")
 
+    lat_lon = new_zealand
+    inv = c.get_stations(network="X2",
+                        station="*",
+                        starttime="2009-11-06",
+                        endtime="2010-04-30",
+                        minlatitude=lat_lon[0],
+                        maxlatitude=lat_lon[1],
+                        minlongitude=lat_lon[2],
+                        maxlongitude=lat_lon[3],
+                        location='*',
+                        level="station")
 def get_those_events():
     """misc event getter to be copy-pasted"""
     from obspy.clients.fdsn import Client

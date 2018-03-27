@@ -4,18 +4,26 @@ def preprocess(st,resample=50,inv=False,output="VEL"):
     """preprocess waveform data:
     resample, demean, detrend, taper, remv. resp. (if applicable)
     """
+
     st_manipulate = st.copy()
     st_manipulate.resample(resample)
     st_manipulate.detrend("demean")
     st_manipulate.detrend("linear")
     st_manipulate.taper(max_percentage=0.05)
+    inv_print = False
     if inv:
+        inv_print = True
         # pre_filt = [1/100,1/90,25,30]
         st_manipulate.attach_response(inv)
         st_manipulate.remove_response(output=output,
                                       # pre_filt=pre_filt,
                                       water_level=60,
                                       plot=False)
+    code = st[0].get_id()
+    print("\t[procmod.preprocess] {ID} {r}Hz resample, response: {i}".format(
+                                                                ID=code,
+                                                                r=resample,
+                                                                i=inv_print))
 
 
     return st_manipulate
