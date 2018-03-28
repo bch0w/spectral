@@ -2,6 +2,7 @@
 """
 import sys
 import getdata
+import collections
 from getdata import pathnames
 from obspy import read_events
 
@@ -43,8 +44,12 @@ def mt_from_event(event):
     """
     fm = event.focal_mechanisms[0].moment_tensor.tensor
 
-    MT = {"Mrr":fm.m_rr,"Mtt":fm.m_tt,"Mpp":fm.m_pp,
-          "Mrt":fm.m_rt,"Mrp":fm.m_rp,"Mtp":fm.m_tp}
+    MT = collections.OrderedDict({"Mrr":fm.m_rr,
+                                  "Mtt":fm.m_tt,
+                                  "Mpp":fm.m_pp,
+                                  "Mrt":fm.m_rt,
+                                  "Mrp":fm.m_rp,
+                                  "Mtp":fm.m_tp})
 
     return MT
 

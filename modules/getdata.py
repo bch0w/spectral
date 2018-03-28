@@ -518,10 +518,6 @@ def get_GCMT_solution(event_id):
     """retrieve GCMT solutions from the .ndk files for comparison against
     converted MT from Ristau. Returns an obspy event object.
     """
-    import os
-    from obspy import read_events, UTCDateTime
-    from getdata import get_moment_tensor
-
     month_dict={4:"apr",12:"dec",1:"jan",6:"jun",5:"may",10:"oct",
                 8:"aug",2:"feb",7:"jul",3:"mar",11:"nov",9:"sep"}
     MT = get_moment_tensor(event_id=event_id)
@@ -532,18 +528,20 @@ def get_GCMT_solution(event_id):
     fid = "{m}{y}.ndk".format(m=month_dict[month],y=year[2:])
     filepath = os.path.join(pathnames()['data'],"GCMT",year,fid)
     cat = read_events(filepath)
-    cat_filt = cat.filter("time > {}".format(str(date-300)),
-                          "time < {}".format(str(date+300)),
+    cat_filt = cat.filter("time > {}".format(str(date-60)),
+                          "time < {}".format(str(date+60)),
                           "magnitude >= {}".format(mw-.5),
                           "magnitude <= {}".format(mw+.5)
                           )
     if len(cat_filt) == 0:
-        print("No events found")
+        print("[getdata.get_GCMT_solution] No events found")
         return
     elif len(cat_filt) > 1:
-        print("{} events found, choose from list:".format(len(cat_filt)))
+        print("[getdata.get_GCMT_solution]"
+                    " {} events found, choose from list:".format(len(cat_filt)))
+        print(MT)
         print(cat_filt)
-        choice = input("Event number: ")
+        choice = int(input("Event number (index from 0): "))
         event = cat_filt[choice]
         return event
     else:
