@@ -41,28 +41,34 @@ def plot_arrays(st,TEORRm,sig,show=True):
     A1 = ax1.plot(t,st[0].data,color='r',label=st[0].get_id())
     A2 = ax1.plot(t,st[1].data,color='b',label=st[1].get_id())
     ax1.legend(prop={"size":5})
-    pretty_grids(ax1)
 
     # filtered waveforms
     B1 = ax2.plot(t,T,color='r',label="[T]remor Band 2-8Hz")
     B2 = ax2.plot(t,E,color='k',label="[E]arthquake Band 10-20Hz")
     B3 = ax2.plot(t,O,color='g',label="[O]cean Band .5-1Hz")
     ax2.legend(prop={"size":5})
-    pretty_grids(ax2)
 
     # amplitude ratio and median value
     # C1 = ax3.plot(t,R,color='k',label='Amplitude [R]atio (T^2/(E*O))')
     C2 = ax3.plot(tRm,Rm,color='b',label='Amplitude [R]atio [m]edian')
     C3 = ax3.plot(tRm,sig2,color='g',zorder=5,label='2-sigma')
     C4 = ax3.plot(tRm,sig3,color='orange',zorder=5,label='3-sigma')
-    ax3.legend(prop={"size":5})
-    pretty_grids(ax3)
-
+    
+    # set axis properties
+    for ax in [ax1,ax2,ax3]:
+        pretty_grids(ax)
+        ax.legend(prop={"size":5})
+    
+    ax2.set_yscale("log")
+        
+    ax1.set_title("TEROR {}".format(st[0].get_id()))
     # ax1.set_xlim([60000,t.max()])
     ax1.set_ylabel("velocity (m/s)")
     ax2.set_ylabel("velocity (m/s)")
     ax3.set_ylabel("dimensionless")
     ax3.set_xlabel("time (sec)")
+
+
 
     if show:
         plt.show()
@@ -73,7 +79,10 @@ def pretty_grids(input_ax):
     """make dem grids pretty
     """
     input_ax.set_axisbelow(True)
-    input_ax.tick_params(which='both',direction='in',top=True,right=True)
+    input_ax.tick_params(which='both',
+                         direction='in',
+                         top=True,
+                         right=True)
     input_ax.minorticks_on()
     input_ax.grid(which='minor',
                     linestyle=':',
@@ -90,33 +99,43 @@ def pretty_grids(input_ax):
                             scilimits=(0,0))
     
 # ========================== SUPPORTING FUNCTIONS ==============================
-def just_save_it(st,TEORRm):
-    """save arrays to numpy npz array
+def check_save(code_set,st=None,TEORRm=None):
+    """either check if processing has been run before, or save files to
+    specific path. [Check] initiated by default, [save] initiated if the 
+    function is given an argument for TEORRm
+    :type code_set: str
+    :param code_set: instrument code, set in main
+    :type st: obspy stream
+    :param st: stream containing preprocessed data
+    :type TEORRm: list of numpy arrays
+    :param TEORRm: list of arrays containing filtered waveform data
     """
-    code = st[0].get_id()
-    net,sta,loc,cha = code.split('.')
-    outfile = "{n}.{s}.TEORRm.{f}".format(n=net,s=sta,f='{f}')
+    # set up pathing
+    net,sta,loc,cha,year,jday = code_set.split('.')
     outpath = pathnames()['data'] + 'TEROR'
+    outfile = "{n}.{s}.{l}.{y}.{j}.TEORRm.{f}".format(n=net,
+                                                      s=sta,
+                                                      l=loc,
+                                                      y=year,
+                                                      j=jday,
+                                                      f='{f}')
     output = os.path.join(outpath,outfile)
+    pickle_path = output.format(f='pickle')
+    npz_path = output.format(f='npz')
     
-    T,E,O,R,Rm = TEORRm
-    np.savez(output.format(f='npz'),T=T,E=E,O=O,R=R,Rm=Rm)
-    st.write(output.format(f='pickle'),format="PICKLE")
-    
-def just_check_it(st):
-    """check to see if this processing has been run before
-    """
-    code = st[0].get_id()
-    net,sta,loc,cha = code.split('.')
-    outfile = "{n}.{s}.TEORRm.{f}".format(n=net,s=sta,f='{f}')
-    outpath = pathnames()['data'] + 'TEROR'
-
-    pickle_path = os.path.join(outpath,outfile.format(f='pickle'))
-    npz_path = os.path.join(outpath,outfile.format(f='npz'))
-    if (os.path.exists(npz_path) and os.path.exists(pickle_path)):
-        return {"npz":npz_path,"pickle":pickle_path}
+    # save arrays
+    if st:
+        T,E,O,R,Rm = TEORRm
+        st.write(pickle_path,format="PICKLE")
+        np.savez(npz_path,T=T,E=E,O=O,R=R,Rm=Rm)
+        return True
+        
+    # check arrays
     else:
-        return False
+        if (os.path.exists(npz_path) and os.path.exists(pickle_path)):
+            return {"npz":npz_path,"pickle":pickle_path}
+        else:
+            return False
         
         
 # ========================== PROCESSING FUNCTIONS ==============================
@@ -189,6 +208,7 @@ def detect_earthquakes(tremor_horizontal,sampling_rate_min,corr_criteria=0.7):
     neg_ones_ext = -1*(np.ones(sampling_rate_one_one_half_min))
     
     endtrace = len(tremor_horizontal)
+    quakecount = 0
     for S0 in range(0,endtrace,sampling_rate_min):
         # print("{0}/{1}".format(S0/sampling_rate_min,endtrace/sampling_rate_min))
         S1 = S0 + sampling_rate_min
@@ -196,10 +216,9 @@ def detect_earthquakes(tremor_horizontal,sampling_rate_min,corr_criteria=0.7):
         tremor_snippet = tremor_horizontal[S0:S1]
         exp_correlation = correlate(exp_template,tremor_snippet,shift=len(x))
         max_corr = exp_correlation.max()
-        print(max_corr)
         # if correlation criteria met
         if max_corr > corr_criteria:
-            print('yes')
+            quakecount +=1 
             if S0 == 0:
                 quakearray = np.append(quakearray,neg_ones)
             else:
@@ -209,6 +228,7 @@ def detect_earthquakes(tremor_horizontal,sampling_rate_min,corr_criteria=0.7):
             quakearray = np.append(quakearray,tremor_snippet)
     
     print(round(time.time()-T0,2))
+    print("{} earthquakes detected".format(quakecount))
             
     return quakearray
     
@@ -265,23 +285,20 @@ def create_TEORRm_arrays(st_raw, inv):
     
     print(round(time.time()-T0,2))
     
-    TEORRm = [tremor_horizontal,
-              earthquake_horizontal,
-              ocean_horizontal,
-              amplitude_ratio,
-              median_amp_ratio]
+    TEORRm = [np.array(tremor_horizontal),
+              np.array(earthquake_horizontal),
+              np.array(ocean_horizontal),
+              np.array(amplitude_ratio),
+              np.array(median_amp_ratio)
+              ]
         
     return st, TEORRm
             
-def data_gather_and_process():
+def data_gather_and_process(code_set):
     """grab relevant data files for instrument code, process using functions
     written in this script, return processed waveforms and arrays containing 
     filtered waveforms and ratio values.
     """
-    # ///////////////////// parameter set \\\\\\\\\\\\\\\\\\\\\\\
-    code_set = "XX.RD06.10.HH{c}.2017.210"
-    # \\\\\\\\\\\\\\\\\\\\\ parameter set ///////////////////////
-    
     # setting up datapaths
     net,sta,loc,cha,year,jday = code_set.split('.')
     
@@ -290,25 +307,27 @@ def data_gather_and_process():
                                                               c="{c}")
     inv_path = pathnames()['RDF'] + "DATALESS.RDF.XX"
     
-    # read in data
-    st = Stream()
-    inv = read_inventory(inv_path)
-    for comp in ["N","E"]:
-        fid = os.path.join(fid_path,code_set).format(c=comp)
-        st += read(fid)
-        
-    # feed data into processing function
-    path_dict = just_check_it(st)
+    path_dict = check_save(code_set)
+
     if not path_dict:
+        print("[files don't exist, processing...]")
+        # read in data
+        st = Stream()
+        inv = read_inventory(inv_path)
+        for comp in ["N","E"]:
+            fid = os.path.join(fid_path,code_set).format(c=comp)
+            st += read(fid)
+        # process
         st_processed, TEORRm = create_TEORRm_arrays(st,inv)
-        just_save_it(st_processed,TEORRm)
+        _ = check_save(code_set,st=st_procesesd,TEORRm=TEORRm)
     else:
-        print("files exist, reading...")
+        print("[files exist, reading...]")
         st_processed = read(path_dict['pickle'])
         TEORRm = np.load(path_dict['npz'])
         TEORRm = [TEORRm['T'],TEORRm['E'],TEORRm['O'],TEORRm['R'],TEORRm['Rm']]
         
     # count tremors
+    import ipdb;ipdb.set_trace()
     Rm = TEORRm[-1]
     Rm_2sig,Rm_3sig = tremor_counter(Rm)
     sig = [Rm_2sig,Rm_3sig]
@@ -345,8 +364,14 @@ def tremor_counter(Rm,nighttime=False):
     
 
 if __name__ == "__main__":
-    st,TEORRm, sig = data_gather_and_process()
-    plot_arrays(st,TEORRm,sig,show=True)
+    # ///////////////////// parameter set \\\\\\\\\\\\\\\\\\\\\\\
+    code_set_template = "XX.RD06.10.HH{c}.2017.{d}"
+    # \\\\\\\\\\\\\\\\\\\\\ parameter set ///////////////////////
+    for i in range(210,220):
+        code_set = code_set_template.format(c="{c}",d=i)
+        print(code_set)
+        st,TEORRm,sig = data_gather_and_process(code_set)
+        plot_arrays(st,TEORRm,sig,show=True)
     
         
         
