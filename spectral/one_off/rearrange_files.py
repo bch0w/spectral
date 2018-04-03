@@ -20,6 +20,44 @@ def check_files():
     new_list = sorted(new_list, key=lambda x: x[1])
     return new_list
 
+def VUW_fixo():
+    """
+    RD01.2017.319.10-HHE.XX.ms RD08.2017.264.10-HHE.XX.ms RD14.2017.321.10-HHE.XX.ms
+    RD01.2017.319.10-HHN.XX.ms RD08.2017.264.10-HHN.XX.ms RD14.2017.321.10-HHN.XX.ms
+    RD01.2017.319.10-HHZ.XX.ms RD08.2017.264.10-HHZ.XX.ms RD14.2017.321.10-HHZ.XX.ms
+    RD03.2017.322.10-HHE.XX.ms RD09.2017.320.10-HHE.XX.ms RD15.2017.263.10-HHE.XX.ms
+    RD03.2017.322.10-HHN.XX.ms RD09.2017.320.10-HHN.XX.ms RD15.2017.263.10-HHN.XX.ms
+    RD03.2017.322.10-HHZ.XX.ms RD09.2017.320.10-HHZ.XX.ms RD15.2017.263.10-HHZ.XX.ms
+    RD04.2017.322.10-HHE.XX.ms RD10.2017.321.10-HHE.XX.ms RD16.2017.263.10-HHE.XX.ms
+    RD04.2017.322.10-HHN.XX.ms RD10.2017.321.10-HHN.XX.ms RD16.2017.263.10-HHN.XX.ms
+    RD04.2017.322.10-HHZ.XX.ms RD10.2017.321.10-HHZ.XX.ms RD16.2017.263.10-HHZ.XX.ms
+    RD05.2017.323.10-HHE.XX.ms RD11.2017.264.10-HHE.XX.ms RD17.2017.322.10-HHE.XX.ms
+    RD05.2017.323.10-HHN.XX.ms RD11.2017.264.10-HHN.XX.ms RD17.2017.322.10-HHN.XX.ms
+    RD05.2017.323.10-HHZ.XX.ms RD11.2017.264.10-HHZ.XX.ms RD17.2017.322.10-HHZ.XX.ms
+    RD06.2017.320.10-HHE.XX.ms RD12.2017.320.10-HHE.XX.ms RD18.2017.322.10-HHE.XX.ms
+    RD06.2017.320.10-HHN.XX.ms RD12.2017.320.10-HHN.XX.ms RD18.2017.322.10-HHN.XX.ms
+    RD06.2017.320.10-HHZ.XX.ms RD12.2017.320.10-HHZ.XX.ms RD18.2017.322.10-HHZ.XX.ms
+    RD07.2017.264.10-HHE.XX.ms RD13.2017.264.10-HHE.XX.ms 
+    RD07.2017.264.10-HHN.XX.ms RD13.2017.264.10-HHN.XX.ms
+    RD07.2017.264.10-HHZ.XX.ms RD13.2017.264.10-HHZ.XX.ms
+    overlap list
+    """
+    from os.path import join
+    import os
+    import glob
+    from obspy import read
+    list1 = '/Users/chowbr/Documents/subduction/spectral/common/DATA/RDF_Array/Sep2017_Nov2017/DATA_ALL'
+    list2 = '/Users/chowbr/Documents/subduction/RDF'
+    overlap_list = glob.glob(list1 + '/*.ms')
+    SEED_name_template = "{net}.{sta}.{loc}.{cha}.{year}.{jday}"
+    for entry in overlap_list:
+        file1 = glob.glob(join(list1,entry))[0]
+        fid = os.path.basename(file1)
+        file2 = glob.glob(join(list2,fid))[0]
+        st = read(file1) + read(file2)
+        st.write(file2,format='MSEED')
+        # os.remove(del_SEED_path)
+
 def fixo():
     """some datafiles overlap between two deployments, combine into single
     """
@@ -57,7 +95,8 @@ def fixo():
 
 
 if __name__ == "__main__":
-    cwd = "/seis/prj/fwi/bchow/RDF/"
+    # cwd = "/seis/prj/fwi/bchow/RDF/"
+    cwd = '/Users/chowbr/Documents/subduction/RDF/'
     os.chdir(cwd)
 
     SEED_name_template = "{net}.{sta}.{loc}.{cha}.{year}.{jday}"
@@ -72,5 +111,8 @@ if __name__ == "__main__":
                                                 cha=cha,
                                                 year=year,
                                                 jday=jday)
+        new_SEED_basepath = join(prepath,year,net,sta,cha)
         new_SEED_path = join(prepath,year,net,sta,cha,new_SEED_name)
+        if not os.path.exists(new_SEED_basepath):
+            os.mkdir(new_SEED_basepath)
         os.rename(src=old_filename,dst=new_SEED_path)

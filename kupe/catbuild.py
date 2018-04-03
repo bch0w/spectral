@@ -44,6 +44,7 @@ def collect_events():
                         maxlongitude=lat_lon[3],
                         orderby="magnitude")
 
+
 def info_from_GCMT(event_id):
     """modified from synmod.tshift_halfdur()
     get centroid time, half duration and GCMT moment tensor solution
