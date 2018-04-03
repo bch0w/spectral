@@ -1,5 +1,9 @@
 """Python port of the modified Frequency Scanning Method (mFSM),
 from Katakami et al. 2017 JGR
+Used to detect tremors in waveform data by taking amplitude ratio of different
+frequency filter bands, removes earthquake data using a simple cross-correlation
+with an exponential function. Counts tremor detection using standard deviation
+thresholds.
 """
 import os
 import time
@@ -15,13 +19,14 @@ from getdata import pathnames
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 mpl.rcParams['font.size'] = 8
-mpl.rcParams['lines.linewidth'] = 1
+mpl.rcParams['lines.linewidth'] = 0.25
+mpl.rcParams['lines.markersize'] = 1.75
 
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 # ============================ PLOTTING FUNCTIONS ==============================
-def plot_arrays(st,TEORRm,sig,show=True):
+def plot_arrays(st,code_set,TEORRm,sig,show=True):
     """plot 6 streams in 3 subplot figure
     """
     f,(ax1,ax2,ax3) = plt.subplots(3,sharex=True,sharey=False,
@@ -33,12 +38,14 @@ def plot_arrays(st,TEORRm,sig,show=True):
                                                     
     # create time axis
     stats = st[0].stats
-    t = np.linspace(0,stats.endtime-stats.starttime,stats.npts)
-    tRm = np.linspace(0,stats.endtime-stats.starttime,len(Rm))
-
+    start = stats.starttime
+    end = stats.endtime
+    tracelength = (end-start)/3600
+    t = np.linspace(0,tracelength,len(R))
+    tRm = np.linspace(0,tracelength,len(Rm))
 
     # full waveforms
-    A1 = ax1.plot(t,st[0].data,color='r',label=st[0].get_id())
+    A1 = ax1.plot(t,st[0].data,color='orange',label=st[0].get_id())
     A2 = ax1.plot(t,st[1].data,color='b',label=st[1].get_id())
     ax1.legend(prop={"size":5})
 
@@ -50,33 +57,35 @@ def plot_arrays(st,TEORRm,sig,show=True):
 
     # amplitude ratio and median value
     # C1 = ax3.plot(t,R,color='k',label='Amplitude [R]atio (T^2/(E*O))')
-    C2 = ax3.plot(tRm,Rm,color='b',label='Amplitude [R]atio [m]edian')
-    C3 = ax3.plot(tRm,sig2,color='g',zorder=5,label='2-sigma')
-    C4 = ax3.plot(tRm,sig3,color='orange',zorder=5,label='3-sigma')
+    C2 = ax3.plot(tRm,Rm,color='k',label='Amplitude [R]atio [m]edian')
+    C3 = ax3.scatter(tRm,sig2,c='r',marker='x',zorder=5,label='2-sigma')
+    C4 = ax3.scatter(tRm,sig3,c='orange',marker='o',zorder=6,label='3-sigma')
     
     # set axis properties
     for ax in [ax1,ax2,ax3]:
         pretty_grids(ax)
         ax.legend(prop={"size":5})
-    
+        
+    ax1.set_xlim([t.min(),t.max()])
+    st_std = 5 * np.std(st[0].data)
+    ax1.set_ylim([-st_std,st_std])
+    ax3.set_ylim([Rm.min(),Rm.max()])
     ax2.set_yscale("log")
         
-    ax1.set_title("TEROR {}".format(st[0].get_id()))
-    # ax1.set_xlim([60000,t.max()])
+    ax1.set_title("TEROR {}".format(code_set))
     ax1.set_ylabel("velocity (m/s)")
-    ax2.set_ylabel("velocity (m/s)")
+    ax2.set_ylabel("log (velocity (m/s))")
     ax3.set_ylabel("dimensionless")
-    ax3.set_xlabel("time (sec)")
-
-
+    ax3.set_xlabel("time (hours from UTC midnight)")
 
     if show:
         plt.show()
 
     return f    
     
+    
 def pretty_grids(input_ax):
-    """make dem grids pretty
+    """grid formatting
     """
     input_ax.set_axisbelow(True)
     input_ax.tick_params(which='both',
@@ -124,7 +133,7 @@ def check_save(code_set,st=None,TEORRm=None):
     npz_path = output.format(f='npz')
     
     # save arrays
-    if st:
+    if TEORRm:
         T,E,O,R,Rm = TEORRm
         st.write(pickle_path,format="PICKLE")
         np.savez(npz_path,T=T,E=E,O=O,R=R,Rm=Rm)
@@ -140,8 +149,15 @@ def check_save(code_set,st=None,TEORRm=None):
         
 # ========================== PROCESSING FUNCTIONS ==============================
 def preprocess(st_raw,inv,resample,water_level=60):
-    """preprocess waveform data:
-    resample, taper, remv. resp.
+    """preprocess waveform data: resample, detrend, taper, remv. resp.
+    :type st_raw: obspy stream
+    :param st_ray: raw data stream
+    :type inv: obspy inventory
+    :param inv: response information for station
+    :type resample: int
+    :param resample: new sampling rate to set
+    :type water_level: int
+    :param water_level: water level input during instrument response
     """
     print("[preprocess]",end=" ")
     T0 = time.time()
@@ -156,11 +172,18 @@ def preprocess(st_raw,inv,resample,water_level=60):
                           pre_filt=pre_filt, # not in original code
                           water_level=water_level, # not in original code
                           plot=False)
+    plt.show()
     print(round(time.time()-T0,2))
     return st_pp
 
 def create_horizontal_data(st,bounds):
     """filter north and east component data and combine into horizontal comp
+    :type st: obspy stream
+    :param st: preprocessed data
+    :type bounds: list of floats
+    :param bounds: [lower bound,upper bound] for filtering
+    :rtype data_horizontal: numpy array
+    :return data_horizontal: average of horizontal components
     """
     st_chd = st.copy()
     st_chd.filter("bandpass",freqmin=bounds[0],
@@ -177,6 +200,14 @@ def create_horizontal_data(st,bounds):
 def set_water_level(st,band):
     """create water level from ocean band filter bands to avoid division by
     very small values, which could lead to false detections
+    :type st: obspy stream
+    :param st: preprocessed data
+    :type band: list of floats
+    :param band: [lower bound,upper bound] for filtering
+    :rtype data_horizontal: numpy array
+    :return data_horizontal: average of horizontal components, with WL set
+    :rtype water_level: float
+    :return water_level: mean value of data_horizontal
     """
     data_horizontal = create_horizontal_data(st,band)
     water_level = data_horizontal.mean()
@@ -187,7 +218,15 @@ def set_water_level(st,band):
 
 def detect_earthquakes(tremor_horizontal,sampling_rate_min,corr_criteria=0.7):
     """remove regular earthquake from waveforms by taking correlations with
-    an exponential function 
+    an exponential function. If correlation criteria met, earthquake 'detected'
+    :type tremor_horizontal: numpy array
+    :param tremor_horizontal: average of horizontal components in Tremor band
+    :type sampling_rate_min: float
+    :param sampling_rate_min: number of samples in one minute
+    :type corr_criteria: float
+    :param corr_criteria: threshold for detecting earthquakes, defaults to 0.7
+    :rtype quakearray: numpy array
+    :return quakearray: array containing -1's for detected earthquakes
     """
     print("[detect_earthquakes]",end=" ")
     T0 = time.time()
@@ -233,8 +272,14 @@ def detect_earthquakes(tremor_horizontal,sampling_rate_min,corr_criteria=0.7):
     return quakearray
     
 def create_TEORRm_arrays(st_raw, inv):
-    """create filtered bands, set water level, simple earthquake detection and
-    creation of amplitude ratio
+    """create filtered horizontal bands, set water level, perform simple 
+    earthquake detection and create amplitude ratios.
+    :type st_raw: obspy stream
+    :param st_raw: raw stream
+    :type inv: obspy inventory
+    :param inv: response information for st_raw
+    :rtpye TEORRm: list of numpy arrays
+    :return TEORRm: arrays containing filtered waveforms and amp. ratios
     """
     # parameter set
     tremor_band = [2,8]
@@ -295,9 +340,14 @@ def create_TEORRm_arrays(st_raw, inv):
     return st, TEORRm
             
 def data_gather_and_process(code_set):
-    """grab relevant data files for instrument code, process using functions
-    written in this script, return processed waveforms and arrays containing 
-    filtered waveforms and ratio values.
+    """grab relevant data files for instrument code, process using internal
+    functions, return arrays containing filtered waveforms and ratio values
+    :type code_set: str
+    :param code_set: instrument code set in main
+    :rtype TEORRm: list of numpy arrays
+    :return TEORRm: arrays containing filtered waveforms and amp. ratios
+    :rtype sig: list of numpy arrays
+    :return sig: two column list, 2-sigma and 3-sigma of Rm respectively
     """
     # setting up datapaths
     net,sta,loc,cha,year,jday = code_set.split('.')
@@ -309,6 +359,7 @@ def data_gather_and_process(code_set):
     
     path_dict = check_save(code_set)
 
+
     if not path_dict:
         print("[files don't exist, processing...]")
         # read in data
@@ -318,25 +369,31 @@ def data_gather_and_process(code_set):
             fid = os.path.join(fid_path,code_set).format(c=comp)
             st += read(fid)
         # process
-        st_processed, TEORRm = create_TEORRm_arrays(st,inv)
-        _ = check_save(code_set,st=st_procesesd,TEORRm=TEORRm)
+        st_proc, TEORRm = create_TEORRm_arrays(st,inv)
+        _ = check_save(code_set,st=st_proc,TEORRm=TEORRm)
     else:
         print("[files exist, reading...]")
-        st_processed = read(path_dict['pickle'])
+        st_proc = read(path_dict['pickle'])
         TEORRm = np.load(path_dict['npz'])
         TEORRm = [TEORRm['T'],TEORRm['E'],TEORRm['O'],TEORRm['R'],TEORRm['Rm']]
         
     # count tremors
-    import ipdb;ipdb.set_trace()
     Rm = TEORRm[-1]
     Rm_2sig,Rm_3sig = tremor_counter(Rm)
     sig = [Rm_2sig,Rm_3sig]
     
-    return st_processed, TEORRm, sig
+    return st_proc, TEORRm, sig
     
 def tremor_counter(Rm,nighttime=False):
     """port of calc_numTT from Satoshi, counts the number of tremors per day 
-    using standard deviations to determine tremor threshold
+    using standard deviations to determine tremor threshold, for 2-sigma
+    and 3-sigma detection thresholds
+    :type Rm: numpy array
+    :param Rm: array containing the median values for amplitude ratios
+    :type nighttime: boolean
+    :param nighttime: investigate only nighttime signals to avoid cultural noise
+    :rtype Rm_?sig: numpy array
+    :return Rm_?sig: ?-sigma detection array for Rm
     """
     one_sigma = np.std(Rm[Rm>0])
     mean_val = np.mean(Rm[Rm>0])
@@ -362,16 +419,23 @@ def tremor_counter(Rm,nighttime=False):
                                                     )
     return Rm_2sig, Rm_3sig
     
+def time_convert():
+    """convert time from UTC to local-NZ time. for use in e.g. finding out night
+    time to remove the effect of cultural noise
+    """
+    
+    
+    
 
 if __name__ == "__main__":
     # ///////////////////// parameter set \\\\\\\\\\\\\\\\\\\\\\\
     code_set_template = "XX.RD06.10.HH{c}.2017.{d}"
     # \\\\\\\\\\\\\\\\\\\\\ parameter set ///////////////////////
-    for i in range(210,220):
+    for i in range(213,220):
         code_set = code_set_template.format(c="{c}",d=i)
         print(code_set)
         st,TEORRm,sig = data_gather_and_process(code_set)
-        plot_arrays(st,TEORRm,sig,show=True)
+        plot_arrays(st,code_set,TEORRm,sig,show=True)
     
         
         
