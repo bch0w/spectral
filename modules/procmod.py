@@ -1,6 +1,6 @@
 """module file for processing data
 """
-def preprocess(st,resample=50,inv=False,output="VEL"):
+def preprocess(st,resample=50,inv=False,output="VEL",filter=False):
     """preprocess waveform data:
     resample, demean, detrend, taper, remv. resp. (if applicable)
     """
@@ -27,6 +27,16 @@ def preprocess(st,resample=50,inv=False,output="VEL"):
 
 
     return st_manipulate
+
+def signal_to_noise(data,separation):
+    """calculate signal to noise ratio for a datastream
+    """
+    noise = data[:separation]
+    signal = data[separation:]
+    amplitude_SNR = abs(signal.max())/abs(noise.max())
+    amplitude_SNR = round(amplitude_SNR,2)
+    
+    return amplitude_SNR
 
 def trimstreams(st):
     """trim streams to common start and end times
