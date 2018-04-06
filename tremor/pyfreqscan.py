@@ -6,171 +6,23 @@ with an exponential function. Counts tremor detection using standard deviation
 thresholds.
 """
 import os
+import sys
 import time
 import numpy as np
-import matplotlib.pyplot as plt
 from obspy import read, read_inventory, Stream
 from obspy.signal.cross_correlation import correlate
 
-import sys
+# internal packages
 sys.path.append("../modules")
 from getdata import pathnames
 
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-mpl.rcParams['font.size'] = 8
-mpl.rcParams['lines.linewidth'] = 0.1
-mpl.rcParams['lines.markersize'] = 1.75
+from utils import z2nan, check_save, create_min_max
+from plotutils import plot_arrays, stacked_plot
 
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 
-# ============================ PLOTTING FUNCTIONS ==============================
-def plot_arrays(st,code_set,TEORRm,sig,show=True,save=False):
-    """plot 6 streams in 3 subplot figure
-    """
-    f,(ax1,ax2,ax3) = plt.subplots(3,sharex=True,sharey=False,
-                                                figsize=(11.69,8.27),dpi=200)
 
-    # divy out arrays
-    T,E,O,R,Rm = TEORRm
-    sig2,sig3 = sig
-
-    # create time axis
-    stats = st[0].stats
-    start = stats.starttime
-    end = stats.endtime
-    tracelength = (end-start)/3600
-    t = np.linspace(0,tracelength,len(R))
-    tRm = np.linspace(0,tracelength,len(Rm))
-
-    # full waveforms
-    A1 = ax1.plot(t,st[0].data,color='orange',label=st[0].get_id())
-    A2 = ax1.plot(t,st[1].data,color='b',label=st[1].get_id())
-
-    # filtered waveforms
-    # B1 = ax2.plot(t,T,color='k',label="[T]remor Band 2-8Hz")
-    # B2 = ax2.plot(t,E,color='r',label="[E]arthquake Band 10-20Hz")
-    # B3 = ax2.plot(t,O,color='g',label="[O]cean Band .5-1Hz")
-    B4 = ax2.plot(t,R,color='c',label="[R]atio")
-
-    # amplitude ratio and median value
-    # C1 = ax3.plot(t,R,color='k',label='Amplitude [R]atio (T^2/(E*O))')
-    C2 = ax3.plot(tRm,Rm,color='k',label='Amplitude [R]atio [m]edian',
-                                                    linewidth=1,zorder=4)
-    C3 = ax3.scatter(tRm,z2nan(sig2),c='r',marker='^',zorder=5,label='2-sigma',
-                                                        s=4)
-    C4 = ax3.scatter(tRm,z2nan(sig3),c='orange',marker='o',zorder=6,
-                                                            label='3-sigma')
-
-    # plot vertical lines on each subplot for tremor locations
-    for X,Y2 in zip(tRm,sig2):
-        if np.isnan(Y2):
-            continue
-        else:
-            for ax in [ax1,ax2,ax3]:
-                D2 = ax.axvline(X,zorder=1,linestyle="solid",color='gray',
-                                                        linewidth=1,alpha=0.35)
-
-    # set axis properties
-    for ax in [ax1,ax2,ax3]:
-        pretty_grids(ax)
-        ax.legend(prop={"size":7.5})
-
-    ax1.set_xlim([t.min(),t.max()])
-    st_std = 5 * np.std(st[0].data)
-    # ax1.set_ylim([-st_std,st_std])
-    ax3.set_ylim([Rm.min(),Rm.max()])
-    # ax2.set_yscale("log")
-
-    ax1.set_title("TEROR {}".format(code_set))
-    ax1.set_ylabel("velocity (m/s)")
-    ax2.set_ylabel("velocity (m/s)")
-    ax3.set_ylabel("dimensionless")
-    ax3.set_xlabel("time (hours from UTC midnight)")
-    plt.tight_layout()
-
-    if show:
-        plt.show()
-    if save:
-        fig_path = pathnames()['plots'] + 'tremor/'
-        fig_name = code_set.format(c='?') + '.png'
-        fig_out = os.path.join(fig_path,fig_name)
-        plt.savefig(fig_out)
-    return f
-
-
-def pretty_grids(input_ax):
-    """grid formatting
-    """
-    input_ax.set_axisbelow(True)
-    input_ax.tick_params(which='both',
-                         direction='in',
-                         top=True,
-                         right=True)
-    input_ax.minorticks_on()
-    input_ax.grid(which='minor',
-                    linestyle=':',
-                    linewidth='0.5',
-                    color='k',
-                    alpha=0.25)
-    input_ax.grid(which='major',
-                    linestyle='-',
-                    linewidth='0.5',
-                    color='k',
-                    alpha=0.15)
-    input_ax.ticklabel_format(style='sci',
-                            axis='y',
-                            scilimits=(0,0))
-
-# ========================== SUPPORTING FUNCTIONS ==============================
-def z2nan(array):
-    """convert zeros in an array to nan for plotting use
-    """
-    array[array==0] = np.nan
-
-    return array
-
-def check_save(code_set,st=None,TEORRm=None):
-    """either check if processing has been run before, or save files to
-    specific path. [Check] initiated by default, [save] initiated if the
-    function is given an argument for TEORRm
-    :type code_set: str
-    :param code_set: instrument code, set in main
-    :type st: obspy stream
-    :param st: stream containing preprocessed data
-    :type TEORRm: list of numpy arrays
-    :param TEORRm: list of arrays containing filtered waveform data
-    """
-    # set up pathing
-    net,sta,loc,cha,year,jday = code_set.split('.')
-    outpath = pathnames()['data'] + 'TEROR'
-    outfile = "{n}.{s}.{l}.{y}.{j}.TEORRm.{f}".format(n=net,
-                                                      s=sta,
-                                                      l=loc,
-                                                      y=year,
-                                                      j=jday,
-                                                      f='{f}')
-    output = os.path.join(outpath,outfile)
-    pickle_path = output.format(f='pickle')
-    npz_path = output.format(f='npz')
-
-    # save arrays
-    if TEORRm:
-        T,E,O,R,Rm = TEORRm
-        st.write(pickle_path,format="PICKLE")
-        np.savez(npz_path,T=T,E=E,O=O,R=R,Rm=Rm)
-        return True
-
-    # check arrays
-    else:
-        if (os.path.exists(npz_path) and os.path.exists(pickle_path)):
-            return {"npz":npz_path,"pickle":pickle_path}
-        else:
-            return False
-
-
-# ========================== PROCESSING FUNCTIONS ==============================
 def preprocess(st_raw,inv,resample,water_level=60):
     """preprocess waveform data: resample, detrend, taper, remv. resp.
     :type st_raw: obspy stream
@@ -195,7 +47,6 @@ def preprocess(st_raw,inv,resample,water_level=60):
                           pre_filt=pre_filt, # not in original code
                           water_level=water_level, # not in original code
                           plot=False)
-    plt.show()
     print(round(time.time()-T0,2))
     return st_pp
 
@@ -362,7 +213,7 @@ def create_TEORRm_arrays(st_raw, inv):
 
     return st, TEORRm
 
-def data_gather_and_process(code_set):
+def data_gather_and_process(code_set,pre_filt=False):
     """grab relevant data files for instrument code, process using internal
     functions, return arrays containing filtered waveforms and ratio values
     :type code_set: str
@@ -399,6 +250,10 @@ def data_gather_and_process(code_set):
         st_proc = read(path_dict['pickle'])
         TEORRm = np.load(path_dict['npz'])
         TEORRm = [TEORRm['T'],TEORRm['E'],TEORRm['O'],TEORRm['R'],TEORRm['Rm']]
+
+    # filter streams for plotting
+    if pre_filt:
+        st_proc.filter('bandpass',freqmin=pre_filt[0],freqmax=pre_filt[1])
 
     # count tremors
     Rm = TEORRm[-1]
@@ -447,16 +302,62 @@ def time_convert():
     time to remove the effect of cultural noise
     """
 
-
-
-
-if __name__ == "__main__":
+# ============================= MAIN PROCESSING ================================
+def stacked_process():
+    """creating stacked plots by running processing for multiple stations and
+    feeding the outputs into plotting script
+    data manipualation includes:
+    -creating min/max arrays to ease plotting requirements
+    -normalizing traces -1 to 1 to allow plotting on the same figure
+    -removing values greater than 0.5 (most likely earthquake signals)
+    """
     # ///////////////////// parameter set \\\\\\\\\\\\\\\\\\\\\\\
-    code_set_template = "XX.RD06.10.HH{c}.2017.{d}"
+    station_list = [8,9,12,13,14]
+    jday = 220
+    # \\\\\\\\\\\\\\\\\\\\\ parameter set ///////////////////////
+
+    # accumulate all data
+    code_set_template = "XX.RD{s:0>2}.10.HH{c}.2017.{d}"
+    y_N_list,y_E_list,Rm_list,sig_list,sta_list = [],[],[],[],[]
+    for station in station_list:
+        code_set = code_set_template.format(s=station,c="{c}",d=jday)
+        sta_list.append(code_set.split('.')[1])
+        st,TEORRm,sig = data_gather_and_process(code_set,pre_filt=[2,8])
+
+        # set up plotting arrays
+        for comp in ["N","E"]:
+            x,y = create_min_max(st.select(component=comp)[0])
+            y/=y.max()
+            y[y>0.5]=np.nan
+            if comp == "N":
+                y_N_list.append(y)
+            elif comp == "E":
+                y_E_list.append(y)
+
+        # grab sigma values and Rm values
+        Rm = TEORRm[-1]
+        Rm/=Rm.max()
+        Rm_list.append(TEORRm[-1])
+
+        sigma2 = sig[1]
+        sigma2/=sigma2.max()
+        sig_list.append(z2nan(sigma2))
+
+    stacked_plot(x,y_N_list,y_E_list,Rm_list,sig_list,sta_list)
+
+def single_process():
+    """process a single station day by day
+    """
+    # ///////////////////// parameter set \\\\\\\\\\\\\\\\\\\\\\\
+    code_set_template = "XX.RD13.10.HH{c}.2017.{d}"
     # \\\\\\\\\\\\\\\\\\\\\ parameter set ///////////////////////
     for i in range(220,250):
         code_set = code_set_template.format(c="{c}",d=i)
         print(code_set)
-        st,TEORRm,sig = data_gather_and_process(code_set)
-        st.filter('bandpass',freqmin=2,freqmax=8)
+        st,TEORRm,sig = data_gather_and_process(code_set,pre_filt=[2,8])
         plot_arrays(st,code_set,TEORRm,sig,show=False,save=True)
+
+
+
+if __name__ == "__main__":
+    stacked_process()
