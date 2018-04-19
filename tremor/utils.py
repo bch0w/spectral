@@ -70,14 +70,14 @@ def create_min_max(tr,pixel_length=10):
 
     return x_values, y_values
 
-def z2nan(array):
+def __z2nan(array):
     """convert zeros in an array to nan for plotting use
     """
     array[array==0] = np.nan
 
     return array
 
-def check_save(code_set,st=None,TEORRm=None):
+def check_save(code_set,st=None,TEORRm=None,night=False):
     """either check if processing has been run before, or save files to
     specific path. [Check] initiated by default, [save] initiated if the
     function is given an argument for TEORRm
@@ -91,11 +91,15 @@ def check_save(code_set,st=None,TEORRm=None):
     # set up pathing
     net,sta,loc,cha,year,jday = code_set.split('.')
     outpath = pathnames()['data'] + 'TEROR'
-    outfile = "{n}.{s}.{l}.{y}.{j}.TEORRm.{f}".format(n=net,
+    nightcheck = ""
+    if night:
+        nightcheck = "_night"
+    outfile = "{n}.{s}.{l}.{y}.{j}.TEORRm{N}.{f}".format(n=net,
                                                       s=sta,
                                                       l=loc,
                                                       y=year,
                                                       j=jday,
+                                                      N=nightcheck,
                                                       f='{f}')
     output = os.path.join(outpath,outfile)
     pickle_path = output.format(f='pickle')
@@ -114,3 +118,21 @@ def check_save(code_set,st=None,TEORRm=None):
             return {"npz":npz_path,"pickle":pickle_path}
         else:
             return False
+
+def already_processed():
+    """check what days have already been processed
+    """
+    import glob
+    output_path = pathnames()['data'] + 'TEROR/*npz'
+    allfiles = glob.glob(output_path)
+    jday_list,sta_list = [],[]
+    for fid in allfiles:
+        fid = os.path.basename(fid)
+        net,sta,loc,year,jday,_,_ = fid.split('.')
+        jday_list.append(jday)
+        sta_list.append(sta)
+
+    jday_list,sta_list = zip(*sorted(zip(jday_list,sta_list), key=lambda x:x[0]))
+    for j,s in zip(jday_list,sta_list):
+        print(j,s)
+    sys.exit()

@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-from utils import z2nan
+from utils import __z2nan
 
 mpl.rcParams['font.size'] = 8
 mpl.rcParams['lines.linewidth'] = 0.5
@@ -43,9 +43,9 @@ def plot_arrays(st,code_set,TEORRm,sig,show=True,save=False):
     # C1 = ax3.plot(t,R,color='k',label='Amplitude [R]atio (T^2/(E*O))')
     C2 = ax3.plot(tRm,Rm,color='k',label='Amplitude [R]atio [m]edian',
                                                     linewidth=1,zorder=4)
-    C3 = ax3.scatter(tRm,z2nan(sig2),c='r',marker='^',zorder=5,label='2-sigma',
-                                                        s=4)
-    C4 = ax3.scatter(tRm,z2nan(sig3),c='orange',marker='o',zorder=6,
+    C3 = ax3.scatter(tRm,__z2nan(sig2),c='r',marker='^',zorder=5,
+                                                            label='2-sigma',s=4)
+    C4 = ax3.scatter(tRm,__z2nan(sig3),c='orange',marker='o',zorder=6,
                                                             label='3-sigma')
 
     # plot vertical lines on each subplot for tremor locations
@@ -85,7 +85,7 @@ def plot_arrays(st,code_set,TEORRm,sig,show=True,save=False):
     return f
 
 
-def stacked_plot(x,north_list,east_list,Rm_list,sig_list,sta_list):
+def stacked_plot(x,north_list,east_list,Rm_list,sig_list,sta_list,night):
     """multiple stations plotted in a stacked plot to show waveform coherence
     sts should be a stream of all components
     """
@@ -109,6 +109,7 @@ def stacked_plot(x,north_list,east_list,Rm_list,sig_list,sta_list):
     ax3.legend(prop={"size":7.5})
     for ax in [ax1,ax2,ax3]:
         __pretty_grids(ax)
+        ax.set_xlim([18,30]) if night else ax.set_xlim([x.min(),x.max()])
 
     plt.tight_layout()
     plt.show()

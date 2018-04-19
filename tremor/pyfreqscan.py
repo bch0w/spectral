@@ -8,6 +8,7 @@ thresholds.
 import os
 import sys
 import time
+import pytz
 import numpy as np
 from obspy import read, read_inventory, Stream
 from obspy.signal.cross_correlation import correlate
@@ -16,14 +17,14 @@ from obspy.signal.cross_correlation import correlate
 sys.path.append("../modules")
 from getdata import pathnames
 
-from utils import z2nan, check_save, create_min_max
+from utils import check_save, create_min_max, already_processed
 from plotutils import plot_arrays, stacked_plot
 
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 
-def preprocess(st_raw,inv,resample,water_level=60):
+def preprocess(st_raw,inv,resample,night=False,water_level=60):
     """preprocess waveform data: resample, detrend, taper, remv. resp.
     :type st_raw: obspy stream
     :param st_ray: raw data stream
@@ -37,6 +38,12 @@ def preprocess(st_raw,inv,resample,water_level=60):
     print("[preprocess]",end=" ")
     T0 = time.time()
     st_pp = st_raw.copy()
+    # trim traces to nz local night time, NZ ~= UTC+12
+    if night:
+        sunset_in_nz = st_pp[0].stats.starttime + 6*3600
+        sunrise_in_nz = st_pp[0].stats.starttime + 18*3600
+        st_pp.trim(sunset_in_nz,sunrise_in_nz)
+
     st_pp.resample(resample)
     st_pp.detrend("demean") # not in original code
     st_pp.detrend("linear") # not in original code
@@ -145,7 +152,7 @@ def detect_earthquakes(tremor_horizontal,sampling_rate_min,corr_criteria=0.7):
 
     return quakearray
 
-def create_TEORRm_arrays(st_raw, inv):
+def create_TEORRm_arrays(st_raw, inv, night):
     """create filtered horizontal bands, set water level, perform simple
     earthquake detection and create amplitude ratios.
     :type st_raw: obspy stream
@@ -164,7 +171,7 @@ def create_TEORRm_arrays(st_raw, inv):
     sampling_rate_min = 50*60
 
     # preprocess
-    st = preprocess(st_raw,inv,resample=sampling_rate_Hz)
+    st = preprocess(st_raw,inv,resample=sampling_rate_Hz,night=night)
 
     # create arrays for different freq bands
     tremor_horizontal = create_horizontal_data(st,tremor_band)
@@ -213,7 +220,7 @@ def create_TEORRm_arrays(st_raw, inv):
 
     return st, TEORRm
 
-def data_gather_and_process(code_set,pre_filt=False):
+def data_gather_and_process(code_set,pre_filt=False,night=False):
     """grab relevant data files for instrument code, process using internal
     functions, return arrays containing filtered waveforms and ratio values
     :type code_set: str
@@ -231,8 +238,7 @@ def data_gather_and_process(code_set,pre_filt=False):
                                                               c="{c}")
     inv_path = pathnames()['RDF'] + "XX.RDF.DATALESS"
 
-    path_dict = check_save(code_set)
-
+    path_dict = check_save(code_set,night=night)
 
     if not path_dict:
         print("[files don't exist, processing...]")
@@ -242,9 +248,10 @@ def data_gather_and_process(code_set,pre_filt=False):
         for comp in ["N","E"]:
             fid = os.path.join(fid_path,code_set).format(c=comp)
             st += read(fid)
+
         # process
-        st_proc, TEORRm = create_TEORRm_arrays(st,inv)
-        _ = check_save(code_set,st=st_proc,TEORRm=TEORRm)
+        st_proc, TEORRm = create_TEORRm_arrays(st,inv,night)
+        _ = check_save(code_set,st=st_proc,TEORRm=TEORRm,night=night)
     else:
         print("[files exist, reading...]")
         st_proc = read(path_dict['pickle'])
@@ -258,11 +265,11 @@ def data_gather_and_process(code_set,pre_filt=False):
     # count tremors
     Rm = TEORRm[-1]
     Rm_2sig,Rm_3sig = tremor_counter(Rm)
-    sig = [Rm_2sig,Rm_3sig]
+    sig_arrays = [Rm_2sig,Rm_3sig]
 
-    return st_proc, TEORRm, sig
+    return st_proc, TEORRm, sig_arrays
 
-def tremor_counter(Rm,nighttime=False):
+def tremor_counter(Rm):
     """port of calc_numTT from Satoshi, counts the number of tremors per day
     using standard deviations to determine tremor threshold, for 2-sigma
     and 3-sigma detection thresholds
@@ -275,8 +282,11 @@ def tremor_counter(Rm,nighttime=False):
     """
     one_sigma = np.std(Rm[Rm>0])
     mean_val = np.mean(Rm[Rm>0])
-    two_sigma = mean_val + one_sigma * 2
-    three_sigma = mean_val + one_sigma * 3
+    median_val = np.median(Rm[Rm>0])
+    # two_sigma = mean_val + one_sigma * 2
+    # three_sigma = mean_val + one_sigma * 3
+    two_sigma = median_val + one_sigma * 2
+    three_sigma = median_val + one_sigma * 3
 
     Rm_2sig = np.copy(Rm)
     Rm_3sig = np.copy(Rm)
@@ -297,13 +307,20 @@ def tremor_counter(Rm,nighttime=False):
                                                     )
     return Rm_2sig, Rm_3sig
 
-def time_convert():
-    """convert time from UTC to local-NZ time. for use in e.g. finding out night
-    time to remove the effect of cultural noise
+def timezone_convert(st):
+    """convert timezone of a stream object
     """
+    # create UTC aware datetime objects
+    startUTC = st[0].stats.starttime.datetime.replace(tzinfo=pytz.utc)
+    endUTC = st[0].stats.endtime.datetime.replace(tzinfo=pytz.utc)
+    startNZ = startUTC.astimezone(pytz.timezone('Pacific/Auckland'))
+    endNZ = endUTC.astimezone(pytz.timezone('Pacific/Auckland'))
+
+    return startNZ, endNZ
+
 
 # ============================= MAIN PROCESSING ================================
-def stacked_process():
+def stacked_process(jday):
     """creating stacked plots by running processing for multiple stations and
     feeding the outputs into plotting script
     data manipualation includes:
@@ -312,23 +329,41 @@ def stacked_process():
     -removing values greater than 0.5 (most likely earthquake signals)
     """
     # ///////////////////// parameter set \\\\\\\\\\\\\\\\\\\\\\\
-    station_list = [8,9,12,13,14]
-    jday = 220
+    station_list = [8,9,12,13,14,16,6,1]
+    # jday = 299
+    nighttime_only = True
     # \\\\\\\\\\\\\\\\\\\\\ parameter set ///////////////////////
 
     # accumulate all data
     code_set_template = "XX.RD{s:0>2}.10.HH{c}.2017.{d}"
-    y_N_list,y_E_list,Rm_list,sig_list,sta_list = [],[],[],[],[]
+    y_N_list,y_E_list,Rm_list,sig_list,sta_list,max_amps = [],[],[],[],[],[]
     for station in station_list:
         code_set = code_set_template.format(s=station,c="{c}",d=jday)
         sta_list.append(code_set.split('.')[1])
-        st,TEORRm,sig = data_gather_and_process(code_set,pre_filt=[2,8])
+        st,TEORRm,sig_arrays = data_gather_and_process(
+                                code_set,pre_filt=[2,8],night=nighttime_only)
 
-        # set up plotting arrays
+        sig2_array,sig3_array = sig_arrays
+
+        # set up plotting arrays, normalize to 3sigma and remove amplitudes > 1
         for comp in ["N","E"]:
             x,y = create_min_max(st.select(component=comp)[0])
+            startNZ,endNZ = timezone_convert(st)
+            t0 = startNZ.hour
+            t1 = t0 + 24
+            t = np.linspace(t0,t1,len(x))
+
+            # normalize to 3sigma and remove amplitudes > +/- 1
+            one_sigma = np.std(y)
+            mean_val = np.mean(y)
+            median_val = np.median(y)
+            three_sigma = mean_val + one_sigma * 3
+            # three_sigma = median_val + one_sigma * 3
             y/=y.max()
             y[y>0.5]=np.nan
+            y[y<-0.5]=np.nan
+
+            # append to appropriate lists for plotting
             if comp == "N":
                 y_N_list.append(y)
             elif comp == "E":
@@ -339,11 +374,13 @@ def stacked_process():
         Rm/=Rm.max()
         Rm_list.append(TEORRm[-1])
 
-        sigma2 = sig[1]
-        sigma2/=sigma2.max()
-        sig_list.append(z2nan(sigma2))
+        # what is this doing?
+        sig2_array/=sig2_array.max()
+        sig2_array[sig2_array==0] = np.nan
+        sig_list.append(sig2_array)
 
-    stacked_plot(x,y_N_list,y_E_list,Rm_list,sig_list,sta_list)
+    stacked_plot(t,y_N_list,y_E_list,Rm_list,sig_list,sta_list,nighttime_only,
+                                                            show=True)
 
 def single_process():
     """process a single station day by day
@@ -355,9 +392,15 @@ def single_process():
         code_set = code_set_template.format(c="{c}",d=i)
         print(code_set)
         st,TEORRm,sig = data_gather_and_process(code_set,pre_filt=[2,8])
-        plot_arrays(st,code_set,TEORRm,sig,show=False,save=True)
+        plot_arrays(st,code_set,TEORRm,sig,show=True,save=True)
 
 
 
 if __name__ == "__main__":
-    stacked_process()
+    # already_processed()
+    for jday in range(305,320):
+        try:
+            stacked_process(jday)
+        except Exception as e:
+            print(jday)
+            continue
