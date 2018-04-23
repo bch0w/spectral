@@ -1,8 +1,14 @@
 """plotting utilities for pyfreqscan
 """
+import os
+import sys
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+
+# internal packages
+sys.path.append("../modules")
+from getdata import pathnames
 
 from utils import __z2nan
 
@@ -85,37 +91,58 @@ def plot_arrays(st,code_set,TEORRm,sig,show=True,save=False):
     return f
 
 
-def stacked_plot(x,north_list,east_list,Rm_list,sig_list,sta_list,night):
+def stacked_plot(code_set,x,north_list,east_list,Rm_list,sig_list,
+                            ano_list,tremor_list,night,show=False,save=False):
     """multiple stations plotted in a stacked plot to show waveform coherence
     sts should be a stream of all components
     """
+    net,sta,loc,cha,year,jday = code_set.split('.')
+
     f,(ax1,ax2,ax3) = plt.subplots(3,sharex=True,sharey=False,
-                                                figsize=(11.69,8.27),dpi=200)
+                                        figsize=(11.69,8.27),dpi=100)
 
     # create t axis to match x
     x_Rm = np.linspace(x.min(),x.max(),len(Rm_list[0]))
     step_up = 0
-    for N,E,Rm,O,S in zip(north_list,east_list,Rm_list,sig_list,sta_list):
-        # full waveforms, stepping up amplitude by .5 each plot for separation
+    n_ano,e_ano=ano_list
+    for N,E,T,Rm,O,Nano,Eano in zip(
+                north_list,east_list,tremor_list,Rm_list,sig_list,n_ano,e_ano):
         N += step_up
         E += step_up
-        step_up += 0.5
+        T += step_up
+        ax1.set_title('[Tremor Detection] {}\n \
+                    North (2-8Hz Bandpass, 0-1 norm, 0.5 cutoff)'.format(jday))
         ax1.plot(x,N)
+        ax1.plot(x,T,'k')
+        ax2.set_title('East')
         ax2.plot(x,E)
-        # plot sigmas and Rm
-        ax3.plot(x_Rm,Rm,label=S)
-        ax3.scatter(x_Rm,O,marker='o')
+        ax2.plot(x,T,'k')
+        ax3.set_title('Ratio median detection threshold and 2-sigma detection')
+        ax3.plot(x_Rm,Rm,'|-',markersize=1.25)
+        ax3.scatter(x_Rm,O,marker='o',s=4,zorder=10)
+        ax3.set_xlabel('NZ local time (hours)')
+        for ax,ano in zip([ax1,ax2],[Nano,Eano]):
+            ax.annotate(ano,xy=(x.min(),step_up),
+                                        xytext=(x.min(),step_up),fontsize=6)
+        step_up += 1
 
-    ax3.legend(prop={"size":7.5})
+    # ax3.legend(prop={"size":7.5})
     for ax in [ax1,ax2,ax3]:
         __pretty_grids(ax)
-        ax.set_xlim([18,30]) if night else ax.set_xlim([x.min(),x.max()])
+        # ax.set_xlim([18,30]) if night else ax.set_xlim([x.min(),x.max()])
+        ax.set_xlim([x.min(),x.max()])
 
     plt.tight_layout()
-    plt.show()
-
-
-    return f
+    if save:
+        fig_path = pathnames()['plots'] + 'tremor/'
+        fig_name = code_set.format(c='?') + '.png'
+        fig_out = os.path.join(fig_path,fig_name)
+        plt.savefig(fig_out,dpi=200)
+            
+    if show:
+        plt.show()
+    
+    plt.close()
 
 
 def __pretty_grids(input_ax):

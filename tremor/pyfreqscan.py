@@ -9,6 +9,7 @@ import os
 import sys
 import time
 import pytz
+import glob
 import traceback
 import numpy as np
 from obspy import read, read_inventory, Stream
@@ -203,13 +204,14 @@ def create_TEORRm_arrays(st_raw, inv, night):
 
     print(round(time.time()-T0,2))
 
-    # determine median values for amplitude ratio
-    time_window = sampling_rate_min * 5
-    median_amp_ratio = []
-    for S0 in range(0,len(amplitude_ratio)-time_window,time_window):
-        S1 = S0 + time_window
-        med = np.median(amplitude_ratio[S0:S1])
-        median_amp_ratio.append(med)
+    # determine median values for amplitude ratio by 5min and by 1hour
+    Rm,Rh = [],[]
+    minute_,hour_ = sampling_rate_min*5,samplig_rate_min*60
+    for i,time_window in enumerate([minute_,hour_]):
+        for S0 in range(0,len(amplitude_ratio)-time_window,time_window):
+            S1 = S0 + time_window
+            avg = np.median(amplitude_ratio[S0:S1])
+            Rm.append(avg) if i==0 else Rh.append(avg)
 
     print(round(time.time()-T0,2))
 
@@ -217,7 +219,8 @@ def create_TEORRm_arrays(st_raw, inv, night):
               np.array(earthquake_horizontal),
               np.array(ocean_horizontal),
               np.array(amplitude_ratio),
-              np.array(median_amp_ratio)
+              np.array(Rm),
+              np.array(Rh)
               ]
 
     return st, TEORRm
@@ -260,19 +263,61 @@ def data_gather_and_process(code_set,pre_filt=False,night=False):
         print("[files exist, reading...]")
         st_proc = read(path_dict['pickle'])
         TEORRm = np.load(path_dict['npz'])
-        TEORRm = [TEORRm['T'],TEORRm['E'],TEORRm['O'],TEORRm['R'],TEORRm['Rm']]
+        TEORRm = [TEORRm['T'],TEORRm['E'],TEORRm['O'],
+                  TEORRm['R'],TEORRm['Rm'],TEORRm['Rh']
+                  ]
 
     if pre_filt:
         st_proc.filter('bandpass',freqmin=pre_filt[0],freqmax=pre_filt[1])
 
     # count tremors
     Rm = TEORRm[-1]
-    Rm_2sig,Rm_3sig = tremor_counter(Rm,avg_choice="median")
+    Rm_2sig,Rm_3sig = tremor_counter(Rm,avg_choice="median",night=night)
     sig_arrays = [Rm_2sig,Rm_3sig]
 
     return st_proc, TEORRm, sig_arrays
+    
+def __mean_std_creator(night=False):
+    """determine mean value of traces for all TEORRm arrays, and one-sigma value
+    to be used for counting tremors. nighttime only looks at files with suffix
+    _night
+    """
+    filepath = pathnames()['data'] + 'TEROR'
+    N = "_night"
+    if night:
+        N = ""    
+    terorfiles = glob.glob(filepath + '*{N}.npz'.format(N=night))
+    
+    # file check
+    num_of_files = len(terorfiles)
+    outpath = os.path.join(filepath,'Rm_mean_std{N}_{C}'.format(N=night,
+                                                                C=num_of_files))
+    if os.path.exists(outpath):
+        avgs_and_one_sigma = np.load(outpath)
+        mean_ = avgs_and_one_sigma['mean']
+        median_ = avgs_and_one_sigma['median']
+        one_sigma = avg_and_one_sigma['onesigma']
+        
+        return mean_,median_,one_sigma_
 
-def tremor_counter(Rm,avg_choice='mean'):
+    # if new file, calculate all averages etc.
+    means_,medians_,one_sigmas_ = [],[]
+    for count,fid in enumerate(terorfiles):
+        TEORRm = np.load(fid)
+        Rm = TEORRm['Rm']
+        means_.append(np.mean(Rm))
+        medians_.append(np.median(Rm))
+        one_sigmas_.append(np.std(Rm))
+    
+    mean_ = np.mean(means_)
+    median_ = np.mean(medians_)
+    one_sigma_ = np.mean(one_sigmas_)
+    
+    np.savez(outpath,mean=mean_,median_=median,onesigma=one_sigma)
+    
+    return mean_,median_,one_sigma_
+
+def tremor_counter(Rm,avg_choice='mean',night=False):
     """port of calc_numTT from Satoshi, counts the number of tremors per day
     using standard deviations to determine tremor threshold, for 2-sigma
     and 3-sigma detection thresholds
@@ -283,10 +328,11 @@ def tremor_counter(Rm,avg_choice='mean'):
     :rtype Rm_?sig: numpy array
     :return Rm_?sig: ?-sigma detection array for Rm
     """
-    one_sigma = np.std(Rm[Rm>0])
-    avg_val = np.mean(Rm[Rm>0])
+    mean_,median_,one_sigma = __mean_std_counter(night)
+    
+    avg_val = mean_
     if avg_choice == 'median':
-        avg_val = np.median(Rm[Rm>0])
+        avg_val = median_
 
     two_sigma = avg_val + one_sigma * 2
     three_sigma = avg_val + one_sigma * 3

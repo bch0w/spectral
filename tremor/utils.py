@@ -107,9 +107,9 @@ def check_save(code_set,st=None,TEORRm=None,night=False):
 
     # save arrays
     if TEORRm:
-        T,E,O,R,Rm = TEORRm
+        T,E,O,R,Rm,Rh = TEORRm
         st.write(pickle_path,format="PICKLE")
-        np.savez(npz_path,T=T,E=E,O=O,R=R,Rm=Rm)
+        np.savez(npz_path,T=T,E=E,O=O,R=R,Rm=Rm,Rh=Rh)
         return True
 
     # check arrays

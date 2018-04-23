@@ -28,6 +28,9 @@ def generate_CMTSOLUTION(event_id):
     -Event information taken from GEONET earthquake catalog
     -CMT information taken from GCMT catalog
     NOTE: template stolen from obspy
+    
+    20.4.18 missing a whole chunk from this function? doesnt work, use 
+    standalone or from tomcat
     """
 
     # grab moment tensor information from Ristau's solutions
@@ -180,5 +183,5 @@ def generate_CMTSOLUTION_from_tomCat(event_id):
 
 if __name__ == "__main__":
     eventid = sys.argv[1]
-    generate_CMTSOLUTION_from_tomCat(eventid)
-    # generate_CMTSOLUTION(eventid)
+    # generate_CMTSOLUTION_from_tomCat(eventid)
+    generate_CMTSOLUTION(eventid)
