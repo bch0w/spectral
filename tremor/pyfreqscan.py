@@ -9,6 +9,7 @@ import os
 import sys
 import time
 import pytz
+import traceback
 import numpy as np
 from obspy import read, read_inventory, Stream
 from obspy.signal.cross_correlation import correlate
@@ -23,6 +24,8 @@ from plotutils import plot_arrays, stacked_plot
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 
+
+# ============================ PROCESSING HELPERS ==============================
 
 def preprocess(st_raw,inv,resample,night=False,water_level=60):
     """preprocess waveform data: resample, detrend, taper, remv. resp.
@@ -201,7 +204,6 @@ def create_TEORRm_arrays(st_raw, inv, night):
     print(round(time.time()-T0,2))
 
     # determine median values for amplitude ratio
-    print("[median values]",end=" ")
     time_window = sampling_rate_min * 5
     median_amp_ratio = []
     for S0 in range(0,len(amplitude_ratio)-time_window,time_window):
@@ -242,14 +244,16 @@ def data_gather_and_process(code_set,pre_filt=False,night=False):
 
     if not path_dict:
         print("[files don't exist, processing...]")
-        # read in data
         st = Stream()
         inv = read_inventory(inv_path)
         for comp in ["N","E"]:
             fid = os.path.join(fid_path,code_set).format(c=comp)
             st += read(fid)
-
-        # process
+        if len(st) != 2:
+            print("{} traces found, skipping".format(len(st)))
+            return False,False,False
+                
+            
         st_proc, TEORRm = create_TEORRm_arrays(st,inv,night)
         _ = check_save(code_set,st=st_proc,TEORRm=TEORRm,night=night)
     else:
@@ -258,18 +262,17 @@ def data_gather_and_process(code_set,pre_filt=False,night=False):
         TEORRm = np.load(path_dict['npz'])
         TEORRm = [TEORRm['T'],TEORRm['E'],TEORRm['O'],TEORRm['R'],TEORRm['Rm']]
 
-    # filter streams for plotting
     if pre_filt:
         st_proc.filter('bandpass',freqmin=pre_filt[0],freqmax=pre_filt[1])
 
     # count tremors
     Rm = TEORRm[-1]
-    Rm_2sig,Rm_3sig = tremor_counter(Rm)
+    Rm_2sig,Rm_3sig = tremor_counter(Rm,avg_choice="median")
     sig_arrays = [Rm_2sig,Rm_3sig]
 
     return st_proc, TEORRm, sig_arrays
 
-def tremor_counter(Rm):
+def tremor_counter(Rm,avg_choice='mean'):
     """port of calc_numTT from Satoshi, counts the number of tremors per day
     using standard deviations to determine tremor threshold, for 2-sigma
     and 3-sigma detection thresholds
@@ -281,12 +284,12 @@ def tremor_counter(Rm):
     :return Rm_?sig: ?-sigma detection array for Rm
     """
     one_sigma = np.std(Rm[Rm>0])
-    mean_val = np.mean(Rm[Rm>0])
-    median_val = np.median(Rm[Rm>0])
-    # two_sigma = mean_val + one_sigma * 2
-    # three_sigma = mean_val + one_sigma * 3
-    two_sigma = median_val + one_sigma * 2
-    three_sigma = median_val + one_sigma * 3
+    avg_val = np.mean(Rm[Rm>0])
+    if avg_choice == 'median':
+        avg_val = np.median(Rm[Rm>0])
+
+    two_sigma = avg_val + one_sigma * 2
+    three_sigma = avg_val + one_sigma * 3
 
     Rm_2sig = np.copy(Rm)
     Rm_3sig = np.copy(Rm)
@@ -307,16 +310,17 @@ def tremor_counter(Rm):
                                                     )
     return Rm_2sig, Rm_3sig
 
-def timezone_convert(st):
-    """convert timezone of a stream object
+
+def convert_UTC_to_local(st,local_timezone="Pacific/Auckland"):
+    """convert timezone of a stream object from UTC to local timezone
     """
     # create UTC aware datetime objects
     startUTC = st[0].stats.starttime.datetime.replace(tzinfo=pytz.utc)
     endUTC = st[0].stats.endtime.datetime.replace(tzinfo=pytz.utc)
-    startNZ = startUTC.astimezone(pytz.timezone('Pacific/Auckland'))
-    endNZ = endUTC.astimezone(pytz.timezone('Pacific/Auckland'))
+    startLOC = startUTC.astimezone(pytz.timezone(local_timezone))
+    endLOC = endUTC.astimezone(pytz.timezone(local_timezone))
 
-    return startNZ, endNZ
+    return startLOC, endLOC
 
 
 # ============================= MAIN PROCESSING ================================
@@ -330,57 +334,103 @@ def stacked_process(jday):
     """
     # ///////////////////// parameter set \\\\\\\\\\\\\\\\\\\\\\\
     station_list = [8,9,12,13,14,16,6,1]
-    # jday = 299
     nighttime_only = True
+    stop_if_tremor_num_below = 5
+    stop_if_stations_above = len(station_list) // 2
     # \\\\\\\\\\\\\\\\\\\\\ parameter set ///////////////////////
 
-    # accumulate all data
+    # accumulate, process all data and place in arrays for later plotting
     code_set_template = "XX.RD{s:0>2}.10.HH{c}.2017.{d}"
-    y_N_list,y_E_list,Rm_list,sig_list,sta_list,max_amps = [],[],[],[],[],[]
+    num_low_tremor_events=0
+    
+    y_N_list,y_E_list,Rm_list,sig_list,tremor_list = [],[],[],[],[]
+    ano_NE_list = [[],[]]
+    
     for station in station_list:
         code_set = code_set_template.format(s=station,c="{c}",d=jday)
-        sta_list.append(code_set.split('.')[1])
-        st,TEORRm,sig_arrays = data_gather_and_process(
+        print('\n',code_set)
+        try:
+            st_,TEORRm_,sig_arrays_ = data_gather_and_process(
                                 code_set,pre_filt=[2,8],night=nighttime_only)
-
+            if not st_:
+                continue
+        except Exception as e:
+            print("ERROR {jday} {station}".format(jday=jday,station=station))
+            traceback.print_exc()
+            continue
+        
+        # hacky way to avoid errors with overwriting the last entry before plot
+        st,TEORRm,sig_arrays = st_,TEORRm_,sig_arrays_
         sig2_array,sig3_array = sig_arrays
 
-        # set up plotting arrays, normalize to 3sigma and remove amplitudes > 1
+        # check stop if detection threshold met
+        if stop_if_tremor_num_below:
+            if len(sig2_array[sig2_array>0]) < stop_if_tremor_num_below:
+                print("Low tremor event {0}/{1}".format(num_low_tremor_events+1,
+                                                      stop_if_tremor_num_below))
+                num_low_tremor_events += 1
+                if (num_low_tremor_events > stop_if_stations_above):
+                    print("Exiting due to low detection")
+                    return False 
+                continue
+
+
+        # set up plotting arrays
         for comp in ["N","E"]:
             x,y = create_min_max(st.select(component=comp)[0])
-            startNZ,endNZ = timezone_convert(st)
-            t0 = startNZ.hour
-            t1 = t0 + 24
-            t = np.linspace(t0,t1,len(x))
-
-            # normalize to 3sigma and remove amplitudes > +/- 1
-            one_sigma = np.std(y)
-            mean_val = np.mean(y)
-            median_val = np.median(y)
-            three_sigma = mean_val + one_sigma * 3
-            # three_sigma = median_val + one_sigma * 3
-            y/=y.max()
-            y[y>0.5]=np.nan
-            y[y<-0.5]=np.nan
-
-            # append to appropriate lists for plotting
+            y_E_max = y.max()
             if comp == "N":
-                y_N_list.append(y)
-            elif comp == "E":
-                y_E_list.append(y)
+                y_N_max = y.max()
+            y/=y.max()
+            y_N_list.append(y) if comp == "N" else y_E_list.append(y)
+        
+        # create annotations from max amplitude values
+        for i,max_ in enumerate([y_N_max,y_E_max]):
+            ano_NE_list[i].append("{s} {a}um/s".format(s=code_set.split('.')[1],
+                                                        a=round(max_ * 1E6,2)
+                                                        )) 
+                             
+        # normalize sigma and Rm 0to1
+        ratio_median = TEORRm[-1]
+        ratio_median/=ratio_median.max()
+        Rm_list.append(ratio_median)
 
-        # grab sigma values and Rm values
-        Rm = TEORRm[-1]
-        Rm/=Rm.max()
-        Rm_list.append(TEORRm[-1])
-
-        # what is this doing?
         sig2_array/=sig2_array.max()
         sig2_array[sig2_array==0] = np.nan
         sig_list.append(sig2_array)
+        
+    if not y_N_list:
+        return False 
 
-    stacked_plot(t,y_N_list,y_E_list,Rm_list,sig_list,sta_list,nighttime_only,
-                                                            show=True)
+    # RMS of tremor signal for envelope plots, nan out amplitudes above 0.5
+    for N,E in zip(y_N_list,y_E_list):
+        horizontal_rms = 0.5 * (N**2 + E**2)
+        horizontal_rms /= horizontal_rms.max()
+        for data in N,E,horizontal_rms:
+            data[abs(data)>0.5] = np.nan
+
+        tremor_list.append(horizontal_rms)
+
+    
+    # time arrays
+    startNZ,endNZ = convert_UTC_to_local(st)
+    t0 = startNZ.hour
+    t1 = t0 + 12
+    t = np.linspace(t0,t1,len(x))
+    
+    stacked_plot(code_set=code_set,
+                     x=t,
+                     north_list=y_N_list,
+                     east_list=y_E_list,
+                     Rm_list=Rm_list,
+                     sig_list=sig_list,
+                     ano_list=ano_NE_list,
+                     tremor_list=tremor_list,
+                     night=nighttime_only,
+                     show=True,
+                     save=False)
+                    
+    return True
 
 def single_process():
     """process a single station day by day
@@ -397,10 +447,8 @@ def single_process():
 
 
 if __name__ == "__main__":
-    # already_processed()
-    for jday in range(305,320):
-        try:
-            stacked_process(jday)
-        except Exception as e:
-            print(jday)
-            continue
+    # for jday in range(264,365):
+    #     print('=========={}========='.format(jday))
+    #     stacked_process(jday)
+    stacked_process(286)
+
