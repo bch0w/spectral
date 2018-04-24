@@ -156,7 +156,7 @@ def detect_earthquakes(tremor_horizontal,sampling_rate_min,corr_criteria=0.7):
 
     return quakearray
 
-def create_TEORRm_arrays(st_raw, inv, night):
+def create_TEORRm_arrays(st_raw, inv, night, already_preprocessed=False):
     """create filtered horizontal bands, set water level, perform simple
     earthquake detection and create amplitude ratios.
     :type st_raw: obspy stream
@@ -175,55 +175,61 @@ def create_TEORRm_arrays(st_raw, inv, night):
     sampling_rate_min = 50*60
 
     # preprocess
-    st = preprocess(st_raw,inv,resample=sampling_rate_Hz,night=night)
+    if not already_preprocessed:
+        st = preprocess(st_raw,inv,resample=sampling_rate_Hz,night=night)
+    else:
+        st = st_raw
+    try:
+        # create arrays for different freq bands
+        tremor_horizontal = create_horizontal_data(st,tremor_band)
+        earthquake_horizontal = create_horizontal_data(st,earthquake_band)
 
-    # create arrays for different freq bands
-    tremor_horizontal = create_horizontal_data(st,tremor_band)
-    earthquake_horizontal = create_horizontal_data(st,earthquake_band)
+        # set water level on ocean band
+        ocean_horizontal, water_level = set_water_level(st,ocean_band)
 
-    # set water level on ocean band
-    ocean_horizontal, water_level = set_water_level(st,ocean_band)
+        # simple earthquake detection
+        quakearray = detect_earthquakes(tremor_horizontal,sampling_rate_min)
+        quakearray_mean = quakearray.mean()
 
-    # simple earthquake detection
-    quakearray = detect_earthquakes(tremor_horizontal,sampling_rate_min)
-    quakearray_mean = quakearray.mean()
+        amplitude_ratio = []
+        ratio_equation = lambda T,E,O: T**2 / (E*O)
+        print("[amplitude_ratios]",end=" ")
+        T0 = time.time()
+        for S0,_ in enumerate(tremor_horizontal):
+            if quakearray[S0] == -1:
+                amplitude_ratio.append(-1)
+            else:
+                R = ratio_equation(T=tremor_horizontal[S0],
+                                   E=earthquake_horizontal[S0],
+                                   O=ocean_horizontal[S0]
+                                   )
+                amplitude_ratio.append(R)
 
-    amplitude_ratio = []
-    ratio_equation = lambda T,E,O: T**2 / (E*O)
-    print("[amplitude_ratios]",end=" ")
-    T0 = time.time()
-    for S0,_ in enumerate(tremor_horizontal):
-        if quakearray[S0] == -1:
-            amplitude_ratio.append(-1)
-        else:
-            R = ratio_equation(T=tremor_horizontal[S0],
-                               E=earthquake_horizontal[S0],
-                               O=ocean_horizontal[S0]
-                               )
-            amplitude_ratio.append(R)
 
-    print(round(time.time()-T0,2))
+        # determine median values for amplitude ratio by 5min and by 1hour
+        Rm,Rh = [],[]
+        minute_,hour_ = sampling_rate_min*5,sampling_rate_min*60
+        for i,time_window in enumerate([minute_,hour_]):
+            for S0 in range(0,len(amplitude_ratio)-time_window,time_window):
+                S1 = S0 + time_window
+                avg = np.median(amplitude_ratio[S0:S1])
+                Rm.append(avg) if i==0 else Rh.append(avg)
 
-    # determine median values for amplitude ratio by 5min and by 1hour
-    Rm,Rh = [],[]
-    minute_,hour_ = sampling_rate_min*5,samplig_rate_min*60
-    for i,time_window in enumerate([minute_,hour_]):
-        for S0 in range(0,len(amplitude_ratio)-time_window,time_window):
-            S1 = S0 + time_window
-            avg = np.median(amplitude_ratio[S0:S1])
-            Rm.append(avg) if i==0 else Rh.append(avg)
+        print(round(time.time()-T0,2))
 
-    print(round(time.time()-T0,2))
+        TEORRm = {"T":np.array(tremor_horizontal),
+                  "E":np.array(earthquake_horizontal),
+                  "O":np.array(ocean_horizontal),
+                  "R":np.array(amplitude_ratio),
+                  "Rm":np.array(Rm),
+                  "Rh":np.array(Rh)
+                  }
 
-    TEORRm = [np.array(tremor_horizontal),
-              np.array(earthquake_horizontal),
-              np.array(ocean_horizontal),
-              np.array(amplitude_ratio),
-              np.array(Rm),
-              np.array(Rh)
-              ]
+        return st, TEORRm
 
-    return st, TEORRm
+    except Exception as e:
+        print('[TEORRm creation error]')
+        return st, None
 
 def data_gather_and_process(code_set,pre_filt=False,night=False):
     """grab relevant data files for instrument code, process using internal
@@ -243,78 +249,101 @@ def data_gather_and_process(code_set,pre_filt=False,night=False):
                                                               c="{c}")
     inv_path = pathnames()['RDF'] + "XX.RDF.DATALESS"
 
+    # check what combination of files are available
     path_dict = check_save(code_set,night=night)
+    process_check = False
 
-    if not path_dict:
-        print("[files don't exist, processing...]")
-        st = Stream()
-        inv = read_inventory(inv_path)
-        for comp in ["N","E"]:
-            fid = os.path.join(fid_path,code_set).format(c=comp)
-            st += read(fid)
-        if len(st) != 2:
-            print("{} traces found, skipping".format(len(st)))
+    if not path_dict["npz"]:
+        if not path_dict["pickle"]:
+            print("[files don't exist, processing...]")
+            st = Stream()
+            inv = read_inventory(inv_path)
+            for comp in ["N","E"]:
+                fid = os.path.join(fid_path,code_set).format(c=comp)
+                st += read(fid)
+            if len(st) != 2:
+                print("{} traces found, skipping".format(len(st)))
+                return False,False,False
+        else:
+            inv = None
+            process_check = True
+            st = read(path_dict['pickle'])
+
+        st_proc, TEORRm = create_TEORRm_arrays(st,inv,night=night,
+                                        already_preprocessed=process_check)
+        import ipdb;ipdb.set_trace()
+        check_bool = check_save(code_set,st=st_proc,TEORRm=TEORRm,night=night)
+        if not check_bool:
             return False,False,False
-                
-            
-        st_proc, TEORRm = create_TEORRm_arrays(st,inv,night)
-        _ = check_save(code_set,st=st_proc,TEORRm=TEORRm,night=night)
+
     else:
         print("[files exist, reading...]")
         st_proc = read(path_dict['pickle'])
         TEORRm = np.load(path_dict['npz'])
-        TEORRm = [TEORRm['T'],TEORRm['E'],TEORRm['O'],
-                  TEORRm['R'],TEORRm['Rm'],TEORRm['Rh']
-                  ]
 
     if pre_filt:
         st_proc.filter('bandpass',freqmin=pre_filt[0],freqmax=pre_filt[1])
 
     # count tremors
-    Rm = TEORRm[-1]
-    Rm_2sig,Rm_3sig = tremor_counter(Rm,avg_choice="median",night=night)
-    sig_arrays = [Rm_2sig,Rm_3sig]
+    sig_arrays = tremor_counter(TEORRm["Rm"],avg_choice="median",night=night)
 
     return st_proc, TEORRm, sig_arrays
-    
+
 def __mean_std_creator(night=False):
     """determine mean value of traces for all TEORRm arrays, and one-sigma value
     to be used for counting tremors. nighttime only looks at files with suffix
     _night
     """
-    filepath = pathnames()['data'] + 'TEROR'
+    filepath = pathnames()['data'] + 'TEROR/'
     N = "_night"
     if night:
-        N = ""    
-    terorfiles = glob.glob(filepath + '*{N}.npz'.format(N=night))
-    
+        N = ""
+    terorfiles = glob.glob(filepath + 'XX*{N}.npz'.format(N=N))
+
     # file check
     num_of_files = len(terorfiles)
-    outpath = os.path.join(filepath,'Rm_mean_std{N}_{C}'.format(N=night,
+    outpath = os.path.join(filepath,'Rm_mean_std{N}_{C}.npz'.format(N=N,
                                                                 C=num_of_files))
     if os.path.exists(outpath):
+        print("[mean/std file exists, reading...]")
         avgs_and_one_sigma = np.load(outpath)
         mean_ = avgs_and_one_sigma['mean']
         median_ = avgs_and_one_sigma['median']
-        one_sigma = avg_and_one_sigma['onesigma']
-        
+        one_sigma_ = avgs_and_one_sigma['onesigma']
+
         return mean_,median_,one_sigma_
 
     # if new file, calculate all averages etc.
-    means_,medians_,one_sigmas_ = [],[]
+    means_,medians_,one_sigmas_ = [],[],[]
     for count,fid in enumerate(terorfiles):
         TEORRm = np.load(fid)
         Rm = TEORRm['Rm']
         means_.append(np.mean(Rm))
         medians_.append(np.median(Rm))
         one_sigmas_.append(np.std(Rm))
-    
+
     mean_ = np.mean(means_)
     median_ = np.mean(medians_)
     one_sigma_ = np.mean(one_sigmas_)
-    
-    np.savez(outpath,mean=mean_,median_=median,onesigma=one_sigma)
-    
+
+    print("[creating mean/std file...]\n\t"
+            "Mean:{mean},Med:{med},1-sig:{one_sig}".format(
+                                                    mean=round(mean_,2),
+                                                    med=round(median_,2),
+                                                    one_sig=round(one_sigma_,2)
+                                                    ))
+
+    np.savez(outpath,mean=mean_,median=median_,onesigma=one_sigma_)
+
+    # delete any previous files that are superceded by current write
+    outpath_wild = os.path.join(filepath,'Rm_mean_std{N}_{C}.npz'.format(N=N,
+                                                                        C="*"))
+    files_to_delete = glob.glob(outpath_wild)
+    files_to_delete.remove(outpath)
+    if files_to_delete:
+        for fid in files_to_delete:
+            os.remove(fid)
+
     return mean_,median_,one_sigma_
 
 def tremor_counter(Rm,avg_choice='mean',night=False):
@@ -328,8 +357,8 @@ def tremor_counter(Rm,avg_choice='mean',night=False):
     :rtype Rm_?sig: numpy array
     :return Rm_?sig: ?-sigma detection array for Rm
     """
-    mean_,median_,one_sigma = __mean_std_counter(night)
-    
+    mean_,median_,one_sigma = __mean_std_creator(night)
+
     avg_val = mean_
     if avg_choice == 'median':
         avg_val = median_
@@ -354,7 +383,7 @@ def tremor_counter(Rm,avg_choice='mean',night=False):
     print("{} tremors detected at 2-sigma detection".format(
                                                     len(Rm_2sig[Rm_2sig>0]))
                                                     )
-    return Rm_2sig, Rm_3sig
+    return Rm_2sig, Rm_3sig, two_sigma
 
 
 def convert_UTC_to_local(st,local_timezone="Pacific/Auckland"):
@@ -381,33 +410,33 @@ def stacked_process(jday):
     # ///////////////////// parameter set \\\\\\\\\\\\\\\\\\\\\\\
     station_list = [8,9,12,13,14,16,6,1]
     nighttime_only = True
-    stop_if_tremor_num_below = 5
+    stop_if_tremor_num_below = False
     stop_if_stations_above = len(station_list) // 2
     # \\\\\\\\\\\\\\\\\\\\\ parameter set ///////////////////////
 
     # accumulate, process all data and place in arrays for later plotting
     code_set_template = "XX.RD{s:0>2}.10.HH{c}.2017.{d}"
     num_low_tremor_events=0
-    
+
     y_N_list,y_E_list,Rm_list,sig_list,tremor_list = [],[],[],[],[]
     ano_NE_list = [[],[]]
-    
+
     for station in station_list:
         code_set = code_set_template.format(s=station,c="{c}",d=jday)
         print('\n',code_set)
         try:
-            st_,TEORRm_,sig_arrays_ = data_gather_and_process(
+            st_,TEORRm,sig_arrays = data_gather_and_process(
                                 code_set,pre_filt=[2,8],night=nighttime_only)
             if not st_:
                 continue
         except Exception as e:
-            print("ERROR {jday} {station}".format(jday=jday,station=station))
+            print("ERROR {jday} RD{station}".format(jday=jday,station=station))
             traceback.print_exc()
             continue
-        
+
         # hacky way to avoid errors with overwriting the last entry before plot
-        st,TEORRm,sig_arrays = st_,TEORRm_,sig_arrays_
-        sig2_array,sig3_array = sig_arrays
+        st = st_
+        sig2_array,sig3_array,two_sigma = sig_arrays
 
         # check stop if detection threshold met
         if stop_if_tremor_num_below:
@@ -417,11 +446,10 @@ def stacked_process(jday):
                 num_low_tremor_events += 1
                 if (num_low_tremor_events > stop_if_stations_above):
                     print("Exiting due to low detection")
-                    return False 
+                    return False
                 continue
 
-
-        # set up plotting arrays
+        # set up waveform plotting arrays
         for comp in ["N","E"]:
             x,y = create_min_max(st.select(component=comp)[0])
             y_E_max = y.max()
@@ -429,24 +457,25 @@ def stacked_process(jday):
                 y_N_max = y.max()
             y/=y.max()
             y_N_list.append(y) if comp == "N" else y_E_list.append(y)
-        
+
         # create annotations from max amplitude values
         for i,max_ in enumerate([y_N_max,y_E_max]):
             ano_NE_list[i].append("{s} {a}um/s".format(s=code_set.split('.')[1],
                                                         a=round(max_ * 1E6,2)
-                                                        )) 
-                             
+                                                        ))
+
         # normalize sigma and Rm 0to1
-        ratio_median = TEORRm[-1]
-        ratio_median/=ratio_median.max()
+        ratio_median = TEORRm["Rm"]
+        # ratio_median/=ratio_median.max()
         Rm_list.append(ratio_median)
 
-        sig2_array/=sig2_array.max()
+        # if not sig2_array.max() == 0:
+        #     sig2_array/=sig2_array.max()
         sig2_array[sig2_array==0] = np.nan
         sig_list.append(sig2_array)
-        
+
     if not y_N_list:
-        return False 
+        return False
 
     # RMS of tremor signal for envelope plots, nan out amplitudes above 0.5
     for N,E in zip(y_N_list,y_E_list):
@@ -457,25 +486,23 @@ def stacked_process(jday):
 
         tremor_list.append(horizontal_rms)
 
-    
+
     # time arrays
     startNZ,endNZ = convert_UTC_to_local(st)
     t0 = startNZ.hour
     t1 = t0 + 12
     t = np.linspace(t0,t1,len(x))
-    
-    stacked_plot(code_set=code_set,
-                     x=t,
-                     north_list=y_N_list,
-                     east_list=y_E_list,
-                     Rm_list=Rm_list,
-                     sig_list=sig_list,
-                     ano_list=ano_NE_list,
-                     tremor_list=tremor_list,
-                     night=nighttime_only,
-                     show=True,
-                     save=False)
-                    
+
+    stacked_plot(code=code_set,x=t,N=y_N_list,E=y_E_list,
+                 Rm_list=Rm_list,
+                 sig_list=sig_list,
+                 ano_list=ano_NE_list,
+                 tremor_list=tremor_list,
+                 night=nighttime_only,
+                 horizontal_line=two_sigma,
+                 show=True,
+                 save=False)
+
     return True
 
 def single_process():
@@ -491,10 +518,8 @@ def single_process():
         plot_arrays(st,code_set,TEORRm,sig,show=True,save=True)
 
 
-
 if __name__ == "__main__":
-    # for jday in range(264,365):
+    # for jday in range(250,300):
     #     print('=========={}========='.format(jday))
     #     stacked_process(jday)
-    stacked_process(286)
-
+    stacked_process(250)

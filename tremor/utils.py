@@ -106,18 +106,28 @@ def check_save(code_set,st=None,TEORRm=None,night=False):
     npz_path = output.format(f='npz')
 
     # save arrays
-    if TEORRm:
-        T,E,O,R,Rm,Rh = TEORRm
+    if st:
         st.write(pickle_path,format="PICKLE")
-        np.savez(npz_path,T=T,E=E,O=O,R=R,Rm=Rm,Rh=Rh)
-        return True
+        if TEORRm:
+            np.savez(npz_path,T=TEORRm["T"],
+                              E=TEORRm["E"],
+                              O=TEORRm["O"],
+                              R=TEORRm["R"],
+                              Rm=TEORRm["Rm"],
+                              Rh=TEORRm["Rh"]
+                              )
+            return True
+        else:
+            return False
 
     # check arrays
     else:
-        if (os.path.exists(npz_path) and os.path.exists(pickle_path)):
-            return {"npz":npz_path,"pickle":pickle_path}
-        else:
-            return False
+        if not os.path.exists(npz_path):
+            npz_path = False
+        if not os.path.exists(pickle_path):
+            pickle_path = False
+        return {"npz":npz_path,"pickle":pickle_path}
+
 
 def already_processed():
     """check what days have already been processed
