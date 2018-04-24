@@ -92,9 +92,8 @@ def fixo():
 
             st.write(new_SEED_path,format='MSEED')
             # os.remove(del_SEED_path)
-
-
-if __name__ == "__main__":
+            
+def was_in_main():
     # cwd = "/seis/prj/fwi/bchow/RDF/"
     cwd = '/Users/chowbr/Documents/subduction/RDF/'
     os.chdir(cwd)
@@ -116,3 +115,37 @@ if __name__ == "__main__":
         if not os.path.exists(new_SEED_basepath):
             os.mkdir(new_SEED_basepath)
         os.rename(src=old_filename,dst=new_SEED_path)
+        
+def rename_files_and_folders():
+    """adding .D to all files and folders in RDF folder
+    """
+    # cwd = "/seis/prj/fwi/bchow/RDF/"
+    folders_ = False
+    files_ = True
+    
+    cwd = '/Users/chowbr/Documents/subduction/RDF/'
+    os.chdir(cwd)
+    if folders_:
+        folders_to_rename = glob.glob(join(cwd,"*","*","*","HH?"))
+        for old_folder in folders_to_rename:
+            new_folder = old_folder + '.D'
+            os.rename(src=old_folder,dst=new_folder)
+    
+    if files_: 
+        files_to_rename = glob.glob(join(cwd,"*","*","*","*","*"))
+        for old_file in files_to_rename:
+            new_seed_format = "{N}.{S}.{L}.{C}.D.{Y}.{D}"
+            
+            prepath = os.path.dirname(old_file)
+            net,sta,loc,chan,year,day = os.path.basename(old_file).split('.')
+            new_file_base = new_seed_format.format(
+                                        N=net,S=sta,L=loc,C=chan,Y=year,D=day)
+
+            new_file = join(prepath,new_file_base)
+            
+            os.rename(src=old_file,dst=new_file)
+    
+
+
+if __name__ == "__main__":
+    rename_files_and_folders()
