@@ -242,9 +242,9 @@ def data_gather_and_process(code_set,pre_filt=False,night=False):
     :return sig: two column list, 2-sigma and 3-sigma of Rm respectively
     """
     # setting up datapaths
-    net,sta,loc,cha,year,jday = code_set.split('.')
+    net,sta,loc,cha,d,year,jday = code_set.split('.')
 
-    fid_path = pathnames()['RDF'] + "{y}/XX/{s}/HH{c}".format(y=year,
+    fid_path = pathnames()['RDF'] + "{y}/XX/{s}/HH{c}.D".format(y=year,
                                                               s=sta,
                                                               c="{c}")
     inv_path = pathnames()['RDF'] + "XX.RDF.DATALESS"
@@ -271,7 +271,6 @@ def data_gather_and_process(code_set,pre_filt=False,night=False):
 
         st_proc, TEORRm = create_TEORRm_arrays(st,inv,night=night,
                                         already_preprocessed=process_check)
-        import ipdb;ipdb.set_trace()
         check_bool = check_save(code_set,st=st_proc,TEORRm=TEORRm,night=night)
         if not check_bool:
             return False,False,False
@@ -397,6 +396,9 @@ def convert_UTC_to_local(st,local_timezone="Pacific/Auckland"):
 
     return startLOC, endLOC
 
+def __handler(signum,frame):
+    raise Exception("[process timed out]")
+
 
 # ============================= MAIN PROCESSING ================================
 def stacked_process(jday):
@@ -410,12 +412,12 @@ def stacked_process(jday):
     # ///////////////////// parameter set \\\\\\\\\\\\\\\\\\\\\\\
     station_list = [8,9,12,13,14,16,6,1]
     nighttime_only = True
-    stop_if_tremor_num_below = False
+    stop_if_tremor_num_below = 3
     stop_if_stations_above = len(station_list) // 2
     # \\\\\\\\\\\\\\\\\\\\\ parameter set ///////////////////////
 
     # accumulate, process all data and place in arrays for later plotting
-    code_set_template = "XX.RD{s:0>2}.10.HH{c}.2017.{d}"
+    code_set_template = "XX.RD{s:0>2}.10.HH{c}.D.2017.{d}"
     num_low_tremor_events=0
 
     y_N_list,y_E_list,Rm_list,sig_list,tremor_list = [],[],[],[],[]
@@ -519,7 +521,6 @@ def single_process():
 
 
 if __name__ == "__main__":
-    # for jday in range(250,300):
-    #     print('=========={}========='.format(jday))
-    #     stacked_process(jday)
-    stacked_process(250)
+    for jday in range(262,300):
+        print('=========={}========='.format(jday))
+        stacked_process(jday)

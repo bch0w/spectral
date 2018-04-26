@@ -89,7 +89,7 @@ def check_save(code_set,st=None,TEORRm=None,night=False):
     :param TEORRm: list of arrays containing filtered waveform data
     """
     # set up pathing
-    net,sta,loc,cha,year,jday = code_set.split('.')
+    net,sta,loc,cha,d,year,jday = code_set.split('.')
     outpath = pathnames()['data'] + 'TEROR'
     nightcheck = ""
     if night:

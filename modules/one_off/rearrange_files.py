@@ -119,11 +119,11 @@ def was_in_main():
 def rename_files_and_folders():
     """adding .D to all files and folders in RDF folder
     """
-    # cwd = "/seis/prj/fwi/bchow/RDF/"
+    cwd = "/seis/prj/fwi/bchow/RDF/"
     folders_ = False
     files_ = True
     
-    cwd = '/Users/chowbr/Documents/subduction/RDF/'
+    # cwd = '/Users/chowbr/Documents/subduction/RDF/'
     os.chdir(cwd)
     if folders_:
         folders_to_rename = glob.glob(join(cwd,"*","*","*","HH?"))

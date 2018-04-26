@@ -96,7 +96,7 @@ def stacked_plot(code,x,N,E,**options):
     """multiple stations plotted in a stacked plot to show waveform coherence
     sts should be a stream of all components
     """
-    net,sta,loc,cha,year,jday = code.split('.')
+    net,sta,loc,cha,d,year,jday = code.split('.')
 
     f,(ax1,ax2,ax3) = plt.subplots(3,sharex=True,sharey=False,
                                         figsize=(11.69,8.27),dpi=75)
