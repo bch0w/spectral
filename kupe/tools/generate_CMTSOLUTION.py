@@ -22,19 +22,16 @@ def get_region(event_id):
 
     return region
 
-def generate_CMTSOLUTION(event_id):
+def generate_CMTSOLUTION(event_id,csv_file,output_file):
     """generate CMTSOLUTION file in the format of the Harvard CMT catalog
     -Moment tensor components taken from John Ristaus MT catalog
     -Event information taken from GEONET earthquake catalog
     -CMT information taken from GCMT catalog
     NOTE: template stolen from obspy
-    
-    20.4.18 missing a whole chunk from this function? doesnt work, use 
-    standalone or from tomcat
     """
 
     # grab moment tensor information from Ristau's solutions
-    MT = get_moment_tensor(event_id=event_id)
+    MT = get_moment_tensor(event_id=event_id,csv_file=csv_file)
     if not MT:
         sys.exit('incorrect event call')
     mt = [MT['Mxx'],MT['Myy'],MT['Mzz'],MT['Mxy'],MT['Mxz'],MT['Myz']]
@@ -42,8 +39,10 @@ def generate_CMTSOLUTION(event_id):
     mt = mt_transform(mt,method='xyz2rtp')
     mrr,mtt,mpp,mrt,mrp,mtp = mt
 
-    region = get_region(event_id)
-
+    event,region = get_event_and_region(event_id)
+    origin = event.origins[0]
+    datetime = origin.time
+    
     # always set zero
     time_shift = 0
     half_duration = 0
@@ -66,7 +65,7 @@ def generate_CMTSOLUTION(event_id):
         "Mrp:{m_rp:24.6E}\n"
         "Mtp:{m_tp:24.6E}\n"
         )
-
+    
     template = template.format(hypocenter_catalog="XXXX",
                                 year=datetime.year,
                                 month=datetime.month,
@@ -95,6 +94,7 @@ def generate_CMTSOLUTION(event_id):
                                 m_tp=mtp
                                 )
 
+
     # write to solution file
     filename = (pathnames()['data'] +
                 'KUPEDATA/CMTSOLUTIONS/{}CMTSOLUTION'.format(event_id))
@@ -106,10 +106,11 @@ def generate_CMTSOLUTION_from_tomCat(event_id):
     """generate CMTSOLUTION file from tomCat
     28.3 haven't tested it yet
     """
-    tomCat_path = pathnames()['data'] + 'CATBUILD/tomCat'
+    tomCat_path = pathnames()['data'] + 'tomCat/tomCat'
     tomCat = pd.read_pickle(tomCat_path)
     event = tomCat.loc[tomCat['event_id'] == event_id]
     if event.empty:
+        print("{} empty".format(event_id))
         return
 
     # parse tomCat
@@ -176,12 +177,20 @@ def generate_CMTSOLUTION_from_tomCat(event_id):
     # write to solution file
     filename = (pathnames()['data'] +
                 'KUPEDATA/CMTSOLUTIONS/{}CMTSOLUTION'.format(event_id))
-    import ipdb;ipdb.set_trace()
     with open(filename,'w') as f:
         f.write(template)
     print(filename)
 
 if __name__ == "__main__":
     eventid = sys.argv[1]
-    # generate_CMTSOLUTION_from_tomCat(eventid)
-    generate_CMTSOLUTION(eventid)
+    event_list = ['2016p669820',
+                  '2403682',
+                  '2593170',
+                  '2799448',
+                  '2014p240655',
+                  '2015p768477',
+                  '2016p881118',
+                  '2354133',
+                  '2013p614135',
+                  '2016p860224']
+    generate_CMTSOLUTION_from_tomCat(eventid)

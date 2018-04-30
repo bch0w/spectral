@@ -105,17 +105,13 @@ def check_save(code_set,st=None,TEORRm=None,night=False):
     pickle_path = output.format(f='pickle')
     npz_path = output.format(f='npz')
 
-    # save arrays
+    # save stream as a pickle to preserve non-mseed components
+    # save passband arrays into npz file, dynamically sort out dict components**
     if st:
-        st.write(pickle_path,format="PICKLE")
+        if not os.path.exists(pickle_path):
+            st.write(pickle_path,format="PICKLE") 
         if TEORRm:
-            np.savez(npz_path,T=TEORRm["T"],
-                              E=TEORRm["E"],
-                              O=TEORRm["O"],
-                              R=TEORRm["R"],
-                              Rm=TEORRm["Rm"],
-                              Rh=TEORRm["Rh"]
-                              )
+            np.savez(npz_path,**TEORRm)
             return True
         else:
             return False
@@ -128,21 +124,26 @@ def check_save(code_set,st=None,TEORRm=None,night=False):
             pickle_path = False
         return {"npz":npz_path,"pickle":pickle_path}
 
-
 def already_processed():
-    """check what days have already been processed
+    """check what days have already been processed, pretty print by day number
     """
     import glob
-    output_path = pathnames()['data'] + 'TEROR/*npz'
+    output_path = pathnames()['data'] + 'TEROR/XX*.pickle'
     allfiles = glob.glob(output_path)
-    jday_list,sta_list = [],[]
+    jday_list,sta_list = np.array([]),np.array([])
     for fid in allfiles:
         fid = os.path.basename(fid)
         net,sta,loc,year,jday,_,_ = fid.split('.')
-        jday_list.append(jday)
-        sta_list.append(sta)
-
-    jday_list,sta_list = zip(*sorted(zip(jday_list,sta_list), key=lambda x:x[0]))
-    for j,s in zip(jday_list,sta_list):
-        print(j,s)
+        jday_list = np.append(jday_list,jday)
+        sta_list = np.append(sta_list,sta)
+    
+    jday_set = sorted(set(jday_list))
+    for J in jday_set:
+        indices = np.where(jday_list==J)[0]
+        print(J,end=" ")
+        for i in indices:
+            print(sta_list[i],end=" ")
+        print(' ')
     sys.exit()
+    
+

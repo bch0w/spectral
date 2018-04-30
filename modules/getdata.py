@@ -613,18 +613,19 @@ def get_those_stations():
     center_lat_lon = WPUK
     # RDF surround
     inv = c.get_stations(network='NZ',
-                        station='*S',
-                        channel='*',
-                        latitude=center_lat_lon[0],
-                        longitude=center_lat_lon[1],
-                        maxradius=.8,
-                        level="station")
-    inv += c.get_stations(network='NZ',
                         station='*Z',
                         channel='*',
                         latitude=center_lat_lon[0],
                         longitude=center_lat_lon[1],
-                        maxradius=.8,
+                        maxradius=1.01,
+                        level="response")
+    inv.plot()
+    inv += c.get_stations(network='NZ',
+                        station='*S',
+                        channel='*',
+                        latitude=center_lat_lon[0],
+                        longitude=center_lat_lon[1],
+                        maxradius=0.85,
                         level="station")
 
     # NZ seismometers

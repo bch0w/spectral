@@ -5,6 +5,7 @@ import sys
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+from matplotlib import gridspec
 
 # internal packages
 sys.path.append("../modules")
@@ -12,9 +13,11 @@ from getdata import pathnames
 
 from utils import __z2nan
 
-mpl.rcParams['font.size'] = 8
+mpl.rcParams['font.size'] = 10
 mpl.rcParams['lines.linewidth'] = 0.5
 mpl.rcParams['lines.markersize'] = 1.75
+mpl.rcParams['axes.linewidth'] = 1.25
+
 
 
 def plot_arrays(st,code_set,TEORRm,sig,show=True,save=False):
@@ -90,8 +93,6 @@ def plot_arrays(st,code_set,TEORRm,sig,show=True,save=False):
         plt.savefig(fig_out)
     return f
 
-
-
 def stacked_plot(code,x,N,E,**options):
     """multiple stations plotted in a stacked plot to show waveform coherence
     sts should be a stream of all components
@@ -100,17 +101,23 @@ def stacked_plot(code,x,N,E,**options):
 
     f,(ax1,ax2,ax3) = plt.subplots(3,sharex=True,sharey=False,
                                         figsize=(11.69,8.27),dpi=75)
+    ax3a = ax3.twinx()
 
     # create t axis to match x
-    x_Rm = np.linspace(x.min(),x.max(),len(options['Rm_list'][0]))
+    TEORRm_ = options['TEORRm_list'][0]
+    x_Rm = np.linspace(x.min(),x.max(),len(TEORRm_['Rm']))
+    x_Rs = np.linspace(x.min(),x.max(),len(TEORRm_['Rs']))
     step_up = 0
     n_ano,e_ano = options['ano_list']
-    for N_,E_,T_,Rm_,O_,Nano_,Eano_ in zip(N,E,
+    for N_,E_,T_,TEROR_,O_,Nano_,Eano_ in zip(N,E,
                                             options['tremor_list'],
-                                            options['Rm_list'],
+                                            options['TEORRm_list'],
                                             options['sig_list'],
                                             n_ano,
                                             e_ano):
+        Rm_ = TEROR_['Rm']
+        Rs_ = TEROR_['Rs']
+                    
         N_ += step_up
         E_ += step_up
         T_ += step_up
@@ -123,6 +130,8 @@ def stacked_plot(code,x,N,E,**options):
         ax2.plot(x,T_,'k')
         ax3.set_title('Ratio median detection threshold and 2-sigma detection')
         ax3.plot(x_Rm,Rm_,'|-',markersize=1.25)
+        # plot Rs list on twin ax3
+        ax3a.plot(x_Rs,Rs_,'|-',markersize=1.25)
         ax3.scatter(x_Rm,O_,marker='o',s=4,zorder=10)
         ax3.axhline(y=options['horizontal_line'],xmin=x.min(),xmax=x.max(),c='k')
         ax3.set_xlabel('NZ local time (hours)')
@@ -132,7 +141,7 @@ def stacked_plot(code,x,N,E,**options):
         step_up += 0.25
 
     # ax3.legend(prop={"size":7.5})
-    for ax in [ax1,ax2,ax3]:
+    for ax in [ax1,ax2,ax3,ax3a]:
         __pretty_grids(ax)
         # ax.set_xlim([18,30]) if night else ax.set_xlim([x.min(),x.max()])
         ax.set_xlim([x.min(),x.max()])
@@ -149,7 +158,98 @@ def stacked_plot(code,x,N,E,**options):
 
     plt.close()
 
+def gridspec_plot(code,x,N,E,**options):
+    """based on stacked_plot, but with gridspec changing size of subplots:
+    multiple stations plotted in a stacked plot to show waveform coherence
+    sts should be a stream of all components
+    """
+    net,sta,loc,cha,d,year,jday = code.split('.')
 
+    # initiate figure and axes objects
+    f = plt.figure(figsize=(11.69,8.27),dpi=75)
+    gs = gridspec.GridSpec(5,1,height_ratios=[2,2,1,1,1],hspace=0.2)
+    ax1 = plt.subplot(gs[0])
+    ax2 = plt.subplot(gs[1],sharex=ax1)
+    ax3a = plt.subplot(gs[2],sharex=ax1)
+    ax3b = plt.subplot(gs[3],sharex=ax1)
+    ax3c = plt.subplot(gs[4],sharex=ax1)
+    for ax in [ax1,ax2,ax3a,ax3b]:
+        plt.setp(ax.get_xticklabels(), visible=False)
+        
+    
+    # create t axis to match x
+    TEORRm_ = options['TEORRm_list'][0]
+    x_Rm = np.linspace(x.min(),x.max(),len(TEORRm_['Rm']))
+    x_Rs = np.linspace(x.min(),x.max(),len(TEORRm_['Rs']))
+    x_Rh = np.linspace(x.min(),x.max(),len(TEORRm_['Rh']))
+
+    step_up = 0
+    n_ano,e_ano = options['ano_list']
+    for N_,E_,T_,TEROR_,TREMOR_,Nano_,Eano_ in zip(N,E,
+                                            options['tremor_list'],
+                                            options['TEORRm_list'],
+                                            options['sig_list'],
+                                            n_ano,
+                                            e_ano):
+        Rs_ = TEROR_['Rs']
+        Rm_ = TEROR_['Rm']
+        Rh_ = TEROR_['Rh']
+        Rs_sigma_ = TREMOR_['Rs']
+        Rm_sigma_ = TREMOR_['Rm']
+        Rh_sigma_ = TREMOR_['Rh']            
+        N_ += step_up
+        E_ += step_up
+        T_ += step_up
+        
+        # waveforms
+        ax1.plot(x,N_)
+        ax1.plot(x,T_,'k')
+        ax2.plot(x,E_)
+        ax2.plot(x,T_,'k')
+        # ratios
+        ax3a.plot(x_Rs,Rs_,'|-',markersize=0.25)
+        ax3b.plot(x_Rm,Rm_,'|-',markersize=1.25)
+        ax3c.plot(x_Rh,Rh_,'|-',markersize=1.25)
+        # two-sigmas
+        ax3a.scatter(x_Rs,Rs_sigma_,marker='o',s=1.5,zorder=10)
+        ax3b.scatter(x_Rm,Rm_sigma_,marker='o',s=4,zorder=10)
+        ax3c.scatter(x_Rh,Rh_sigma_,marker='o',s=4,zorder=10)
+        # annotations
+        for ax,ano in zip([ax1,ax2],[Nano_,Eano_]):
+            ax.annotate(ano,xy=(x.min(),step_up),
+                                        xytext=(x.min(),step_up),fontsize=6)
+        step_up += 0.25
+
+    # labelliung
+    title = ("[Tremor Detection]\n"
+         "Jday: {} Bandpass: [2-5Hz] Norm: 0-1 Cutoff: 0.5".format(jday))
+    ax1.set_title(title)
+    ax1.set_ylabel('North (normalized)')
+    ax2.set_ylabel('East (normalized)')
+    ax3a.set_ylabel('5-sec. ratio')
+    ax3b.set_ylabel('5-min. ratio')
+    ax3c.set_ylabel('1-hour ratio')
+    ax3c.set_xlabel('NZ local time (hours)')
+    
+    # axis options
+    # ax3.legend(prop={"size":7.5})
+    for ax in [ax1,ax2,ax3a,ax3b,ax3c]:
+        __pretty_grids(ax)
+        # ax.set_xlim([18,30]) if night else ax.set_xlim([x.min(),x.max()])
+        ax.set_xlim([x.min(),x.max()])
+    # plt.tight_layout()
+    
+    if options['save']:
+        fig_path = pathnames()['plots'] + 'tremor/'
+        fig_name = code_set.format(c='?') + '.png'
+        fig_out = os.path.join(fig_path,fig_name)
+        plt.savefig(fig_out,dpi=200)
+
+    if options['show']:
+        plt.show()
+
+    plt.close()
+    
 def __pretty_grids(input_ax):
     """grid formatting
     """
@@ -166,9 +266,9 @@ def __pretty_grids(input_ax):
                     alpha=0.25)
     input_ax.grid(which='major',
                     linestyle='-',
-                    linewidth='0.5',
+                    linewidth='0.55',
                     color='k',
-                    alpha=0.15)
+                    alpha=0.25)
     input_ax.ticklabel_format(style='sci',
                             axis='y',
                             scilimits=(0,0))
