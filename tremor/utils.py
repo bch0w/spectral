@@ -94,7 +94,7 @@ def check_save(code_set,st=None,TEORRm=None,night=False):
     nightcheck = ""
     if night:
         nightcheck = "_night"
-    outfile = "{n}.{s}.{l}.{y}.{j}.TEORRm{N}.{f}".format(n=net,
+    outfile = "{n}.{s}.{l}.{y}.{j}{N}.{f}".format(n=net,
                                                       s=sta,
                                                       l=loc,
                                                       y=year,
@@ -109,7 +109,7 @@ def check_save(code_set,st=None,TEORRm=None,night=False):
     # save passband arrays into npz file, dynamically sort out dict components**
     if st:
         if not os.path.exists(pickle_path):
-            st.write(pickle_path,format="PICKLE") 
+            st.write(pickle_path,format="PICKLE")
         if TEORRm:
             np.savez(npz_path,**TEORRm)
             return True
@@ -136,7 +136,7 @@ def already_processed():
         net,sta,loc,year,jday,_,_ = fid.split('.')
         jday_list = np.append(jday_list,jday)
         sta_list = np.append(sta_list,sta)
-    
+
     jday_set = sorted(set(jday_list))
     for J in jday_set:
         indices = np.where(jday_list==J)[0]
@@ -145,5 +145,3 @@ def already_processed():
             print(sta_list[i],end=" ")
         print(' ')
     sys.exit()
-    
-

@@ -36,21 +36,26 @@ def convert_UTC_to_local(st,local_timezone="Pacific/Auckland"):
     endLOC = endUTC.astimezone(pytz.timezone(local_timezone))
 
     return startLOC, endLOC
-        
+
 def average_array(data,number_of_samples):
     """take a numpy array and return a shortened version which contains averaged
-    values for every number of samples specified. the end point may contain a 
-    disproportionate number of samples to make up for the indivisibility of 
+    values for every number of samples specified. the end point may contain a
+    disproportionate number of samples to make up for the indivisibility of
     the number of samples by the chosen division rate
+
+    np.nanmean throws a runtime warning for all-nan slices, and returns nan
     """
-    new_data = []
+    warnings.filterwarnings("ignore", category=RuntimeWarning)
+
+    new_data,std_list = [],[]
     for i in range(0,len(data)-number_of_samples,number_of_samples):
         j = i + number_of_samples
         if j > len(data)-number_of_samples:
             j = len(data) - 1
-        new_data.append(np.mean(data[i:j]))
-    
+        new_data.append(np.nanmean(data[i:j]))
+
     return np.array(new_data)
+
 
 def create_horizontal_data(st,bounds):
     """filter north and east component data and combine into horizontal comp
@@ -59,7 +64,7 @@ def create_horizontal_data(st,bounds):
     :type bounds: list of floats
     :param bounds: [lower bound,upper bound] for filtering
     :type take_average: int
-    :param take_average: if averages of arrays should be taken, if so give an 
+    :param take_average: if averages of arrays should be taken, if so give an
     integer number of samples to take averaging windows over
     :rtype data_horizontal: numpy array
     :return data_horizontal: average of horizontal components
@@ -75,7 +80,7 @@ def create_horizontal_data(st,bounds):
     data_horizontal = np.sqrt(data_north**2 + data_east**2)
 
     return data_horizontal
-    
+
 def set_water_level(st,band):
     """create water level from ocean band filter bands to avoid division by
     very small values, which could lead to false detections
@@ -94,8 +99,8 @@ def set_water_level(st,band):
     data_horizontal[low_values_flags] = water_level
 
     return data_horizontal, water_level
-    
-def __mean_std_creator(night=False):
+
+def mean_std_creator(night=False):
     """determine mean value of traces for all TEORRm arrays, and one-sigma value
     to be used for counting tremors. nighttime only looks at files with suffix
     _night
@@ -127,7 +132,7 @@ def __mean_std_creator(night=False):
             medians_.append(np.median(ratio))
             one_sigmas_.append(np.std(ratio))
 
-        # dictionary 
+        # dictionary
         sig_dict["{}_mean".format(choice)] = np.mean(means_)
         sig_dict["{}_median".format(choice)] = np.mean(medians_)
         sig_dict["{}_sigma".format(choice)] = np.mean(one_sigmas_)
@@ -164,22 +169,21 @@ def preprocess(st_raw,inv,resample,night=False,water_level=60):
     print("[preprocess]",end=" ")
     st_copy = st_raw.copy()
     T0 = time.time()
-    # trim traces to nz local night time, NZ ~= UTC+12    
-    if night:        
+    # trim traces to nz local night time, NZ ~= UTC+12
+    if night:
         year = st_raw[0].stats.starttime.year
         month = st_raw[0].stats.starttime.month
         day = st_raw[0].stats.starttime.day
 
         sunset_in_nz = UTCDateTime(year,month,day,6,0,0)
         sunrise_in_nz = UTCDateTime(year,month,day,18,0,0)
-        
+
         # sunset_in_nz = st_raw[0].stats.starttime + 6*3600
         # sunrise_in_nz = st_raw[0].stats.starttime + 18*3600
         st_raw.trim(sunset_in_nz,sunrise_in_nz)
-    
+
     # data quality checks
     if not st_raw:
-        
         print("streams fall outside trim")
         return False
     elif st_raw[0].stats.npts != st_raw[1].stats.npts:
@@ -187,7 +191,7 @@ def preprocess(st_raw,inv,resample,night=False,water_level=60):
                                                         st_raw[0].stats.npts,
                                                         st_raw[1].stats.npts))
         return False
-        
+
     decimate_by = int(st_raw[0].stats.sampling_rate//resample)
     st_raw.decimate(decimate_by)
     st_raw.detrend("demean") # not in original code
@@ -200,11 +204,11 @@ def preprocess(st_raw,inv,resample,night=False,water_level=60):
                           pre_filt=pre_filt, # not in original code
                           water_level=water_level, # not in original code
                           plot=False)
-    
+
     print(round(time.time()-T0,2))
     return st_raw
 
-def detect_earthquakes(tremor_horizontal,sampling_rate_min,corr_criteria=0.7):
+def detect_earthquakes(tremor_horizontal,sampling_rate,corr_criteria=0.7):
     """remove regular earthquake from waveforms by taking correlations with
     an exponential function. If correlation criteria met, earthquake 'detected'
     :type tremor_horizontal: numpy array
@@ -216,6 +220,7 @@ def detect_earthquakes(tremor_horizontal,sampling_rate_min,corr_criteria=0.7):
     :rtype quakearray: numpy array
     :return quakearray: array containing -1's for detected earthquakes
     """
+    sampling_rate_min = sampling_rate * 60
     x= np.linspace(0.002,6,sampling_rate_min)
     exp_internal = -(x/2)*2
     exp_template = np.exp(exp_internal)
@@ -229,8 +234,8 @@ def detect_earthquakes(tremor_horizontal,sampling_rate_min,corr_criteria=0.7):
     quakearray = np.array([])
 
     # fill-value arrays if earthquake detected
-    neg_ones = -1*(np.ones(sampling_rate_min))
-    neg_ones_ext = -1*(np.ones(sampling_rate_one_one_half_min))
+    nan_fill = np.nan*(np.ones(sampling_rate_min))
+    nan_fill_ext = np.nan*(np.ones(sampling_rate_one_one_half_min))
 
     endtrace = len(tremor_horizontal)
     quakecount = 0
@@ -245,17 +250,17 @@ def detect_earthquakes(tremor_horizontal,sampling_rate_min,corr_criteria=0.7):
         if max_corr > corr_criteria:
             quakecount +=1
             if S0 == 0:
-                quakearray = np.append(quakearray,neg_ones)
+                quakearray = np.append(quakearray,nan_fill)
             else:
                 quakearray_new = quakearray[:S0-sampling_rate_half_min]
-                quakearray = np.append(quakearray_new,neg_ones_ext)
+                quakearray = np.append(quakearray_new,nan_fill_ext)
         else:
             quakearray = np.append(quakearray,tremor_snippet)
 
     print("{} earthquakes detected".format(quakecount))
 
     return quakearray
-    
+
 def tremor_counter(array,choice,avg_choice='mean',night=False):
     """port of calc_numTT from Satoshi, counts the number of tremors per day
     using standard deviations to determine tremor threshold, for 2-sigma
@@ -267,11 +272,11 @@ def tremor_counter(array,choice,avg_choice='mean',night=False):
     :rtype Rm_?sig: numpy array
     :return Rm_?sig: ?-sigma detection array for Rm
     """
-    sig_dict = __mean_std_creator(night)
+    sig_dict = mean_std_creator(night)
     mean_ = sig_dict["{}_mean".format(choice)]
     median_ = sig_dict["{}_median".format(choice)]
     one_sigma = sig_dict["{}_sigma".format(choice)]
-    
+
     avg_val = mean_
     if avg_choice == 'median':
         avg_val = median_
@@ -297,87 +302,37 @@ def tremor_counter(array,choice,avg_choice='mean',night=False):
 
     sigma_dict = {"2-sigma":R_2sig,
                   "3-sigma":R_3sig}
-    
+
     return sigma_dict
 
-
-def create_TEORRm_arrays(st_raw, inv, night, already_preprocessed=False):
-    """create filtered horizontal bands, set water level, perform simple
-    earthquake detection and create amplitude ratios.
-    :type st_raw: obspy stream
-    :param st_raw: raw stream
-    :type inv: obspy inventory
-    :param inv: response information for st_raw
-    :rtpye TEORRm: list of numpy arrays
-    :return TEORRm: arrays containing filtered waveforms and amp. ratios
+def count_tremors_over_sigma(TEORRm,avg_choice="median",night=False,
+                                               stop_if_tremor_num_below = 3):
+    """count number of tremors in a given array and return values which cross
+    a global 2-sigma and 3-sigma threshold, which signifies a tremor 'detection'
+    station specific function. Currently only returns 2-sigma values
+    :return tremor_count_dict: dictionary filled with arrays where ratio arrays
+    surpass 2-sigma over the mean value
     """
-    # parameter set
-    tremor_band = [2,8]
-    earthquake_band = [10,20]
-    ocean_band = [0.5,1]
+    tremor_count_dict = {}
+    for choice in ['Rs','Rm','Rh']:
+        sgtmp = tremor_counter(TEORRm[choice],choice=choice,
+                                        avg_choice=avg_choice,night=night)
+        two_sigma = sgtmp["2-sigma"]
 
-    sampling_rate_Hz = 50
-    sampling_rate_min = 50*60
+        # check-stop if low-tremor detection threshold met on Rs
+        if stop_if_tremor_num_below and choice=='Rm':
+            if len(two_sigma[two_sigma>0]) < stop_if_tremor_num_below:
+                print("\t--tremor number below {n} ".format(
+                                                n=stop_if_tremor_num_below))
+                return None
 
-    # preprocess
-    if not already_preprocessed:
-        st = preprocess(st_raw,inv,resample=sampling_rate_Hz,night=night)
-        if not st:
-            print("preprocess returned no streams")
-            return None, None 
-    else:
-        st = st_raw
-    try:
-        # create arrays for different freq bands
-        tremor_horizontal = create_horizontal_data(st,tremor_band)
-        earthquake_horizontal = create_horizontal_data(st,earthquake_band)
+        # nan out 0's to avoid overplotting 0 values
+        two_sigma[two_sigma==0] = np.nan
+        tremor_count_dict[choice] = two_sigma
 
-        # set water level on ocean band
-        ocean_horizontal, water_level = set_water_level(st,ocean_band)
-
-        # simple earthquake detection
-        quakearray = detect_earthquakes(tremor_horizontal,sampling_rate_min)
-
-        amplitude_ratio = []
-        ratio_equation = lambda T,E,O: T**2 / (E*O)
-        print("[amplitude_ratios]",end=" ")
-        T0 = time.time()
-        for S0,_ in enumerate(tremor_horizontal):
-            if quakearray[S0] == -1:
-                amplitude_ratio.append(-1)
-            else:
-                R = ratio_equation(T=tremor_horizontal[S0],
-                                   E=earthquake_horizontal[S0],
-                                   O=ocean_horizontal[S0]
-                                   )
-                amplitude_ratio.append(R)
+    return tremor_count_dict
 
 
-        # determine median values for amplitude ratio by 5min and by 1hour
-        Rm,Rh = [],[]
-        minute_,hour_ = sampling_rate_min*5,sampling_rate_min*60
-        for i,window in enumerate([minute_,hour_]):
-            for S0 in range(0,len(amplitude_ratio)-window,window):
-                S1 = S0 + window
-                avg = np.median(amplitude_ratio[S0:S1])
-                Rm.append(avg) if i==0 else Rh.append(avg)
-
-        print(round(time.time()-T0,2))
-
-        TEORRm = {"T":np.array(tremor_horizontal),
-                  "E":np.array(earthquake_horizontal),
-                  "O":np.array(ocean_horizontal),
-                  "R":np.array(amplitude_ratio),
-                  "Rm":np.array(Rm),
-                  "Rh":np.array(Rh)
-                  }
-
-        return st, TEORRm
-
-    except Exception as e:
-        print('\t--error TEORRm creation')
-        return st, None
-        
 def create_modified_TEROR(st_raw, inv, night, already_preprocessed=False):
     """create passband arrays more in line with methods by Sit et al. 2012
     :type st_raw: obspy stream
@@ -400,12 +355,12 @@ def create_modified_TEROR(st_raw, inv, night, already_preprocessed=False):
     one_minute = sampling_rate * 60
     five_minutes = one_minute * 5
     one_hour = one_minute * 60
-    
+
     # preprocess
     if not already_preprocessed:
         st = preprocess(st_raw,inv,resample=sampling_rate,night=night)
         if not st:
-            return None, None 
+            return None, None
     else:
         st = st_raw
     try:
@@ -413,27 +368,39 @@ def create_modified_TEROR(st_raw, inv, night, already_preprocessed=False):
         tremor_horizontal = create_horizontal_data(st,tremor_band_short)
         earthquake_horizontal = create_horizontal_data(st,earthquake_band_short)
         surface_wave_horizontal = create_horizontal_data(st,surface_wave_band)
-        
-        # simple earthquake detection
-        quakearray = detect_earthquakes(tremor_horizontal,one_minute)
-        
-        # create ratio arrays by certain time windows
-        Rs,Rm,Rh = [],[],[]
+
+        # simple earthquake detection and removal
+        tremor_horizontal = detect_earthquakes(tremor_horizontal,sampling_rate,
+                                                            corr_criteria=0.65)
+
+        # create ratio arrays by certain time windows,
+        # honor earthquake detection in all ratios, replace any nan's with 0's
+        ratio_dict = {}
         ratio_equation = lambda T,E,O: T**2 / (E*O)
-        for window,Rx in zip([five_seconds,five_minutes,one_hour],[Rs,Rm,Rh]):
+        for window,Rx in zip([five_seconds,five_minutes,one_hour],
+                                                            ['Rs','Rm','Rh']):
             T = average_array(tremor_horizontal,window)
             E = average_array(earthquake_horizontal,window)
             S = average_array(surface_wave_horizontal,window)
             R = ratio_equation(T=T,E=E,O=S)
-            Rx.append(R)
-        
+            R[np.isnan(R)] = 0
+            ratio_dict[Rx] = R
+
+        # zero out any values of Rm > (Rs.mean + 3*Rs.1-sigma)
+        Rh_mean_3sigma = ratio_dict['Rh'] + 3*np.std(ratio_dict['Rh'])
+        Rh_m3s_long = np.repeat(Rh_mean_3sigma,
+                                    len(ratio_dict['Rm'])//len(Rh_mean_3sigma))
+        ratio_dict['Rm'][ratio_dict['Rm']>Rh_m3s_long] = 0
+
+        # distribution
         TEROR = {"T":tremor_horizontal,
                   "E":earthquake_horizontal,
                   "S":surface_wave_horizontal,
-                  "Rs":Rs[0],
-                  "Rm":Rm[0],
-                  "Rh":Rh[0]
+                  "Rs":ratio_dict['Rs'],
+                  "Rm":ratio_dict['Rm'],
+                  "Rh":ratio_dict['Rh']
                   }
+
         return st, TEROR
 
     except Exception as e:
@@ -475,10 +442,11 @@ def data_gather_and_process(code_set,pre_filt=None,night=False):
                 print("{} traces found, skipping".format(len(st)))
                 return None,None
         else:
+            print("[stream exists, creating TEROR...]")
             inv = None
             process_check = True
             st = read(path_dict['pickle'])
-        
+
         # create passband filtered arrays using internal functions
         st_proc, TEORRm = create_modified_TEROR(st,inv,
                                             night=night,
@@ -499,34 +467,9 @@ def data_gather_and_process(code_set,pre_filt=None,night=False):
 
     if pre_filt:
         st_proc.filter('bandpass',freqmin=pre_filt[0],freqmax=pre_filt[1])
-    
-    return st_proc, TEORRm
-    
-def count_tremors_over_sigma(TEORRm,avg_choice="median",night=False,
-                                               stop_if_tremor_num_below = 3):
-    """count number of tremors in a given array and return values which cross
-    a global 2-sigma and 3-sigma threshold, which signifies a tremor 'detection'
-    station specific function. Currently only returns 2-sigma values
-    """
-    tremor_count_dict = {}
-    for choice in ['Rs','Rm','Rh']:
-        sgtmp = tremor_counter(TEORRm[choice],choice=choice,
-                                        avg_choice=avg_choice,night=night)
-        two_sigma = sgtmp["2-sigma"]
 
-        # check-stop if low-tremor detection threshold met on Rs
-        if stop_if_tremor_num_below and choice=='Rm':
-            if len(two_sigma[two_sigma>0]) < stop_if_tremor_num_below:
-                print("\t--tremor number below {n} ".format(
-                                                n=stop_if_tremor_num_below))
-                return None
-        
-        # nan out 0's to avoid overplotting 0 values
-        two_sigma[two_sigma==0] = np.nan
-        tremor_count_dict[choice] = two_sigma
-        
-    return tremor_count_dict
-    
+    return st_proc, TEORRm
+
 
 # ============================= MAIN PROCESSING ================================
 def stacked_process(jday,year='2017'):
@@ -538,7 +481,7 @@ def stacked_process(jday,year='2017'):
     -removing values greater than 0.5 (most likely earthquake signals)
     """
     # ///////////////////// parameter set \\\\\\\\\\\\\\\\\\\\\\\
-    station_list = [8,9,12,13,14,16,6,1]
+    station_list = list(range(0,19))
     nightonly = True
     stop_if_tremor_num_below = 3
     stop_if_stations_above = len(station_list) // 2
@@ -566,7 +509,7 @@ def stacked_process(jday,year='2017'):
             st = st_
             st_ = []
         except FileNotFoundError:
-            print('\t --nonexistent file')
+            print('\t--nonexistent file')
             continue
         except Exception as e:
             print("\t--error data_gather_and_process")
@@ -595,19 +538,20 @@ def stacked_process(jday,year='2017'):
             print("="*79)
             traceback.print_exc()
             print("="*79)
-            continue            
+            continue
 
         # ++ SET UP WAVEFORM PLOTTING ARRAYS
         for comp in ["N","E"]:
+            print(len(st[0]))
             x,y = create_min_max(st.select(component=comp)[0])
             y_E_max = y.max()
             if comp == "N":
                 y_N_max = y.max()
             y/=y.max()
             y_N_list.append(y) if comp == "N" else y_E_list.append(y)
-            
 
-        
+
+
         sig_list.append(tremor_count_dict)
         TEROR_list.append(TEORRm)
 
@@ -617,11 +561,10 @@ def stacked_process(jday,year='2017'):
                                                         a=round(max_ * 1E6,2)
                                                         ))
     # check stop conditions
-    if not y_N_list:
+    if not y_N_list or (len(y_N_list) < 3):
+        print('\t--not enough stations processed')
         return False
-    elif len(y_N_list) < 3:
-        return False
-            
+
     # ++ OPERATE ON CREATED LISTS
     # RMS of tremor signal for envelope plots, nan out amplitudes above 0.5
     for N,E in zip(y_N_list,y_E_list):
@@ -631,7 +574,7 @@ def stacked_process(jday,year='2017'):
             data[abs(data)>0.5] = np.nan
 
         tremor_list.append(horizontal_rms)
-            
+
     # time arrays
     startNZ,endNZ = convert_UTC_to_local(st)
     t0 = startNZ.hour
@@ -649,24 +592,14 @@ def stacked_process(jday,year='2017'):
 
     return True
 
-def single_process():
-    """process a single station day by day
-    """
-    # ///////////////////// parameter set \\\\\\\\\\\\\\\\\\\\\\\
-    code_set_template = "XX.RD13.10.HH{c}.2017.{d}"
-    # \\\\\\\\\\\\\\\\\\\\\ parameter set ///////////////////////
-    for i in range(220,250):
-        code_set = code_set_template.format(c="{c}",d=i)
-        print(code_set)
-        st,TEORRm,sig = data_gather_and_process(code_set,pre_filt=[2,8])
-        plot_arrays(st,code_set,TEORRm,sig,show=True,save=True)
 
 
 if __name__ == "__main__":
     # already_processed()
-    for jday in range(199,365):
-        print('\n==============={}==============='.format(jday))
-        stacked_process(jday,year='2017')
-    for jday in range(1,63):
-        print('\n==============={}==============='.format(jday))
-        stacked_process(jday,year='2018')
+    stacked_process(251)
+    # for jday in range(199,365):
+    #     print('\n==============={}==============='.format(jday))
+    #     stacked_process(jday,year='2017')
+    # for jday in range(1,63):
+    #     print('\n==============={}==============='.format(jday))
+    #     stacked_process(jday,year='2018')

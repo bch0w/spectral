@@ -117,7 +117,7 @@ def stacked_plot(code,x,N,E,**options):
                                             e_ano):
         Rm_ = TEROR_['Rm']
         Rs_ = TEROR_['Rs']
-                    
+
         N_ += step_up
         E_ += step_up
         T_ += step_up
@@ -175,8 +175,8 @@ def gridspec_plot(code,x,N,E,**options):
     ax3c = plt.subplot(gs[4],sharex=ax1)
     for ax in [ax1,ax2,ax3a,ax3b]:
         plt.setp(ax.get_xticklabels(), visible=False)
-        
-    
+
+
     # create t axis to match x
     TEORRm_ = options['TEORRm_list'][0]
     x_Rm = np.linspace(x.min(),x.max(),len(TEORRm_['Rm']))
@@ -196,11 +196,11 @@ def gridspec_plot(code,x,N,E,**options):
         Rh_ = TEROR_['Rh']
         Rs_sigma_ = TREMOR_['Rs']
         Rm_sigma_ = TREMOR_['Rm']
-        Rh_sigma_ = TREMOR_['Rh']            
+        Rh_sigma_ = TREMOR_['Rh']
         N_ += step_up
         E_ += step_up
         T_ += step_up
-        
+
         # waveforms
         ax1.plot(x,N_)
         ax1.plot(x,T_,'k')
@@ -224,13 +224,13 @@ def gridspec_plot(code,x,N,E,**options):
     title = ("[Tremor Detection]\n"
          "Jday: {} Bandpass: [2-5Hz] Norm: 0-1 Cutoff: 0.5".format(jday))
     ax1.set_title(title)
-    ax1.set_ylabel('North (normalized)')
-    ax2.set_ylabel('East (normalized)')
-    ax3a.set_ylabel('5-sec. ratio')
-    ax3b.set_ylabel('5-min. ratio')
-    ax3c.set_ylabel('1-hour ratio')
+    ax1.set_ylabel('N. velocity (normalized)')
+    ax2.set_ylabel('E. velocity (normalized)')
+    ax3a.set_ylabel('5-sec. ratio (R$_s$)')
+    ax3b.set_ylabel('5-min. ratio (R$_m$)')
+    ax3c.set_ylabel('1-hour ratio (R$_h$)')
     ax3c.set_xlabel('NZ local time (hours)')
-    
+
     # axis options
     # ax3.legend(prop={"size":7.5})
     for ax in [ax1,ax2,ax3a,ax3b,ax3c]:
@@ -238,7 +238,7 @@ def gridspec_plot(code,x,N,E,**options):
         # ax.set_xlim([18,30]) if night else ax.set_xlim([x.min(),x.max()])
         ax.set_xlim([x.min(),x.max()])
     # plt.tight_layout()
-    
+
     if options['save']:
         fig_path = pathnames()['plots'] + 'tremor/'
         fig_name = code_set.format(c='?') + '.png'
@@ -249,7 +249,7 @@ def gridspec_plot(code,x,N,E,**options):
         plt.show()
 
     plt.close()
-    
+
 def __pretty_grids(input_ax):
     """grid formatting
     """
