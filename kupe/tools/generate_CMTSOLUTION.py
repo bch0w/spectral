@@ -20,9 +20,9 @@ def get_region(event_id):
     region = fe.get_region(longitude=origin.longitude,
                   latitude=origin.latitude)
 
-    return region
+    return event,region
 
-def generate_CMTSOLUTION(event_id,csv_file,output_file):
+def generate_CMTSOLUTION(event_id):
     """generate CMTSOLUTION file in the format of the Harvard CMT catalog
     -Moment tensor components taken from John Ristaus MT catalog
     -Event information taken from GEONET earthquake catalog
@@ -31,7 +31,7 @@ def generate_CMTSOLUTION(event_id,csv_file,output_file):
     """
 
     # grab moment tensor information from Ristau's solutions
-    MT = get_moment_tensor(event_id=event_id,csv_file=csv_file)
+    MT = get_moment_tensor(event_id=event_id)
     if not MT:
         sys.exit('incorrect event call')
     mt = [MT['Mxx'],MT['Myy'],MT['Mzz'],MT['Mxy'],MT['Mxz'],MT['Myz']]
@@ -39,7 +39,7 @@ def generate_CMTSOLUTION(event_id,csv_file,output_file):
     mt = mt_transform(mt,method='xyz2rtp')
     mrr,mtt,mpp,mrt,mrp,mtp = mt
 
-    event,region = get_event_and_region(event_id)
+    event,region = get_region(event_id)
     origin = event.origins[0]
     datetime = origin.time
     
@@ -125,7 +125,7 @@ def generate_CMTSOLUTION_from_tomCat(event_id):
     mrp = event['m_rp'].iloc[0]
     mtp = event['m_tp'].iloc[0]
 
-    region = get_region(event_id)
+    _,region = get_region(event_id)
 
     template = (
         "{hypocenter_catalog:>4} {year:4d} {month:02d} {day:02d} {hour:02d} "
@@ -183,14 +183,15 @@ def generate_CMTSOLUTION_from_tomCat(event_id):
 
 if __name__ == "__main__":
     eventid = sys.argv[1]
-    event_list = ['2016p669820',
-                  '2403682',
-                  '2593170',
-                  '2799448',
-                  '2014p240655',
-                  '2015p768477',
-                  '2016p881118',
-                  '2354133',
-                  '2013p614135',
-                  '2016p860224']
-    generate_CMTSOLUTION_from_tomCat(eventid)
+    generate_CMTSOLUTION(eventid)
+    # event_list = ['2016p669820',
+    #               '2403682',
+    #               '2593170',
+    #               '2799448',
+    #               '2014p240655',
+    #               '2015p768477',
+    #               '2016p881118',
+    #               '2354133',
+    #               '2013p614135',
+    #               '2016p860224']
+    # generate_CMTSOLUTION_from_tomCat(eventid)

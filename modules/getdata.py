@@ -497,7 +497,8 @@ def get_quakeml(event_id):
 def get_moment_tensor(event_id):
     """gets moment tensor as array from geonet CSV file"""
     import csv
-    csvfile = pathnames()['data'] + "GeoNet_CMT_solutions.csv"
+    csvfile = os.path.join(pathnames()['data'],"GEONET","data","moment-tensor",
+                                                    "GeoNet_CMT_solutions.csv")
     with open(csvfile,'r') as f:
         reader = csv.reader(f)
         for i,row in enumerate(reader):
@@ -527,7 +528,28 @@ def get_GCMT_solution(event_id):
     month = date.month
     fid = "{m}{y}.ndk".format(m=month_dict[month],y=year[2:])
     filepath = os.path.join(pathnames()['data'],"GCMT",year,fid)
-    cat = read_events(filepath)
+    
+    # files can also be read directly from GCMT website
+    gcmt_standard_url = ("https://www.ldeo.columbia.edu/~gcmt/projects/CMT/"
+                            "catalog/NEW_MONTHLY/{y}/"
+                            "{m}{ys}.ndk".format(y=year,
+                                                 m=month_dict[month],
+                                                 ys=year[2:]))
+    gcmt_quick_url = ("http://www.ldeo.columbia.edu/~gcmt/projects/CMT/"
+                      "catalog/NEW_QUICK/qcmt.ndk")
+    
+    try:
+        cat = read_events(filepath)
+    except FileNotFoundError:
+        try:
+            print("[getdata.get_GCMT_solution] internal .ndk file not found, "
+                  "searching for GCMT standard url")
+            cat = read_events(gcmt_standard_url)
+        except Exception as e:
+            print("[getdata.get_GCMT_solution] standard url not found, "
+                  "searching GCMT quick solutions")
+            cat = read_events(gcmt_quick_url)
+    import ipdb;ipdb.set_trace()        
     cat_filt = cat.filter("time > {}".format(str(date-60)),
                           "time < {}".format(str(date+60)),
                           "magnitude >= {}".format(mw-.5),
