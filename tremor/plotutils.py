@@ -217,8 +217,10 @@ def gridspec_plot(code,x,N,E,**options):
         # annotations
         for ax,ano in zip([ax1,ax2],[Nano_,Eano_]):
             ax.annotate(ano,xy=(x.min(),step_up),
-                                        xytext=(x.min(),step_up),fontsize=6)
-        step_up += 0.25
+                        xytext=(x.min(),step_up),
+                        fontsize=8,
+                        zorder=11)
+        step_up += 0.5
 
     # labelliung
     title = ("[Tremor Detection]\n"
@@ -265,7 +267,7 @@ def __pretty_grids(input_ax):
                     color='k',
                     alpha=0.25)
     input_ax.grid(which='major',
-                    linestyle='-',
+                    linestyle='--',
                     linewidth='0.55',
                     color='k',
                     alpha=0.25)

@@ -90,7 +90,7 @@ def check_save(code_set,st=None,TEORRm=None,night=False):
     """
     # set up pathing
     net,sta,loc,cha,d,year,jday = code_set.split('.')
-    outpath = pathnames()['data'] + 'TEROR'
+    outpath = os.path.join(pathnames()['data'],'TEROR',year,net,sta,'{f}')
     nightcheck = ""
     if night:
         nightcheck = "_night"
@@ -128,19 +128,20 @@ def already_processed():
     """check what days have already been processed, pretty print by day number
     """
     import glob
-    output_path = pathnames()['data'] + 'TEROR/XX*.pickle'
+    output_path = os.path.join(pathnames()['data'],
+                                    'TEROR','201?','*','*','pickle','*.pickle')
     allfiles = glob.glob(output_path)
     jday_list,sta_list = np.array([]),np.array([])
     for fid in allfiles:
         fid = os.path.basename(fid)
-        net,sta,loc,year,jday,_,_ = fid.split('.')
+        net,sta,loc,year,jday,_ = fid.split('.')
         jday_list = np.append(jday_list,jday)
         sta_list = np.append(sta_list,sta)
 
     jday_set = sorted(set(jday_list))
     for J in jday_set:
         indices = np.where(jday_list==J)[0]
-        print(J,end=" ")
+        print(J,end=": ")
         for i in indices:
             print(sta_list[i],end=" ")
         print(' ')
