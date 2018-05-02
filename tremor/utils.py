@@ -77,16 +77,16 @@ def __z2nan(array):
 
     return array
 
-def check_save(code_set,st=None,TEORRm=None,night=False):
+def check_save(code_set,STREAM=None,TEORRm=None,night=False):
     """either check if processing has been run before, or save files to
     specific path. [Check] initiated by default, [save] initiated if the
     function is given an argument for TEORRm
     :type code_set: str
     :param code_set: instrument code, set in main
-    :type st: obspy stream
-    :param st: stream containing preprocessed data
-    :type TEORRm: list of numpy arrays
-    :param TEORRm: list of arrays containing filtered waveform data
+    :type STREAM: dict of numpy arrays
+    :param st: dict containing preprocessed data
+    :type TEORRm: dict of numpy arrays
+    :param TEORRm: dict of arrays containing filtered waveform data
     """
     # set up pathing
     net,sta,loc,cha,d,year,jday = code_set.split('.')
@@ -95,34 +95,34 @@ def check_save(code_set,st=None,TEORRm=None,night=False):
     if night:
         nightcheck = "_night"
     outfile = "{n}.{s}.{l}.{y}.{j}{N}.{f}".format(n=net,
-                                                      s=sta,
-                                                      l=loc,
-                                                      y=year,
-                                                      j=jday,
-                                                      N=nightcheck,
-                                                      f='{f}')
+                                                  s=sta,
+                                                  l=loc,
+                                                  y=year,
+                                                  j=jday,
+                                                  N=nightcheck,
+                                                  f='{f}')
     output = os.path.join(outpath,outfile)
-    pickle_path = output.format(f='pickle')
-    npz_path = output.format(f='npz')
+    data_path = output.format(f='data') + '.npz'
+    teror_path = output.format(f='npz')
 
     # save stream as a pickle to preserve non-mseed components
     # save passband arrays into npz file, dynamically sort out dict components**
-    if st:
-        if not os.path.exists(pickle_path):
-            st.write(pickle_path,format="PICKLE")
+    if STREAM:
+        if not os.path.exists(data_path):
+            np.savez(data_path,**STREAM)
         if TEORRm:
-            np.savez(npz_path,**TEORRm)
+            np.savez(teror_path,**TEORRm)
             return True
         else:
             return False
 
-    # check arrays
+    # check if arrays exist
     else:
-        if not os.path.exists(npz_path):
-            npz_path = False
-        if not os.path.exists(pickle_path):
-            pickle_path = False
-        return {"npz":npz_path,"pickle":pickle_path}
+        if not os.path.exists(teror_path):
+            teror_path = None
+        if not os.path.exists(data_path):
+            data_path = None
+        return {"npz":teror_path,"data":data_path}
 
 def already_processed():
     """check what days have already been processed, pretty print by day number

@@ -12,7 +12,7 @@ import pytz
 import glob
 import traceback
 import numpy as np
-from obspy import read, read_inventory, Stream, UTCDateTime
+from obspy import read, read_inventory, Stream, Trace, UTCDateTime
 from obspy.signal.cross_correlation import correlate
 
 # internal packages
@@ -386,12 +386,16 @@ def create_modified_TEROR(st_raw, inv, night, already_preprocessed=False):
                   "Rh":ratio_dict['Rh']
                   }
 
-        return st, TEROR
+        # divy out stream data into numpy arrays for saving
+        STREAM = {"N":st.select(component='N')[0].data,
+                  "E":st.select(component='E')[0].data}
+
+        return STREAM, TEROR
 
     except Exception as e:
         print('\t-- error TERORm creation')
         traceback.print_exc()
-        return st, None
+        return None, None
 
 def data_gather_and_process(code_set,pre_filt=None,night=False):
     """grab relevant data files for instrument code, process using internal
@@ -437,29 +441,38 @@ def data_gather_and_process(code_set,pre_filt=None,night=False):
             st = read(path_dict['pickle'])
 
         # create passband filtered arrays using internal functions
-        st_proc, TEORRm = create_modified_TEROR(st,inv,
+        STREAM, TEORRm = create_modified_TEROR(st,inv,
                                             night=night,
                                             already_preprocessed=process_check)
-        if not st_proc:
+        if not STREAM:
             print("\t--stream not found...")
             return None,None
             
         check_bool = check_save(code_set,
-                                st=st_proc,
+                                STREAM=STREAM,
                                 TEORRm=TEORRm,
                                 night=night)
+        import ipdb;ipdb.set_trace()
+
         if not check_bool:
             return None,None
 
     else:
         print("[files exist, reading...]")
-        st_proc = read(path_dict['pickle'])
+        STREAM = np.load(path_dict['data'])
         TEORRm = np.load(path_dict['npz'])
 
     if pre_filt:
-        st_proc.filter('bandpass',freqmin=pre_filt[0],freqmax=pre_filt[1])
+        STREAM_out = {}
+        for comp in ['N','E']:
+            tr_temp = Trace()
+            tr_temp.data = STREAM[comp]
+            tr_temp.stats.sampling_rate = 50.0
+            tr_temp.filter('bandpass',freqmin=pre_filt[0],freqmax=pre_filt[1])
+            STREAM_out[comp] = tr_temp.data
+        
 
-    return st_proc, TEORRm
+    return STREAM_out, TEORRm
 
 
 # ============================= MAIN PROCESSING ================================
@@ -477,6 +490,7 @@ def stacked_process(jday,year='2017'):
     """
     # ///////////////////// parameter set \\\\\\\\\\\\\\\\\\\\\\\
     station_list = list(range(1,19))
+    station_list = [8]
     night = True
     stop_if_tremor_num_below = 3
     stop_if_stations_above = len(station_list) // 2
@@ -496,14 +510,14 @@ def stacked_process(jday,year='2017'):
         print('\n\t\t++',code_set)
         # ++ CREATE STREAM OBJECTS AND TEROR ARRAYS
         try:
-            st_,TEORRm = data_gather_and_process(code_set,pre_filt=[2,5],
+            STREAM_,TEORRm = data_gather_and_process(code_set,pre_filt=[2,5],
                                                                     night=night)
              # hacky way to avoid overwriting the last entry w/ error
-            if not st_:
+            if not STREAM_:
                 print("\t--error no stream object found")
                 continue
-            st = st_
-            st_ = []
+            STREAM = STREAM_
+            STREAM_ = []
         except FileNotFoundError:
             print('\t--file not found')
             continue
@@ -541,7 +555,7 @@ def stacked_process(jday,year='2017'):
 
         # ++ SET UP WAVEFORM PLOTTING ARRAYS
         for comp in ["N","E"]:
-            x,y = create_min_max(st.select(component=comp)[0])
+            x,y = create_min_max(STREAM[comp])
             y_E_max = y.max()
             if comp == "N":
                 y_N_max = y.max()
@@ -591,8 +605,9 @@ def stacked_process(jday,year='2017'):
 
 if __name__ == "__main__":
     # already_processed()
-    # stacked_process(251)
-    for jday in range(199,365):
-        print('\n==============={}==============='.format(jday))
-        stacked_process(jday,year='2017')
+    stacked_process(250)
+    # for jday in range(199,365):
+    #     print('\n==============={}==============='.format(jday))
+    #     stacked_process(jday,year='2017')
+
 
