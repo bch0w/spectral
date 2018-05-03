@@ -549,7 +549,6 @@ def get_GCMT_solution(event_id):
             print("[getdata.get_GCMT_solution] standard url not found, "
                   "searching GCMT quick solutions")
             cat = read_events(gcmt_quick_url)
-    import ipdb;ipdb.set_trace()        
     cat_filt = cat.filter("time > {}".format(str(date-60)),
                           "time < {}".format(str(date+60)),
                           "magnitude >= {}".format(mw-.5),

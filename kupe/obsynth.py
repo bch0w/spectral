@@ -54,10 +54,6 @@ def initial_data_gather(code,event_id,bounds,plotmap=False):
 
     # grab synthetic data locally
     syntheticdata_path = join(pathnames()['syns'],event_id,'')
-    # ======================== GCMT ADDITION ==========================
-    syntheticdata_path_PART2 = join(pathnames()['syns'],event_id,
-                                                    "with_GCMT_solution",'')
-    # ======================== GCMT ADDITION ==========================
 
     syntheticdata = Stream()
     for c in ["N","E","Z"]:
@@ -65,12 +61,6 @@ def initial_data_gather(code,event_id,bounds,plotmap=False):
                                                                 s=sta,
                                                                 co=c)
         syntheticdata += read(join(syntheticdata_path,syntheticdata_filename))
-        # ======================== GCMT ADDITION ==========================
-        syntheticdata_PART2 = read(join(syntheticdata_path_PART2,
-                                                        syntheticdata_filename))
-        syntheticdata_PART2[0].stats.location = "withGCMT"
-        syntheticdata += syntheticdata_PART2
-        # ======================== GCMT ADDITION ==========================
 
     # grab observation data
     observationdata,inv,cat = getdata.event_stream(code=code,
@@ -121,10 +111,14 @@ def plot_obsynth(st,bounds,twinax=False,save=False,show=True):
     # axes lists for plotting
     axes = [ax1,ax2,ax3]
     twin_axes = [ax1,ax2,ax3]
+    ax2.set_ylabel("velocity (m/s)\n{}".format(c2))
     if twinax:
         ax1a,ax2a,ax3a = ax1.twinx(),ax2.twinx(),ax3.twinx()
         twin_axes = [ax1a,ax2a,ax3a]
-        ax2a.set_ylabel("velocity (m/s)")
+        ax2a.set_ylabel("synthetic velocity (m/s)")
+        ax2.set_ylabel("observed velocity (m/s)\n{}".format(c2))
+
+
 
     obs_list = ["HH{}".format(c1),"HH{}".format(c2),"HH{}".format(c3)]
     if net == "YH":
@@ -138,19 +132,12 @@ def plot_obsynth(st,bounds,twinax=False,save=False,show=True):
     # plot
     for ax,tax,obs,syn in zip(axes,twin_axes,obs_list,syn_list):
         obs_select = st.select(channel=obs)[0]
-        # syn_select = st.select(channel=syn)[0]
-        # ======================== GCMT ADDITION ==========================
-        syn_select = st.select(channel=syn)
-        syn_select_PART2 = syn_select.select(location="withGCMT")[0]
-        syn_select = syn_select.select(location="")[0]
-        C = tax.plot(t,syn_select_PART2.data,color='r',label=syn_select_PART2.get_id(),
-                                                linestyle='--')
-        # ======================== GCMT ADDITION ==========================
+        syn_select = st.select(channel=syn)[0]
 
         A = ax.plot(t,obs_select.data,color='k',label=obs_select.get_id())
         B = tax.plot(t,syn_select.data,color='r',label=syn_select.get_id())
         plotmod.pretty_grids(ax)
-        lines = A+B+C
+        lines = A+B
         labels = [l.get_label() for l in lines]
         ax.legend(lines,labels,prop={"size":5})
         plotmod.pretty_grids(tax)
@@ -165,7 +152,6 @@ def plot_obsynth(st,bounds,twinax=False,save=False,show=True):
                                                     )
 
     ax1.set_ylabel(c1)
-    ax2.set_ylabel("velocity (m/s)\n{}".format(c2))
     ax3.set_ylabel(c3)
 
     ax3.set_xlabel("time (sec)")
@@ -188,10 +174,10 @@ if __name__ == "__main__":
     station_name_path = (pathnames()['data'] +
                                 'STATIONXML/NAMESOF_NZ_NI_BB_seismometers.npy')
     station_names = np.load(station_name_path)
-    # station_names = ['BFZ','BKZ','HAZ','HIZ','KNZ','MRZ','MWZ','OPRZ','PUZ',
-    #                     'PXZ','RTZ','TLZ','TOZ','TSZ','VRZ','WAZ']
-    station_names = ['KNZ']
-    event_id = "2014p240655"
+    station_names = ['BFZ','BKZ','HAZ','HIZ','KNZ','MRZ','MWZ','OPRZ','PUZ',
+                        'PXZ','RTZ','TLZ','TOZ','TSZ','VRZ','WAZ']
+
+    event_id = "2016p669820"
 
     for station_code in station_names:
         try:
@@ -199,11 +185,11 @@ if __name__ == "__main__":
             bounds = [6,30]
             st = initial_data_gather(code,event_id,
                                     bounds=bounds,
-                                    plotmap=True)
+                                    plotmap=False)
             fig = plot_obsynth(st,bounds=bounds,
                                     twinax=False,
-                                    save=True,
-                                    show=False)
+                                    save=False,
+                                    show=True)
         except Exception as e:
             print("="*79)
             traceback.print_exc()
