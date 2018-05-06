@@ -144,8 +144,48 @@ def rename_files_and_folders():
             new_file = join(prepath,new_file_base)
             
             os.rename(src=old_file,dst=new_file)
+            
+def rearrange_SAHKE():
+    """converting SAHKE data from SAC to mseed and rename/organize files
+    """
+    import os
+    import glob
+    import numpy as np
+    from obspy import read
     
+    sacpath = '/Users/chowbr/Documents/subduction/SAHKE/SAC/'
+    sacfolders = glob.glob(sacpath + '*')
+    
+    name_template = "X2.{s}..{c}.D.{y}.{j}"
+    savepath_template = ('/Users/chowbr/Documents/subduction/SAHKE/2010/X2/{s}/'
+                         '{c}.D/')
+    for fold in sacfolders:
+        os.chdir(fold)
+        sacfiles = glob.glob('*')
+        for fid in sacfiles:
+            basename = os.path.basename(fid)
+            try:
+                net,sta,cha,year,jday,fmt = basename.split('.')
+            except ValueError:
+                sta,year,jday,comp,fmt = basename.split('.')
+                cha = "HH{}".format(comp)
+                net = "X2"
+            
+            newbasename = name_template.format(s=sta,c=cha,y=year,j=jday)
+            savepath = savepath_template.format(s=sta,c=cha)
+            savename = os.path.join(savepath,newbasename)
+            if os.path.exists(savename):
+                continue
+            try:
+                st = read(fid)
+            except TypeError:
+                print(fid)
+                continue
+            st[0].data = st[0].data.astype(np.int32)
+            st.write(savename,format='MSEED',reclen=512,encoding='STEIM1')
+        os.chdir(sacpath)
+                                
 
 
 if __name__ == "__main__":
-    rename_files_and_folders()
+    rearrange_SAHKE()
