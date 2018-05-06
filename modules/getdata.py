@@ -405,7 +405,7 @@ def rdf_internal(station,channel,start,end=False,response=True):
     channel = channel.upper()
     start = UTCDateTime(start)
 
-    # filepaths direct to GeoNet Archives path
+    # filepaths direct to RDF
     mseed_RDFpath = pathnames()['RDF'] + '{year}/XX/{sta}/{ch}/'.format(
                                                                 year=start.year,
                                                                 sta=station,
@@ -442,13 +442,13 @@ def rdf_internal(station,channel,start,end=False,response=True):
             if end.year - start.year > 1:
                 for year_iter in range(start.year+1,end.year,1):
                     pth_iter = (pathnames()['RDF'] +
-                                        '{year}/NZ/{sta}/{ch}/'.format(
+                                        '{year}/XX/{sta}/{ch}/'.format(
                                                                 year=year_iter,
                                                                 sta=station,
                                                                 ch=channel))
                     mseed_files += glob.glob(pth_iter + '*')
             # last year
-            RDFpath_last = pathnames()['RDF'] + '{year}/NZ/{sta}/{ch}/'.format(
+            RDFpath_last = pathnames()['RDF'] + '{year}/XX/{sta}/{ch}/'.format(
                                                                 year=end.year,
                                                                 sta=station,
                                                                 ch=channel)
@@ -528,7 +528,7 @@ def get_GCMT_solution(event_id):
     month = date.month
     fid = "{m}{y}.ndk".format(m=month_dict[month],y=year[2:])
     filepath = os.path.join(pathnames()['data'],"GCMT",year,fid)
-    
+
     # files can also be read directly from GCMT website
     gcmt_standard_url = ("https://www.ldeo.columbia.edu/~gcmt/projects/CMT/"
                             "catalog/NEW_MONTHLY/{y}/"
@@ -537,7 +537,7 @@ def get_GCMT_solution(event_id):
                                                  ys=year[2:]))
     gcmt_quick_url = ("http://www.ldeo.columbia.edu/~gcmt/projects/CMT/"
                       "catalog/NEW_QUICK/qcmt.ndk")
-    
+
     try:
         cat = read_events(filepath)
     except FileNotFoundError:
@@ -549,7 +549,7 @@ def get_GCMT_solution(event_id):
             print("[getdata.get_GCMT_solution] standard url not found, "
                   "searching GCMT quick solutions")
             cat = read_events(gcmt_quick_url)
-    import ipdb;ipdb.set_trace()        
+    import ipdb;ipdb.set_trace()
     cat_filt = cat.filter("time > {}".format(str(date-60)),
                           "time < {}".format(str(date+60)),
                           "magnitude >= {}".format(mw-.5),
