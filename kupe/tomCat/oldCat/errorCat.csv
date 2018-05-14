@@ -322,22 +322,21 @@ event_id,exception
 2017p338727,'NoneType' object has no attribute 'origins'
 2017p381325,'NoneType' object has no attribute 'origins'
 2017p708412,'NoneType' object has no attribute 'origins'
-2017p852531,'NoneType' object has no attribute 'origins'
-2017p861155,'NoneType' object has no attribute 'origins'
-2017p887092,'NoneType' object has no attribute 'origins'
-2017p919876,'NoneType' object has no attribute 'origins'
-2017p952681,'NoneType' object has no attribute 'origins'
-2018p012973,'NoneType' object has no attribute 'origins'
-2018p021170,'NoneType' object has no attribute 'origins'
-2018p130600,'NoneType' object has no attribute 'origins'
-2018p177486,'NoneType' object has no attribute 'origins'
-2018p254466,'NoneType' object has no attribute 'origins'
-2018p266243,'NoneType' object has no attribute 'origins'
+2017p735876,'NoneType' object is not subscriptable
+2017p852531,[Errno 2] No such file or directory: '/Users/chowbr/Documents/subduction/spectral/common/DATA/GCMT/2017/nov17.ndk'
+2017p861155,[Errno 2] No such file or directory: '/Users/chowbr/Documents/subduction/spectral/common/DATA/GCMT/2017/nov17.ndk'
+2017p887092,[Errno 2] No such file or directory: '/Users/chowbr/Documents/subduction/spectral/common/DATA/GCMT/2017/nov17.ndk'
+2017p919876,[Errno 2] No such file or directory: '/Users/chowbr/Documents/subduction/spectral/common/DATA/GCMT/2017/dec17.ndk'
+2017p952681,[Errno 2] No such file or directory: '/Users/chowbr/Documents/subduction/spectral/common/DATA/GCMT/2017/dec17.ndk'
+2018p012973,[Errno 2] No such file or directory: '/Users/chowbr/Documents/subduction/spectral/common/DATA/GCMT/2018/jan18.ndk'
+2018p021170,[Errno 2] No such file or directory: '/Users/chowbr/Documents/subduction/spectral/common/DATA/GCMT/2018/jan18.ndk'
+2018p130600,[Errno 2] No such file or directory: '/Users/chowbr/Documents/subduction/spectral/common/DATA/GCMT/2018/feb18.ndk'
+2018p177486,'NoneType' object is not subscriptable
 2352843,'NoneType' object is not subscriptable
 2366369,'NoneType' object has no attribute 'origins'
 2399117,'NoneType' object has no attribute 'origins'
 2404281,'NoneType' object has no attribute 'origins'
-2421974,'NoneType' object has no attribute 'origins'
+2421974,[Errno 2] No such file or directory: '/Users/chowbr/Documents/subduction/spectral/common/DATA/GCMT/2005/jun05.ndk'
 2450882,'NoneType' object is not subscriptable
 2498995,'NoneType' object has no attribute 'origins'
 2533983,'NoneType' object is not subscriptable

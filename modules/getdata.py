@@ -406,10 +406,10 @@ def rdf_internal(station,channel,start,end=False,response=True):
     start = UTCDateTime(start)
 
     # filepaths direct to RDF
-    mseed_RDFpath = pathnames()['RDF'] + '{year}/XX/{sta}/{ch}/'.format(
-                                                                year=start.year,
-                                                                sta=station,
-                                                                ch=channel)
+    mseed_RDFpath_template = pathnames()['RDF'] + '{year}/XX/{sta}/{ch}.D/'
+    mseed_RDFpath = mseed_RDFpath_template.format(year=start.year,
+                                                    sta=station,
+                                                    ch=channel)
     resp_filepath = pathnames()['RDF'] + 'XX.RDF.DATALESS'
 
     # check if data spans more than one day
@@ -441,17 +441,14 @@ def rdf_internal(station,channel,start,end=False,response=True):
             # if years in middle
             if end.year - start.year > 1:
                 for year_iter in range(start.year+1,end.year,1):
-                    pth_iter = (pathnames()['RDF'] +
-                                        '{year}/XX/{sta}/{ch}/'.format(
-                                                                year=year_iter,
-                                                                sta=station,
-                                                                ch=channel))
-                    mseed_files += glob.glob(pth_iter + '*')
-            # last year
-            RDFpath_last = pathnames()['RDF'] + '{year}/XX/{sta}/{ch}/'.format(
-                                                                year=end.year,
+                    pth_iter = mseed_RDFpath_template.format(year=year_iter,
                                                                 sta=station,
                                                                 ch=channel)
+                    mseed_files += glob.glob(pth_iter + '*')
+            # last year
+            RDFpath_last = mseed_RDFpath_template.format(year=end.year,
+                                                            sta=station,
+                                                            ch=channel)
             last_year_files = glob.glob(RDFpath_last + '*')
             last_year_files.sort()
             end_file_match = glob.glob(RDFpath_last + "*{date}".format(
@@ -549,10 +546,6 @@ def get_GCMT_solution(event_id):
             print("[getdata.get_GCMT_solution] standard url not found, "
                   "searching GCMT quick solutions")
             cat = read_events(gcmt_quick_url)
-<<<<<<< HEAD
-    import ipdb;ipdb.set_trace()
-=======
->>>>>>> 69e6622fa56d541e8f56fe85c6571acb1f369eb2
     cat_filt = cat.filter("time > {}".format(str(date-60)),
                           "time < {}".format(str(date+60)),
                           "magnitude >= {}".format(mw-.5),

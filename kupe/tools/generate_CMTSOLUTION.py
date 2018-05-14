@@ -42,11 +42,10 @@ def generate_CMTSOLUTION(event_id):
     event,region = get_region(event_id)
     origin = event.origins[0]
     datetime = origin.time
-    
+
     # always set zero
     time_shift = 0
     half_duration = 0
-
     template = (
         "{hypocenter_catalog:>4} {year:4d} {month:02d} {day:02d} {hour:02d} "
         "{minute:02d} {second:05.2f} "
@@ -65,7 +64,7 @@ def generate_CMTSOLUTION(event_id):
         "Mrp:{m_rp:24.6E}\n"
         "Mtp:{m_tp:24.6E}\n"
         )
-    
+
     template = template.format(hypocenter_catalog="XXXX",
                                 year=datetime.year,
                                 month=datetime.month,

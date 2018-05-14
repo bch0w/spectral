@@ -32,7 +32,7 @@ def collect_events():
     new_zealand = [-50,-35,165,180]
     kaikoura_to_east_cape = [-43,-37,172,180]
     blenheim_to_east_cape = [-41.5,-37,172,180]
-    lat_lon = blenheim_to_east_cape
+    lat_lon = kaikoura_to_east_cape
     cat = c.get_events(starttime="2005-01-01T00:00:00",
                         endtime=UTCDateTime(),
                         minmagnitude=4.5,
@@ -43,7 +43,7 @@ def collect_events():
                         minlongitude=lat_lon[2],
                         maxlongitude=lat_lon[3],
                         orderby="magnitude")
-
+    return cat
 
 def info_from_GCMT(event_id):
     """modified from synmod.tshift_halfdur()
@@ -234,17 +234,14 @@ def parse_catalog(cat):
 
 
 if __name__ == "__main__":
-    catpath = pathnames()['data'] + 'QUAKEML/kaikoura_to_east_cape.xml'
+    catpath = pathnames()['data'] + 'QUAKEML/kaikoura_to_east_cape_update.xml'
     # catpath = pathnames()['data'] + 'QUAKEML/catbuild_testcat.xml'
     cat = read_events(catpath)
     tomCat,errorCat = parse_catalog(cat)
 
-    # save as pickle
-    picklepath = pathnames()['data'] + 'CATBUILD/{}'
-    tomCat.to_pickle(picklepath.format("tomCat"))
-    errorCat.to_pickle(picklepath.format("errorCat"))
-
-    # save as csv
-    csvpath = pathnames()['data'] + 'CATBUILD/{}.csv'
-    tomCat.to_csv(csvpath.format("tomCat"),index=False)
-    errorCat.to_csv(csvpath.format("errorCat"),index=False)
+    # save as pickle and csv files
+    outpath = pathnames()['kupe'] + 'tomCat/{}{}'
+    tomCat.to_pickle(outpath.format("tomCat",""))
+    errorCat.to_pickle(outpath.format("errorCat",""))
+    tomCat.to_csv(outpath.format("tomCat",".csv"),index=False)
+    errorCat.to_csv(outpath.format("errorCat",".csv"),index=False)

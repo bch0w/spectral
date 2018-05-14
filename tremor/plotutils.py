@@ -243,7 +243,7 @@ def gridspec_plot(code,x,N,E,**options):
 
     if options['save']:
         fig_path = pathnames()['plots'] + 'tremor/'
-        fig_name = code_set.format(c='?') + '.png'
+        fig_name = code.format(c='?') + '.png'
         fig_out = os.path.join(fig_path,fig_name)
         plt.savefig(fig_out,dpi=200)
 

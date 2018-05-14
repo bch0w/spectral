@@ -104,6 +104,9 @@ def check_save(code_set,st=None,TEORRm=None,night=False):
     output = os.path.join(outpath,outfile)
     pickle_path = output.format(f='pickle')
     npz_path = output.format(f='npz')
+    for pathcheck in [pickle_path,npz_path]:
+        if not os.path.exists(os.path.dirname(pathcheck)):
+            os.makedirs(os.path.dirname(pathcheck))
 
     # save stream as a pickle to preserve non-mseed components
     # save passband arrays into npz file, dynamically sort out dict components**

@@ -42,11 +42,11 @@ def convert_UTC_to_local(st,local_timezone="Pacific/Auckland"):
     endLOC = endUTC.astimezone(pytz.timezone(local_timezone))
 
     return startLOC, endLOC
-        
+
 def average_array(data,number_of_samples):
     """return a shortened version of input array which contains averaged
-    values for every number_of_samples specified. the end member may contain a 
-    disproportionate number of samples to make up for the indivisibility of 
+    values for every number_of_samples specified. the end member may contain a
+    disproportionate number of samples to make up for the indivisibility of
     the number of samples by the chosen division rate
     :type data: np.array
     :param data: array to be averaged
@@ -61,7 +61,7 @@ def average_array(data,number_of_samples):
         if j > len(data)-number_of_samples:
             j = len(data) - 1
         new_data.append(np.mean(data[i:j]))
-    
+
     return np.array(new_data)
 
 def create_filt_horiz_data(st,bounds):
@@ -72,7 +72,7 @@ def create_filt_horiz_data(st,bounds):
     :type bounds: list of floats
     :param bounds: [lower bound,upper bound] for filtering
     :type take_average: int
-    :param take_average: if averages of arrays should be taken, if so give an 
+    :param take_average: if averages of arrays should be taken, if so give an
     integer number of samples to take averaging windows over
     :rtype data_horizontal: numpy array
     :return data_horizontal: average of horizontal components
@@ -88,7 +88,7 @@ def create_filt_horiz_data(st,bounds):
     data_horizontal = np.sqrt(data_north**2 + data_east**2)
 
     return data_horizontal
-    
+
 def set_water_level(st,band):
     """create water level from filter bands to avoid division by small values
     :type st: obspy stream
@@ -108,12 +108,12 @@ def set_water_level(st,band):
     return data_horizontal, water_level
 
 def mean_std_creator(night=False):
-    """determine mean and 1-sigma values for all TEORRm arrays, to be used for 
-    counting tremors. 
+    """determine mean and 1-sigma values for all TEORRm arrays, to be used for
+    counting tremors.
     :type night: bool
     :param night: consider only nighttime files with suffix '_night'
     :rtype sig_dict: dict
-    :return sig_dict: contains mean, median and 1-sigma values for each ratio 
+    :return sig_dict: contains mean, median and 1-sigma values for each ratio
     array Rs,Rm and Rh
     """
     filepath = os.path.join(pathnames()['data'],
@@ -176,7 +176,7 @@ def preprocess(st_original,inv,resample,night=False,water_level=60):
     """
     print("[preprocess]",end=" ")
     st_pp = st_original.copy()
-    
+
     T0 = time.time()
     # trim traces to nz local night time, NZ ~= UTC+12
     if night:
@@ -208,7 +208,7 @@ def preprocess(st_original,inv,resample,night=False,water_level=60):
                           plot=False)
 
     print(round(time.time()-T0,2),'s')
-    
+
     return st_pp
 
 def detect_earthquakes(de_array,sampling_rate,corr_criteria=0.7):
@@ -224,7 +224,7 @@ def detect_earthquakes(de_array,sampling_rate,corr_criteria=0.7):
     :return quakearray: de_array containing -1's for detected earthquakes
     """
     T0 = time.time()
-    
+
     # set exponential template
     sampling_rate_min = sampling_rate * 60
     sampling_rate_half_min = int(sampling_rate_min * (1/2))
@@ -288,8 +288,8 @@ def tremor_counter(TEORRm,avg_choice="mean",stop_if_tremor_num_below=3,
 
         two_sigma = avg_val + (2*one_sigma)
         three_sigma = avg_val + (3*one_sigma)
-        
-        # count tremors - can probably write cleaner 
+
+        # count tremors - can probably write cleaner
         R_2sig = np.copy(TEORRm[choice])
         R_3sig = np.copy(TEORRm[choice])
         for i,section in enumerate(TEORRm[choice]):
@@ -359,7 +359,7 @@ def create_modified_TEROR(st_raw, inv, night, already_preprocessed=False):
         tremor_horizontal = detect_earthquakes(tremor_horizontal,sampling_rate,
                                                             corr_criteria=0.65)
 
-        # create ratio arrays by time window, honor earthquake detection 
+        # create ratio arrays by time window, honor earthquake detection
         ratio_dict = {}
         ratio_equation = lambda T,E,O: T**2 / (E*O)
         for window,Rx in zip([five_seconds,five_minutes,one_hour],
@@ -443,7 +443,7 @@ def data_gather_and_process(code_set,pre_filt=None,night=False):
         if not st_proc:
             print("\t--stream not found...")
             return None,None
-            
+
         check_bool = check_save(code_set,
                                 st=st_proc,
                                 TEORRm=TEORRm,
@@ -479,12 +479,12 @@ def stacked_process(jday,year='2017'):
     station_list = list(range(1,19))
     night = True
     stop_if_tremor_num_below = 3
-    stop_if_stations_above = len(station_list) // 2
+    stop_if_stations_above = 16#len(station_list) // 2
     # \\\\\\\\\\\\\\\\\\\\\ parameter set ///////////////////////
 
     code_set_template = "XX.RD{s:0>2}.10.HH{c}.D.{y}.{d}"
     num_low_tremor_events=0
-    
+
     # arrays to be filled and passed to plotting function
     y_N_list,y_E_list = [],[]
     TEROR_list,sig_list,tremor_list = [],[],[]
@@ -531,7 +531,7 @@ def stacked_process(jday,year='2017'):
                 else:
                     continue
             tremor_count_dict = tremor_count_dict_
-            
+
         except Exception as e:
             print("\t--error count_tremors_over_sigma()")
             print("="*79)
@@ -554,11 +554,11 @@ def stacked_process(jday,year='2017'):
             ano_NE_list[i].append("{s} {a}um/s".format(s=code_set.split('.')[1],
                                                         a=round(max_ * 1E6,2)
                                                         ))
-        
+
         sig_list.append(tremor_count_dict)
         TEROR_list.append(TEORRm)
-        
-        
+
+
     # ++ CHECK-STOP CONDITIONS
     if not y_N_list or (len(y_N_list) < 3):
         print('\t--not enough stations processed')
@@ -583,8 +583,8 @@ def stacked_process(jday,year='2017'):
                  ano_list=ano_NE_list,
                  tremor_list=tremor_list,
                  night=night,
-                 show=True,
-                 save=False)
+                 show=False,
+                 save=True)
 
     return True
 
@@ -592,7 +592,9 @@ def stacked_process(jday,year='2017'):
 if __name__ == "__main__":
     # already_processed()
     # stacked_process(251)
-    for jday in range(199,365):
+    for jday in range(215,365):
         print('\n==============={}==============='.format(jday))
         stacked_process(jday,year='2017')
-
+    for jday in range(1,150):
+        print('\n==============={}==============='.format(jday))
+        stacked_process(jday,year='2018')
