@@ -413,7 +413,7 @@ def data_gather_and_process(code_set,pre_filt=None,night=False):
     fid_path = pathnames()['RDF'] + "{y}/XX/{s}/HH{c}.D".format(y=year,
                                                               s=sta,
                                                               c="{c}")
-    inv_path = pathnames()['RDF'] + "XX.RDF.DATALESS"
+    inv_path = pathnames()['RDF'] + "DATALESS/XX.RDF.DATALESS"
 
     # check what combination of files are available, process accordingly
     path_dict = check_save(code_set,night=night)
@@ -583,18 +583,18 @@ def stacked_process(jday,year='2017'):
                  ano_list=ano_NE_list,
                  tremor_list=tremor_list,
                  night=night,
-                 show=False,
-                 save=True)
+                 show=True,
+                 save=False)
 
     return True
 
 
 if __name__ == "__main__":
     # already_processed()
-    # stacked_process(251)
-    for jday in range(215,365):
-        print('\n==============={}==============='.format(jday))
-        stacked_process(jday,year='2017')
-    for jday in range(1,150):
-        print('\n==============={}==============='.format(jday))
-        stacked_process(jday,year='2018')
+    stacked_process(251)
+    # for jday in range(215,365):
+    #     print('\n==============={}==============='.format(jday))
+    #     stacked_process(jday,year='2017')
+    # for jday in range(1,150):
+    #     print('\n==============={}==============='.format(jday))
+    #     stacked_process(jday,year='2018')
