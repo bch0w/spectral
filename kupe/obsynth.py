@@ -39,7 +39,8 @@ def find_BAz(inv,cat):
     return BAz
 
 
-def initial_data_gather(code,event_id,bounds,plotmap=False,tshift=True):
+def initial_data_gather(code,event_id,bounds,output="VEL",
+                                                    rotate=False,plotmap=False):
     """gather event information, observation and synthetic traces,
     preprocess all traces accordingly and return one stream object with 6 traces
     """
@@ -49,9 +50,9 @@ def initial_data_gather(code,event_id,bounds,plotmap=False,tshift=True):
     # filter bounds
     tmin,tmax = bounds
 
-    # grab synthetic data locally
+    # grab synthetic data locally, decide
     syntheticdata_path = join(pathnames()['syns'],event_id,'')
-
+    
     syntheticdata = Stream()
     for c in ["N","E","Z"]:
         syntheticdata_filename = "{n}.{s}.BX{co}.semv.mseed".format(n=net,
@@ -64,32 +65,40 @@ def initial_data_gather(code,event_id,bounds,plotmap=False,tshift=True):
                                                     event_id=event_id,
                                                     startpad=0,
                                                     endpad=350)
+    if not observationdata:
+        return None
+                                                    
     # plot event and station on a map
     if plotmap:
         plotmod.plot_event_station(inv,cat)
 
-
     # preprocessing, instrument response, STF convolution (synthetics)
     observationdata_proc = procmod.preprocess(observationdata,
                                                 inv=inv,
-                                                output='DISP')
-
+                                                output=output)
+                                            
+    # synthetic timing information
+    time_shift, half_duration = synmod.tshift_halfdur(event_id)
+    
     # if GCMT solution doesn't exist, timeshift isn't possible
-    if tshift:
-        # event information
-        time_shift, half_duration = synmod.tshift_halfdur(event_id)
+    if time_shift:
         syntheticdata_preproc = synmod.stf_convolve(st=syntheticdata,
                                                  half_duration=half_duration,
                                                  time_shift=time_shift)
         syntheticdata_proc = procmod.preprocess(syntheticdata_preproc)
     else:
+        print('')
         syntheticdata_proc = procmod.preprocess(syntheticdata)
-
+    
+    # velocity to displacement if necessary
+    if output == "DISP":
+        syntheticdata_proc.differentiate()
 
     # rotate to theoretical backazimuth
-    # BAz = find_BAz(inv,cat)
-    # observationdata_proc.rotate(method='NE->RT',back_azimuth=BAz)
-    # syntheticdata_proc.rotate(method='NE->RT',back_azimuth=BAz)
+    if rotate:
+        BAz = find_BAz(inv,cat)
+        observationdata_proc.rotate(method='NE->RT',back_azimuth=BAz)
+        syntheticdata_proc.rotate(method='NE->RT',back_azimuth=BAz)
 
     # combine, common sampling rate, filter, trim common time
     st_IDG = observationdata_proc + syntheticdata_proc
@@ -175,18 +184,25 @@ def plot_obsynth(st,bounds,twinax=False,save=False,show=True):
 
 # =================================== MAIN ====================================
 if __name__ == "__main__":
+    # USER CHOICE
     # station_code = sys.argv[1].upper()
+    
+    # ALL GEONET STATIONS
     station_name_path = (pathnames()['data'] +
                                 'STATIONXML/NAMESOF_NZ_NI_BB_seismometers.npy')
     station_names = np.load(station_name_path)
+    
+    # SUBSET OF GEONET STATIONS
     station_names = ['NZ.BFZ','NZ.BKZ','NZ.HAZ','NZ.HIZ','NZ.KNZ','NZ.MRZ',
                      'NZ.MWZ','NZ.OPRZ','NZ.PUZ','NZ.PXZ','NZ.RTZ','NZ.TLZ',
                      'NZ.TOZ','NZ.TSZ','NZ.VRZ','NZ.WAZ']
+    
+    # RDF STATIONS
     station_names = []
-    for i in range(1,22):
-        station_names.append("XX.RD{:0<2}".format(i))
+    for i in range(1,20):
+        station_names.append("XX.RD{:0>2}".format(i))
 
-    event_id = "2017p708412"
+    event_id = "2018p130600"
 
     for station_code in station_names:
         try:
@@ -194,12 +210,14 @@ if __name__ == "__main__":
             bounds = [6,30]
             st = initial_data_gather(code,event_id,
                                     bounds=bounds,
-                                    plotmap=False,
-                                    tshift=False)
+                                    plotmap=False)
+            if not st:
+                continue
+                
             fig = plot_obsynth(st,bounds=bounds,
                                     twinax=False,
-                                    save=True,
-                                    show=False)
+                                    save=False,
+                                    show=True)
         except Exception as e:
             print("="*79)
             traceback.print_exc()

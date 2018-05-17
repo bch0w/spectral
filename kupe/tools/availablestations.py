@@ -63,7 +63,7 @@ def accumulate_station_dates():
     
     # BANNISTER - Information available from email correspondence
     BAN_path = ('/Users/chowbr/Documents/subduction/spectral/common/DATA/'
-                'STATIONXML/Bannister_temporary_array_station_list.txt'
+                'STATIONXML/Bannister_temporary_array_station_list.txt')
     with open(BAN_path,'r') as f:
         lines = f.readlines()
     

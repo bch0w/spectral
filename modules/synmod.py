@@ -186,23 +186,28 @@ def tshift_halfdur(event_id):
     t_abs = t_pde + time shift + t_syn
     also get the half duration from the GCMT solution
     """
-    # time shift
-    MT = getdata.get_GCMT_solution(event_id)
-    CMTSOLUTIONPATH = (pathnames()['kupedata'] +
+    try:
+        # time shift
+        MT = getdata.get_GCMT_solution(event_id)
+        CMTSOLUTIONPATH = (pathnames()['kupedata'] +
                                 'CMTSOLUTIONS/{}CMTSOLUTION'.format(event_id))
-    CMTSOLUTION = read_events(CMTSOLUTIONPATH)
+        CMTSOLUTION = read_events(CMTSOLUTIONPATH)
 
-    CMTSOLUTION_time = CMTSOLUTION[0].origins[0].time
-    CENTROID_time = [i.time for i in MT.origins
+        CMTSOLUTION_time = CMTSOLUTION[0].origins[0].time
+        CENTROID_time = [i.time for i in MT.origins
                                             if i.origin_type == "centroid"][0]
 
-    time_shift = abs(CMTSOLUTION_time - CENTROID_time)
+        time_shift = abs(CMTSOLUTION_time - CENTROID_time)
 
-    # half duration
-    moment_tensor = MT.focal_mechanisms[0].moment_tensor
-    half_duration = (moment_tensor.source_time_function['duration'])/2
+        # half duration
+        moment_tensor = MT.focal_mechanisms[0].moment_tensor
+        half_duration = (moment_tensor.source_time_function['duration'])/2
 
-    return time_shift, half_duration
+        return time_shift, half_duration
+    
+    except AttributeError:
+        print("[synmod.tshift_halfdur] GCMT solution not found")    
+        return None, None
 
 if __name__ == "__main__":
     print('what?')

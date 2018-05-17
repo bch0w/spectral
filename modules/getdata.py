@@ -4,7 +4,7 @@ FDSN webservices via obspy (@VIC)
 """
 import os
 import glob
-from obspy import read, read_events, read_inventory, UTCDateTime
+from obspy import read, read_events, read_inventory, UTCDateTime, Stream
 from obspy.clients.fdsn import Client
 
 # ============================== INTERNAL SCRIPTS =============================
@@ -357,24 +357,29 @@ def event_stream(code,event_id,client="GEONET",startpad=False,endpad=False):
                                         event_id=event_id,
                                         response=True)
 
-            # trim regardless of get-method
-            st.trim(starttime=start,endtime=end)
 
         # temporary station filepaths
         if choice == "RDF":
             st_list,resp_list = [],[]
+            st = Stream()
             for comp in ['N','E','Z']:
                 path_st, path_resp = rdf_internal(station=sta,
                                         channel=cha[:2] + comp,
                                         start=origin,
                                         response=True)
                 st_list += path_st
-            st = (read(st_list[0]) +
-                    read(st_list[1]) +
-                    read(st_list[2])
-                    )
+            
+            for st_fid in st_list:    
+                st += read(st_fid)
+                
             inv = read_inventory(path_resp)
-
+        
+        
+        # trim regardless of get-method, return none if trim kills stream
+        st.trim(starttime=start,endtime=end)
+        if not st:
+            st = None
+            
         return st, inv, cat
 
 def rdf_internal(station,channel,start,end=False,response=True):
@@ -410,7 +415,7 @@ def rdf_internal(station,channel,start,end=False,response=True):
     mseed_RDFpath = mseed_RDFpath_template.format(year=start.year,
                                                     sta=station,
                                                     ch=channel)
-    resp_filepath = pathnames()['RDF'] + 'XX.RDF.DATALESS'
+    resp_filepath = pathnames()['RDF'] + 'DATALESS/XX.RDF.DATALESS'
 
     # check if data spans more than one day
     if type(end) != bool:
