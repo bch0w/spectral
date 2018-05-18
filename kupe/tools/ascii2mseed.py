@@ -55,3 +55,8 @@ for fname in all_files:
         print("Failure at ",e)
 
 print("{} files converted".format(len(all_files)-errors))
+
+deletecheck = input('Delete ascii files? (y/[n])')
+if deletecheck == 'y':
+	for fname in all_files:
+		os.remove(fname)
