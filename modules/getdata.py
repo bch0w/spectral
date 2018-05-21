@@ -368,18 +368,18 @@ def event_stream(code,event_id,client="GEONET",startpad=False,endpad=False):
                                         start=origin,
                                         response=True)
                 st_list += path_st
-            
-            for st_fid in st_list:    
+
+            for st_fid in st_list:
                 st += read(st_fid)
-                
+
             inv = read_inventory(path_resp)
-        
-        
+
+
         # trim regardless of get-method, return none if trim kills stream
         st.trim(starttime=start,endtime=end)
         if not st:
             st = None
-            
+
         return st, inv, cat
 
 def rdf_internal(station,channel,start,end=False,response=True):
@@ -391,7 +391,7 @@ def rdf_internal(station,channel,start,end=False,response=True):
     a certain location, rather than a paired down list.
 
     :type station: str
-    :param station: station name i.e. GKBS (case-insensitive)
+    :param station: station name i.e. RD01 (case-insensitive)
     :type channel: str
     :param channel: channel of interest, i.e. BHN, HHE (case-insensitive)
     :type start: str
@@ -424,11 +424,22 @@ def rdf_internal(station,channel,start,end=False,response=True):
         if start.year == end.year:
             list_of_files = glob.glob(mseed_RDFpath + '*')
             list_of_files.sort()
-            # match start and end dates to filepaths
-            start_file_match = glob.glob(mseed_RDFpath + "*{date}".format(
+            # match start and end dates to filepaths, catch times outside avail.
+            try:
+                start_file_match = glob.glob(mseed_RDFpath + "*{date}".format(
                                 date=start.format_seed().replace(',','.')))[0]
-            end_file_match = glob.glob(mseed_RDFpath + "*{date}".format(
-                                date=end.format_seed().replace(',','.')))[0]
+            except IndexError:
+                print('[getdata.rdf_internal] start falls outside availability')
+                return None, None
+            try:
+                end_file_match = glob.glob(mseed_RDFpath + "*{date}".format(
+                                    date=end.format_seed().replace(',','.')))[0]
+            except IndexError:
+                print('[getdata.rdf_internal] end falls outside, trimming')
+                end_file_match = glob.glob(mseed_RDFpath + "*")
+                end_file_match.sort()
+                end_file_match = end_file_match[-1]
+
             # determine indices for start and end files
             start_file_index = list_of_files.index(start_file_match)
             end_file_index = list_of_files.index(end_file_match)

@@ -4,7 +4,6 @@ in accordance with McNamara2004 using the obspy PPSD package
 """
 import os
 import sys
-sys.path.append('../modules/')
 import glob
 import time
 import argparse
@@ -14,41 +13,27 @@ from obspy.signal import PPSD
 from obspy import UTCDateTime
 from obspy.imaging.cm import pqlx
 
+# internal modules
+sys.path.append('../modules/')
 import getdata
 from getdata import pathnames
 
+def gather_data(sta,comp,start,end):
+    """data gather to distribute to PPSD creation
+    """
 
-# user input arguments
-    # parser = argparse.ArgumentParser(description='Download create PPSD for \
-    #  sta and timeframe $ python noise_analysis.py --sta TBAS --cha\
-    #  HHZ --start 2015-01-01 --end 2016-01-01')
-    # parser.add_argument('--code', help='Instrument Code, i.e. XX.RD01..HHZ or\
-    #                         NZ.PUZ..HHE', type=str, default='NZ.PUZ..HHE')
-    # parser.add_argument('--start', help='Starttime YYYY-MM-DD default = \
-    #                     2015-01-01',type=str, default='2015-01-01')
-    # parser.add_argument('--end', help='Endtime, default = 2015-01-01',type=str,
-    #                     default='2015-01-02')
-    # parser.add_argument('--dec', help='Decimate trace, default 0',type=int,
-    #                     default=0)
-    #
-    # # parse arguments
-    # arg = parser.parse_args()
-    # code = arg.code
-    # start = UTCDateTime(arg.start)
-    # end = UTCDateTime(arg.end)
-    # decimateby = arg.dec
-    #
-    # net,sta,loc,cha = code.split('.')
-    # print("Analyzing noise spectra for {}".format(code))
-    #
-    # # filepaths of geonet archive
-    # if net == 'NZ':
-    #     if pathnames()["where"] == "GNS":
-    #         print("\nTimeframe set: {} through {}".format(start.date,end.date))
-    #         data_files, resp_file = geonet_internal(station=sta,
-    #                                             channel=cha,
-    #                                             start=start,
-    #                                             end=end)
+    code_template = "XX.{sta}.10.{comp}.D.{year}.{jday}"
+
+    # determine fid of start and end points
+    code_start = code_template(sta=sta,
+                               comp=comp,
+                               year=start.year,
+                               jday=star.jday)
+    code_end = code_template(sta=sta,
+                             comp=comp,
+                             year=end.year,
+                             jday=end.jday)
+    star
 
 # RDF temporary net - includes all files, does not filter by time
 for i in range(2,19):
