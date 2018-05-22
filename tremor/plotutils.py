@@ -19,7 +19,6 @@ mpl.rcParams['lines.markersize'] = 1.75
 mpl.rcParams['axes.linewidth'] = 1.25
 
 
-
 def plot_arrays(st,code_set,TEORRm,sig,show=True,save=False):
     """plot 6 streams in 3 subplot figure
     """
@@ -162,6 +161,15 @@ def gridspec_plot(code,x,N,E,**options):
     """based on stacked_plot, but with gridspec changing size of subplots:
     multiple stations plotted in a stacked plot to show waveform coherence
     sts should be a stream of all components
+    
+    gridspec_plot(code=code_set,x=t,N=y_N_list,E=y_E_list,
+                 TEORRm_list=TEROR_list,
+                 sig_list=sig_list,
+                 ano_list=ano_NE_list,
+                 tremor_list=tremor_list,
+                 night=night,
+                 show=True,
+                 save=False)
     """
     net,sta,loc,cha,d,year,jday = code.split('.')
 
@@ -191,12 +199,15 @@ def gridspec_plot(code,x,N,E,**options):
                                             options['sig_list'],
                                             n_ano,
                                             e_ano):
+        # amplitude ratios
         Rs_ = TEROR_['Rs']
         Rm_ = TEROR_['Rm']
         Rh_ = TEROR_['Rh']
+        # scatterpoints for values about two-sigma
         Rs_sigma_ = TREMOR_['Rs']
         Rm_sigma_ = TREMOR_['Rm']
         Rh_sigma_ = TREMOR_['Rh']
+        # shifting waveform plots up by increments
         N_ += step_up
         E_ += step_up
         T_ += step_up
@@ -226,8 +237,102 @@ def gridspec_plot(code,x,N,E,**options):
     title = ("[Tremor Detection]\n"
          "Jday: {} Bandpass: [2-5Hz] Norm: 0-1 Cutoff: 0.5".format(jday))
     ax1.set_title(title)
-    ax1.set_ylabel('N. velocity (normalized)')
-    ax2.set_ylabel('E. velocity (normalized)')
+    ax1.set_ylabel('N. velocity (-1/1 norm)')
+    ax2.set_ylabel('E. velocity (-1/1 norm)')
+    ax3a.set_ylabel('5-sec. ratio (R$_s$)')
+    ax3b.set_ylabel('5-min. ratio (R$_m$)')
+    ax3c.set_ylabel('1-hour ratio (R$_h$)')
+    ax3c.set_xlabel('NZ local time (hours)')
+
+    # axis options
+    # ax3.legend(prop={"size":7.5})
+    for ax in [ax1,ax2,ax3a,ax3b,ax3c]:
+        __pretty_grids(ax)
+        # ax.set_xlim([18,30]) if night else ax.set_xlim([x.min(),x.max()])
+        ax.set_xlim([x.min(),x.max()])
+    # plt.tight_layout()
+
+    if options['save']:
+        fig_path = pathnames()['plots'] + 'tremor/'
+        fig_name = code.format(c='?') + '.png'
+        fig_out = os.path.join(fig_path,fig_name)
+        plt.savefig(fig_out,dpi=200)
+
+    if options['show']:
+        plt.show()
+
+    plt.close()
+    
+def envelope_plots(code,x,N,E,**options):
+    """based on stacked_plot, but with gridspec changing size of subplots:
+    multiple stations plotted in a stacked plot to show waveform coherence
+    sts should be a stream of all components
+    """
+    net,sta,loc,cha,d,year,jday = code.split('.')
+
+    # initiate figure and axes objects
+    f = plt.figure(figsize=(11.69,8.27),dpi=75)
+    gs = gridspec.GridSpec(5,1,height_ratios=[2,2,1,1,1],hspace=0.2)
+    ax1 = plt.subplot(gs[0])
+    ax2 = plt.subplot(gs[1],sharex=ax1)
+    ax3a = plt.subplot(gs[2],sharex=ax1)
+    ax3b = plt.subplot(gs[3],sharex=ax1)
+    ax3c = plt.subplot(gs[4],sharex=ax1)
+    for ax in [ax1,ax2,ax3a,ax3b]:
+        plt.setp(ax.get_xticklabels(), visible=False)
+
+
+    # create t axis to match x
+    TEORRm_ = options['TEORRm_list'][0]
+    x_Rm = np.linspace(x.min(),x.max(),len(TEORRm_['Rm']))
+    x_Rs = np.linspace(x.min(),x.max(),len(TEORRm_['Rs']))
+    x_Rh = np.linspace(x.min(),x.max(),len(TEORRm_['Rh']))
+
+    step_up = 0
+    n_ano,e_ano = options['ano_list']
+    for N_,E_,Env_,TEROR_,TREMOR_,Nano_,Eano_ in zip(N,E,
+                                            options['envelopes'],
+                                            options['TEORRm_list'],
+                                            options['sig_list'],
+                                            n_ano,
+                                            e_ano):
+        # amplitude ratios
+        Rs_ = TEROR_['Rs']
+        Rm_ = TEROR_['Rm']
+        Rh_ = TEROR_['Rh']
+        # scatterpoints for values about two-sigma
+        Rs_sigma_ = TREMOR_['Rs']
+        Rm_sigma_ = TREMOR_['Rm']
+        Rh_sigma_ = TREMOR_['Rh']
+        # shifting waveform plots up by increments
+        N_ += step_up
+
+
+        # waveforms
+        ax1.plot(x,N_)
+        ax2.plot(x,Env_)
+        # ratios
+        ax3a.plot(x_Rs,Rs_,'|-',markersize=0.25)
+        ax3b.plot(x_Rm,Rm_,'|-',markersize=1.25)
+        ax3c.plot(x_Rh,Rh_,'|-',markersize=1.25)
+        # two-sigmas
+        ax3a.scatter(x_Rs,Rs_sigma_,marker='o',s=1.5,zorder=10)
+        ax3b.scatter(x_Rm,Rm_sigma_,marker='o',s=4,zorder=10)
+        ax3c.scatter(x_Rh,Rh_sigma_,marker='o',s=4,zorder=10)
+        # annotations
+        for ax,ano in zip([ax1,ax2],[Nano_,Eano_]):
+            ax.annotate(ano,xy=(x.min(),step_up),
+                        xytext=(x.min(),step_up),
+                        fontsize=8,
+                        zorder=11)
+        step_up += 0.5
+
+    # labelliung
+    title = ("[Tremor Detection]\n"
+         "Jday: {} Bandpass: [2-5Hz] Norm: 0-1 Cutoff: 0.5".format(jday))
+    ax1.set_title(title)
+    ax1.set_ylabel('N. velocity (-1/1 norm w/ .5cutoff)')
+    ax2.set_ylabel('E. velocity (-1/1 norm w/ .5cutoff)')
     ax3a.set_ylabel('5-sec. ratio (R$_s$)')
     ax3b.set_ylabel('5-min. ratio (R$_m$)')
     ax3c.set_ylabel('1-hour ratio (R$_h$)')

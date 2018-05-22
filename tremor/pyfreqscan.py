@@ -12,6 +12,7 @@ import pytz
 import glob
 import traceback
 import numpy as np
+from scipy.signal import hilbert
 from obspy import read, read_inventory, Stream, UTCDateTime
 from obspy.signal.cross_correlation import correlate
 
@@ -19,7 +20,7 @@ from obspy.signal.cross_correlation import correlate
 sys.path.append("../modules")
 from getdata import pathnames
 from utils import check_save, create_min_max, already_processed, check_save
-from plotutils import plot_arrays, stacked_plot, gridspec_plot
+from plotutils import gridspec_plot, envelope_plots
 
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -107,11 +108,13 @@ def set_water_level(st,band):
 
     return data_horizontal, water_level
 
-def mean_std_creator(night=False):
+def mean_std_creator(night=False,overwrite=True):
     """determine mean and 1-sigma values for all TEORRm arrays, to be used for
     counting tremors.
     :type night: bool
     :param night: consider only nighttime files with suffix '_night'
+    :type overwrite: bool
+    :param overwrite: if True, create new file, if False, use file available
     :rtype sig_dict: dict
     :return sig_dict: contains mean, median and 1-sigma values for each ratio
     array Rs,Rm and Rh
@@ -123,10 +126,19 @@ def mean_std_creator(night=False):
     N = "_night"
     if not night:
         N = ""
+    
+    # use the file currently available, avoid creating new
+    if not overwrite:
+        if verbose: print("[mean/std overwrite turned OFF, reading in place]")
+        outpath_inplace = glob.glob(outpath_template.format(N=N,C="*"))[0]
+        sig_dict = np.load(outpath_inplace)
+        return sig_dict
+    
+    # during normal processing, if file exists, read
     terorfiles = glob.glob(filepath + 'XX*{N}.npz'.format(N=N))
     outpath = outpath_template.format(N=N,C=len(terorfiles))
     if os.path.exists(outpath):
-        # print("[mean/std file exists, reading...]")
+        if verbose: print("[mean/std file exists, reading...]")
         sig_dict = np.load(outpath)
         return sig_dict
 
@@ -145,12 +157,11 @@ def mean_std_creator(night=False):
         sig_dict["{}_mean".format(choice)] = np.mean(means_)
         sig_dict["{}_median".format(choice)] = np.mean(medians_)
         sig_dict["{}_sigma".format(choice)] = np.mean(one_sigmas_)
-
-    print("[creating mean/std file...]")
+    if verbose: print("[creating mean/std file...]")
     np.savez(outpath,**sig_dict)
 
     # delete any previous files that are superceded by current write
-    outpath_wild = outpath_template.format(c=choice,N=N,C="*")
+    outpath_wild = outpath_template.format(N=N,C="*")
     files_to_delete = glob.glob(outpath_wild)
     files_to_delete.remove(outpath)
     if files_to_delete:
@@ -174,7 +185,7 @@ def preprocess(st_original,inv,resample,night=False,water_level=60):
     :rtype st_pp: obspy stream
     :return st_pp: preprocessed stream object
     """
-    print("[preprocess]",end=" ")
+    if verbose: print("[preprocess]",end=" ")
     st_pp = st_original.copy()
 
     T0 = time.time()
@@ -207,7 +218,7 @@ def preprocess(st_original,inv,resample,night=False,water_level=60):
                           water_level=water_level, # not in original code
                           plot=False)
 
-    print(round(time.time()-T0,2),'s')
+    if verbose: print(round(time.time()-T0,2),'s')
 
     return st_pp
 
@@ -256,7 +267,8 @@ def detect_earthquakes(de_array,sampling_rate,corr_criteria=0.7):
         else:
             quakearray = np.append(quakearray,tremor_snippet)
 
-    print("[detect_earthquakes] {} quakes".format(quakecount),end=" ")
+    if verbose: print("[detect_earthquakes] {} quakes".format(
+                                                            quakecount),end=" ")
     print(round(time.time()-T0,2),'s')
 
     return quakearray
@@ -277,7 +289,7 @@ def tremor_counter(TEORRm,avg_choice="mean",stop_if_tremor_num_below=3,
     tremor_count_dict = {}
     for choice in ['Rs','Rm','Rh']:
         # set average values
-        sig_dict = mean_std_creator(night)
+        sig_dict = mean_std_creator(night,overwrite=False)
         mean_ = sig_dict["{}_mean".format(choice)]
         median_ = sig_dict["{}_median".format(choice)]
         one_sigma = sig_dict["{}_sigma".format(choice)]
@@ -298,8 +310,8 @@ def tremor_counter(TEORRm,avg_choice="mean",stop_if_tremor_num_below=3,
                 R_3sig[i] = 0
             elif section < three_sigma:
                 R_3sig[i] = 0
-
-        print("[tremor_counter {c}: 2-sig:{two} / 3-sig:{three}]".format(
+        if verbose:
+            print("[tremor_counter {c}: 2-sig:{two} / 3-sig:{three}]".format(
                                                     c=choice,
                                                     two=len(R_2sig[R_2sig>0]),
                                                     three=len(R_3sig[R_3sig>0])
@@ -421,7 +433,7 @@ def data_gather_and_process(code_set,pre_filt=None,night=False):
 
     if not path_dict["npz"]:
         if not path_dict["pickle"]:
-            print("[files don't exist, processing...]")
+            if verbose: print("[files don't exist, processing...]")
             st = Stream()
             inv = read_inventory(inv_path)
             for comp in ["N","E"]:
@@ -431,7 +443,7 @@ def data_gather_and_process(code_set,pre_filt=None,night=False):
                 print("\t--too many ({}) traces found...".format(len(st)))
                 return None,None
         else:
-            print("[stream exists, creating TEROR...]")
+            if verbose: print("[stream exists, creating TEROR...]")
             inv = None
             process_check = True
             st = read(path_dict['pickle'])
@@ -452,7 +464,7 @@ def data_gather_and_process(code_set,pre_filt=None,night=False):
             return None,None
 
     else:
-        print("[files exist, reading...]")
+        if verbose: print("[files exist, reading...]")
         st_proc = read(path_dict['pickle'])
         TEORRm = np.load(path_dict['npz'])
 
@@ -480,6 +492,8 @@ def stacked_process(jday,year='2017'):
     night = True
     stop_if_tremor_num_below = 3
     stop_if_stations_above = 16#len(station_list) // 2
+    global verbose
+    verbose = False
     # \\\\\\\\\\\\\\\\\\\\\ parameter set ///////////////////////
 
     code_set_template = "XX.RD{s:0>2}.10.HH{c}.D.{y}.{d}"
@@ -487,7 +501,7 @@ def stacked_process(jday,year='2017'):
 
     # arrays to be filled and passed to plotting function
     y_N_list,y_E_list = [],[]
-    TEROR_list,sig_list,tremor_list = [],[],[]
+    TEROR_list,sig_list,envelopes = [],[],[]
     ano_NE_list = [[],[]]
 
     # ++ PROCESS EACH STATION AND APPEND TO LISTS
@@ -540,8 +554,15 @@ def stacked_process(jday,year='2017'):
             continue
 
         # ++ SET UP WAVEFORM PLOTTING ARRAYS
-        for comp in ["N","E"]:
-            x,y = create_min_max(st.select(component=comp)[0])
+        north_comp = st.select(component="N")[0]
+        east_comp = st.select(component="E")[0]
+        RMS_ = return_RMS(north_comp.data,east_comp.data,
+                                                normalize=False,cutoff=0.5)
+        ENV_ = waveform_envelope(RMS_)
+        envelopes.append(ENV_)
+        
+        for stream in zip(north_comp,east_comp):
+            x,y = create_min_max(stream)
             y_E_max = y.max()
             if comp == "N":
                 y_N_max = y.max()
@@ -564,29 +585,60 @@ def stacked_process(jday,year='2017'):
         print('\t--not enough stations processed')
         return False
 
-    # ++ OPERATE ON CREATED LISTS
-    # RMS of tremor signal for envelope plots, a[a>0.5] == nan
-    for N,E in zip(y_N_list,y_E_list):
-        horizontal_rms = 0.5 * (N**2 + E**2)
-        horizontal_rms /= horizontal_rms.max()
-        for data in N,E,horizontal_rms:
-            data[abs(data)>0.5] = np.nan
-        tremor_list.append(horizontal_rms)
+    # ++ WAVEFORM ENVELOPES
+
+    
 
     # ++ TIME - !!! check that all times should be equal eh?
     startNZ,endNZ = convert_UTC_to_local(st)
     t = np.linspace(startNZ.hour,startNZ.hour+12,len(x))
-
-    gridspec_plot(code=code_set,x=t,N=y_N_list,E=y_E_list,
+    
+    envelope_plots(code=code_set,x=t,N=y_N_list,E=y_E_list,
                  TEORRm_list=TEROR_list,
                  sig_list=sig_list,
                  ano_list=ano_NE_list,
-                 tremor_list=tremor_list,
+                 envelopes=envelopes,
                  night=night,
                  show=True,
                  save=False)
 
     return True
+
+# =========================== CLEANUP FUNCTIONS =============================
+
+def return_RMS(A,B,normalize=True,cutoff=1.0):
+    """return RMS values of two arrays (usually north and east seismograms)
+    normalize by max value by default, set a cutoff if necessary and if norm on
+    """
+    RMS = 0.5 * (A**2 + B**2)
+    if normalize:
+        RMS /= RMS.max()
+        if cutoff:
+            for data in N,E,horizontal_rms:
+                data[abs(data)>cutoff] = np.nan
+    return RMS
+    
+def waveform_envelope(signal):
+    """take the hilbert transform of a waveform data stream to create an 
+    envelope for plotting purposes
+    breaks the signal into small chunks if too large, otherwise hilbert hangs
+    """
+    breakpoint = int(1E6)
+    if len(signal) >= breakpoint:
+        signalend = len(signal)-1
+        analytic_signal = np.array([])
+        for i in range(0,signalend,breakpoint):
+            j = i+breakpoint
+            if j > signalend: 
+                j = signalend
+            analytic_signal_temp = hilbert(signal[i:j])
+            analytic_signal = np.append(analytic_signal,analytic_signal_temp)
+    else:    
+        analytic_signal = hilbert(signal)
+    
+    amplitude_envelope = np.abs(analytic_signal)
+    
+    return amplitude_envelope
 
 
 if __name__ == "__main__":
