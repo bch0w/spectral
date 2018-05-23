@@ -422,10 +422,10 @@ def data_gather_and_process(code_set,pre_filt=None,night=False):
     # datapaths
     net,sta,loc,cha,d,year,jday = code_set.split('.')
 
-    fid_path = pathnames()['RDF'] + "{y}/XX/{s}/HH{c}.D".format(y=year,
+    fid_path = pathnames()['fathom'] + "{y}/XX/{s}/HH{c}.D".format(y=year,
                                                               s=sta,
                                                               c="{c}")
-    inv_path = pathnames()['RDF'] + "DATALESS/XX.RDF.DATALESS"
+    inv_path = pathnames()['fathom'] + "DATALESS/XX.RDF.DATALESS"
 
     # check what combination of files are available, process accordingly
     path_dict = check_save(code_set,night=night)

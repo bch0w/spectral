@@ -13,38 +13,32 @@ def pathnames():
     simplify pathname calling between computers, call function to return the
     correct pathname instead of setting them in every script
     """
-    cwd = os.getcwd()
-    base0 = cwd.split('/')[0]
-    base1 = cwd.split('/')[1]
-    base2 = cwd.split('/')[2]
-    basecheck = os.path.join(base0,base1,base2)
-    # if cwd == "/Users/chowbr/Documents/subduction/spectral":
-    #     where = "VIC"
-    # elif cwd == "/seis/prj/fwi/bchow/spectral":
-    #     where = "GNS"
-    # else:
-    #     where = "OTHER"
+    split = os.getcwd().split('/')
+    basecheck = os.path.join(split[0],split[1],split[2])
     if basecheck == "seis/prj":
         where = "GNS"
-        base = "/seis/prj/fwi/bchow/spectral"
+        base = "/seis/prj/fwi/bchow"
     elif basecheck == "Users/chowbr":
         where = "VIC"
-        base = "/Users/chowbr/Documents/subduction/spectral"
-
-    common = os.path.join(base,'common')
-    path_dictionary = {"spectral":os.path.join(base,'spectral',''),
-            "kupe":os.path.join(base,'kupe',''),
-            "RDF":os.path.join(base,'..','RDF',''),
-            "rdf":os.path.join(common,'DATA','RDF_Array',''),
+        base = "/Users/chowbr/Documents/subduction"
+    
+    # set up important paths
+    mseeds = os.path.join(base,'mseeds')
+    spectral = os.path.join(base,'spectral')
+    common = os.path.join(spectral,'common')
+    
+    path_dictionary = {"spectral":os.path.join(spectral,''),
+            "kupe":os.path.join(spectral,'kupe',''),
+            "modules":os.path.join(spectral,'modules',''),
+            "mseeds":os.path.join(base,'mseeds',''),
+            "fathom":os.path.join(mseeds,'FATHOM',''),
+            "syns":os.path.join(mseeds,'SYNTH',''),
             "plots":os.path.join(common,'OUTPUT_PLOTS',''),
             "spectralplots":os.path.join(common,'OUTPUT_PLOTS','spectral',''),
             "kupeplots":os.path.join(common,'OUTPUT_PLOTS','kupe',''),
             "ppsd":os.path.join(common,'DATA','PPSD',''),
             "data":os.path.join(common,'DATA',''),
             "kupedata":os.path.join(common,'DATA','KUPEDATA',''),
-            "hobitss":os.path.join(common,'DATA','hobitss_mseeds',''),
-            "mseed":os.path.join(common,'DATA','MSEED',''),
-            "syns":os.path.join(common,'DATA','MSEED','SYN',''),
             "where": where
                     }
 
@@ -222,9 +216,10 @@ def fdsn_download(code,event_id=False,response=False,
         client = "IRIS"
 
     # search for data internal
-    data_path = pathnames()['mseed'] + '{n}/{e}_{s}.mseed'.format(n=net,
-                                                                 e=event_id,
-                                                                 s=sta)
+    data_path = pathnames()['mseed']+'GEONET/{n}_by_event/{e}_{s}.mseed'.format(
+                                                                     n=net,
+                                                                     e=event_id,
+                                                                     s=sta)
     try:
         st = read(data_path)
     except Exception as e:
@@ -384,11 +379,14 @@ def event_stream(code,event_id,client="GEONET",startpad=False,endpad=False):
 
 def rdf_internal(station,channel,start,end=False,response=True):
     """
+    ============================ 24.5.18 DEPRECATED ============================
     returns a list of pathnames for RDF data. Copied from geonet_internal
     If response == True, also returns path for response.
     If end not specified, returns a list of length 1 for day requested.
     Wildcards possible, however inventory returns a full list of instruments at
     a certain location, rather than a paired down list.
+    ============================= USE get_fathom() =============================
+
 
     :type station: str
     :param station: station name i.e. RD01 (case-insensitive)
@@ -411,11 +409,11 @@ def rdf_internal(station,channel,start,end=False,response=True):
     start = UTCDateTime(start)
 
     # filepaths direct to RDF
-    mseed_RDFpath_template = pathnames()['RDF'] + '{year}/XX/{sta}/{ch}.D/'
+    mseed_RDFpath_template = pathnames()['fathom'] + '{year}/XX/{sta}/{ch}.D/'
     mseed_RDFpath = mseed_RDFpath_template.format(year=start.year,
                                                     sta=station,
                                                     ch=channel)
-    resp_filepath = pathnames()['RDF'] + 'DATALESS/XX.RDF.DATALESS'
+    resp_filepath = pathnames()['fathom'] + 'DATALESS/XX.RDF.DATALESS'
 
     # check if data spans more than one day
     if type(end) != bool:
@@ -518,8 +516,8 @@ def get_fathom(station,channel,start,end=None):
         end = UTCDateTime(start)
 
     # filepaths direct to RDF
-    path_template = pathnames()['RDF'] + '{year}/XX/{sta}/{cha}.D/'
-    resp_filepath = pathnames()['RDF'] + 'DATALESS/XX.RDF.DATALESS'
+    path_template = pathnames()['fathom'] + '{year}/XX/{sta}/{cha}.D/'
+    resp_filepath = pathnames()['fathom'] + 'DATALESS/XX.RDF.DATALESS'
 
     mseed_files = []
     fid_template = 'XX.{sta}.10.{cha}.D.{year}.{jday:0>3}'
@@ -555,7 +553,6 @@ def get_fathom(station,channel,start,end=None):
                 mseed_files.append(base_fid_)
 
     return mseed_files, resp_filepath
-
 
 
 
