@@ -39,7 +39,7 @@ def pathnames():
             "plots":os.path.join(common,'OUTPUT_PLOTS',''),
             "spectralplots":os.path.join(common,'OUTPUT_PLOTS','spectral',''),
             "kupeplots":os.path.join(common,'OUTPUT_PLOTS','kupe',''),
-            "ppsd":os.path.join(common,'DATA','ppsd_arrays',''),
+            "ppsd":os.path.join(common,'DATA','PPSD',''),
             "data":os.path.join(common,'DATA',''),
             "kupedata":os.path.join(common,'DATA','KUPEDATA',''),
             "hobitss":os.path.join(common,'DATA','hobitss_mseeds',''),
@@ -429,8 +429,11 @@ def rdf_internal(station,channel,start,end=False,response=True):
                 start_file_match = glob.glob(mseed_RDFpath + "*{date}".format(
                                 date=start.format_seed().replace(',','.')))[0]
             except IndexError:
-                print('[getdata.rdf_internal] start falls outside availability')
-                return None, None
+                print('[getdata.rdf_internal] start falls outside, trimming')
+                start_file_match = glob.glob(mseed_RDFpath + "*")
+                start_file_match.sort()
+                start_file_match = start_file_match[0]
+
             try:
                 end_file_match = glob.glob(mseed_RDFpath + "*{date}".format(
                                     date=end.format_seed().replace(',','.')))[0]
@@ -444,7 +447,7 @@ def rdf_internal(station,channel,start,end=False,response=True):
             start_file_index = list_of_files.index(start_file_match)
             end_file_index = list_of_files.index(end_file_match)
             # list of files for return
-            mseed_files = list_of_files[start_file_index:end_file_index]
+            mseed_files = list_of_files[start_file_index:end_file_index+1]
         # if data spans multiple years
         else:
             # first year
@@ -486,6 +489,74 @@ def rdf_internal(station,channel,start,end=False,response=True):
         return mseed_files, resp_filepath
     else:
         return mseed_files, None
+
+def get_fathom(station,channel,start,end=None):
+    """
+    rewritten paired down version of rdf_internal. rdf_internal left because
+    I make break something if I try to take it out.
+
+    :type station: str
+    :param station: station name i.e. RD01 (case-insensitive)
+    :type channel: str
+    :param channel: channel of interest, i.e. BHN, HHE (case-insensitive)
+    :type start: str
+    :param start: starttime for data request
+    :type end: str
+    :param end: endtime for data request
+    :rtype mseed_files: list of str
+    :return mseed_files: list of absolute filepaths to requested data
+    :rtype response_filepath: str or None
+    :return response_filepath: if requested, filepath of response
+    """
+    # channel naming convention based on instrument type
+    sta = station.upper()
+    cha = channel.upper()
+    start = UTCDateTime(start)
+    if end:
+        end = UTCDateTime(end)
+    else:
+        end = UTCDateTime(start)
+
+    # filepaths direct to RDF
+    path_template = pathnames()['RDF'] + '{year}/XX/{sta}/{cha}.D/'
+    resp_filepath = pathnames()['RDF'] + 'DATALESS/XX.RDF.DATALESS'
+
+    mseed_files = []
+    fid_template = 'XX.{sta}.10.{cha}.D.{year}.{jday:0>3}'
+    # if data only spans the same year
+    if start.year == end.year:
+        base_ = path_template.format(year=start.year,sta=sta,cha=cha)
+        for JDAY in range(start.julday,end.julday+1):
+            fid_ = fid_template.format(sta=sta,cha=cha,year=start.year,
+                                                                    jday=JDAY)
+            base_fid_ = os.path.join(base_,fid_)
+            if os.path.exists(base_fid_):
+                mseed_files.append(base_fid_)
+    # data spans multiple years
+    if start.year != end.year:
+        if end.year-start.year != 1:
+            print('[getdata.rdf_internal] data spans more than 1 year, ERROR')
+
+        # first year
+        year = start.year
+        base_ = path_template.format(year=year,sta=sta,cha=cha)
+        for JDAY_y1 in range(start.julday,366):
+            fid_ = fid_template.format(sta=sta,cha=cha,year=year,jday=JDAY_y1)
+            base_fid_ = os.path.join(base_,fid_)
+            if os.path.exists(base_fid_):
+                mseed_files.append(base_fid_)
+        # second year
+        year = end.year
+        base_ = path_template.format(year=year,sta=sta,cha=cha)
+        for JDAY_y2 in range(1,end.julday+1):
+            fid_ = fid_template.format(sta=sta,cha=cha,year=year,jday=JDAY_y2)
+            base_fid_ = os.path.join(base_,fid_)
+            if os.path.exists(base_fid_):
+                mseed_files.append(base_fid_)
+
+    return mseed_files, resp_filepath
+
+
 
 
 # ============================== EVENT INFO DOWNLOAD ==========================

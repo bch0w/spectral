@@ -7,6 +7,6 @@ __pycache__/
 kupe/test_perl
 kupe/tools/perl_scripts
 kupe/simulation_data/tomo_files/
-kupe/meshtest
+kupe/meshTest
 #tremor
 tremor/satoshi
