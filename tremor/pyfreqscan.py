@@ -600,7 +600,7 @@ def stacked_process(jday,year='2017'):
                  envelopes=envelopes,
                  night=night,
                  show=True,
-                 save=False)
+                 save=True)
 
     return True
 
