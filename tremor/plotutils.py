@@ -272,12 +272,13 @@ def envelope_plots(code,x,N,E,**options):
 
     # initiate figure and axes objects
     f = plt.figure(figsize=(11.69,8.27),dpi=75)
-    gs = gridspec.GridSpec(5,1,height_ratios=[2,2,1,1,1],hspace=0.2)
+    gs = gridspec.GridSpec(6,1,height_ratios=[2,2,2,1,1,1],hspace=0.2)
     ax1 = plt.subplot(gs[0])
     ax2 = plt.subplot(gs[1],sharex=ax1)
-    ax3a = plt.subplot(gs[2],sharex=ax1)
-    ax3b = plt.subplot(gs[3],sharex=ax1)
-    ax3c = plt.subplot(gs[4],sharex=ax1)
+    ax2a = plt.subplot(gs[2],sharex=ax1)
+    ax3a = plt.subplot(gs[3],sharex=ax1)
+    ax3b = plt.subplot(gs[4],sharex=ax1)
+    ax3c = plt.subplot(gs[5],sharex=ax1)
     for ax in [ax1,ax2,ax3a,ax3b]:
         plt.setp(ax.get_xticklabels(), visible=False)
 
@@ -287,6 +288,8 @@ def envelope_plots(code,x,N,E,**options):
     x_Rm = np.linspace(x.min(),x.max(),len(TEORRm_['Rm']))
     x_Rs = np.linspace(x.min(),x.max(),len(TEORRm_['Rs']))
     x_Rh = np.linspace(x.min(),x.max(),len(TEORRm_['Rh']))
+    x_Env = np.linspace(x.min(),x.max(),len(options['envelopes'][0]))
+    x_sur = np.linspace(x.min(),x.max(),len(options['surface']))
 
     step_up = 0
     n_ano,e_ano = options['ano_list']
@@ -306,11 +309,11 @@ def envelope_plots(code,x,N,E,**options):
         Rh_sigma_ = TREMOR_['Rh']
         # shifting waveform plots up by increments
         N_ += step_up
-
+        # Env_ += step_up
 
         # waveforms
         ax1.plot(x,N_)
-        ax2.plot(x,Env_)
+        ax2.plot(x_Env,Env_)
         # ratios
         ax3a.plot(x_Rs,Rs_,'|-',markersize=0.25)
         ax3b.plot(x_Rm,Rm_,'|-',markersize=1.25)
@@ -326,13 +329,16 @@ def envelope_plots(code,x,N,E,**options):
                         fontsize=8,
                         zorder=11)
         step_up += 0.5
+    ax2a.plot(x_sur,options['surface'],'k')
+
 
     # labelliung
     title = ("[Tremor Detection]\n"
          "Jday: {} Bandpass: [2-5Hz] Norm: 0-1 Cutoff: 0.5".format(jday))
     ax1.set_title(title)
-    ax1.set_ylabel('N. velocity (-1/1 norm w/ .5cutoff)')
-    ax2.set_ylabel('E. velocity (-1/1 norm w/ .5cutoff)')
+    ax1.set_ylabel('N. velocity (-1/1 norm)')
+    ax2.set_ylabel('Waveform Envelopes')
+    ax2a.set_ylabel("N. Velocity (m/s) [6-30s]")
     ax3a.set_ylabel('5-sec. ratio (R$_s$)')
     ax3b.set_ylabel('5-min. ratio (R$_m$)')
     ax3c.set_ylabel('1-hour ratio (R$_h$)')
@@ -340,7 +346,7 @@ def envelope_plots(code,x,N,E,**options):
 
     # axis options
     # ax3.legend(prop={"size":7.5})
-    for ax in [ax1,ax2,ax3a,ax3b,ax3c]:
+    for ax in [ax1,ax2,ax2a,ax3a,ax3b,ax3c]:
         __pretty_grids(ax)
         # ax.set_xlim([18,30]) if night else ax.set_xlim([x.min(),x.max()])
         ax.set_xlim([x.min(),x.max()])
