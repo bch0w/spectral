@@ -10,6 +10,7 @@ from matplotlib import gridspec
 # internal packages
 sys.path.append("../modules")
 from getdata import pathnames
+from plotmod import pretty_grids
 
 from utils import __z2nan
 
@@ -67,7 +68,7 @@ def plot_arrays(st,code_set,TEORRm,sig,show=True,save=False):
 
     # set axis properties
     for ax in [ax1,ax2,ax3]:
-        __pretty_grids(ax)
+        pretty_grids(ax)
         ax.legend(prop={"size":7.5})
 
     ax1.set_xlim([t.min(),t.max()])
@@ -141,7 +142,7 @@ def stacked_plot(code,x,N,E,**options):
 
     # ax3.legend(prop={"size":7.5})
     for ax in [ax1,ax2,ax3,ax3a]:
-        __pretty_grids(ax)
+        pretty_grids(ax)
         # ax.set_xlim([18,30]) if night else ax.set_xlim([x.min(),x.max()])
         ax.set_xlim([x.min(),x.max()])
 
@@ -247,7 +248,7 @@ def gridspec_plot(code,x,N,E,**options):
     # axis options
     # ax3.legend(prop={"size":7.5})
     for ax in [ax1,ax2,ax3a,ax3b,ax3c]:
-        __pretty_grids(ax)
+        pretty_grids(ax)
         # ax.set_xlim([18,30]) if night else ax.set_xlim([x.min(),x.max()])
         ax.set_xlim([x.min(),x.max()])
     # plt.tight_layout()
@@ -347,7 +348,7 @@ def envelope_plots(code,x,N,E,**options):
     # axis options
     # ax3.legend(prop={"size":7.5})
     for ax in [ax1,ax2,ax2a,ax3a,ax3b,ax3c]:
-        __pretty_grids(ax)
+        pretty_grids(ax)
         # ax.set_xlim([18,30]) if night else ax.set_xlim([x.min(),x.max()])
         ax.set_xlim([x.min(),x.max()])
     # plt.tight_layout()
@@ -363,25 +364,3 @@ def envelope_plots(code,x,N,E,**options):
 
     plt.close()
 
-def __pretty_grids(input_ax):
-    """grid formatting
-    """
-    input_ax.set_axisbelow(True)
-    input_ax.tick_params(which='both',
-                         direction='in',
-                         top=True,
-                         right=True)
-    input_ax.minorticks_on()
-    input_ax.grid(which='minor',
-                    linestyle=':',
-                    linewidth='0.5',
-                    color='k',
-                    alpha=0.25)
-    input_ax.grid(which='major',
-                    linestyle='--',
-                    linewidth='0.55',
-                    color='k',
-                    alpha=0.25)
-    input_ax.ticklabel_format(style='sci',
-                            axis='y',
-                            scilimits=(0,0))

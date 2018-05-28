@@ -615,6 +615,7 @@ def return_RMS(A,B,normalize=True,cutoff=1.0):
         if cutoff:
             for data in N,E,horizontal_rms:
                 data[abs(data)>cutoff] = np.nan
+                
     return RMS
     
 def waveform_envelope(signal):
@@ -652,14 +653,14 @@ def envelope_stream(st,normalize=False):
     envelope_stream.decimate(int(st[0].stats.sampling_rate),no_filter=True)
     north_comp = envelope_stream.select(component="N")[0]
     east_comp = envelope_stream.select(component="E")[0]
-    RMS_ = return_RMS(north_comp.data,east_comp.data,
+    RMS = return_RMS(north_comp.data,east_comp.data,
                                             normalize=False,cutoff=0.5)
-    ENV_ = waveform_envelope(RMS_)
+    ENV = waveform_envelope(RMS)
     
     if normalize:
-        ENV_/=ENV_.max()
+        ENV/=ENV.max()
     
-    return ENV_
+    return ENV
     
     
 def analyze_spectra(signal,sampling_rate):
