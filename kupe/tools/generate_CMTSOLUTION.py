@@ -2,7 +2,7 @@
 followd the format of Harvard CMTSOLUTION, but replaces centroid moment
 entries with more precise GEONET information and MT from John Ristau
 """
-
+import os
 import sys
 import pandas as pd
 sys.path.append('../../modules/')
@@ -11,7 +11,7 @@ from synmod import mt_transform
 from obspy.clients.fdsn import Client
 from obspy.geodetics import FlinnEngdahl
 
-def get_region(event_id):
+def get_region(event_list):
     c = Client('GEONET')
     cat = c.get_events(eventid=event_id)
     event = cat[0]
@@ -39,7 +39,7 @@ def generate_CMTSOLUTION(event_id):
     mt = mt_transform(mt,method='xyz2rtp')
     mrr,mtt,mpp,mrt,mrp,mtp = mt
 
-    event,region = get_region(event_id)
+    event,region = get_region([event_id])
     origin = event.origins[0]
     datetime = origin.time
 
@@ -101,31 +101,29 @@ def generate_CMTSOLUTION(event_id):
         f.write(template)
     print(filename)
 
-def generate_CMTSOLUTION_from_tomCat(event_id):
+def mass_get_region(event_list):
+    c = Client('GEONET')
+    events,regions = [],[]
+    for pd_event in event_list:
+        event_id = pd_event['event_id']
+        cat = c.get_events(eventid=event_id)
+        event = cat[0]
+        origin = event.origins[0]
+        fe = FlinnEngdahl()
+        region = fe.get_region(longitude=origin.longitude,
+                      latitude=origin.latitude)
+        
+        events.append(event)
+        regions.append(region)
+        
+    return events,regions
+
+def generate_CMTSOLUTION_from_tomCat(event_id=None):
     """generate CMTSOLUTION file from tomCat
     28.3 haven't tested it yet
     """
     tomCat_path = pathnames()['data'] + 'tomCat/tomCat'
     tomCat = pd.read_pickle(tomCat_path)
-    event = tomCat.loc[tomCat['event_id'] == event_id]
-    if event.empty:
-        print("{} empty".format(event_id))
-        return
-
-    # parse tomCat
-    datetime = event['datetime'].iloc[0]
-    latitude = event['latitude'].iloc[0]
-    longitude = event['longitude'].iloc[0]
-    depth = event['depth'].iloc[0]
-    mrr = event['m_rr'].iloc[0]
-    mtt = event['m_tt'].iloc[0]
-    mpp = event['m_pp'].iloc[0]
-    mrt = event['m_rt'].iloc[0]
-    mrp = event['m_rp'].iloc[0]
-    mtp = event['m_tp'].iloc[0]
-
-    _,region = get_region(event_id)
-
     template = (
         "{hypocenter_catalog:>4} {year:4d} {month:02d} {day:02d} {hour:02d} "
         "{minute:02d} {second:05.2f} "
@@ -144,53 +142,73 @@ def generate_CMTSOLUTION_from_tomCat(event_id):
         "Mrp:{m_rp:24.6E}\n"
         "Mtp:{m_tp:24.6E}\n"
         )
+    
+    event_list = []
+    # single event
+    if event_id:
+        event = tomCat.loc[tomCat['event_id'] == event_id].iloc[0]
+        if event.empty:
+            print("{} empty".format(event_id))
+            return
+        else:
+            event_list.append(event)
+    # mass process all events in tomCat
+    else:
+        for index,event in tomCat.iterrows():
+            event_list.append(event)
+    print(len(event_list),'events to convert')
+    
+    # get regions beforehand to save time
+    _,regions = mass_get_region(event_list)
+    
+    for event,region in zip(event_list,regions):
+        # parse tomCat
+        event_id = event['event_id']
+        datetime = event['datetime']
+        latitude = event['latitude']
+        longitude = event['longitude']
+        depth = event['depth']
+        mrr = event['m_rr']
+        mtt = event['m_tt']
+        mpp = event['m_pp']
+        mrt = event['m_rt']
+        mrp = event['m_rp']
+        mtp = event['m_tp']
+        settemplate = template.format(hypocenter_catalog="XXXX",
+                                        year=datetime.year,
+                                        month=datetime.month,
+                                        day=datetime.day,
+                                        hour=datetime.hour,
+                                        minute=datetime.minute,
+                                        second=float(datetime.second) +
+                                        datetime.microsecond / 1E6,
+                                        latitude=latitude,
+                                        longitude=longitude,
+                                        depth=depth,
+                                        mb=0,
+                                        ms=0,
+                                        region=region,
+                                        event_name=event_id,
+                                        time_shift=0,
+                                        half_duration=0,
+                                        cmt_latitude=latitude,
+                                        cmt_longitude=longitude,
+                                        cmt_depth=depth,
+                                        m_rr=mrr,
+                                        m_tt=mtt,
+                                        m_pp=mpp,
+                                        m_rt=mrt,
+                                        m_rp=mrp,
+                                        m_tp=mtp
+                                        )
 
-    template = template.format(hypocenter_catalog="XXXX",
-                                year=datetime.year,
-                                month=datetime.month,
-                                day=datetime.day,
-                                hour=datetime.hour,
-                                minute=datetime.minute,
-                                second=float(datetime.second) +
-                                datetime.microsecond / 1E6,
-                                latitude=latitude,
-                                longitude=longitude,
-                                depth=depth,
-                                mb=0,
-                                ms=0,
-                                region=region,
-                                event_name=event_id,
-                                time_shift=0,
-                                half_duration=0,
-                                cmt_latitude=latitude,
-                                cmt_longitude=longitude,
-                                cmt_depth=depth,
-                                m_rr=mrr,
-                                m_tt=mtt,
-                                m_pp=mpp,
-                                m_rt=mrt,
-                                m_rp=mrp,
-                                m_tp=mtp
-                                )
-
-    # write to solution file
-    filename = (pathnames()['data'] +
-                'KUPEDATA/CMTSOLUTIONS/{}CMTSOLUTION'.format(event_id))
-    with open(filename,'w') as f:
-        f.write(template)
-    print(filename)
-
+        # write to solution file
+        filename = (pathnames()['data'] +
+                    'KUPEDATA/CMTSOLUTIONS/{}CMTSOLUTION'.format(event_id))
+        print(os.path.basename(filename))
+        with open(filename,'w') as f:
+            f.write(settemplate)
+    
 if __name__ == "__main__":
-    eventid = sys.argv[1]
-    generate_CMTSOLUTION(eventid)
-    # event_list = ['2016p669820',
-    #               '2403682',
-    #               '2593170',
-    #               '2799448',
-    #               '2014p240655',
-    #               '2015p768477',
-    #               '2016p881118',
-    #               '2354133',
-    #               '2013p614135',
-    #               '2016p860224']
-    # generate_CMTSOLUTION_from_tomCat(eventid)
+    # generate_CMTSOLUTION(sys.argv[1])
+    generate_CMTSOLUTION_from_tomCat()
