@@ -28,25 +28,27 @@ for fname in all_files:
         output_file = os.path.join(dirname,output_name)
         if os.path.exists(output_file):
             continue
-
         time = np.loadtxt(fname=fname, usecols=0)
         data = np.loadtxt(fname=fname, usecols=1)
         # assuming dt is constant after 3 decimal points
         delta = round(time[1]-time[0],3)
-
-        network,station,channel,component = basename.split('.')
-        stats = {"network":network,
-                 "station":station,
-                 "location":"",
-                 "channel":channel,
-                 "starttime":starttime,
-                 "npts":len(data),
-                 "delta":delta,
-                 "mseed":{"dataquality":'D'}
-                 }
-        st = Stream([Trace(data=data,header=stats)])
-
-
+    
+        try:
+            network,station,channel,component = basename.split('.')
+            stats = {"network":network,
+                     "station":station,
+                     "location":"",
+                     "channel":channel,
+                     "starttime":starttime,
+                     "npts":len(data),
+                     "delta":delta,
+                     "mseed":{"dataquality":'D'}
+                     }
+            st = Stream([Trace(data=data,header=stats)])
+        except ValueError:
+            print('nonstandard filename - cannot write header info')
+            st = Stream([Trace(data=data)])
+        
         st.write(output_name,format="MSEED")
     except KeyboardInterrupt:
         sys.exit()

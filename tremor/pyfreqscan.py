@@ -468,9 +468,6 @@ def data_gather_and_process(code_set,pre_filt=None,night=False):
         st_proc = read(path_dict['pickle'])
         TEORRm = np.load(path_dict['npz'])
 
-    if pre_filt:
-        st_proc.filter('bandpass',freqmin=pre_filt[0],freqmax=pre_filt[1])
-
     return st_proc, TEORRm
 
 
@@ -510,8 +507,7 @@ def stacked_process(jday,year='2017'):
         print('\n\t\t++',code_set)
         # ++ CREATE STREAM OBJECTS AND TEROR ARRAYS
         try:
-            st_,TEORRm = data_gather_and_process(code_set,pre_filt=[2,5],
-                                                                    night=night)
+            st_,TEORRm = data_gather_and_process(code_set,night=night)
              # hacky way to avoid overwriting the last entry w/ error
             if not st_:
                 print("\t--error no stream object found")
@@ -554,28 +550,16 @@ def stacked_process(jday,year='2017'):
             continue
 
         # ++ SET UP WAVEFORM PLOTTING ARRAYS
-        north_comp = st.select(component="N")[0]
-        east_comp = st.select(component="E")[0]
-        RMS_ = return_RMS(north_comp.data,east_comp.data,
-                                                normalize=False,cutoff=0.5)
-        ENV_ = waveform_envelope(RMS_)
-        envelopes.append(ENV_)
-        
-        for stream in zip(north_comp,east_comp):
-            x,y = create_min_max(stream)
-            y_E_max = y.max()
-            if comp == "N":
-                y_N_max = y.max()
-            y/=y.max()
-            y_N_list.append(y) if comp == "N" else y_E_list.append(y)
-
-
+        x,y_N,y_N_max = filter_then_minmax(st,bounds=[2,5],comp='N')
+        x,y_E,y_E_max = filter_then_minmax(st,bounds=[2,5],comp='E')
+        y_N_list.append(y_N)
+        y_E_list.append(y_E)
         # create annotations from max amplitude values
         for i,max_ in enumerate([y_N_max,y_E_max]):
             ano_NE_list[i].append("{s} {a}um/s".format(s=code_set.split('.')[1],
                                                         a=round(max_ * 1E6,2)
-                                                        ))
-
+                                                        ))    
+        envelopes.append(envelope_stream(st,normalize=True))
         sig_list.append(tremor_count_dict)
         TEROR_list.append(TEORRm)
 
@@ -585,27 +569,42 @@ def stacked_process(jday,year='2017'):
         print('\t--not enough stations processed')
         return False
 
-    # ++ WAVEFORM ENVELOPES
-
-    
-
-    # ++ TIME - !!! check that all times should be equal eh?
+    # ++ TIME ARRAY - !!! check that all times should be equal eh?
     startNZ,endNZ = convert_UTC_to_local(st)
     t = np.linspace(startNZ.hour,startNZ.hour+12,len(x))
-    
+
+    x,y_N_surface,_ = filter_then_minmax(st,bounds=[1/30,1/6],
+                                                comp='N',normalize=False)
+
     envelope_plots(code=code_set,x=t,N=y_N_list,E=y_E_list,
-                 TEORRm_list=TEROR_list,
-                 sig_list=sig_list,
-                 ano_list=ano_NE_list,
-                 envelopes=envelopes,
-                 night=night,
-                 show=True,
-                 save=False)
+                     TEORRm_list=TEROR_list,
+                     sig_list=sig_list,
+                     ano_list=ano_NE_list,
+                     envelopes=envelopes,
+                     surface=y_N_surface,
+                     night=night,
+                     show=True,
+                     save=True)
 
     return True
 
 # =========================== CLEANUP FUNCTIONS =============================
-
+def filter_then_minmax(st,bounds,comp=None,normalize=True):
+    """run stream object through a filter and then return a min_max plot array
+    """
+    if comp:
+        tr = st.select(component=comp)[0]
+    else:
+        tr = st[0]
+        
+    tr.filter('bandpass',freqmin=bounds[0],freqmax=bounds[1])
+    x,y = create_min_max(tr)
+    ymax = y.max()
+    if normalize:
+        y/=ymax
+        
+    return x,y,ymax
+    
 def return_RMS(A,B,normalize=True,cutoff=1.0):
     """return RMS values of two arrays (usually north and east seismograms)
     normalize by max value by default, set a cutoff if necessary and if norm on
@@ -616,6 +615,7 @@ def return_RMS(A,B,normalize=True,cutoff=1.0):
         if cutoff:
             for data in N,E,horizontal_rms:
                 data[abs(data)>cutoff] = np.nan
+                
     return RMS
     
 def waveform_envelope(signal):
@@ -639,6 +639,40 @@ def waveform_envelope(signal):
     amplitude_envelope = np.abs(analytic_signal)
     
     return amplitude_envelope
+    
+    
+def envelope_stream(st,normalize=False):
+    """taking waveform envelopes partially acfording to Ide 2011
+    bandpass filter 2-8Hz, lowpass filter 0.1Hz, resample 1Hz
+    hilbert transform instead of RMS
+    """
+    envelope_stream = st.copy()
+    envelope_stream.filter('bandpass',freqmin=2,freqmax=8)
+    envelope_stream.filter('lowpass',freq=0.1)
+
+    envelope_stream.decimate(int(st[0].stats.sampling_rate),no_filter=True)
+    north_comp = envelope_stream.select(component="N")[0]
+    east_comp = envelope_stream.select(component="E")[0]
+    RMS = return_RMS(north_comp.data,east_comp.data,
+                                            normalize=False,cutoff=0.5)
+    ENV = waveform_envelope(RMS)
+    
+    if normalize:
+        ENV/=ENV.max()
+    
+    return ENV
+    
+    
+def analyze_spectra(signal,sampling_rate):
+    """fourier transform of signal to look at frequency spectra 
+    akin to Yabe et al. 2014
+    """
+    fft_signal = np.fft.fft(signal)
+    freq_bins = np.fft.fftfreq(n=len(signal),d=1/sampling_rate)
+    return
+    
+    
+    
 
 
 if __name__ == "__main__":

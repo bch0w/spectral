@@ -13,7 +13,8 @@ def create_min_max(tr,pixel_length=10):
     Creates new data using a min/max approach that calculated the minimum and
     maximum values of each "pixel". Much faster plotting of large datasets.
 
-    !!! base code copied and modified from obspy.imaging.waveform.__plot_min_max
+    !!! base code copied and modified 
+    !!! from obspy.imaging.waveform.__plot_min_max
     """
     # Some variables to help calculate the values.
     starttime = date2num(tr.stats.starttime.datetime)
@@ -26,7 +27,6 @@ def create_min_max(tr,pixel_length=10):
     # width = 800 # guessing
     # pixel_length = int(
     #     np.ceil((x_width * sampling_rate + 1) / width))
-    pixel_length = pixel_length
     # Loop over all the traces. Do not merge them as there are many samples
     # and therefore merging would be slow.
     trace_length = len(tr.data)

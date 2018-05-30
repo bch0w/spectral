@@ -26,13 +26,13 @@ def gather_data(sta,cha,start,end):
     """
     mseed_files, response_file = getdata.get_fathom(station=sta,channel=cha,
                                                         start=start,end=end)
+    mseed_files.sort()
 
     return mseed_files, response_file
 
 def analyze_noise(data_files,response,decimateby=5):
     """run through data files and create PPSD objects using obsy
     """
-    data_files.sort()
     print("++ {} data files".format(len(data_files)))
     inv = read_inventory(response)
     # initialize PPSD with first datafile
@@ -97,12 +97,15 @@ def mass_process():
     start = '2018-072'
     end = '2018-143'
     decimate_by = 5
-	#for i in range(10,22):
-    for i in [19,20,21]: 
+    for i in range(12,19):
         station = 'RD{:0>2}'.format(i)
         for channel in ['HHZ','HHN','HHE']:
             data,response = gather_data(sta=station,cha=channel,
                                                         start=start,end=end)
+            if not data:
+                print('No data for',station)
+                continue
+
             ppsd = analyze_noise(data,response)
 
             # save ppsd and figure
@@ -117,6 +120,7 @@ def mass_process():
                             'spectral/ppsd_plots/PPSD_HOLD/{}.png'.format(
                                                                     output_name)
             ppsd.save_npz(npz_filepath)
+            # ppsd.plot(filename=png_filepath,cmap=pqlx,show_mean=True)
 
 if __name__ == '__main__':
     mass_process()

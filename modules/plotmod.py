@@ -3,11 +3,33 @@
 import getdata
 import matplotlib.pyplot as plt
 
+def build_color_dictionary(num_of_colors,map='nipy_spectral'):
+    """to keep static colors for each station for future plots. assumes 21
+    stations in the array
+    """
+    import matplotlib.cm as mplcm
+    import matplotlib.colors as colors
+    
+    num_of_colors += 1
+    cm = plt.get_cmap(map)
+    norm_col = colors.Normalize(vmin=0,vmax=num_of_colors-1)
+    scalarMap = mplcm.ScalarMappable(norm=norm_col,cmap=cm)
+    colorrange = [scalarMap.to_rgba(i) for i in range(num_of_colors)]
+        
+    color_dictionary = {}
+    for i in range(0,num_of_colors):
+        color_dictionary[i] = colorrange[i]
+    
+    return color_dictionary
+    
 def pretty_grids(input_ax):
     """make dem grids pretty
     """
     input_ax.set_axisbelow(True)
-    input_ax.tick_params(which='both',direction='in',top=True,right=True)
+    input_ax.tick_params(which='both',
+                         direction='in',
+                         top=True,
+                         right=True)
     input_ax.minorticks_on()
     input_ax.grid(which='minor',
                     linestyle=':',
