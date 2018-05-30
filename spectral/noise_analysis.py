@@ -12,6 +12,8 @@ from obspy import read_inventory
 from obspy.signal import PPSD
 from obspy import UTCDateTime
 from obspy.imaging.cm import pqlx
+import matplotlib
+matplotlib.use('agg')
 
 # internal modules
 sys.path.append('../modules/')
@@ -85,8 +87,8 @@ def single_process():
     png_filepath = pathnames()['plots'] + \
                     'spectral/ppsd_plots/PPSD_HOLD/{}.png'.format(output_name)
 
-    ppsd.save_npz(npz_filepath)
-    ppsd.plot(filename=png_filepath,cmap=pqlx,show_mean=True)
+
+    ppsd.plot(filename=png_filepath,cmap=pqlx,show_mean=True,show=True)
 
 def mass_process():
     """main processing function
@@ -95,7 +97,8 @@ def mass_process():
     start = '2018-072'
     end = '2018-143'
     decimate_by = 5
-    for i in range(1,22):
+	#for i in range(10,22):
+    for i in [19,20,21]: 
         station = 'RD{:0>2}'.format(i)
         for channel in ['HHZ','HHN','HHE']:
             data,response = gather_data(sta=station,cha=channel,
@@ -113,9 +116,7 @@ def mass_process():
             png_filepath = pathnames()['plots'] + \
                             'spectral/ppsd_plots/PPSD_HOLD/{}.png'.format(
                                                                     output_name)
-
             ppsd.save_npz(npz_filepath)
-            ppsd.plot(filename=png_filepath,cmap=pqlx,show_mean=True)
 
 if __name__ == '__main__':
     mass_process()
