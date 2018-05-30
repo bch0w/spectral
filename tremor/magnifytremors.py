@@ -83,6 +83,21 @@ def create_x_axes(st,Rm):
     x_Rm = np.linspace(start,end,len(Rm))
     
     return x_st,x_Rm
+
+def points_over_sigma(Rm):
+    """determine which points lie over 2sigma for minute arrays
+    """
+    meanstdfilepath = pathnames()['data'] + 'TEROR/MEANSTD_night_2338.npz'
+    meanstdfile = np.load(meanstdfilepath)
+    mean = meanstdfile['Rm_mean']
+    std = meanstdfile['Rm_sigma']
+    two_sigma = mean + (2*std)
+    
+    for i,rmpoint in enumerate(Rm):
+        if rmpoint < two_sigma:
+            Rm[i] = np.nan
+    
+    return Rm
     
 def magnifytremors(date):
     """dynamically plot waveforms and envelopes depending on number of files
@@ -97,8 +112,12 @@ def magnifytremors(date):
         Rm = parse_npz_file(npz,choice='Rm')
         st,st_envelope = process_data(pick,bounds=[2,8])
         x_st,x_Rm = create_x_axes(st,Rm)
+        Rm = points_over_sigma(Rm)
         ax.plot(x_st,st[0].data,c=color_dictionary[i])
-        twax.plot(x_Rm,Rm,c='k')
+        twax.scatter(x_Rm,Rm,marker='o',c='k',s=1.5,)
+        ax.set_ylabel(st[0].get_id().split('.')[1])
+        ax.set_ylim([-np.std(st[0].data)*10,np.std(st[0].data)*10])
+    axes[-1].set_xlabel('Time [s]')
         
     plt.show()
         
