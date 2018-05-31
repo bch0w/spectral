@@ -109,6 +109,14 @@ def example_lonlat_utm():
     URC_xy= lonlat_utm(URC_lonlat[0],URC_lonlat[1])
     print(LLC_xy)
     print(URC_xy)
+	
+	#modified kaikoura to east cape
+    LLC_lonlat = [171311,5286948]
+    URC_lonlat = [LLC_lonlat[0]+495,LLC_lonlat[1]+566]
+    LLC_xy= lonlat_utm(LLC_lonlat[0],LLC_lonlat[1],inverse=True)
+    URC_xy= lonlat_utm(URC_lonlat[0],URC_lonlat[1],inverse=True)
+    print(LLC_xy)
+    print(URC_xy)
 
     # carls project
     TAPE_LLC = [44429.4,5335568.8]
@@ -120,7 +128,7 @@ def example_lonlat_utm():
     
 def example_determine_nxny():
     # kaikoura to east cape
-    LLC_lonlat = [173.3795,-42.4198]
+    LLC_lonlat = [173,-42.5]
     URC_lonlat = [178.8848,-37.4556]
     determine_nxny(LLC_lonlat,URC_lonlat)
     
