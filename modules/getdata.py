@@ -496,7 +496,8 @@ def get_fathom(station,channel,start,end=None):
     :type station: str
     :param station: station name i.e. RD01 (case-insensitive)
     :type channel: str
-    :param channel: channel of interest, i.e. BHN, HHE (case-insensitive)
+    :param channel: channel of interest, i.e. BHN, HHE (case-insensitive), can 
+    wildcard the last value with ? i.e. HH? to get HHN,HHE,HHZ
     :type start: str
     :param start: starttime for data request
     :type end: str
@@ -508,7 +509,10 @@ def get_fathom(station,channel,start,end=None):
     """
     # channel naming convention based on instrument type
     sta = station.upper()
-    cha = channel.upper()
+    if channel[-1] in ["?","*"]:
+        channel_list = ["HHN","HHE","HHZ"]
+    else:
+        channel_list = [channel.upper()]
     start = UTCDateTime(start)
     if end:
         end = UTCDateTime(end)
@@ -521,36 +525,40 @@ def get_fathom(station,channel,start,end=None):
 
     mseed_files = []
     fid_template = 'XX.{sta}.10.{cha}.D.{year}.{jday:0>3}'
-    # if data only spans the same year
-    if start.year == end.year:
-        base_ = path_template.format(year=start.year,sta=sta,cha=cha)
-        for JDAY in range(start.julday,end.julday+1):
-            fid_ = fid_template.format(sta=sta,cha=cha,year=start.year,
+    for cha in channel_list:
+        # if data only spans the same year
+        if start.year == end.year:
+            base_ = path_template.format(year=start.year,sta=sta,cha=cha)
+            for JDAY in range(start.julday,end.julday+1):
+                fid_ = fid_template.format(sta=sta,cha=cha,year=start.year,
                                                                     jday=JDAY)
-            base_fid_ = os.path.join(base_,fid_)
-            if os.path.exists(base_fid_):
-                mseed_files.append(base_fid_)
-    # data spans multiple years
-    if start.year != end.year:
-        if end.year-start.year != 1:
-            print('[getdata.rdf_internal] data spans more than 1 year, ERROR')
+                base_fid_ = os.path.join(base_,fid_)
+                if os.path.exists(base_fid_):
+                    mseed_files.append(base_fid_)
+        # data spans multiple years
+        if start.year != end.year:
+            if end.year-start.year != 1:
+                print(
+                    '[getdata.rdf_internal] data spans more than 1 year, ERROR')
 
-        # first year
-        year = start.year
-        base_ = path_template.format(year=year,sta=sta,cha=cha)
-        for JDAY_y1 in range(start.julday,366):
-            fid_ = fid_template.format(sta=sta,cha=cha,year=year,jday=JDAY_y1)
-            base_fid_ = os.path.join(base_,fid_)
-            if os.path.exists(base_fid_):
-                mseed_files.append(base_fid_)
-        # second year
-        year = end.year
-        base_ = path_template.format(year=year,sta=sta,cha=cha)
-        for JDAY_y2 in range(1,end.julday+1):
-            fid_ = fid_template.format(sta=sta,cha=cha,year=year,jday=JDAY_y2)
-            base_fid_ = os.path.join(base_,fid_)
-            if os.path.exists(base_fid_):
-                mseed_files.append(base_fid_)
+            # first year
+            year = start.year
+            base_ = path_template.format(year=year,sta=sta,cha=cha)
+            for JDAY_y1 in range(start.julday,366):
+                fid_ = fid_template.format(sta=sta,cha=cha,year=year,
+                                                                jday=JDAY_y1)
+                base_fid_ = os.path.join(base_,fid_)
+                if os.path.exists(base_fid_):
+                    mseed_files.append(base_fid_)
+            # second year
+            year = end.year
+            base_ = path_template.format(year=year,sta=sta,cha=cha)
+            for JDAY_y2 in range(1,end.julday+1):
+                fid_ = fid_template.format(sta=sta,cha=cha,year=year,
+                                                                jday=JDAY_y2)
+                base_fid_ = os.path.join(base_,fid_)
+                if os.path.exists(base_fid_):
+                    mseed_files.append(base_fid_)
 
     return mseed_files, resp_filepath
 

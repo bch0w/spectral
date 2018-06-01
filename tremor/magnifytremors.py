@@ -7,11 +7,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
 from obspy import read, UTCDateTime
-from pyfreqscan import waveform_envelope
 
 sys.path.append("../modules")
-from getdata import pathnames
+from getdata import pathnames, get_fathom
 from plotmod import pretty_grids, build_color_dictionary
+from pyfreqscan import waveform_envelope
 
 def collect_files(date):
     """grab datafile by dates
@@ -62,17 +62,19 @@ def setup_plot(number_of_files,twax=True):
             ax = plt.subplot(gs[i])
         else:
             ax = plt.subplot(gs[i],sharex=axes[0])
-        twax = None
         if twax:
             twinax = ax.twinx()
             twaxes.append(twinax)
+        else:
+            twax = None
+
         pretty_grids(ax)
         axes.append(ax)
 
     # remove x tick labels except for last axis
     for ax in axes[0:-1]:
         plt.setp(ax.get_xticklabels(),visible=False)
-
+    
     return f,axes,twaxes
 
 def create_x_axes(st,Rm=None):
@@ -83,10 +85,7 @@ def create_x_axes(st,Rm=None):
     if start > end:
         end += 12
     x_st = np.linspace(start,end,len(st[0].data))
-    if Rm:
-        x_Rm = np.linspace(start,end,len(Rm))
-    else:
-        x_Rm = None
+    x_Rm = np.linspace(start,end,len(Rm))
 
     return x_st,x_Rm
 
@@ -104,6 +103,40 @@ def points_over_sigma(Rm):
             Rm[i] = np.nan
 
     return Rm
+        
+def get_surface_wave_streams(stats,bounds):
+    """get all components of surface waves, radial and vertical for rayleigh and
+    transverse for love wave. currently case study for M8.2 Mexico quake.
+    match stats to streams already being used
+    """
+    from obspy import read, read_inventory, Stream
+    
+    mseeds,response = get_fathom(station=stats.station,
+                                 channel="HHZ",
+                                 start=stats.starttime,
+                                 end=stats.endtime)
+    st_gsw = Stream()
+    for ms in mseeds:
+        st_gsw += read(ms)
+    
+    inv = read_inventory(response)
+    
+    # preprocess in the same fashion as pyfreqscan
+    decimate_by = int(st_gsw[0].stats.sampling_rate//stats.sampling_rate)
+    st_gsw.trim(stats.starttime,stats.endtime)
+    st_gsw.decimate(decimate_by)
+    st_gsw.detrend("demean")
+    st_gsw.detrend("linear")
+    st_gsw.taper(max_percentage=0.05)
+    st_gsw.attach_response(inv)
+    st_gsw.remove_response(output="VEL",
+                          pre_filt=[.001,.01,50,55], # not in original code
+                          water_level=60, # not in original code
+                          plot=False)    
+    
+    st_gsw.filter('bandpass',freqmin=bounds[0],freqmax=bounds[1])
+    
+    return st_gsw
 
 def magnifytremors(date):
     """dynamically plot waveforms and envelopes depending on number of files
@@ -136,9 +169,9 @@ def magnifytremors(date):
     st_surface,st_envelope = process_data(pick_surface,bounds=[1/30,1/6])
     axes[-1].plot(x_st,st_surface[0].data,c='k')
 
-    plt.show()
+    plt.show()    
 
-def windowtremor(date,window=60*5):
+def windowtremor(date,window=60*45,rotate=False):
     """plot waveforms in small time windows for more in depth viewing
     window should be given in seconds
     """
@@ -147,29 +180,58 @@ def windowtremor(date,window=60*5):
     color_dictionary = build_color_dictionary(num_of_colors=NoF)
 
     # read in all the data first
-    DAT,STA = [],[]
-    for i,pick in enumerate(pickle_files):
+    DAT,STA,RM = [],[],[]
+    for i,(pick,npz) in enumerate(zip(pickle_files,npz_files)):
         st,st_envelope = process_data(pick,bounds=[2,8])
+        Rm = parse_npz_file(npz,choice='Rm')
+        Rm = points_over_sigma(Rm)
         station = st[0].get_id().split('.')[1]
+        RM.append(Rm)
         DAT.append(st[0].data)
-        STA.append(station)
+        STA.append("{}.{}".format(station,st[0].stats.channel))
         if station == "RD07":
-            st_surface,st_envelope = process_data(pick,bounds=[1/30,1/6])
-    window *= st[0].stats.sampling_rate
-    x_st,_ = create_x_axes(st)
+            stats = st[0].stats
+    
+    # get surface wave data
+    st_surface = get_surface_wave_streams(stats,bounds=[1/30,1/6])
 
     # sequential plots for each time window
+    rm_window = int(window*(1/(5*60)))
+    rmws = 0
+
+    window *= st[0].stats.sampling_rate
+    x_st,x_Rm = create_x_axes(st,Rm)  
     for window_start in range(0,len(x_st),int(window)):
-        f,axes,_ = setup_plot(NoF+1,twax=False)
+        f,axes,twaxes = setup_plot(NoF+1,twax=True)
         window_end = window_start + window
         ws,we = int(window_start),int(window_end)
-        for i,(tr,sta,ax) in enumerate(zip(DAT,STA,axes[:-1])):
+        rmwe = int(rmws+rm_window)
+        for i,(tr,rm,sta,ax,twax) in enumerate(zip(DAT,RM,STA,
+                                                        axes[:-1],twaxes[:-1])):
             ax.plot(x_st[ws:we],tr[ws:we],c=color_dictionary[i])
+            twax.scatter(x_Rm[rmws:rmwe],rm[rmws:rmwe],c='k',marker='o')
             ax.set_ylabel(sta)
         axes[-1].plot(x_st[ws:we],st_surface[0].data[ws:we],c='k')
+        axes[-1].set_ylabel(st_surface[0].stats.channel)
         axes[-1].set_xlabel('Time [h]')
         plt.show()
         plt.close()
+        rmws = rmwe
 
+def chiapas_BAz():
+    """case study of chiapas, return backazimuth values for rotating seismograms
+    """
+    from obspy.geodetics import gps2dist_azimuth
+    event_latlon = (15.38,-94.66)
+    wpuk_latlon = (-40.06,176.44)
+    gcd,BAz,Az = gps2dist_azimuth(lat1=event_latlon[0],lon1=event_latlon[1],
+                           lat2=wpuk_latlon[0],lon2=event_latlon[1])
+    
+    return BAz
+
+    
+    
+    
+    
 if __name__ == "__main__":
     windowtremor(date='2017-251')
