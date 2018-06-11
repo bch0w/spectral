@@ -3,6 +3,7 @@
 common
 #spectral
 __pycache__/
+spectral/scriptyard
 #kupe
 kupe/test_perl
 kupe/tools/perl_scripts

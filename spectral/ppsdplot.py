@@ -22,13 +22,11 @@ def station_dict(code):
                     "RD17":"TEAC", "RD18":"RANC","RD19":"MATT","RD20":"KAHU2",
                     "RD21":"TEAC2"}
     return station_dict[code]
-    
-def gather_ppsd(comp='Z',avg='median'):
+
+def gather_ppsd(specific,comp='Z',avg='median'):
     """grab folders of data. comp can be wildcard or N,E or Z
     """
     npz_path = pathnames()['ppsd']
-    # specific = 'FATHOM/Jan18_Mar18'
-    specific = 'FATHOM/Jul17_Jan18'
     filename = '*HH{}*.npz'.format(comp)
     files = glob.glob(os.path.join(npz_path,specific,filename))
     files.sort()
@@ -45,21 +43,22 @@ def gather_ppsd(comp='Z',avg='median'):
             average = ppsd.get_percentile(percentile=50)
         averages.append(average[1])
         stations.append(sta)
-            
+
     periods = average[0]
-        
+
     return stations,periods,averages
-    
+
 def compare_ppsd(comp='Z',avg='median'):
     """grab folders of data. comp can be wildcard or N,E or Z
     """
     npz_path = pathnames()['ppsd']
-    specific1 = 'Jan18_Mar18'
-    specific2 = 'Jul17_Jan18'
+    specific1 = 'RDF_JanMar_deployment/'
+    specific2 = 'RDF_MarMay_deployment/'
+    specific_list = [specific1,specific2]
     averages,stations = [],[]
-    for i,specific in enumerate([specific1,specific2]):
+    for i,specific in enumerate(specific_list):
         filename = '*HH{}*.npz'.format(comp)
-        files = glob.glob(os.path.join(npz_path,'FATHOM',specific,filename))
+        files = glob.glob(os.path.join(npz_path,specific,filename))
         files.sort()
 
         for fid in files:
@@ -73,68 +72,78 @@ def compare_ppsd(comp='Z',avg='median'):
                 average = ppsd.get_percentile(percentile=50)
             averages.append(average[1])
             stations.append(sta)
-                
         periods = average[0]
-        
+
     return stations,periods,averages
-    
-def plot_ppsd(save=False,show=True):
-    """plotting function
+
+def prime_plot():
+    """set up plot objects
     """
     f = plt.figure(figsize=(9,5),dpi=200)
     ax = f.add_subplot(111)
     pretty_grids(ax)
-    
-    styles = ['-.','--','-']
-    color_dict = build_color_dictionary(map='viridis',num_of_colors=21)
-    
+
     # plot lines for noise models and microseisms
     nlnm_x,nlnm_y = get_nlnm()
     nhnm_x,nhnm_y = get_nhnm()
     plt.plot(nhnm_x,nhnm_y,'gray',alpha=0.4)
     plt.plot(nlnm_x,nlnm_y,'gray',alpha=0.4)
     ax.fill_between(nhnm_x,nlnm_y,nhnm_y,facecolor='gray',alpha=0.2)
-    
-    # compare stations
-    stations,periods,averages = compare_ppsd()
-    stationcheck = [10,11,17,19,20,21]
-    stylecheck = ['-','--','-.','-','--','-.']
-    colorcheck = ['r','r','r','k','k','k']
-    y=0
-    for i,(avgs,stas) in enumerate(zip(averages,stations)):
-        sta_num = int(stas[2:])
-        if sta_num in stationcheck:
-            plt.plot(periods,avgs,c=colorcheck[y],
-                     linestyle=stylecheck[y],
-                     label="{} {}".format(stas,station_dict(stas)))
-            y+=1
-    
-    # plot single timeframe
-    # stations,periods,averages = gather_ppsd()
-    # for i,(avgs,stas) in enumerate(zip(averages,stations)):
-    #     sta_num = int(stas[2:])
-    #     if sta_num in stationcheck:
-    #         plt.plot(periods,avgs,c=color_dict[sta_num],
-    #                  linestyle=styles[i%len(styles)],
-    #                  label="{}".format(stas))
 
     plt.xlim([0.2,100])
     plt.ylim([nlnm_y.min(),-90])
     plt.xscale("log")
     plt.xlabel("Period [s]")
     plt.ylabel("Amplitude [m^2/s^4/Hz][dB]")
-    plt.legend(ncol=3,prop={"size":5})
-    plt.title("Station Relocation")
     plt.grid()
+
+    return f, ax
+
+
+def plot_ppsd(save=False,show=True):
+    """plotting function
+    """
+    styles = ['-.','--','-']
+    color_dict = build_color_dictionary(map='viridis',num_of_colors=21)
+
+    # compare stations
+    stations,periods,averages = compare_ppsd()
+    f,ax = prime_plot()
+
+    for i,(avgs,stas) in enumerate(zip(averages,stations)):
+        sta_num = int(stas[2:])
+        plt.plot(periods,avgs,
+                 label="{} {}".format(stas,station_dict(stas)))
+
     if save:
         figname = "placeholder"
         plt.savefig(figname)
     if show:
         plt.show()
-    
+
+def plot_by_station():
+    color_dict = build_color_dictionary(map='viridis',num_of_colors=21)
+
+    # compare stations
+    specific1 = 'RDF_JanMar_deployment'
+    specific2 = 'RDF_MarMay_deployment'
+    S1,periods,A1 = gather_ppsd(specific1)
+    S2,periods,A2 = gather_ppsd(specific2)
+
+    for i in range(1,22):
+        station_number = 'RD{:0>2}'.format(i)
+        f,ax = prime_plot()
+        for S,A,specific,L in zip([S1,S2],[A1,A2],[specific1,specific2],['-','--']):
+            try:
+                index = S.index(station_number)
+                plt.plot(periods,A[index],label=specific,linestyle=L)
+                plt.legend()
+                plt.title(station_number)
+            except ValueError:
+                continue
+        plt.show()
+
+
+
 if __name__ == "__main__":
-    plot_ppsd()
-
-
-
-
+    plot_by_station()
