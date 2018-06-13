@@ -19,7 +19,8 @@ def preprocess(st,resample=50,inv=False,output="VEL",filter=False):
                                       # pre_filt=pre_filt,
                                       water_level=60,
                                       plot=False)
-        
+        st_manipulate.taper(max_percentage=0.05)
+
     code = st[0].get_id()
     print("\t[procmod.preprocess] {ID} {r}Hz resample, response: {i}".format(
                                                                 ID=code,
@@ -36,7 +37,7 @@ def signal_to_noise(data,separation):
     signal = data[separation:]
     amplitude_SNR = abs(signal.max())/abs(noise.max())
     amplitude_SNR = round(amplitude_SNR,2)
-    
+
     return amplitude_SNR
 
 def trimstreams(st):

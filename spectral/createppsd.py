@@ -97,12 +97,13 @@ def mass_process():
     start = '2018-072'
     end = '2018-143'
     decimate_by = 5
-	#for i in range(10,22):
-    for i in [19,20,21]:
+    for i in range(10,22):
         station = 'RD{:0>2}'.format(i)
         for channel in ['HHZ','HHN','HHE']:
             data,response = gather_data(sta=station,cha=channel,
                                                         start=start,end=end)
+            if not data:
+                continue
             ppsd = analyze_noise(data,response)
 
             # save ppsd and figure
