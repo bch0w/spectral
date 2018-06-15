@@ -216,7 +216,7 @@ def fdsn_download(code,event_id=False,response=False,
         client = "IRIS"
 
     # search for data internal
-    data_path = pathnames()['mseed']+'GEONET/{n}_by_event/{e}_{s}.mseed'.format(
+    data_path = pathnames()['mseeds']+'GEONET/{n}_by_event/{e}_{s}.mseed'.format(
                                                                      n=net,
                                                                      e=event_id,
                                                                      s=sta)

@@ -1,24 +1,34 @@
 """module file for processing data
 """
-def preprocess(st,resample=50,inv=False,output="VEL",filter=False):
+def preprocess(st,resample=50,inv=None,output="VEL",filter=False):
     """preprocess waveform data:
     resample, demean, detrend, taper, remv. resp. (if applicable)
     """
 
     st_manipulate = st.copy()
     st_manipulate.resample(resample)
-    st_manipulate.detrend("demean")
     st_manipulate.detrend("linear")
+    st_manipulate.detrend("demean")
     st_manipulate.taper(max_percentage=0.05)
     inv_print = False
     if inv:
         inv_print = True
-        # pre_filt = [1/100,1/90,25,30]
         st_manipulate.attach_response(inv)
         st_manipulate.remove_response(output=output,
-                                      # pre_filt=pre_filt,
+                                      # pre_filt=[1/100,1/90,25,30],
                                       water_level=60,
                                       plot=False)
+        st_manipulate.detrend("linear")
+        st_manipulate.detrend("demean")
+        st_manipulate.taper(max_percentage=0.05)
+    
+    # if no inventory, assumed to be synthetic data
+    # change units from default velocity if necessary
+    elif not inv:
+        if output == "DISP":
+            st_manipulate.differentiate(method="gradient")
+        elif output == "ACC":
+            st_manipulate.integrate(method="cumtrapz")
         
     code = st[0].get_id()
     print("\t[procmod.preprocess] {ID} {r}Hz resample, response: {i}".format(
@@ -42,17 +52,22 @@ def signal_to_noise(data,separation):
 def trimstreams(st):
     """trim streams to common start and end times
     """
+    st_trimmed = st.copy()
     start_set,end_set = 0,1E10
-    for tr in st:
+    for tr in st_trimmed:
         start_hold = tr.stats.starttime
         end_hold = tr.stats.endtime
         if start_hold > start_set:
             start_set = start_hold
         if end_hold < end_set:
             end_set = end_hold
-
-    st.trim(start_set,end_set)
-
+            
+    st_trimmed.trim(start_set,end_set)
+    st_trimmed.detrend("linear")
+    st_trimmed.detrend("demean")
+    st_trimmed.taper(max_percentage=0.05)
+    
+    return st_trimmed
 
 def amplitude_threshold(t,tr,threshold_percentage):
     """based on some amplitude threshold, return all points that fall above,

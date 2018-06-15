@@ -1,3 +1,9 @@
+"""waveform comparisons of observations and synthetics based on GEONET event ID
+and station codes. currently works for GEONET permanent stations and FATHOM 
+temporary array stations
+"""
+
+
 import os
 import sys
 import traceback
