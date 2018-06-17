@@ -18,11 +18,10 @@ def preprocess(st,resample=50,inv=None,output="VEL",filter=False):
                                       # pre_filt=[1/100,1/90,25,30],
                                       water_level=60,
                                       plot=False)
-<<<<<<< HEAD
         st_manipulate.detrend("linear")
         st_manipulate.detrend("demean")
         st_manipulate.taper(max_percentage=0.05)
-    
+
     # if no inventory, assumed to be synthetic data
     # change units from default velocity if necessary
     elif not inv:
@@ -30,11 +29,8 @@ def preprocess(st,resample=50,inv=None,output="VEL",filter=False):
             st_manipulate.differentiate(method="gradient")
         elif output == "ACC":
             st_manipulate.integrate(method="cumtrapz")
-        
-=======
         st_manipulate.taper(max_percentage=0.05)
 
->>>>>>> 88adbac2105e0c3c1e91e5c44549b40695098512
     code = st[0].get_id()
     print("\t[procmod.preprocess] {ID} {r}Hz resample, response: {i}".format(
                                                                 ID=code,
@@ -66,12 +62,12 @@ def trimstreams(st):
             start_set = start_hold
         if end_hold < end_set:
             end_set = end_hold
-            
+
     st_trimmed.trim(start_set,end_set)
     st_trimmed.detrend("linear")
     st_trimmed.detrend("demean")
     st_trimmed.taper(max_percentage=0.05)
-    
+
     return st_trimmed
 
 def amplitude_threshold(t,tr,threshold_percentage):
