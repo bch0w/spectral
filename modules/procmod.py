@@ -18,6 +18,7 @@ def preprocess(st,resample=50,inv=None,output="VEL",filter=False):
                                       # pre_filt=[1/100,1/90,25,30],
                                       water_level=60,
                                       plot=False)
+<<<<<<< HEAD
         st_manipulate.detrend("linear")
         st_manipulate.detrend("demean")
         st_manipulate.taper(max_percentage=0.05)
@@ -30,6 +31,10 @@ def preprocess(st,resample=50,inv=None,output="VEL",filter=False):
         elif output == "ACC":
             st_manipulate.integrate(method="cumtrapz")
         
+=======
+        st_manipulate.taper(max_percentage=0.05)
+
+>>>>>>> 88adbac2105e0c3c1e91e5c44549b40695098512
     code = st[0].get_id()
     print("\t[procmod.preprocess] {ID} {r}Hz resample, response: {i}".format(
                                                                 ID=code,
@@ -46,7 +51,7 @@ def signal_to_noise(data,separation):
     signal = data[separation:]
     amplitude_SNR = abs(signal.max())/abs(noise.max())
     amplitude_SNR = round(amplitude_SNR,2)
-    
+
     return amplitude_SNR
 
 def trimstreams(st):

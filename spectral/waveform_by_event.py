@@ -14,7 +14,7 @@ from obspy.geodetics.base import gps2dist_azimuth
 import getdata
 import procmod
 import plotmod
-from getdata import pathnames
+from getdata import pathnames, get_fathom
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -49,7 +49,7 @@ def plot_streams(st,bounds,save=False,show=True):
 
     # final plot
     ax1.set_xlim([t.min(),t.max()])
-    ax1.set_title("{e} {s} [{t0}-{t1}s]".format(e=event_id,
+    ax1.set_title("{e} {s} [{t0}-{t1}s]".format(e=stats.starttime,
                                                     s=stats.station,
                                                     t0=bounds[0],
                                                     t1=bounds[1])
@@ -61,9 +61,9 @@ def plot_streams(st,bounds,save=False,show=True):
     ax3.set_xlabel("time (sec)")
 
     if save:
-        figtitle = "{e}_{s}.png".format(e=event_id,s=stats.station)
-        figfolder = join(pathnames()['kupeplots'],"obsynth_plots",figtitle)
-        plt.savefig(figfolder,dpi=200)
+        figtitle = "{s}_{t}.png".format(s=stats.station,t=TART)
+        figfolder = join(pathnames()['plots'],"noncategorical",figtitle)
+        plt.savefig(figfolder,dpi=100)
 
     if show:
         plt.show()
@@ -158,28 +158,56 @@ def initial_data_gather(code,event_id,bounds):
 
     return st_alltogether
 
-# =================================== MAIN ====================================
-event_list = glob.glob(pathnames()['mseed'] + 'GA/*')
-code = "NZ.KNZ.*.HH*"
-# event_id = "2013p545288"
-bounds = [6,30]
+def fathom_data_gather(station,origin_time,bounds):
+    """get fathom data, filter and return stream
+    """
+    mseeds,inv = get_fathom(station,'HH*',start=origin_time,end=origin_time+300)
+    if not mseeds:
+        return None
+    st = Stream()
+    for ms in mseeds:
+        st += read(ms)
+    st.trim(origin_time,origin_time+300)
+    st_proc = procmod.preprocess(st,inv=inv,output="VEL")
+    st_proc.filter("bandpass",freqmin=1/bounds[1],freqmax=1/bounds[0])
 
-check_list = []
-event_work = []
-for event in event_list:
-    try:
-        event_id = os.path.basename(event)
-        st = initial_data_gather(code,event_id,bounds)
-        plot_two_streams(st,bounds=bounds,twinax=False,show=True,save=False)
-    except Exception as e:
-        print("="*79)
-        traceback.print_exc()
-        print("="*79)
-        continue
-    check = input("y or n")
-    check_list.append(check)
-    event_work.append(event)
+    return st_proc
 
-for i,j in zip(event_work,check_list):
-    print(os.path.basename(i),j)
-import ipdb;ipdb.set_trace()
+def process_fathom():
+    bounds = [3,30]
+    global TART
+    TART = "20180425232800"
+    origin_time = UTCDateTime(TART)
+    print(origin_time.julday)
+    for i in range(14,22):
+        station = "RD{:0>2}".format(i)
+        print(station)
+        st = fathom_data_gather(station,origin_time,bounds)
+        if not st:
+            continue
+        plot_streams(st,bounds=bounds,show=True,save=True)
+
+def process_que():
+    event_list = glob.glob(pathnames()['mseed'] + 'GA/*')
+    code = "NZ.KNZ.*.HH*"
+
+    check_list = []
+    event_work = []
+    for event in event_list:
+        try:
+            event_id = os.path.basename(event)
+            st = initial_data_gather(code,event_id,bounds)
+        except Exception as e:
+            print("="*79)
+            traceback.print_exc()
+            print("="*79)
+            continue
+        check = input("y or n")
+        check_list.append(check)
+        event_work.append(event)
+
+    for i,j in zip(event_work,check_list):
+        print(os.path.basename(i),j)
+
+if __name__ == "__main__":
+    process_fathom()

@@ -21,12 +21,12 @@ def pathnames():
     elif basecheck == "Users/chowbr":
         where = "VIC"
         base = "/Users/chowbr/Documents/subduction"
-    
+
     # set up important paths
     mseeds = os.path.join(base,'mseeds')
     spectral = os.path.join(base,'spectral')
     common = os.path.join(spectral,'common')
-    
+
     path_dictionary = {"spectral":os.path.join(spectral,''),
             "kupe":os.path.join(spectral,'kupe',''),
             "modules":os.path.join(spectral,'modules',''),
@@ -490,17 +490,19 @@ def rdf_internal(station,channel,start,end=False,response=True):
 
 def get_fathom(station,channel,start,end=None):
     """
-    rewritten paired down version of rdf_internal. rdf_internal left because
-    I make break something if I try to take it out.
+    rewritten paired down version of rdf_internal.
+
+    example call:
+    mseeds,inv = get_fathom('RD01','HH*',start=UTCDateTime(2017-12-01))
 
     :type station: str
     :param station: station name i.e. RD01 (case-insensitive)
     :type channel: str
-    :param channel: channel of interest, i.e. BHN, HHE (case-insensitive), can 
+    :param channel: channel of interest, i.e. BHN, HHE (case-insensitive), can
     wildcard the last value with ? i.e. HH? to get HHN,HHE,HHZ
-    :type start: str
+    :type start: str or UTCDateTime
     :param start: starttime for data request
-    :type end: str
+    :type end: str or UTCDateTime
     :param end: endtime for data request
     :rtype mseed_files: list of str
     :return mseed_files: list of absolute filepaths to requested data
@@ -513,11 +515,13 @@ def get_fathom(station,channel,start,end=None):
         channel_list = ["HHN","HHE","HHZ"]
     else:
         channel_list = [channel.upper()]
-    start = UTCDateTime(start)
+    if type(start) == str:
+        start = UTCDateTime(start)
     if end:
-        end = UTCDateTime(end)
+        if type(end) == str:
+            end = UTCDateTime(end)
     else:
-        end = UTCDateTime(start)
+        end = start
 
     # filepaths direct to RDF
     path_template = pathnames()['fathom'] + '{year}/XX/{sta}/{cha}.D/'
