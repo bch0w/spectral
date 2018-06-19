@@ -13,12 +13,13 @@ dirname = os.getcwd()
 all_files = glob.glob(os.path.join(dirname,'*.sem?'))
 print("{} files found".format(len(all_files)))
 
-cmtfilepath = glob.glob(os.path.join(dirname,'*CMTSOLUTION'))[0]
-cmtfile = read_events(cmtfilepath,format='CMTSOLUTION')
-if not cmtfile:
-    sys.exit('CMTSOLUTION file required in folder')
-starttime = cmtfile[0].origins[0].time
-
+cmtfilepath = glob.glob(os.path.join(dirname,'*CMTSOLUTION'))
+if cmtfilepath:
+    cmtfile = read_events(cmtfilepath[0],format='CMTSOLUTION')
+    starttime = cmtfile[0].origins[0].time
+else:
+    print("ACHTUNG: No CMTSOLUTION file; starttime set as 2000-01-01T00:00:00")
+    starttime = UTCDateTime('2000-01-01T00:00:00')
 
 errors = 0
 for fname in all_files:
@@ -32,7 +33,7 @@ for fname in all_files:
         data = np.loadtxt(fname=fname, usecols=1)
         # assuming dt is constant after 3 decimal points
         delta = round(time[1]-time[0],3)
-    
+
         try:
             network,station,channel,component = basename.split('.')
             stats = {"network":network,
@@ -48,7 +49,7 @@ for fname in all_files:
         except ValueError:
             print('nonstandard filename - cannot write header info')
             st = Stream([Trace(data=data)])
-        
+
         st.write(output_name,format="MSEED")
     except KeyboardInterrupt:
         sys.exit()
