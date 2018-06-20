@@ -105,7 +105,7 @@ def initial_data_gather(PD):
 
     if not observationdata:
         print("No observation data")
-        return None
+        return None,None,None
 
     # rotate to theoretical backazimuth if necessary
     if PD["component"] == ("R" or "T"):
@@ -118,7 +118,7 @@ def initial_data_gather(PD):
     syntheticdata = syntheticdata.select(component=PD["component"])
 
     # observation preprocessing + instrument response
-    observationdata_proc = procmod.preprocess(observationdata,
+    observationdata = procmod.preprocess(observationdata,
                                                 inv=inv,
                                                 output=PD["output"])
 
@@ -127,16 +127,16 @@ def initial_data_gather(PD):
 
     # if GCMT solution doesn't exist, timeshift isn't possible
     if time_shift:
-        syntheticdata_preproc = synmod.stf_convolve(st=syntheticdata,
+        syntheticdata = synmod.stf_convolve(st=syntheticdata,
                                                  half_duration=half_duration,
                                                  time_shift=time_shift)
 
-    syntheticdata_proc = procmod.preprocess(syntheticdata_preproc,inv=None,
-                                            output=PD["output"])
+    syntheticdata = procmod.preprocess(syntheticdata,inv=None,
+                                                        output=PD["output"])
 
 
     # combine and trim to common time
-    st_IDG = observationdata_proc + syntheticdata_proc
+    st_IDG = observationdata + syntheticdata
     st_IDG = procmod.trimstreams(st_IDG)
 
     # filter
@@ -191,11 +191,10 @@ def run_pyflex(PD,st,inv,event,plot=False,config="UAF"):
                                c_4a=2.5,
                                c_4b=12.0)
 
-
     windows = pyflex.select_windows(observed=obs,
                                     synthetic=syn,
                                     config=config,
-                                    # event=event, # not working for some reason
+                                    event=event, # not working for some reason
                                     station=inv,
                                     plot=plot)
     if not windows:
@@ -289,12 +288,17 @@ def bobTheBuilder():
     :param PLOT: plot outputs of pyflex and pyadjoint, global switch
     """
     # =============== PARAMETER SET ===============
-    EVENT_IDS = ["2014p240655"]
+    EVENT_IDS = ["2018p130600"]
     # STATION_NAMES = ['NZ.BFZ','NZ.BKZ','NZ.HAZ','NZ.HIZ','NZ.KNZ','NZ.MRZ',
     #                  'NZ.MWZ','NZ.OPRZ','NZ.PUZ','NZ.PXZ','NZ.RTZ','NZ.TLZ',
     #                  'NZ.TOZ','NZ.TSZ','NZ.VRZ','NZ.WAZ']
-    STATION_NAMES = ['NZ.HAZ']
-    MINIMUM_FILTER_PERIOD = 3
+    STATION_NAMES = ['XX.RD01','XX.RD02','XX.RD03','XX.RD04','XX.RD05',
+                       'XX.RD06','XX.RD07','XX.RD08','XX.RD09','XX.RD10',
+                       'XX.RD11','XX.RD12','XX.RD13','XX.RD14','XX.RD15',
+                       'XX.RD16','XX.RD17','XX.RD18','XX.RD19','XX.RD20',
+                       'XX.RD21','XX.RD22']
+    # STATION_NAMES = ['XX.RD01']
+    MINIMUM_FILTER_PERIOD = 6
     MAXIMUM_FILTER_PERIOD = 30
     COMPONENT = "Z"
     UNIT_OUTPUT = "VEL"
@@ -319,12 +323,15 @@ def bobTheBuilder():
 
             # PROCESSING
             st,inv,event = initial_data_gather(PAR_DICT)
+            if not st:
+                continue
             windows = run_pyflex(PAR_DICT,st,inv,event,plot=PLOT)
             if not windows:
                 continue
             adj_src = run_pyadjoint(PAR_DICT,st,windows,
                                     output_path=ADJ_SRC_OUTPUT_PATH,
                                     plot=PLOT)
+
 
 
 # =================================== MAIN ====================================
