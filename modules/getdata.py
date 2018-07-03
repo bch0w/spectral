@@ -23,6 +23,7 @@ def pathnames():
         base = "/Users/chowbr/Documents/subduction"
 
     # set up important paths
+    tomo = os.path.join(base,'tomo')
     mseeds = os.path.join(base,'mseeds')
     spectral = os.path.join(base,'spectral')
     common = os.path.join(spectral,'common')
@@ -39,6 +40,7 @@ def pathnames():
             "ppsd":os.path.join(common,'DATA','PPSD',''),
             "data":os.path.join(common,'DATA',''),
             "kupedata":os.path.join(common,'DATA','KUPEDATA',''),
+            "xyz":os.path.join(tomo,'myMeshes','xyzTopoMoho',''),
             "where": where
                     }
 

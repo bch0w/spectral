@@ -1,5 +1,8 @@
 """helper functions designed to facilitate the process of meshing and 
 running simulations with kupe. separated into specific functionalities
+
+determine_nxny: convet WGS84 to UTM and find optimum mesh size
+lonlat_utm: convert WGS84 to UTM
 """
 
 # ================================ MESHING ====================================
