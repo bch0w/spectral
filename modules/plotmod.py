@@ -9,7 +9,7 @@ def build_color_dictionary(num_of_colors,map='nipy_spectral'):
     """
     import matplotlib.cm as mplcm
     import matplotlib.colors as colors
-    
+
     num_of_colors += 1
     cm = plt.get_cmap(map)
     norm_col = colors.Normalize(vmin=0,vmax=num_of_colors-1)
@@ -19,9 +19,9 @@ def build_color_dictionary(num_of_colors,map='nipy_spectral'):
     color_dictionary = {}
     for i in range(0,num_of_colors):
         color_dictionary[i] = colorrange[i]
-    
+
     return color_dictionary
-    
+
 def pretty_grids(input_ax):
     """make dem grids pretty
     """

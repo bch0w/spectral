@@ -9,7 +9,7 @@ export PATH=$PATH:$CUBITDIR/bin
 export PYTHONPATH=~/.conda/envs/mesher/bin/python:$CUBITDIR/bin:$CUBITDIR/structure
 
 # name of mesh
-FTAG=nz_SRTM15P_553_622_1000m
+FTAG=nz_ETOPO1_553_622_1000m
 
 MESH0_MERGE1=$1
 

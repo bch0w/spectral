@@ -1,7 +1,7 @@
 """in generating meshes with different topography files at different resolutions
 we need a way to quantify the different meshes and determine what is different
 in the resulting waveforms from each mesh, how the topography files affect
-the surface waves, and how the mesh edges affect stations that are very close to 
+the surface waves, and how the mesh edges affect stations that are very close to
 the boundaries. this script should hopefully encompass all the tools to make
 that possible
 ++worklist
@@ -16,12 +16,13 @@ import math
 sys.path.append('../modules/')
 import numpy as np
 from obspy import read, Stream
-from os.path import join 
+from os.path import join
 
 from getdata import pathnames
-from plotmod import pretty_grids
+# from plotmod import pretty_grids
 
 import matplotlib as mpl
+mpl.use('TkAgg')
 import matplotlib.pyplot as plt
 
 mpl.rcParams['font.size'] = 8
@@ -51,9 +52,9 @@ def setup_plot(number_of_plots):
     # remove x tick labels except for last axis
     for ax in axes[0:-1]:
         plt.setp(ax.get_xticklabels(),visible=False)
-    
-    return f,axes    
-    
+
+    return f,axes
+
 
 # =================================== FUNC ====================================
 def waveform_getter(code,mesh,bounds=None):
@@ -69,20 +70,20 @@ def waveform_getter(code,mesh,bounds=None):
                                                                    s=sta,
                                                                    m=mesh))
         return None
-    
+
     # read in datafiles
     st = Stream()
     for d in datafiles:
         st += read(d)
-    
+
     # filter if necessary
     if bounds:
         st.filter('bandpass',freqmin=bounds[0],freqmax=bounds[1])
-    
+
     return st
-    
+
 def waveform_plotter(code,bounds,show=True,save=False):
-    """call waveform_getter for the same station in each mesh and plot the 
+    """call waveform_getter for the same station in each mesh and plot the
     waveforms superimposed to see the differences
     """
     net,sta,loc,cha = code.split('.')
@@ -94,14 +95,14 @@ def waveform_plotter(code,bounds,show=True,save=False):
             st_comp = st.select(component=comp)
             plotlabel = "{m} {n}.{s}".format(m=mesh,n=net,s=sta)
             ax.plot(st_comp.data,c=c,label=plotlabel)
-            
+
     for ax,comp in zip(axes,['N','E','Z']):
         ax.set_ylabel('{} disp [m]'.format(comp))
         ax.legend(prop={"size":5})
-        
+
     axes[2].set_xlabel('Time [s]')
     plt.title('Mesh Waveform Comparison')
-    
+
     if show:
         plt.show()
     if save:
@@ -110,17 +111,13 @@ def waveform_plotter(code,bounds,show=True,save=False):
         plt.savefig(figfolder,dpi=100)
 
 def mesh_mapper_2d(mesh,show=True,save=False):
-    """plot an xyz topography file as a 3d figure. lags out hard because our 
+    """plot an xyz topography file as a 3d figure. lags out hard because our
     topography data is so large and high resolution
-    """    
-    meshes = {"ETOPO1":"topo_ETOPO1_utm60H_ismooth0_553_622_1000m_surf.xyz",
-              "SRTM30P":"topo_SRTM30P_utm60H_ismooth0_553_622_1000m_surf.xyz",
-              "SRTM15P":"topo_SRTM15P_utm60H_ismooth0_553_622_1000m_surf.xyz"
-              }
+    """
     filepath = pathnames()['xyz'] + meshes[mesh]
-                 
+
     data = np.genfromtxt(filepath)
-    
+
     x = data[:,0]
     y = data[:,1]
     z = data[:,2]
@@ -133,16 +130,16 @@ def mesh_mapper_2d(mesh,show=True,save=False):
     plt.ylim([min(y),max(y)])
     plt.title(mesh)
     plt.colorbar()
-    
+
     if show:
         plt.show()
     if save:
         figtitle = "mesh_{m}.png".format(m=mesh)
         figfolder = join(pathnames()['kupeplots'],"meshcompare",figtitle)
-        plt.savefig(figfolder,dpi=400) 
-    
+        plt.savefig(figfolder,dpi=400)
+
     return f
-       
+
 def event_station_plotter(event,station):
     """given an event and a station, plot them on a map
     """
@@ -150,21 +147,18 @@ def event_station_plotter(event,station):
     nz_bb_path = pathnames()['DATA'] + 'STATIONXML/nz_BB_coords.npz'
     nz_bb = np.load(nz_bb_path)
     nz_bb_names = nz_bb['names']
-    
+
     bb_ind = np.where(nz_bb_names==station)
     sta_lat = nz_bb['lats'][bb_ind][0][0]
     sta_lon = nz_bb['lons'][bb_ind][0][0]
-    
+
     # find event coordinates
-    
-        
+
+
 def mesh_differencer_2d(mesh1,mesh2,show=True,save=False):
     """difference the elevation of mesh1 and mesh2
     """
-    meshes = {"ETOPO1":"topo_ETOPO1_utm60H_ismooth0_553_622_1000m_surf.xyz",
-              "SRTM30P":"topo_SRTM30P_utm60H_ismooth0_553_622_1000m_surf.xyz",
-              "SRTM15P":"topo_SRTM15P_utm60H_ismooth0_553_622_1000m_surf.xyz"
-              }
+
     # MESH 1
     filepath1 = pathnames()['xyz'] + meshes[mesh1]
     # filepath1=('topo_SRTM30P_utm60H_ismooth0_553_622_1000m_surf.xyz')
@@ -182,11 +176,11 @@ def mesh_differencer_2d(mesh1,mesh2,show=True,save=False):
     z2 = data2[:,2]
 
     zdiff = z1-z2
-    
+
     # plot it
     f,ax = plt.subplots()
     plt.scatter(x1,y1,c=zdiff,cmap='seismic')
-    
+
     # formatting
     plt.ticklabel_format(style='sci',
                          axis='both',
@@ -207,12 +201,12 @@ def mesh_differencer_2d(mesh1,mesh2,show=True,save=False):
         figtitle = "meshdiff_{m1}_{m2}.png".format(m1=mesh1,m2=mesh2)
         figfolder = join(pathnames()['kupeplots'],"meshcompare",figtitle)
         plt.savefig(figfolder,dpi=400)
-    
-    
+
+
 def mesh_mapper_3d():
-    """plot an xyz topography file as a 3d figure. lags out hard because our 
+    """plot an xyz topography file as a 3d figure. lags out hard because our
     topography data is so large and high resolution
-    """    
+    """
     from matplotlib import cm
     from matplotlib.mlab import griddata
     from mpl_toolkits.mplot3d import Axes3D
@@ -220,11 +214,11 @@ def mesh_mapper_3d():
     filepath = (pathnames()['xyz'] +
                         'topo_SRTM30P_utm60H_ismooth0_553_622_1000m_surf.xyz')
     data = np.genfromtxt(filepath)
-    
+
     x = data[:343966,0]
     y = data[:343966,1]
     z = data[:343966,2]
-    
+
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     xi = np.linspace(min(x), max(x))
@@ -242,17 +236,12 @@ def mesh_mapper_3d():
     plt.show()
 
 if __name__ == "__main__":
-    mesh_differencer_2d('ETOPO1','SRTM15P',show=True,save=False)
-    # mesh_mapper_2d('SRTM30P',show=False,save=True)
-        
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+    global meshes
+    meshes = {"ETOPO1":"topo_ETOPO1_utm60H_ismooth0_553_622_1000m_surf.xyz",
+              "SRTM30P":"topo_SRTM30P_utm60H_ismooth0_553_622_1000m_surf.xyz",
+              "SRTM30P_552":"topo_SRTM30P_utm60H_ismooth0_552_620surf.xyz",
+              "SRTM15P":"topo_SRTM15P_utm60H_ismooth0_553_622_1000m_surf.xyz",
+              "ETOPO1_OLD":"topo_NZ_BC_utm60H_ismooth0_496_566surf.xyz"
+              }
+    # mesh_differencer_2d('SRTM15P','SRTM30P',show=False,save=True)
+    mesh_mapper_2d('SRTM30P_552',show=False,save=True)
