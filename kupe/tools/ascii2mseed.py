@@ -20,6 +20,11 @@ if cmtfilepath:
 else:
     print("ACHTUNG: No CMTSOLUTION file; starttime set as 2000-01-01T00:00:00")
     starttime = UTCDateTime('2000-01-01T00:00:00')
+    cont = input("Continue? (y/[n])")
+    if cont == 'n':
+        import sys
+        sys.exit()
+    
 
 errors = 0
 for fname in all_files:
