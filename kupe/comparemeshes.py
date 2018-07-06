@@ -37,7 +37,7 @@ def setup_plot(number_of_plots):
     f = plt.figure(figsize=(11.69,8.27),dpi=75)
     nrows,ncols=number_of_plots,1
     height_ratios = [1] * (number_of_plots)
-    
+
     gs = gridspec.GridSpec(nrows,ncols,height_ratios=height_ratios,hspace=0)
 
     # create gridspec subplots, sharex with the first axis
@@ -56,11 +56,11 @@ def setup_plot(number_of_plots):
         plt.setp(ax.get_xticklabels(),visible=False)
 
     return f,axes
-    
+
 def lonlat_utm(lon_or_x,lat_or_y,zone=60,inverse=False):
     """!!!taken from meshGenTools
     convert latitude and longitude coordinates to UTM projection
-    
+
     :type lon_or_x: float or int
     :param lon_or_x: longitude value in WGS84 or X in UTM-'zone' projection
     :type lat_or_y: float or int
@@ -75,7 +75,7 @@ def lonlat_utm(lon_or_x,lat_or_y,zone=60,inverse=False):
                                                         " +units=m +no_defs")
     myProj = Proj(projstr)
     x_or_lon,y_or_lat = myProj(lon_or_x,lat_or_y,inverse=inverse)
-    
+
     return x_or_lon, y_or_lat
 
 
@@ -159,7 +159,7 @@ def mesh_mapper_3d():
     fig.colorbar(surf)
 
     plt.show()
-    
+
 def mesh_mapper_2d(mesh,show=True,save=False):
     """plot an xyz topography file as a 3d figure. lags out hard because our
     topography data is so large and high resolution
@@ -188,9 +188,9 @@ def mesh_mapper_2d(mesh,show=True,save=False):
         plt.savefig(figfolder,dpi=400)
     if show:
         plt.show()
-        
+
     return f
-    
+
 # ================================ WAVEFORM ====================================
 def waveform_getter(code,mesh,bounds=None):
     """grab mseed data from synthetics folder, filter if necessary
@@ -226,14 +226,14 @@ def waveform_plotter(code,bounds,meshlist,show=True,save=False):
     waveforms superimposed to see the differences
     """
     net,sta,loc,cha = code.split('.')
-    
+
     colordict = {"ETOPO1_553_622":'r',
                  "ETOPO1_496_566":'c',
                  "SRTM30P_552_620":'g',
                  "SRTM15P":'b'
                  }
 
-    # dynamically plot waveforms based on meshlist 
+    # dynamically plot waveforms based on meshlist
     f,axes = setup_plot(3)
     for i,mesh in enumerate(meshlist):
         st = waveform_getter(code,mesh,bounds)
@@ -261,12 +261,12 @@ def waveform_plotter(code,bounds,meshlist,show=True,save=False):
                                                                 b1=bounds[1])
         figfolder = join(pathnames()['kupeplots'],"meshcompare",figtitle)
         plt.savefig(figfolder,dpi=100)
-        
+
     if show:
         plt.show()
-                
+
     return f,axes
-        
+
 
 def event_station_plotter(station,mesh='SRTM30P',
                                     event="2018p130600",save=False,show=True):
@@ -276,7 +276,7 @@ def event_station_plotter(station,mesh='SRTM30P',
     nz_bb_path = pathnames()['data'] + 'STATIONXML/nz_BB_coords.npz'
     nz_bb = np.load(nz_bb_path)
     nz_bb_names = nz_bb['NAME']
-    
+
     bb_ind = np.where(nz_bb_names==station)[0][0]
     sta_lat = nz_bb['LAT'][bb_ind]
     sta_lon = nz_bb['LON'][bb_ind]
@@ -284,75 +284,79 @@ def event_station_plotter(station,mesh='SRTM30P',
     # static event coordinates - but could get from CMTSOLUTIONS easily
     ev_lat = -39.9490
     ev_lon = 176.2995
-    
-    # convert coordinates to UTM60 
+
+    # convert coordinates to UTM60
     sta_x,sta_y = lonlat_utm(sta_lon,sta_lat)
     ev_x,ev_y = lonlat_utm(ev_lon,ev_lat)
-    
+
     # call mesh plotter and superimpose station and event
     f = mesh_mapper_2d(mesh,show=False,save=False)
     # plt.figure(f)
     plt.plot([sta_x,ev_x],[sta_y,ev_y],'k',zorder=4)
     plt.scatter(sta_x,sta_y,s=22.5,c='b',marker='v',
                                         edgecolors='k',linewidths=1,zorder=5)
-    plt.annotate(s="NZ.{}".format(station),xy=(sta_x,sta_y),zorder=6,color='w')                                    
+    plt.annotate(s="NZ.{}".format(station),xy=(sta_x,sta_y),zorder=6,color='w')
     plt.scatter(ev_x,ev_y,s=22.5,c='r',marker='o',
                                         edgecolors='k',linewidths=1,zorder=5)
     plt.annotate(s='2018p130600',xy=(ev_x,ev_y),zorder=6,color='w')
-    
+
     plt.xlabel('X (UTM-60)')
     plt.ylabel('Y (UTM-60)')
-    
+
     if save:
         figtitle = "evsta_{s}.png".format(s=station)
         figfolder = join(pathnames()['kupeplots'],"meshcompare",figtitle)
         plt.savefig(figfolder,dpi=100)
     if show:
-        plt.show()    
-        
+        plt.show()
+
     return f
-    
-    
-    
+
+
+
 # ============================== FUNC CALLS ====================================
 def create_composite():
     """waveform comparisons of synthetics with a map showing source-receiver
     pair and connecting lines, potential option to plot onto real mesh (might
     be intensive)
     """
-    
-    meshlist = ["ETOPO1_496_566","SRTM30P_552_620","ETOPO1_553_622",]
+
+    # meshlist = ["ETOPO1_496_566","SRTM30P_552_620","ETOPO1_553_622",]
+    meshlist = ["SRTM30P_552_620","ETOPO1_553_622",]
+
     boundlist=[[3,30],[10,30]]
-    
+
     # create station list
-    synth_list = (pathnames()['syns'] + 
+    synth_list = (pathnames()['syns'] +
                             '2018p130600_meshTest/ETOPO1_496_566/*.mseed')
     stations = glob.glob(synth_list)
     station_list = []
     for s in stations:
         _,S,_,_,_ = s.split('.')
         station_list.append(S)
-    
-    station_list = list(set(station_list))
-    
-    for sta in station_list:
-        try:
-            code = "NZ.{}..HHZ".format(sta)
-            f_es = event_station_plotter(sta,show=False,save=True)
-            plt.close()
-            for bounds in boundlist:
-                f_wf,axes = waveform_plotter(code,bounds,
-                                                meshlist,show=False,save=True)
-                plt.close()
-        except Exception as e:
-            print(e)
-            continue
 
-    
-    
+    station_list = list(set(station_list))
+    station_list = ["PUZ","MWZ","NNZ","TOZ"]
+
+    for sta in station_list:
+        # try:
+        code = "NZ.{}..HHZ".format(sta)
+        f_es = event_station_plotter(sta,show=False,save=True)
+        plt.close()
+        for bounds in boundlist:
+            f_wf,axes = waveform_plotter(code,bounds,
+
+                                            meshlist,show=False,save=True)
+            plt.close()
+        # except Exception as e:
+        #     print(e)
+        #     continue
+
+
+
 
 if __name__ == "__main__":
-    # multi-use mesh dictionary 
+    # multi-use mesh dictionary
     global meshes
     meshes = {
     "ETOPO1_553_622":"topo_ETOPO1_utm60H_ismooth0_553_622_1000m_surf.xyz",
@@ -361,5 +365,5 @@ if __name__ == "__main__":
     "SRTM15P":"topo_SRTM15P_utm60H_ismooth0_553_622_1000m_surf.xyz",
     "ETOPO1_496_566":"topo_NZ_BC_utm60H_ismooth0_496_566surf.xyz"
               }
-              
+
     create_composite()

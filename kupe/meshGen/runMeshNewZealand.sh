@@ -9,7 +9,7 @@ export PATH=$PATH:$CUBITDIR/bin
 export PYTHONPATH=~/.conda/envs/mesher/bin/python:$CUBITDIR/bin:$CUBITDIR/structure
 
 # name of mesh
-FTAG=nz_ETOPO1_553_622_1000m
+FTAG=nz_SRTM15P_553_622_1000m
 
 MESH0_MERGE1=$1
 
@@ -39,15 +39,16 @@ then
 elif [ ${MESH0_MERGE1} == 1 ]
 then
 	echo RUNNING GEOCUBIT TO MERGE ${FTAG}
-	cd $FTAG
+	cd $FTAG/OUTPUTDIR
 
 	# MERGE
-	/seis/prj/fwi/bchow/tomo/GEOCUBIT/GEOCUBIT.py --collect --merge --meshfiles=mesh_vol_*.e --cpux=$nxi --cpuy=$neta
+	/seis/prj/fwi/bchow/tomo/GEOCUBIT/GEOCUBIT.py --collect --merge --meshfiles=mesh_vol_*.e \
+	   	--cpux="$nxi" --cpuy="$neta"
 	sleep 2s
 	echo "MERGING COMPLETE"
-	echo "GATHERING OUTPUT FILES"
+	echo "MOVING FLUFF TO mergeOut"
 	mkdir mergeOut
-	mv blocks* *.log *.jou *.cub quality_* mergeOut/
+	mv blocks* *.dat *.jou *.cub quality* *.log mergeOut
 
 	# GENERATE SPECFEM OUTPUTS
 	echo "GENERATING SPECFEM OUTPUTS"
@@ -57,4 +58,19 @@ then
 	mkdir export
 	mv mesh_file materials_file nodes_coords_file free_or_absorbing_surface_file_zmax absorbing_surface_file_* nummaterial_velocity_file export/
 	cd ../
+
+	echo "MAKING NEW MATERIALS FILE"
+	cd export
+	cp /seis/prj/fwi/bchow/tomo/generateMeshes/newZealandMeshing/make_new_materials_file.m .
+	matlab -nojvm -nodesktop -r 'try; make_new_materials_file; catch; end; quit;'
+	mv materials_file materials_file_old
+	mv materials_file_tomo materials_file
+	rm make_new_materials_file.m
+
+	echo "SETTING CORRECT numaterial_velocity_file"
+	rm numaterial_velocity_file
+	cp /seis/prj/fwi/bchow/tomo/generateMeshes/newZealandMeshing/numaterial_velocity_file .
+
+	echo "FIN"
+	
 fi
