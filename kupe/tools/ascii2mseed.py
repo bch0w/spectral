@@ -10,7 +10,8 @@ import numpy as np
 from obspy import UTCDateTime, read, Trace, Stream, read_events
 
 dirname = os.getcwd()
-all_files = glob.glob(os.path.join(dirname,'*.sem?'))
+all_files = glob.glob(os.path.join(dirname,'*.sem?'))+\
+									glob.glob(os.path.join(dirname,'*.adj'))
 print("{} files found".format(len(all_files)))
 
 cmtfilepath = glob.glob(os.path.join(dirname,'*CMTSOLUTION'))

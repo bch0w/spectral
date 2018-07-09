@@ -1,6 +1,11 @@
 Data directory structure (6.7.18)
 
 |-**kupe [work related to tomography problem: meshing, simulations etc.]**\
+|------_adjointbuild.py_ [pyflex/pyadjoint run script to create adjoint sources]\
+|------_catbuild.py_ [generate tomCat for target region and time]\
+|------_comparemeshes.py_ [map and waveform plotting for mesh testing]\
+|------_eventQC.py_ [event quality control (unfinished)]\
+|------_obsynth.py_ [observation/synthetic waveform comparisons]\
 |------**meshGen [scripts for setting up and running Trelis mesher]**\
 |------------_createConfig.py_ [make the .cfg file that GEOCUBIT needs]\
 |------------_make_new_materials_file.m_ [Carl Tapes script, aptly named]\
@@ -16,13 +21,8 @@ Data directory structure (6.7.18)
 |------------_availablestations.py_ [find available data in my data directories]\
 |------------_generate_CMTSOLUTION.py_ [create input CMTSOLUTION for specfem, for me]\
 |------------_generate_CMTSOLUTION_standalone.py_ [as above but for general purpose]\
-|------------_grd2mat.m_ [convert grd files to matlab data structure]\
-|------------_grdread2.m_ [to read in grd files]\
-|------_adjointbuild.py_ [pyflex/pyadjoint run script to create adjoint sources]\
-|------_catbuild.py_ [generate tomCat for target region and time]\
-|------_comparemeshes.py_ [map and waveform plotting for mesh testing]\
-|------_eventQC.py_ [event quality control (unfinished)]\
-|------_obsynth.py_ [observation/synthetic waveform comparisons]\
+|------------_grd2mat.m_ [convert grd files to matlab data structure, not mine]\
+|------------_grdread2.m_ [to read in grd files, not mine]\
 |-**modules [general helper functions used within this repository]**\
 |------**one_off [single use functions to complete various tasks]**\
 |------------...\
