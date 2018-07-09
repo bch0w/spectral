@@ -61,6 +61,20 @@ def breakout_stream(st):
 
     return obs_stream, syn_stream
 
+def get_station_latlon(sta):
+    """geonet response files dont have station information, so grab it internal
+    """
+    # find station coordinates
+    nz_bb_path = pathnames()['data'] + 'STATIONXML/nz_BB_coords.npz'
+    nz_bb = np.load(nz_bb_path)
+    nz_bb_names = nz_bb['NAME']
+
+    bb_ind = np.where(nz_bb_names==sta)[0][0]
+    sta_lat = nz_bb['LAT'][bb_ind]
+    sta_lon = nz_bb['LON'][bb_ind]
+
+    return sta_lat, sta_lon
+
 # ============================= MAIN FUNCTIONS =================================
 def initial_data_gather(PD):
     """gather event information, observation and synthetic traces.
@@ -97,11 +111,15 @@ def initial_data_gather(PD):
         syntheticdata += read(join(syntheticdata_path,syntheticdata_filename))
 
     # grab observation data
-    observationdata,inv,event = getdata.event_stream(code=PD["code"],
+    observationdata,inv,cat = getdata.event_stream(code=PD["code"],
                                                     event_id=PD["event_id"],
                                                     startpad=0,
                                                     endpad=180)
-    # event = cat[0]
+    event = cat[0]
+    if inv[0][0].latitude == 0.0:
+        sta_lat,sta_lon = get_station_latlon(sta)
+        inv[0][0].latitude = sta_lat
+        inv[0][0].longitude = sta_lon
 
     if not observationdata:
         print("No observation data")
@@ -191,17 +209,28 @@ def run_pyflex(PD,st,inv,event,plot=False,config="UAF"):
                                c_4a=2.5,
                                c_4b=12.0)
 
+    pf_event = pyflex.Event(latitude=event.origins[0].latitude,
+                            longitude=event.origins[0].longitude,
+                            depth_in_m=event.origins[0].depth,
+                            origin_time=event.origins[0].time)
+
+    pf_station = pyflex.Station(latitude=inv[0][0].latitude,
+                                longitude=inv[0][0].longitude)
+
     windows = pyflex.select_windows(observed=obs,
                                     synthetic=syn,
                                     config=config,
-                                    event=event, # not working for some reason
-                                    station=inv,
+                                    event=pf_event,
+                                    station=pf_station,
                                     plot=plot)
     if not windows:
         print("Empty windows")
         return None
 
     return windows
+
+# def pyflex_window_viewer(obs,syn,windows):
+
 
 def run_pyadjoint(PD,st,windows,output_path=None,plot=False):
     """function to call pyadjoint with preset configurations
@@ -289,15 +318,14 @@ def bobTheBuilder():
     """
     # =============== PARAMETER SET ===============
     EVENT_IDS = ["2018p130600"]
-    # STATION_NAMES = ['NZ.BFZ','NZ.BKZ','NZ.HAZ','NZ.HIZ','NZ.KNZ','NZ.MRZ',
-    #                  'NZ.MWZ','NZ.OPRZ','NZ.PUZ','NZ.PXZ','NZ.RTZ','NZ.TLZ',
-    #                  'NZ.TOZ','NZ.TSZ','NZ.VRZ','NZ.WAZ']
-    STATION_NAMES = ['XX.RD01','XX.RD02','XX.RD03','XX.RD04','XX.RD05',
-                       'XX.RD06','XX.RD07','XX.RD08','XX.RD09','XX.RD10',
-                       'XX.RD11','XX.RD12','XX.RD13','XX.RD14','XX.RD15',
-                       'XX.RD16','XX.RD17','XX.RD18','XX.RD19','XX.RD20',
-                       'XX.RD21','XX.RD22']
-    # STATION_NAMES = ['XX.RD01']
+    STATION_NAMES = ['NZ.BFZ','NZ.BKZ','NZ.HAZ','NZ.HIZ','NZ.KNZ','NZ.MRZ',
+                     'NZ.MWZ','NZ.OPRZ','NZ.PUZ','NZ.PXZ','NZ.RTZ','NZ.TLZ',
+                     'NZ.TOZ','NZ.TSZ','NZ.VRZ','NZ.WAZ']
+    # STATION_NAMES = ['XX.RD01','XX.RD02','XX.RD03','XX.RD04','XX.RD05',
+    #                    'XX.RD06','XX.RD07','XX.RD08','XX.RD09','XX.RD10',
+    #                    'XX.RD11','XX.RD12','XX.RD13','XX.RD14','XX.RD15',
+    #                    'XX.RD16','XX.RD17','XX.RD18','XX.RD19','XX.RD20',
+    #                    'XX.RD21','XX.RD22']
     MINIMUM_FILTER_PERIOD = 6
     MAXIMUM_FILTER_PERIOD = 30
     COMPONENT = "Z"
@@ -326,6 +354,7 @@ def bobTheBuilder():
             if not st:
                 continue
             windows = run_pyflex(PAR_DICT,st,inv,event,plot=PLOT)
+            import ipdb;ipdb.set_trace()
             if not windows:
                 continue
             adj_src = run_pyadjoint(PAR_DICT,st,windows,
