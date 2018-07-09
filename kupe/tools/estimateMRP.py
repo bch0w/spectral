@@ -30,17 +30,18 @@ def estimate_MRP(sta):
         st_tmp[0].stats.location = NGLL
         st += st_tmp
 
-    # downsample NGLL7 to common SR
-    common_sampling_rate = 20.0
-    for tr in st:
-        tr.resample(common_sampling_rate)
-
-    # !!!!  9.7.18 - slight timeshift between ngll5 and ngll7, where is it from?
-    import ipdb;ipdb.set_trace()
 
     # setup plot
     f,ax = plt.subplots()
     pretty_grids(ax)
+
+    # setup time axis
+    t_ngll5 = np.linspace(
+                    0,st[0].stats.endtime-st[0].stats.starttime,len(st[0].data))
+    t_ngll7 = np.linspace(
+                    0,st[1].stats.endtime-st[1].stats.starttime,len(st[1].data))
+
+
 
     step = 0
     st.filter('bandpass',freqmin=1/100,freqmax=1)
@@ -51,8 +52,8 @@ def estimate_MRP(sta):
             tr.data /= tr.data.max()
             tr.data += step
 
-        plt.plot(st_filter.select(location='NGLL5')[0].data[:-7],'k',label='NGLL5')
-        plt.plot(st_filter.select(location='NGLL7')[0].data[7:],'r',label='NGLL7')
+        plt.plot(t_ngll5,st_filter.select(location='NGLL5')[0].data,'k',label='NGLL5')
+        plt.plot(t_ngll7,st_filter.select(location='NGLL7')[0].data,'r',label='NGLL7')
         plt.annotate('lowpass @ {}'.format(lowpass),xy=(0,step))
 
         step += 1.0
