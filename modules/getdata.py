@@ -218,7 +218,7 @@ def fdsn_download(code,event_id=False,response=False,
         client = "IRIS"
 
     # search for data internal
-    data_path = pathnames()['mseeds']+'GEONET/{n}_by_event/{e}_{s}.mseed'.format(
+    data_path = pathnames()['mseeds']+'byEvent/{n}/{e}_{s}.mseed'.format(
                                                                      n=net,
                                                                      e=event_id,
                                                                      s=sta)
@@ -304,7 +304,7 @@ def event_stream(code,event_id,client="GEONET",startpad=False,endpad=False):
     :type startpad: int
     :param startpad: time in seconds to pad beginning of data, positive
     :type endpad: int
-    :param endpad: time in seconds from starttime to end cutoff
+    :param endpad: time in seconds from starttime to end cutoff, default 1000s
     """
     net,sta,loc,cha = code.split('.')
     cat = get_quakeml(event_id)

@@ -25,6 +25,7 @@ def build_color_dictionary(num_of_colors,map='nipy_spectral'):
 def pretty_grids(input_ax):
     """make dem grids pretty
     """
+    import matplotlib.ticker as ptick
     input_ax.set_axisbelow(True)
     input_ax.tick_params(which='both',
                          direction='in',
@@ -59,6 +60,7 @@ def align_yaxis(ax1,v1,ax2,v2):
 def event_beachball(eventid,fig):
     """plt event beachball on figure object
     """
+    from obspy.imaging.beachball import beach
     MT = getdata.get_moment_tensor(eventid)
     eventx,eventy = fig.bmap(MT['Longitude'],MT['Latitude'])
     FM = [MT['strike1'],MT['dip1'],MT['rake1']]

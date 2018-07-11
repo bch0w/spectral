@@ -47,7 +47,8 @@ def pd_pickle_to_npz_array(filepath):
     np.savez(new_filename,NAME=names,LAT=lats,LON=lons,MAG=mags)
 
 
-def initiate_basemap(etopo_else_flat_map=False,map_corners=[-50,-32.5,165,180]):
+def initiate_basemap(etopo_else_flat_map=False,map_corners=[-50,-32.5,165,180],
+                        draw_lines=True):
     """set up local map of NZ to be filled
     default map corners give a rough box around new zealand
     etopo_else_flat_map: bool to control continent fill with either low res topo
@@ -58,7 +59,7 @@ def initiate_basemap(etopo_else_flat_map=False,map_corners=[-50,-32.5,165,180]):
     lake_color = 'w'
 
     # initiate map
-    fig = plt.figure(figsize=(16,16))
+    fig = plt.figure(figsize=(10,10))
     m = Basemap(projection = 'stere',
                 resolution = 'h',
                 rsphere = 6371200,
@@ -76,17 +77,18 @@ def initiate_basemap(etopo_else_flat_map=False,map_corners=[-50,-32.5,165,180]):
     m.drawcoastlines(linewidth=0.75)
 
     # draw parallels and meridians
-    step_by = 2.5
-    start_parallels = myround(map_corners[0]) - step_by
-    end_parallels = myround(map_corners[1]) + step_by
-    start_meridians = myround(map_corners[2]) - step_by
-    end_meridians = myround(map_corners[3]) + step_by
+    if draw_lines:
+        step_by = 2.5
+        start_parallels = myround(map_corners[0]) - step_by
+        end_parallels = myround(map_corners[1]) + step_by
+        start_meridians = myround(map_corners[2]) - step_by
+        end_meridians = myround(map_corners[3]) + step_by
 
-    parallels = np.arange(start_parallels,end_parallels,step_by)
-    meridians = np.arange(start_meridians,end_meridians,step_by)
+        parallels = np.arange(start_parallels,end_parallels,step_by)
+        meridians = np.arange(start_meridians,end_meridians,step_by)
 
-    m.drawparallels(parallels,labels=[1,1,1,1])
-    m.drawmeridians(meridians,labels=[1,1,1,1])
+        m.drawparallels(parallels,labels=[1,1,1,1])
+        m.drawmeridians(meridians,labels=[1,1,1,1])
 
     return fig, m
 
