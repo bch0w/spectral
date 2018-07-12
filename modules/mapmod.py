@@ -11,9 +11,7 @@ mpl.rcParams['font.size'] = 8
 mpl.rcParams['lines.linewidth'] = 1
 
 from getdata import pathnames
-
-def myround(x, base=5):
-    return int(base * round(float(x)/base))
+from procmod import myround
 
 def inventory_to_npz_array(filepath):
     """for quick plotting, generate npz arrays containing latitude,longitude
@@ -87,8 +85,8 @@ def initiate_basemap(etopo_else_flat_map=False,map_corners=[-50,-32.5,165,180],
         parallels = np.arange(start_parallels,end_parallels,step_by)
         meridians = np.arange(start_meridians,end_meridians,step_by)
 
-        m.drawparallels(parallels,labels=[1,1,1,1])
-        m.drawmeridians(meridians,labels=[1,1,1,1])
+        m.drawparallels(parallels,labels=[1,1,1,1],linewidth=0)
+        m.drawmeridians(meridians,labels=[1,1,1,1],linewidth=0)
 
     return fig, m
 

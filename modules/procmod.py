@@ -1,5 +1,18 @@
-"""module file for processing data
+"""module file for processing data and data manipulation
 """
+def myround(x,base=5,choice='near'):
+    """round value x to nearest base, round 'up','down' or to 'near'est base
+    """
+    import numpy as np
+    if choice == 'near':
+        roundout = int(base * round(float(x)/base))
+    elif choice == 'down':
+        roundout = int(base * np.floor(float(x)/base))
+    elif choice == 'up':
+        roundout = int(base * np.ceil(float(x)/base))
+
+    return roundout
+
 def preprocess(st,resample=50,inv=None,output="VEL",filter=False):
     """preprocess waveform data:
     resample, demean, detrend, taper, remv. resp. (if applicable)
@@ -70,46 +83,32 @@ def trimstreams(st):
 
     return st_trimmed
 
-def amplitude_threshold(t,tr,threshold_percentage):
-    """based on some amplitude threshold, return all points that fall above,
-    and the time length covered
+def amplitude_threshold(st,threshold_percentage):
+    """determine amplitudes over a given threshold and count the time length
+    for amount of trace over this threshold. return arrays for plotting
     """
-    duration_a,tover_plot,aover_plot,threshold_plot,sample_plot = [],[],[],[],[]
+    # for 3 component data
+    if len(st) == 3:
+        groundmotion = np.sqrt(st[0].data**2 + st[1].data**2 + st[2].data**2)
+        vertical = st.select(component='Z')[0].data
 
-    samp_rate = tr.stats.sampling_rate
-    tr_manipulate = (tr.data**2)**(1/2)
-    peak_amp = tr_manipulate.max()
-    threshold = peak_amp * threshold_percentage
-    threshold_plot.append(threshold)
+    # for obp data with only 1 comp
+    elif len(st) == 1:
+        groundmotion = np.sqrt(st[0].data**2)
+        vertical = st[0].data
 
-    # loop over seismogram, determine start and end of peak energy
-    # a for amplitude, s for sample
-    a_over, s_over = [],[]
-    for i,amplitude in enumerate(tr_manipulate):
-        if amplitude >= threshold:
-            s_over.append(i)
-            a_over.append(amplitude)
+    peakamplitude = groundmotion.max()
+    threshold = peakamplitude * threshold_percentage
 
-    # find edgepoints by checking if the next sample j is the same as i+1
-    s_edge,a_edge,sections,samples = [s_over[0]],[a_over[0]],[],[]
-    for i,(S,A) in enumerate(zip(s_over[1:-2],a_over[1:-2])):
-        if s_over[i+2] != (S + 1):
-            # determine number of samples covered
-            samples.append(len(s_edge))
-            s_edge,a_edge = [s_over[i+1]],[a_over[i+1]]
-        else:
-            # if the next sample is the same, keep going
-            s_edge.append(S)
-            a_edge.append(A)
+    # array of values of threshold
+    whereover = np.where(groundmotion >= threshold)
 
-    duration_in_seconds = round(sum(samples)/samp_rate,0)
+    # groundmotion over threshold for plotting
+    groundmotion_over = np.copy(groundmotion)
+    groundmotion_over[groundmotion_over<threshold] = np.nan
 
-    # convert samples to time
-    t_over = []
-    for S in s_over:
-        t_over.append(t[S])
+    return vertical,groundmotion,whereover,groundmotion_over,threshold
 
-    return t_over,a_over,duration_in_seconds
 
 
 if __name__ == "__main__":
