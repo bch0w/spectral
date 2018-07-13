@@ -57,7 +57,7 @@ def initiate_basemap(etopo_else_flat_map=False,map_corners=[-50,-32.5,165,180],
     lake_color = 'w'
 
     # initiate map
-    fig = plt.figure(figsize=(10,10))
+    fig = plt.figure(figsize=(14,14))
     m = Basemap(projection = 'stere',
                 resolution = 'h',
                 rsphere = 6371200,
