@@ -30,9 +30,9 @@ from plotmod import pretty_grids, build_color_dictionary
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 
-# global plot parameters
 mpl.rcParams['font.size'] = 11
 mpl.rcParams['lines.linewidth'] = 1.75
+mpl.rcParams['axes.linewidth'] = 1.5
 
 # ============================= RANDOM ONE OFF =================================
 def convert_ITODATA_to_mseed():
@@ -116,7 +116,6 @@ def create_lobs_nparray():
     fullout = os.path.join(pathout,'EBS_LOBS_coords.npz')
 
     np.savez(fullout,**dictout)
-
 
 # ==================================== FUNC ==================================
 def get_ito_data(event_id,station="EBPR-1"):
@@ -237,34 +236,41 @@ def trace_trench(m):
     xprimenew = np.linspace(x.min(),x.max(),100)
     yprimenew = np.interp(xprimenew,xprime,yprime)
 
-    m.plot(xprimenew,yprimenew,'--',linewidth=0.9,color='k',zorder=2) 
+    m.plot(xprimenew,yprimenew,'--',linewidth=1.25,color='k',zorder=2) 
 
-def event_beachball_durationmap(eventid,m,anno=False):
+
+def event_beachball_durationmap(event_id,m,anno=False):
     """plt event beachball on figure object, stolen from plotmod.py
     """
     from obspy.imaging.beachball import beach
 
-    MT = getdata.get_moment_tensor(eventid)
+    MT = getdata.get_moment_tensor(event_id)
     eventx,eventy = m(MT['Longitude'],MT['Latitude'])
     FM = [MT['strike2'],MT['dip2'],MT['rake2']]
 
-    b = beach(FM,xy=(eventx,eventy),width=3.2E4,linewidth=1,facecolor='r')
+    b = beach(FM,xy=(eventx,eventy),width=2.5E4,linewidth=1,facecolor='r')
     b.set_zorder(10)
     ax = plt.gca()
     ax.add_collection(b)
     if anno:
-        plt.annotate("M{m}\n{e}".format(m=MT['Mw'],e=eventid),
+        yshift = .025 * (m.ymax-m.ymin)
+        xshift = -.075 * (m.xmax-m.xmin)
+        plt.annotate("M{m}\n{e}".format(m=MT['Mw'],e=event_id),
                      xy=(eventx,eventy),
-                     xytext=(eventx,eventy),
+                     xytext=(eventx+xshift,eventy+yshift),
                      fontsize=10,
                      zorder=200,
-                     weight='bold')
+                     weight='bold',
+                     multialignment='center')
 
 
-def generate_duration_map(corners,event_id):
+def generate_duration_map(corners,event_id,show=True,save=False):
     """full function to initiate and populate basemap
     """
-    manual_ignore = ["LOBS1","LOBS4",]
+    manual_ignore_dict = {"2014p864702":["LOBS1","LOBS4"],
+                          "2014p715167":["EBPR-3","RTZ","SBPR-1",
+                                         "SBPR-2","SBPR-3","WSRZ"]}
+    manual_ignore = manual_ignore_dict[event_id]
 
     f,m = mapmod.initiate_basemap(map_corners=corners,draw_lines=False)
 
@@ -279,11 +285,12 @@ def generate_duration_map(corners,event_id):
     # manual ignorance
     names,lats,lons,durs = sta['NAME'],sta['LAT'],sta['LON'],sta['DURATION']
     for MI in manual_ignore:
-        ind = np.where(names==MI)[0][0]
-        names = np.delete(names,ind)
-        lats = np.delete(lats,ind)
-        lons = np.delete(lons,ind)
-        durs = np.delete(durs,ind)
+        if MI in names:
+            ind = np.where(names==MI)[0][0]
+            names = np.delete(names,ind)
+            lats = np.delete(lats,ind)
+            lons = np.delete(lons,ind)
+            durs = np.delete(durs,ind)
 
     # set colormap to the values of duration
     vmax = myround(np.nanmax(durs),base=50,choice='up')
@@ -302,15 +309,34 @@ def generate_duration_map(corners,event_id):
         X,Y = m(lons[i],lats[i])
         m.scatter(X,Y,marker='v',
                         color=color,
-                        s=75,
+                        s=100,
+                        linewidth=1.1,
                         edgecolor='k',
                         zorder=int(D))
-        if (names[i] == 'OPRZ') or (names[i] == 'LOBS6'):
+        
+        # fine tuned annotations
+        STA1 = "OPRZ"
+        STA2 = "PUZ"
+        if (names[i] == STA1) or (names[i] == STA2):
+            if names[i] == STA1:
+                yshift = .01 * (m.ymax-m.ymin)
+                xshift = .01 * (m.xmax-m.xmin)
+            elif names[i] == STA2:
+                yshift = .015 * (m.ymax-m.ymin)
+                xshift = -.05 * (m.xmax-m.xmin)
             plt.annotate(names[i],
                          xy=(X,Y),
+                         xytext=(X+xshift,Y+yshift),
                          fontsize=10,
                          zorder=1000,
                          weight='bold')
+        
+        # plt.annotate(names[i],
+        #              xy=(X,Y),
+        #              xytext=(X,Y),
+        #              fontsize=10,
+        #              zorder=1000,
+        #              weight='bold')
 
     # additional map objects
     trace_trench(m)
@@ -319,11 +345,19 @@ def generate_duration_map(corners,event_id):
 
     # colorbar
     colormap.set_array(durs)
-    cbar = f.colorbar(colormap)
-    cbar.set_label('duration (s)',rotation=270,labelpad=17,fontsize=11.5)
+    cbar = f.colorbar(colormap,fraction=0.046,pad=0.04)
+    cbar.set_label('duration (s)',rotation=270,labelpad=17,fontsize=14.5)
 
-    plt.title(event_id)
-    plt.show()
+    # plt.title(event_id)
+    
+    if save:
+        outputfolder = pathnames()['spectralplots'] + 'durations/PAPEROUT'
+        fid = 'map_{e}_{b0}_{b1}.png'.format(e=event_id,
+                                                b0=bounds[0],b1=bounds[1])
+        fidout = os.path.join(outputfolder,fid)
+        plt.savefig(fidout,dpi=plt.gcf().dpi)
+    if show:
+        plt.show()
 
 # ================================== PROCPLOT =================================
 def true_if_outside_bounds(lat,lon,corners):
@@ -398,7 +432,7 @@ def process_and_plot_waveforms(event_id,code,threshold_choice=0.2,choice="GN",
         fid = 'wav_{e}_{c}_{b0}_{b1}.png'.format(e=event_id,c=code,
                                                  b0=bounds[0],b1=bounds[1])
         fidout = os.path.join(outputfolder,fid)
-        plt.savefig(fidout,dpi=100)
+        plt.savefig(fidout,dpi=plt.gcf().dpi)
     if show:
         plt.show()
 
@@ -435,6 +469,7 @@ def loop_waveform_plotter(event_id,corners,choice='GN',show=True,save=False):
         for i,sta in enumerate(names):
             try:
                 if true_if_outside_bounds(lats[i],lons[i],corners):
+                    durations.append(np.nan)
                     print(sta,'outside bounds')
                     continue
                 
@@ -513,7 +548,7 @@ if __name__ == "__main__":
     bounds = [10,100]
     corners = [-42,-36,173,179.5]
 
-    # for choice in ["YH"]:#["GN","ITO","YH"]:
+    # for choice in ["GN","YH"]:
     #     print(choice)
-    #     loop_waveform_plotter(event_id,corners,choice,show=True,save=False)
-    generate_duration_map(corners,event_id)
+    #     loop_waveform_plotter(event_id,corners,choice,show=False,save=False)
+    generate_duration_map(corners,event_id,show=True,save=False)

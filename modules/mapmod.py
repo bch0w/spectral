@@ -57,7 +57,7 @@ def initiate_basemap(etopo_else_flat_map=False,map_corners=[-50,-32.5,165,180],
     lake_color = 'w'
 
     # initiate map
-    fig = plt.figure(figsize=(14,14))
+    fig = plt.figure(figsize=(10,10))
     m = Basemap(projection = 'stere',
                 resolution = 'h',
                 rsphere = 6371200,
@@ -72,7 +72,7 @@ def initiate_basemap(etopo_else_flat_map=False,map_corners=[-50,-32.5,165,180],
         m.etopo()
     else:
         m.fillcontinents(color=continent_color,lake_color=lake_color)
-    m.drawcoastlines(linewidth=0.75)
+    m.drawcoastlines(linewidth=1.25)
 
     # draw parallels and meridians
     if draw_lines:
