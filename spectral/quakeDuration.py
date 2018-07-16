@@ -1,10 +1,11 @@
 """10.7.18 - Publication level figure generation.
 
-Plot waveforms of all three components for a given GEONET permanent station,
-or a temporary RDF station, with preprocessing and filtering set in the script.
-Also subplots of determining duration criteria, which is captured using an
-amplitude threshold criteria and summing up the time sections (dt) where the
-waveform crosses this amplitude threshold.
+Process and generate two figures:
+1) Plot two subplot waveforms, top: vertical component seismogram, bottom:
+RMS ground motion seismogram with highlighted portion of amplitudes above
+threshold criteria
+2) Map with stations color coded by duration criteria. Events plotted as
+beachball objects and hikurangi trench traced out
 
 """
 import os
@@ -37,11 +38,11 @@ mpl.rcParams['axes.linewidth'] = 1.5
 # ============================= RANDOM ONE OFF =================================
 def convert_ITODATA_to_mseed():
     """ito-san gave us sac data with no timestamps and in acceleration.
-    set proper time stamp, convert to velocity and save as mseed
+    set proper time stamp, convert to velocity and save as mseed. needs to be
+    run inside the folder containing the sac (.s) files
     """
     import glob
     from obspy import read, UTCDateTime
-
 
     timedict = {'2014p864702': UTCDateTime('2014-11-16T22:33:17'),
                 '2014p051675': UTCDateTime('2014-01-20T02:52:45'),
@@ -64,8 +65,12 @@ def convert_ITODATA_to_mseed():
         st.write(newname,format="MSEED")
 
 def create_obp_nparray():
-    """convert the coordinates of obp array into a numpy array for easier hands
+    """convert the coordinates of obp array into a numpy array for easier
+    handling. Coordinates given in degrees and minutes, convert to only degrees.
+    Values taken from email correspondence with Ito-San
+    Can be run from anywhere.
     """
+    import numpy as np
     OBPDATA = [['TU13-1', -38, 54.705, 178, 58.573, 3495],
                 ['TU13-2', -38, 51.689, 178, 52.993, 2380],
                 ['TU13-3', -38, 52.196, 178, 42.740, 1088],
@@ -91,8 +96,8 @@ def create_obp_nparray():
     names,lats,lons,depths = [],[],[],[]
     for obp in OBPDATA:
         names.append(obp[0])
-        lat = obp[1] + obp[2]/60
-        lon = obp[3] + obp[4]/60
+        lat = obp[1] + np.sign(obp[1])*obp[2]/60
+        lon = obp[3] + np.sign(obp[3])*obp[4]/60
         lats.append(lat)
         lons.append(lon)
         depths.append(obp[4])
@@ -101,6 +106,9 @@ def create_obp_nparray():
     np.savez('ITO_OBP_coords.npz',**dictout)
 
 def create_lobs_nparray():
+    """quickly take the dataless STATIONXML for the Hobitss stations and convert
+    into my own standard coord file
+    """
     from obspy import read_inventory
     names,lats,lons,depths = [],[],[],[]
     inv = read_inventory('plotYH_HOBITSS_stations_only.xml')
@@ -119,7 +127,14 @@ def create_lobs_nparray():
 
 # ==================================== FUNC ==================================
 def get_ito_data(event_id,station="EBPR-1"):
-    """grab OBP data from ito
+    """Retrieve data from Ito-san internally. mseed files converted from sac
+    files given to us through email correspondence with Ito-san
+    :type event_id: str
+    :param event_id: geonet quake label
+    :type station: str
+    :param station: station name
+    :rtype st: obspy stream
+    :return st: stream object containing waveform
     """
     datapath = pathnames()["mseeds"] + 'ITO'
     fid = "{e}_{s}_vel.mseed".format(e=event_id,s=station)
@@ -132,21 +147,50 @@ def get_ito_data(event_id,station="EBPR-1"):
     return st
 
 def get_lobs_data(event_id,code):
-    """might be able to do this with event_stream?
+    """get Hobitss data through fdsn download from getdata module
+    :type event_id: str
+    :param event_id: geonet quake label
+    :type code: str
+    :param code: station name
+    :rtype st: obspy stream
+    :return st: stream object containing waveform
+    :rtype inv: obspy inventory
+    :return inv: response information for instrument response correction
     """
     st,inv = getdata.fdsn_download(code,event_id,response=True)
 
     return st, inv
 
 def get_geonet_data(event_id,code):
-    # GATHER
+    """gather geonet data either internally or through fdsn using getdata module
+    :type event_id: str
+    :param event_id: geonet quake label
+    :type code: str
+    :param code: station name
+    :rtype st: obspy stream
+    :return st: stream object containing waveform
+    :rtype inv: obspy inventory
+    :return inv: response information for instrument response correction
+    :rtype event: obspy event
+    :return event: event information for given event id
+    """
     st,inv,cat = getdata.event_stream(code=code,event_id=event_id,startpad=15)
     event = cat[0]
 
     return st, inv, event
 
 def preprocess(st_in,inv=None,event=None):
-    """grab data using external functions
+    """normal seismic preprocessing of stream objects, response removal if
+    required, trimming if event origin time is given. bandpass filter for global
+    bounds set in __main__
+    :type st_in: obspy stream
+    :param st_in: stream object containing waveform
+    :type inv: obspy inventory
+    :param inv: response information for instrument response correction
+    :type event: obspy event
+    :param event: event information for given event id
+    :rtype st: obspy stream
+    :return st: preprocessed stream object in units of velocity (micrometers/s)
     """
     st = st_in.copy()
 
@@ -154,7 +198,7 @@ def preprocess(st_in,inv=None,event=None):
     if event:
         origintime = event.origins[0].time
         st.trim(origintime,origintime+1000)
-        
+
     # PREPROCESS and CONVERT to cm/s
     st.detrend('linear')
     st.detrend('demean')
@@ -176,13 +220,29 @@ def preprocess(st_in,inv=None,event=None):
     st.detrend('linear')
     st.detrend('demean')
     st.taper(max_percentage=0.05)
-    
 
     return st
 
 def amplitude_threshold(st,threshold_percentage):
     """determine amplitudes over a given threshold and count the time length
-    for amount of trace over this threshold. return arrays for plotting
+    for amount of trace over this threshold. return arrays for plotting.
+    condintionally dependent on number of traces in stream object.
+    :type st: obspy stream
+    :param st: preprocessed stream object
+    :type threshold_percentage: float
+    :param threshold_percentage: percentage of peak amplitude to count above
+    :rtype vertical: numpy array
+    :return vertical: vertical component seismogram
+    :rtype groundmotion: numpy array
+    :return groundmotion: RMS of all three components if applicable,
+    otherwise only of vertical component
+    :rtype whereover: numpy array
+    :return whereover: indices where groundmotion exceeds amplitude_threshold
+    :rtype groundmotion_over: numpy array
+    :return groundmotion_over: copy of groundmotion, with values below
+    amplitude_threshold masked by numpy nan's
+    :rtype threshold: float
+    :return threshold: amplitude value of the threshold for plotting hori line
     """
     # for 3 component data
     if len(st) == 3:
@@ -208,7 +268,7 @@ def amplitude_threshold(st,threshold_percentage):
 
 # ======================== PLOTTING HELPER FUNCTIONS ===========================
 def setup_plot():
-    """set up plot for waveforms
+    """set up plot for waveform subplots
     """
     f,(ax1,ax2) = plt.subplots(2,sharex=True,sharey=False,figsize=(9,5))
     for ax in [ax1,ax2]:
@@ -219,9 +279,9 @@ def setup_plot():
     ax2.set_xlabel('time (s)')
 
     return f,ax1,ax2
-    
+
 def trace_trench(m):
-    """trace the hikurangi trench on a basemap object
+    """trace the hikurangi trench on a basemap object 'm'
     """
     trenchcoordspath = pathnames()['data'] + \
                                         'DURATIONS/hikurangiTrenchCoords.npz'
@@ -229,18 +289,20 @@ def trace_trench(m):
     lats = trenchcoords['LAT']
     lons = trenchcoords['LON']
     x,y = m(lons,lats)
-    
+
     # interpolate points to make a smoother curve
     xprime = np.flip(x,axis=0)
     yprime = np.flip(y,axis=0)
     xprimenew = np.linspace(x.min(),x.max(),100)
     yprimenew = np.interp(xprimenew,xprime,yprime)
 
-    m.plot(xprimenew,yprimenew,'--',linewidth=1.25,color='k',zorder=2) 
+    m.plot(xprimenew,yprimenew,'--',linewidth=1.25,color='k',zorder=2)
 
 
 def event_beachball_durationmap(event_id,m,anno=False):
-    """plt event beachball on figure object, stolen from plotmod.py
+    """plot event beachball on basemap 'm' object for a given geonet event_id
+    :type anno: bool
+    :param anno: if to annotate the event information next to beachball
     """
     from obspy.imaging.beachball import beach
 
@@ -249,12 +311,12 @@ def event_beachball_durationmap(event_id,m,anno=False):
     FM = [MT['strike2'],MT['dip2'],MT['rake2']]
 
     b = beach(FM,xy=(eventx,eventy),width=2.5E4,linewidth=1,facecolor='r')
-    b.set_zorder(10)
+    b.set_zorder(1000)
     ax = plt.gca()
     ax.add_collection(b)
     if anno:
         yshift = .025 * (m.ymax-m.ymin)
-        xshift = -.075 * (m.xmax-m.xmin)
+        xshift = -.0775 * (m.xmax-m.xmin)
         plt.annotate("M{m}\n{e}".format(m=MT['Mw'],e=event_id),
                      xy=(eventx,eventy),
                      xytext=(eventx+xshift,eventy+yshift),
@@ -265,11 +327,23 @@ def event_beachball_durationmap(event_id,m,anno=False):
 
 
 def generate_duration_map(corners,event_id,show=True,save=False):
-    """full function to initiate and populate basemap
+    """initiate and populate a basemap object for New Zealands north island.
+    Functionality to manually ignore stations based on user quality control
+    Takes station coordinates and coloring from npz files
+    Choice to annotate two stations which correspond to waveforms
+    Calls beachball and trench tracer to populate basemap
+    :type corners: list of floats
+    :param corners: values for map corners to set bounds
+     e.g. [lat_bot,lat_top,lon_left,lon_right]
     """
     manual_ignore_dict = {"2014p864702":["LOBS1","LOBS4"],
                           "2014p715167":["EBPR-3","RTZ","SBPR-1",
-                                         "SBPR-2","SBPR-3","WSRZ"]}
+                                         "SBPR-2","SBPR-3","WSRZ"],
+                          "2016p859524":[],
+                          "2015p768477":["BFZ"],
+                          "2014p051675":["BFZ","MRZ","TSZ"],
+                          "2015p822263":["TLZ","BFZ"],
+                          "2014p240655":[]}
     manual_ignore = manual_ignore_dict[event_id]
 
     f,m = mapmod.initiate_basemap(map_corners=corners,draw_lines=False)
@@ -302,6 +376,7 @@ def generate_duration_map(corners,event_id,show=True,save=False):
     # plot individual stations with color and zorder set by duration length
     for i,D in enumerate(durs):
         if np.isnan(D):
+            continue
             color = 'w'
             D = 10
         else:
@@ -313,24 +388,23 @@ def generate_duration_map(corners,event_id,show=True,save=False):
                         linewidth=1.1,
                         edgecolor='k',
                         zorder=int(D))
-        
+
         # fine tuned annotations
-        STA1 = "OPRZ"
-        STA2 = "PUZ"
+        STA1 = "TOZ"#"HAZ" .0035 .0125 #"TOZ" .01 .01 #OPRZ 0.1,0.1
+        STA2 = "KU15-3"#"PUZ" -.0255 -.05 #KU15-3" -.0255 -.075 #PUZ 0.15 -0.5
         if (names[i] == STA1) or (names[i] == STA2):
             if names[i] == STA1:
                 yshift = .01 * (m.ymax-m.ymin)
                 xshift = .01 * (m.xmax-m.xmin)
             elif names[i] == STA2:
-                yshift = .015 * (m.ymax-m.ymin)
-                xshift = -.05 * (m.xmax-m.xmin)
+                yshift = -.0255 * (m.ymax-m.ymin)
+                xshift = -.075 * (m.xmax-m.xmin)
             plt.annotate(names[i],
                          xy=(X,Y),
                          xytext=(X+xshift,Y+yshift),
                          fontsize=10,
                          zorder=1000,
                          weight='bold')
-        
         # plt.annotate(names[i],
         #              xy=(X,Y),
         #              xytext=(X,Y),
@@ -349,7 +423,7 @@ def generate_duration_map(corners,event_id,show=True,save=False):
     cbar.set_label('duration (s)',rotation=270,labelpad=17,fontsize=14.5)
 
     # plt.title(event_id)
-    
+
     if save:
         outputfolder = pathnames()['spectralplots'] + 'durations/PAPEROUT'
         fid = 'map_{e}_{b0}_{b1}.png'.format(e=event_id,
@@ -361,11 +435,14 @@ def generate_duration_map(corners,event_id,show=True,save=False):
 
 # ================================== PROCPLOT =================================
 def true_if_outside_bounds(lat,lon,corners):
-    """if station falls outside the map bounds, don't process. set up for new
-    zealand coordinates
-    """    
+    """if station falls outside the map bounds, don't process
+    :type lat/lon: float
+    :param lat/lon: object location
+    :type corners: list of floats
+    :param corners: map bounds
+    """
     lat_bot,lat_top,lon_left,lon_right = corners
-    
+
     if (lon < lon_left) or (lon > lon_right):
         return True
     elif (lat < lat_bot) or (lat > lat_top):
@@ -374,9 +451,22 @@ def true_if_outside_bounds(lat,lon,corners):
         return False
 
 def process_and_plot_waveforms(event_id,code,threshold_choice=0.2,choice="GN",
-                                                        show=False,save=False):
-    """create first section of composite, two waveforms
+                                            show=False,save=False,quick=False):
+    """create first section of composite, two waveforms showing vertical and
+    groundmotion with proper formatting etc.
+    :type choice: str
+    :param choice: which stations to process, available GEONET ["GN"], HOBITSS
+    ["YH"] and ITO-SANS data ["ITO"]
+    :rtype duration: float
+    :return duration: value of duration in seconds, for use in plotting
     """
+    # check if the figure has already been generated
+    if quick:
+        if not os.path.exists(fidout):
+            print('quick: {} skipped'.format(fidout))
+            return None
+
+    # setup the plot early to add things during processing
     f,ax1,ax2 = setup_plot()
 
     # PROCESS by network
@@ -384,13 +474,13 @@ def process_and_plot_waveforms(event_id,code,threshold_choice=0.2,choice="GN",
         st_raw,inv,event = get_geonet_data(event_id,code)
         st = preprocess(st_raw,inv,event)
         code = code.split('.')[1]
-        x0,x1 = 0,1000
     elif choice == "ITO":
         st_raw = get_ito_data(event_id,code)
+        for tr in st_raw:
+            tr.stats.starttime -= (17*60+56.346)
         _,_,event = get_geonet_data(event_id,'NZ.PUZ.*.HH?')
         st = preprocess(st_raw,event=event)
         st.resample(20)
-        x0,x1 = 1000,2000
         for ax in [ax1,ax2]:
             ax.set_ylabel('velocity ($\mu$m/s)')
     elif choice == "YH":
@@ -398,7 +488,6 @@ def process_and_plot_waveforms(event_id,code,threshold_choice=0.2,choice="GN",
         _,_,event = get_geonet_data(event_id,'NZ.PUZ.*.HH?')
         st = preprocess(st_raw,inv,event)
         code = code.split('.')[1]
-        x0,x1 = 0,1000
 
     vertical,groundmotion,whereover,groundmotion_over,threshold = \
                                         amplitude_threshold(st,threshold_choice)
@@ -409,7 +498,7 @@ def process_and_plot_waveforms(event_id,code,threshold_choice=0.2,choice="GN",
     if (show==False) and (save==False):
         plt.close()
         return duration
-        
+
     # PLOT WAVEFORMS
     t = np.linspace(0,stats.endtime-stats.starttime,stats.npts)
     ax1.plot(t,vertical,'k')
@@ -419,12 +508,12 @@ def process_and_plot_waveforms(event_id,code,threshold_choice=0.2,choice="GN",
     ax2.axhline(xmin=t[0],xmax=t[-1],y=threshold,zorder=2,
                 color='gray',linestyle='-.',linewidth=1.5,
                 label='20% peak amplitude')
-    
+
     # formatting
     ax1.set_title(code + ' [{b0}-{b1}s]'.format(b0=bounds[0],b1=bounds[1]))
     ax2.legend()
     for ax in [ax1,ax2]:
-        ax.set_xlim([x0,x1])
+        ax.set_xlim([0,1000])
 
     # checksave
     if save:
@@ -437,13 +526,14 @@ def process_and_plot_waveforms(event_id,code,threshold_choice=0.2,choice="GN",
         plt.show()
 
     plt.close()
-    
+
     return duration
 
 # ================================== RUN SCRIPTS ==============================
-def loop_waveform_plotter(event_id,corners,choice='GN',show=True,save=False):
-    """generate output file to be
-            ax.set_xlim([400,1400]) read in for mapping
+def loop_waveform_plotter(event_id,corners,choice='GN',show=True,save=False,
+                                                        quick=False,savez=True):
+    """run script to call waveform process/plotter and save all duration values
+    into an npz file which will be called by the plotter
     """
     filedict = {"GN":"NZ_BB_coords.npz",
                 "ITO":"ITO_OBP_coords.npz",
@@ -472,15 +562,18 @@ def loop_waveform_plotter(event_id,corners,choice='GN',show=True,save=False):
                     durations.append(np.nan)
                     print(sta,'outside bounds')
                     continue
-                
+
                 code = 'NZ.{}.*.HH?'.format(sta)
                 duration = process_and_plot_waveforms(event_id,code,
                                                         choice=choice,
                                                         show=show,
-                                                        save=save)
+                                                        save=save,
+                                                        quick=quick)
+                if not duration:
+                    continue
                 durations.append(duration)
             except Exception as e:
-                print('\t'+sta)
+                print('\t{} {}'.format(sta,e))
                 durations.append(np.nan)
                 plt.close()
                 continue
@@ -508,7 +601,7 @@ def loop_waveform_plotter(event_id,corners,choice='GN',show=True,save=False):
                 if true_if_outside_bounds(lats[i],lons[i],corners):
                     print('\t {} is outside bounds'.format(sta))
                     continue
-                
+
                 ind = np.where(np.array(names)==sta)[0][0]
                 if choice == "YH":
                     if 'EBS' in sta:
@@ -516,14 +609,18 @@ def loop_waveform_plotter(event_id,corners,choice='GN',show=True,save=False):
                     code = "YH.{}.*.?H?".format(sta)
                 else:
                     code = sta
-                newnames.append(names[ind])
-                newlats.append(lats[ind])
-                newlons.append(lons[ind])
+
                 duration = process_and_plot_waveforms(event_id,code,
                                                         choice=choice,
                                                         show=show,
-                                                        save=save)
+                                                        save=save,
+                                                        quick=quick)
+                if not duration:
+                    continue
                 newdurs.append(duration)
+                newnames.append(names[ind])
+                newlats.append(lats[ind])
+                newlons.append(lons[ind])
 
             except Exception as e:
                 print('\t'+sta)
@@ -539,16 +636,23 @@ def loop_waveform_plotter(event_id,corners,choice='GN',show=True,save=False):
 
         dictout = {"NAME":nameO,"DURATION":durO,"LAT":latO,"LON":lonO}
 
-    np.savez(allout,**dictout)
+    if savez:
+        np.savez(allout,**dictout)
 
 
 if __name__ == "__main__":
-    event_id = '2014p715167'#'2014p864702
+    event_id_list = ['2015p822263','2014p240655','2014p051675','2015p768477',
+                     '2016p859524','2014p715167','2014p864702']
+    corner_dict = {"default":[-42,-36,173,179.5],
+                   "2016p859524":[-42.6,-36,173,179.5],
+                   }
+    corners=corner_dict['default']
+
+    event_id = event_id_list[0]
     global bounds
     bounds = [10,100]
-    corners = [-42,-36,173,179.5]
-
-    # for choice in ["GN","YH"]:
+    # for choice in ["ITO"]:
     #     print(choice)
-    #     loop_waveform_plotter(event_id,corners,choice,show=False,save=False)
+    #     loop_waveform_plotter(event_id,corners,choice,
+    #                             show=False,save=True,quick=False,savez=False)
     generate_duration_map(corners,event_id,show=True,save=False)

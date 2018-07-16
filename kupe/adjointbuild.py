@@ -65,7 +65,7 @@ def get_station_latlon(sta):
     """geonet response files dont have station information, so grab it internal
     """
     # find station coordinates
-    nz_bb_path = pathnames()['data'] + 'STATIONXML/nz_BB_coords.npz'
+    nz_bb_path = pathnames()['data'] + 'STATIONXML/NZ_BB_coords.npz'
     nz_bb = np.load(nz_bb_path)
     nz_bb_names = nz_bb['NAME']
 

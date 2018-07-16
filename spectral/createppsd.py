@@ -94,10 +94,12 @@ def mass_process():
     """main processing function
     """
     # common parameter set
-    start = '2018-072'
-    end = '2018-143'
+    start = '2018-128'
+    end = '2018-179'
     decimate_by = 5
-    for i in range(10,22):
+    for i in range(1,23):
+        if i in [10,11,17]:
+            continue
         station = 'RD{:0>2}'.format(i)
         for channel in ['HHZ','HHN','HHE']:
             data,response = gather_data(sta=station,cha=channel,
