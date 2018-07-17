@@ -46,7 +46,7 @@ def pd_pickle_to_npz_array(filepath):
 
 
 def initiate_basemap(etopo_else_flat_map=False,map_corners=[-50,-32.5,165,180],
-                        draw_lines=True,figsize=(10,10),dpi=100):
+                        draw_lines=True,figsize=(10,9.4),dpi=100):
     """set up local map of NZ to be filled
     default map corners give a rough box around new zealand
     etopo_else_flat_map: bool to control continent fill with either low res topo

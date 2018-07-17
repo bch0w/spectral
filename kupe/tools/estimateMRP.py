@@ -30,7 +30,7 @@ def estimate_MRP(sta):
         st_tmp[0].stats.location = NGLL
         st += st_tmp
 
-
+    import ipdb;ipdb.set_trace()
     # setup plot
     f,ax = plt.subplots()
     pretty_grids(ax)

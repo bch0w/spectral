@@ -105,6 +105,7 @@ def create_obp_nparray():
     dictout = {"NAME":names,"LAT":lats,"LON":lons,"DEPTH":depths}
     np.savez('ITO_OBP_coords.npz',**dictout)
 
+
 def create_lobs_nparray():
     """quickly take the dataless STATIONXML for the Hobitss stations and convert
     into my own standard coord file
@@ -301,6 +302,9 @@ def trace_trench(m):
 
 def event_beachball_durationmap(event_id,m,anno=False):
     """plot event beachball on basemap 'm' object for a given geonet event_id
+    most events are yshift=.025 xshift=-.0775 if annotation sits above
+    if below yshift=-.0675 xshift=-.0825
+    yshift 
     :type anno: bool
     :param anno: if to annotate the event information next to beachball
     """
@@ -316,14 +320,14 @@ def event_beachball_durationmap(event_id,m,anno=False):
     ax.add_collection(b)
     if anno:
         yshift = .025 * (m.ymax-m.ymin)
-        xshift = -.0775 * (m.xmax-m.xmin)
+        xshift = -.15 * (m.xmax-m.xmin)
         plt.annotate("M{m}\n{e}".format(m=MT['Mw'],e=event_id),
                      xy=(eventx,eventy),
                      xytext=(eventx+xshift,eventy+yshift),
                      fontsize=10,
                      zorder=200,
                      weight='bold',
-                     multialignment='center')
+                     multialignment='right')
 
 
 def generate_duration_map(corners,event_id,show=True,save=False):
@@ -342,8 +346,8 @@ def generate_duration_map(corners,event_id,show=True,save=False):
                           "2016p859524":[],
                           "2015p768477":["BFZ"],
                           "2014p051675":["BFZ","MRZ","TSZ"],
-                          "2015p822263":["TLZ","BFZ"],
-                          "2014p240655":[]}
+                          "2015p822263":["TLZ","BFZ","RTZ"],
+                          "2014p240655":["ETVZ","RTZ",]}
     manual_ignore = manual_ignore_dict[event_id]
 
     f,m = mapmod.initiate_basemap(map_corners=corners,draw_lines=False)
@@ -369,7 +373,7 @@ def generate_duration_map(corners,event_id,show=True,save=False):
     # set colormap to the values of duration
     vmax = myround(np.nanmax(durs),base=50,choice='up')
     vmin = myround(np.nanmin(durs),base=50,choice='down')
-    norm = mpl.colors.Normalize(vmin=vmin,vmax=vmax)
+    norm = mpl.colors.Normalize(vmin=vmin,vmax=275)
     cmap = cm.jet
     colormap = cm.ScalarMappable(norm=norm,cmap=cmap)
 
@@ -390,15 +394,22 @@ def generate_duration_map(corners,event_id,show=True,save=False):
                         zorder=int(D))
 
         # fine tuned annotations
-        STA1 = "TOZ"#"HAZ" .0035 .0125 #"TOZ" .01 .01 #OPRZ 0.1,0.1
-        STA2 = "KU15-3"#"PUZ" -.0255 -.05 #KU15-3" -.0255 -.075 #PUZ 0.15 -0.5
+        """annotation dictionary
+        2014p051675 HAZ yshift=.0035 xshift=.0125, PUZ yshift=-.0255 xshift=-.05
+        2015p768477 TOZ yshift=.01 xshift=.01, KU15-3 yshift=-.0255 xshift=-.075
+        2014p715167 OPRZ yshift=.01 xshift=.01 , PUZ yshift=.015 xshift=-.05
+        2014p240655 MXZ yshift=.01 xshift=.01, MKAZ yshift=-.025,xshift=-.05
+        2014p864702 MXZ yshift=.01 xshift=.015, EBPR-2 yshift=.005, xshift=.015
+        """
+        STA1 = "MXZ"
+        STA2 = "EBPR-2"
         if (names[i] == STA1) or (names[i] == STA2):
             if names[i] == STA1:
                 yshift = .01 * (m.ymax-m.ymin)
-                xshift = .01 * (m.xmax-m.xmin)
+                xshift = .015 * (m.xmax-m.xmin)
             elif names[i] == STA2:
-                yshift = -.0255 * (m.ymax-m.ymin)
-                xshift = -.075 * (m.xmax-m.xmin)
+                yshift = 0.005 * (m.ymax-m.ymin)
+                xshift = .015 * (m.xmax-m.xmin)
             plt.annotate(names[i],
                          xy=(X,Y),
                          xytext=(X+xshift,Y+yshift),
@@ -415,7 +426,7 @@ def generate_duration_map(corners,event_id,show=True,save=False):
     # additional map objects
     trace_trench(m)
     event_beachball_durationmap(event_id,m,anno=True)
-    m.drawmapscale(179,-41.75, 179,-41.75, 100,yoffset=0.01*(m.ymax-m.ymin))
+    m.drawmapscale(179.65,-41.75, 179.65,-41.75, 100,yoffset=0.01*(m.ymax-m.ymin))
 
     # colorbar
     colormap.set_array(durs)
@@ -451,7 +462,7 @@ def true_if_outside_bounds(lat,lon,corners):
         return False
 
 def process_and_plot_waveforms(event_id,code,threshold_choice=0.2,choice="GN",
-                                            show=False,save=False,quick=False):
+                                            show=False,save=False):
     """create first section of composite, two waveforms showing vertical and
     groundmotion with proper formatting etc.
     :type choice: str
@@ -460,12 +471,6 @@ def process_and_plot_waveforms(event_id,code,threshold_choice=0.2,choice="GN",
     :rtype duration: float
     :return duration: value of duration in seconds, for use in plotting
     """
-    # check if the figure has already been generated
-    if quick:
-        if not os.path.exists(fidout):
-            print('quick: {} skipped'.format(fidout))
-            return None
-
     # setup the plot early to add things during processing
     f,ax1,ax2 = setup_plot()
 
@@ -530,8 +535,8 @@ def process_and_plot_waveforms(event_id,code,threshold_choice=0.2,choice="GN",
     return duration
 
 # ================================== RUN SCRIPTS ==============================
-def loop_waveform_plotter(event_id,corners,choice='GN',show=True,save=False,
-                                                        quick=False,savez=True):
+def loop_waveform_plotter(event_id,corners,choice='GN',
+                                            show=True,save=False,savez=True):
     """run script to call waveform process/plotter and save all duration values
     into an npz file which will be called by the plotter
     """
@@ -567,8 +572,7 @@ def loop_waveform_plotter(event_id,corners,choice='GN',show=True,save=False,
                 duration = process_and_plot_waveforms(event_id,code,
                                                         choice=choice,
                                                         show=show,
-                                                        save=save,
-                                                        quick=quick)
+                                                        save=save)
                 if not duration:
                     continue
                 durations.append(duration)
@@ -613,8 +617,7 @@ def loop_waveform_plotter(event_id,corners,choice='GN',show=True,save=False,
                 duration = process_and_plot_waveforms(event_id,code,
                                                         choice=choice,
                                                         show=show,
-                                                        save=save,
-                                                        quick=quick)
+                                                        save=save)
                 if not duration:
                     continue
                 newdurs.append(duration)
@@ -645,14 +648,15 @@ if __name__ == "__main__":
                      '2016p859524','2014p715167','2014p864702']
     corner_dict = {"default":[-42,-36,173,179.5],
                    "2016p859524":[-42.6,-36,173,179.5],
+                   "2014p864702":[-42,-36,173.6,180.21]
                    }
-    corners=corner_dict['default']
+    corners=corner_dict['2014p864702']
 
-    event_id = event_id_list[0]
+    event_id = event_id_list[-1]
     global bounds
     bounds = [10,100]
-    # for choice in ["ITO"]:
+    # for choice in ["GN","ITO"]:
     #     print(choice)
     #     loop_waveform_plotter(event_id,corners,choice,
-    #                             show=False,save=True,quick=False,savez=False)
+    #                             show=False,save=True,savez=True)
     generate_duration_map(corners,event_id,show=True,save=False)
