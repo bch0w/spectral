@@ -304,6 +304,8 @@ def event_beachball_durationmap(event_id,m,anno=False):
     """plot event beachball on basemap 'm' object for a given geonet event_id
     most events are yshift=.025 xshift=-.0775 if annotation sits above
     if below yshift=-.0675 xshift=-.0825
+    right justified .025 -.15
+    2015p768477: .025 -.1275
     yshift 
     :type anno: bool
     :param anno: if to annotate the event information next to beachball
@@ -319,15 +321,17 @@ def event_beachball_durationmap(event_id,m,anno=False):
     ax = plt.gca()
     ax.add_collection(b)
     if anno:
-        yshift = .025 * (m.ymax-m.ymin)
-        xshift = -.15 * (m.xmax-m.xmin)
-        plt.annotate("M{m}\n{e}".format(m=MT['Mw'],e=event_id),
+        yshift = -.079 * (m.ymax-m.ymin)
+        xshift = -.0825 * (m.xmax-m.xmin)
+        plt.annotate("M{m}\n{e}\n(depth: {d:} km)".format(m=MT['Mw'],
+                                             e=event_id,
+                                             d=int(MT['CD'])),
                      xy=(eventx,eventy),
                      xytext=(eventx+xshift,eventy+yshift),
                      fontsize=10,
                      zorder=200,
                      weight='bold',
-                     multialignment='right')
+                     multialignment='center')
 
 
 def generate_duration_map(corners,event_id,show=True,save=False):
@@ -373,7 +377,7 @@ def generate_duration_map(corners,event_id,show=True,save=False):
     # set colormap to the values of duration
     vmax = myround(np.nanmax(durs),base=50,choice='up')
     vmin = myround(np.nanmin(durs),base=50,choice='down')
-    norm = mpl.colors.Normalize(vmin=vmin,vmax=275)
+    norm = mpl.colors.Normalize(vmin=vmin,vmax=vmax)
     cmap = cm.jet
     colormap = cm.ScalarMappable(norm=norm,cmap=cmap)
 
@@ -401,15 +405,22 @@ def generate_duration_map(corners,event_id,show=True,save=False):
         2014p240655 MXZ yshift=.01 xshift=.01, MKAZ yshift=-.025,xshift=-.05
         2014p864702 MXZ yshift=.01 xshift=.015, EBPR-2 yshift=.005, xshift=.015
         """
-        STA1 = "MXZ"
-        STA2 = "EBPR-2"
+        ano = {"2014p051675":["HAZ",.0035,.0125,"PUZ",-.0255,-.05],
+               "2015p768477":["TOZ",.01,.01,"KU15-3",-.0255,-.075],
+               "2014p864702":["MXZ",.01,.015,"EBPR-2",.005,.015],
+               "2015p822263":["MRZ",.01,.015,"PUZ",-.0255,0.015],
+               "2014p240655":["MXZ",.01,.015,"MKAZ",-.025,-.05]
+               }
+               
+        STA1 = ano[event_id][0]
+        STA2 = ano[event_id][3]
         if (names[i] == STA1) or (names[i] == STA2):
             if names[i] == STA1:
-                yshift = .01 * (m.ymax-m.ymin)
-                xshift = .015 * (m.xmax-m.xmin)
+                yshift = ano[event_id][1] * (m.ymax-m.ymin)
+                xshift = ano[event_id][2] * (m.xmax-m.xmin)
             elif names[i] == STA2:
-                yshift = 0.005 * (m.ymax-m.ymin)
-                xshift = .015 * (m.xmax-m.xmin)
+                yshift = ano[event_id][4] * (m.ymax-m.ymin)
+                xshift = ano[event_id][5] * (m.xmax-m.xmin)
             plt.annotate(names[i],
                          xy=(X,Y),
                          xytext=(X+xshift,Y+yshift),
@@ -423,10 +434,13 @@ def generate_duration_map(corners,event_id,show=True,save=False):
         #              zorder=1000,
         #              weight='bold')
 
+    plt.annotate("(depth: 21 km)\n(depth: 14 km)\n(depth: 20 km)\n(depth: 60 km)\n(depth: 19 km)",
+                xy=(X,Y+0.02*(m.ymax-m.ymin)),fontsize=8,zorder=1000,weight='bold')
     # additional map objects
     trace_trench(m)
     event_beachball_durationmap(event_id,m,anno=True)
-    m.drawmapscale(179.65,-41.75, 179.65,-41.75, 100,yoffset=0.01*(m.ymax-m.ymin))
+    # m.drawmapscale(179.65,-41.75, 179.65,-41.75, 100,yoffset=0.01*(m.ymax-m.ymin))
+    m.drawmapscale(179,-41.75, 179,-41.75, 100,yoffset=0.01*(m.ymax-m.ymin))
 
     # colorbar
     colormap.set_array(durs)
@@ -650,9 +664,9 @@ if __name__ == "__main__":
                    "2016p859524":[-42.6,-36,173,179.5],
                    "2014p864702":[-42,-36,173.6,180.21]
                    }
-    corners=corner_dict['2014p864702']
+    corners=corner_dict['default']
 
-    event_id = event_id_list[-1]
+    event_id = event_id_list[0]
     global bounds
     bounds = [10,100]
     # for choice in ["GN","ITO"]:

@@ -30,7 +30,13 @@ def estimate_MRP(sta):
         st_tmp[0].stats.location = NGLL
         st += st_tmp
 
-    import ipdb;ipdb.set_trace()
+    # determine common endtime
+    commonend = min([st[0].stats.endtime,st[1].stats.endtime])
+    commonSR = min([st[0].stats.sampling_rate,st[1].stats.sampling_rate)
+    for tr in st:
+        tr.trim(tr.stats.starttime,commonend)
+        tr.resample(commonSR)
+        
     # setup plot
     f,ax = plt.subplots()
     pretty_grids(ax)
@@ -40,6 +46,7 @@ def estimate_MRP(sta):
                     0,st[0].stats.endtime-st[0].stats.starttime,len(st[0].data))
     t_ngll7 = np.linspace(
                     0,st[1].stats.endtime-st[1].stats.starttime,len(st[1].data))
+
 
 
 
