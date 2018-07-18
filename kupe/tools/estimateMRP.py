@@ -31,11 +31,17 @@ def estimate_MRP(sta):
         st += st_tmp
 
     # determine common endtime
+    # ngll7_dt = 0.0107
+    # ngll5_dt = 0.016
+    st[1].stats.delta=.0107
     commonend = min([st[0].stats.endtime,st[1].stats.endtime])
-    commonSR = min([st[0].stats.sampling_rate,st[1].stats.sampling_rate)
+    commonSR = min([st[0].stats.sampling_rate,st[1].stats.sampling_rate])
+    import ipdb;ipdb.set_trace()
     for tr in st:
         tr.trim(tr.stats.starttime,commonend)
         tr.resample(commonSR)
+        
+    # st[1].data = st[1].data[50:]
         
     # setup plot
     f,ax = plt.subplots()

@@ -666,11 +666,11 @@ if __name__ == "__main__":
                    }
     corners=corner_dict['default']
 
-    event_id = event_id_list[0]
+    event_id = event_id_list[3]
     global bounds
     bounds = [10,100]
-    # for choice in ["GN","ITO"]:
-    #     print(choice)
-    #     loop_waveform_plotter(event_id,corners,choice,
-    #                             show=False,save=True,savez=True)
-    generate_duration_map(corners,event_id,show=True,save=False)
+    for choice in ["GN"]:#,"ITO"]:
+        print(choice)
+        loop_waveform_plotter(event_id,corners,choice,
+                                show=False,save=False,savez=False)
+    # generate_duration_map(corners,event_id,show=True,save=False)
