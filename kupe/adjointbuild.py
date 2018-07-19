@@ -229,7 +229,7 @@ def run_pyflex(PD,st,inv,event,plot=False,config="UAF"):
 
     return windows
 
-# def pyflex_window_viewer(obs,syn,windows):
+def pyflex_window_viewer(obs,syn,windows):
 
 
 def run_pyadjoint(PD,st,windows,output_path=None,plot=False):
