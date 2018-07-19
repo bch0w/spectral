@@ -166,6 +166,17 @@ def initial_data_gather(PD):
 
     return st_IDG,inv,event
 
+def choose_config(config):
+    """helper function to avoid typing out the full pyflex config, stores values
+    in a list with the following order
+    0:stalta_Waterlevel, 1:tshift_acceptance_level, 2:dlna_acceptance_level,
+    3:cc_acceptance_level, 4:c_0, 5:c_1, 6:c_2, 7:c_3a, 8:c_3b, 10:c_4a, 11:c_4b
+    """
+    cfgdict = {"default":[.08,15.,1.,.8,.7,4.,0.,1.,2.,3.,10.],
+                  "UAF":[.18,4.,1.5,.71,.7,2.,0.,3.,2.,2.5,12.]}
+
+    return cfgdict[config]
+
 def run_pyflex(PD,st,inv,event,plot=False,config="UAF"):
     """use pyflex to grab windows, current config set to defaults found on docs
 
@@ -176,38 +187,15 @@ def run_pyflex(PD,st,inv,event,plot=False,config="UAF"):
     have acceptable match, also contains information about the window (see docs)
     """
     obs,syn = breakout_stream(st)
-
-    # DEFAULT CONFIG
-    if config == "default":
-        config = pyflex.Config(min_period=PD["bounds"][0],
-                               max_period=PD["bounds"][1],
-                               stalta_waterlevel=0.08,
-                               tshift_acceptance_level=15.0,
-                               dlna_acceptance_level=1.0,
-                               cc_acceptance_level=0.8,
-                               c_0=0.7,
-                               c_1=4.0,
-                               c_2=0.0,
-                               c_3a=1.0,
-                               c_3b=2.0,
-                               c_4a=3.0,
-                               c_4b=10.0
-                               )
-        # UAF CONFIG
-    elif config == "UAF":
-        config = pyflex.Config(min_period=PD["bounds"][0],
-                               max_period=PD["bounds"][1],
-                               stalta_waterlevel=0.18,
-                               tshift_acceptance_level=4.0,
-                               dlna_acceptance_level=1.5,
-                               cc_acceptance_level=0.71,
-                               c_0=0.7,
-                               c_1=2.0,
-                               c_2=0.0,
-                               c_3a=3.0,
-                               c_3b=2.0,
-                               c_4a=2.5,
-                               c_4b=12.0)
+    CD = choose_config(config)
+    config = pyflex.Config(min_period=PD["bounds"][0],
+                           max_period=PD["bounds"][1],
+                           stalta_waterlevel=CD[0],
+                           tshift_acceptance_level=CD[1],
+                           dlna_acceptance_level=CD[2],
+                           cc_acceptance_level=CD[3],
+                           c_0=CD[4],c_1=CD[5],c_2=CD[6],c_3a=CD[7],
+                           c_3b=CD[8],c_4a=CD[9],c_4b=CD[10])
 
     pf_event = pyflex.Event(latitude=event.origins[0].latitude,
                             longitude=event.origins[0].longitude,
@@ -229,7 +217,8 @@ def run_pyflex(PD,st,inv,event,plot=False,config="UAF"):
 
     return windows
 
-def pyflex_window_viewer(obs,syn,windows):
+def aggregate_windows(obs,syn,windows):
+
 
 
 def run_pyadjoint(PD,st,windows,output_path=None,plot=False):
