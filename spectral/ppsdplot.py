@@ -14,67 +14,15 @@ import matplotlib as mpl
 mpl.rcParams['font.size'] = 8
 mpl.rcParams['lines.linewidth'] = 1.5
 
+# ============================== HELPER FUNCTIONS ==============================
 def station_dict(code):
     station_dict = {"RD01":"PRWZ", "RD02":"ANWZ", "RD03":"TURI", "RD04":"PORA",
                     "RD05":"MNHR", "RD06":"DNVZ", "RD07":"WPAW", "RD08":"RAKW",
-                    "RD09":"MCHZ", "RD10":"CKHZ", "RD11":"KAHU", "RD12":"KWHZ",
+                    "RD09":"MCNL", "RD10":"CKHZ", "RD11":"KAHU", "RD12":"KWHZ",
                     "RD13":"KERE", "RD14":"PNUI", "RD15":"WPUK", "RD16":"OROA",
-                    "RD17":"TEAC", "RD18":"RANC","RD19":"MATT","RD20":"KAHU2",
+                    "RD17":"TEAC", "RD18":"RANC", "RD19":"MATT","RD20":"KAHU2",
                     "RD21":"TEAC2"}
     return station_dict[code]
-
-def gather_ppsd(specific,comp='Z',avg='median'):
-    """grab folders of data. comp can be wildcard or N,E or Z
-    """
-    npz_path = pathnames()['ppsd']
-    filename = '*HH{}*.npz'.format(comp)
-    files = glob.glob(os.path.join(npz_path,specific,filename))
-    files.sort()
-
-    averages,stations = [],[]
-    for fid in files:
-        sta,cha,date1,date2,db,fmt = os.path.basename(fid).split(".")
-        ppsd = PPSD.load_npz(fid)
-        if avg == 'mean':
-            average = ppsd.get_mean()
-        elif avg == 'mode':
-            average = ppsd.get_mode()
-        elif avg  == 'median':
-            average = ppsd.get_percentile(percentile=50)
-        averages.append(average[1])
-        stations.append(sta)
-
-    periods = average[0]
-
-    return stations,periods,averages
-
-def compare_ppsd(comp='Z',avg='median'):
-    """grab folders of data. comp can be wildcard or N,E or Z
-    """
-    npz_path = pathnames()['ppsd']
-    specific1 = 'RDF_JanMar_deployment/'
-    specific2 = 'RDF_MarMay_deployment/'
-    specific_list = [specific1,specific2]
-    averages,stations = [],[]
-    for i,specific in enumerate(specific_list):
-        filename = '*HH{}*.npz'.format(comp)
-        files = glob.glob(os.path.join(npz_path,specific,filename))
-        files.sort()
-
-        for fid in files:
-            sta,cha,date1,date2,db,fmt = os.path.basename(fid).split(".")
-            ppsd = PPSD.load_npz(fid)
-            if avg == 'mean':
-                average = ppsd.get_mean()
-            elif avg == 'mode':
-                average = ppsd.get_mode()
-            elif avg  == 'median':
-                average = ppsd.get_percentile(percentile=50)
-            averages.append(average[1])
-            stations.append(sta)
-        periods = average[0]
-
-    return stations,periods,averages
 
 def prime_plot():
     """set up plot objects
@@ -86,34 +34,136 @@ def prime_plot():
     # plot lines for noise models and microseisms
     nlnm_x,nlnm_y = get_nlnm()
     nhnm_x,nhnm_y = get_nhnm()
-    plt.plot(nhnm_x,nhnm_y,'gray',alpha=0.4)
-    plt.plot(nlnm_x,nlnm_y,'gray',alpha=0.4)
-    ax.fill_between(nhnm_x,nlnm_y,nhnm_y,facecolor='gray',alpha=0.2)
+    plt.plot(nhnm_x,nhnm_y,'gray',alpha=0.1,linewidth=1)
+    plt.plot(nlnm_x,nlnm_y,'gray',alpha=0.1,linewidth=1)
+    ax.fill_between(nhnm_x,nlnm_y,nhnm_y,facecolor='gray',alpha=0.1)
 
+    # set common plotting parameters
     plt.xlim([0.2,100])
     plt.ylim([nlnm_y.min(),-90])
     plt.xscale("log")
     plt.xlabel("Period [s]")
     plt.ylabel("Amplitude [m^2/s^4/Hz][dB]")
-    plt.grid()
 
     return f, ax
 
-
-def plot_ppsd(save=False,show=True):
-    """plotting function
+# ========================== PROCESSING FUNCTIONS ==============================
+def multi_component_ppsd(comp,specific,avg='median'):
+    """Return average arrays for each station in a given folder, choice of
+    component, can be N/E/Z/*
+    Choice of average available from the PPSD objects
     """
-    styles = ['-.','--','-']
-    color_dict = build_color_dictionary(map='viridis',num_of_colors=21)
+    fidtmplt = "RD{s:0>2}.HH{c}*"
 
-    # compare stations
-    stations,periods,averages = compare_ppsd()
+    if specific == "ALL":
+        folder = 'FATHOM/*'
+    else:
+        folder = 'FATHOM/{}'.format(specific)
+    folderlist = glob.glob(os.path.join(pathnames()['ppsd'],folder))
+
+    averages,stations = [],[]
+    for F in folderlist:
+        print(F)
+        # check range of stations available using filenames
+        allfiles = glob.glob(os.path.join(F,'*HH*.npz'))
+        allfiles.sort()
+        lowrange = int(os.path.basename(allfiles[0]).split('.')[0][2:])
+        highrange = int(os.path.basename(allfiles[-1]).split('.')[0][2:])
+
+        # loop by station and inner loop by components per station
+        for i in range(lowrange,highrange+1):
+            files = glob.glob(os.path.join(F,fidtmplt.format(s=i,c=comp)))
+            if not files:
+                print('no files',fidtmplt.format(s=i,c=comp))
+                continue
+            inneraverages = []
+            for fid in files:
+                ppsd = PPSD.load_npz(fid)
+                if avg == 'mean':
+                    average = ppsd.get_mean()
+                elif avg == 'mode':
+                    average = ppsd.get_mode()
+                elif avg  == 'median':
+                    average = ppsd.get_percentile(percentile=50)
+                inneraverages.append(average[1])
+
+            outeraverage = np.mean(np.array(inneraverages),axis=0)
+            averages.append(outeraverage)
+            stations.append("RD{:0>2}".format(i))
+    periods = average[0]
+
+    if specific == "ALL":
+        stations,averages = collapse_stations(stations,averages)
+
+    return stations,periods,averages
+
+def collapse_stations(stations,averages):
+    """if stations are repeated (e.g. from muilticomponent ppsd gather) take
+    the mean of all arrays and return collapsed arrays
+    """
+    stations = np.array(stations)
+    averages = np.array(averages)
+    setstations = list(set(stations))
+    setstations.sort()
+    stationsout,averagesout = [],[]
+    for sta in setstations:
+        indices = np.where(stations==sta)[0]
+        avginner = []
+        for i in indices:
+            avginner.append(averages[i])
+        avgouter = np.mean(avginner,axis=0)
+        averagesout.append(avgouter)
+        stationsout.append(sta)
+
+    return stationsout,averagesout
+
+
+# ============================== PLOTTING FUNCTIONS ============================
+def plot_ppsd(save=False,show=True):
+    """Main plotting function, plots average lines from a given folder with
+    various distinct colors and markers.
+
+    ++ parameters can be the following:
+    specific: 'ALL','JULY17_JAN18','JAN18_MAR18','MAR18_MAY18','MAY18_JUNE18'
+    component: 'N','E','Z','*'
+    averagetype: 'median','mean','mode'
+    """
+    # PARAMETER SET
+    specific = 'MAY18_JUNE18'
+    component = '*'
+    averagetype = 'median'
+    colormap = 'gist_rainbow'
+    # //PARAMETER SET
+
+
+    # various markers and linestyles for easy visualization
+    styles=['-']
+    markers = ['x','o','D','v','s','*','+']
+
+    # gather data
+    stations,periods,averages = multi_component_ppsd(comp=component,
+                                                     specific=specific,
+                                                     avg=averagetype)
+
+
     f,ax = prime_plot()
-
+    color_dict = build_color_dictionary(map='gist_rainbow',
+                                        num_of_colors=len(stations))
     for i,(avgs,stas) in enumerate(zip(averages,stations)):
         sta_num = int(stas[2:])
         plt.plot(periods,avgs,
-                 label="{} {}".format(stas,station_dict(stas)))
+                 c=color_dict[i],
+                 markersize=2,
+                 markeredgecolor='k',
+                 markeredgewidth='.5',
+                 marker=markers[i%len(markers)],
+                 linestyle=styles[i%len(styles)],
+                 label="{} {}".format(stas,station_dict(stas))
+                 )
+
+    # final plotting adjustments
+    plt.title("{s} HH{c} {a}".format(s=specific,c=component,a=averagetype))
+    plt.legend(prop={'size': 4},ncol=4)
 
     if save:
         figname = "placeholder"
@@ -121,29 +171,5 @@ def plot_ppsd(save=False,show=True):
     if show:
         plt.show()
 
-def plot_by_station():
-    color_dict = build_color_dictionary(map='viridis',num_of_colors=21)
-
-    # compare stations
-    specific1 = 'RDF_JanMar_deployment'
-    specific2 = 'RDF_MarMay_deployment'
-    S1,periods,A1 = gather_ppsd(specific1)
-    S2,periods,A2 = gather_ppsd(specific2)
-
-    for i in range(1,22):
-        station_number = 'RD{:0>2}'.format(i)
-        f,ax = prime_plot()
-        for S,A,specific,L in zip([S1,S2],[A1,A2],[specific1,specific2],['-','--']):
-            try:
-                index = S.index(station_number)
-                plt.plot(periods,A[index],label=specific,linestyle=L)
-                plt.legend()
-                plt.title(station_number)
-            except ValueError:
-                continue
-        plt.show()
-
-
-
 if __name__ == "__main__":
-    plot_by_station()
+    plot_ppsd()

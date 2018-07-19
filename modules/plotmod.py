@@ -15,7 +15,7 @@ def build_color_dictionary(num_of_colors,map='nipy_spectral'):
     norm_col = colors.Normalize(vmin=0,vmax=num_of_colors-1)
     scalarMap = mplcm.ScalarMappable(norm=norm_col,cmap=cm)
     colorrange = [scalarMap.to_rgba(i) for i in range(num_of_colors)]
-        
+
     color_dictionary = {}
     for i in range(0,num_of_colors):
         color_dictionary[i] = colorrange[i]
@@ -38,10 +38,10 @@ def pretty_grids(input_ax):
                     color='k',
                     alpha=0.25)
     input_ax.grid(which='major',
-                    linestyle='-',
+                    linestyle=':',
                     linewidth='0.5',
                     color='k',
-                    alpha=0.15)
+                    alpha=0.25)
     input_ax.ticklabel_format(style='sci',
                             axis='y',
                             scilimits=(0,0))

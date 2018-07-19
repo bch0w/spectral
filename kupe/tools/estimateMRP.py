@@ -18,6 +18,10 @@ mpl.rcParams['lines.linewidth'] = 1
 def get_station_names():
     """
     """
+    basepath = pathnames()['syns'] + '2018p130600_ngllTest'
+    filename = "NZ.*.semv.mseed"
+    filenames = glob.glob(os.path.join(basepath,filename))
+
 
 def estimate_MRP(sta):
     """the function
