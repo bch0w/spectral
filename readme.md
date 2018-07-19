@@ -19,6 +19,7 @@ Data directory structure (6.7.18)
 |------**tools [misc. tools to assist tomography work]**\
 |------------_ascii2mseed.py_ [convert ascii specfem outputs to mseed]\
 |------------_availablestations.py_ [find available data in my data directories]\
+|------------_estimateMRP.py_ [minimum resolvable period using NGLL differences]\
 |------------_generate_CMTSOLUTION.py_ [create input CMTSOLUTION for specfem, for me]\
 |------------_generate_CMTSOLUTION_standalone.py_ [as above but for general purpose]\
 |------------_grd2mat.m_ [convert grd files to matlab data structure, not mine]\
@@ -32,13 +33,9 @@ Data directory structure (6.7.18)
 |------_procmod.py_ [data processing functions]\
 |------_synmod.py_ [synthetic data generation and processing functions]\
 |-**spectral [frequency domain work: ppsd noise analysis and spetrograms]**\
-|------**duration [long duration resonance work]**\
-|------------...\
 |------_createppsd.py_ [generate ppsd noise analysis plots]\
-|------_eq_duration.py_ [quantify and plot earthquake duration]\
+|------_quakeDuration.py_ [quantify and plot earthquake duration]\
 |------_ppsdplot.py_ [plot outputs of createppsd]\
-|------_station_plot.py_ [deprecated mapper]\
-|------_waveform_by_event.py_ [deprecated waveform plotter]\
 |-**tremor [tremor detection and plotting scripts]**\
 |------_pyfreqscan.py_ [main processing script for detecting tremors in data]\
 |------_magnifytremors.py_ [plot zoomed in sections of tremor windows]\
