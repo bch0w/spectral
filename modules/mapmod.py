@@ -13,6 +13,23 @@ mpl.rcParams['lines.linewidth'] = 1
 from getdata import pathnames
 from procmod import myround
 
+def true_if_outside_bounds(lat,lon,corners):
+    """bool tell me if station falls outside the map bounds
+    :type lat/lon: float
+    :param lat/lon: object location
+    :type corners: list of floats
+    :param corners: map bounds [lat_bot,lat_top,lon_left,lon_right] 
+                        e.g.   [-42,-36,173,178]
+    """
+    lat_bot,lat_top,lon_left,lon_right = corners
+
+    if (lon < lon_left) or (lon > lon_right):
+        return True
+    elif (lat < lat_bot) or (lat > lat_top):
+        return True
+    else:
+        return False
+
 def inventory_to_npz_array(filepath):
     """for quick plotting, generate npz arrays containing latitude,longitude
     and names of stations

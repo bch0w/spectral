@@ -13,22 +13,15 @@ from os.path import join
 from obspy import UTCDateTime, read, Stream
 
 # module functions
-sys.path.append('../modules/')
+sys.path.append('../../modules/')
 import getdata
 import synmod
 import procmod
 import plotmod
 from getdata import pathnames
 
-# plotting settings
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-mpl.rcParams['font.size'] = 8
-mpl.rcParams['lines.linewidth'] = 1
-
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
-warnings.filterwarnings("ignore", category=mpl.cbook.mplDeprecation)
 
 # ============================ HELPER FUNCTIONS ================================
 def find_BAz(inv,event):
@@ -125,20 +118,16 @@ def initial_data_gather(PD):
         print("No observation data")
         return None,None,None
 
-    # rotate to theoretical backazimuth if necessary
-    if PD["component"] == ("R" or "T"):
-        BAz = find_BAz(inv,event)
-        observationdata_proc.rotate(method='NE->RT',back_azimuth=BAz)
-        syntheticdata_proc.rotate(method='NE->RT',back_azimuth=BAz)
-
-    # only grab the necessary streams to save on processing
-    observationdata = observationdata.select(component=PD["component"])
-    syntheticdata = syntheticdata.select(component=PD["component"])
-
     # observation preprocessing + instrument response
     observationdata = procmod.preprocess(observationdata,
                                                 inv=inv,
                                                 output=PD["output"])
+    
+    # rotate to theoretical backazimuth if necessary
+    if PD["rotate"] == True:
+        BAz = find_BAz(inv,event)
+        observationdata.rotate(method='NE->RT',back_azimuth=BAz)
+        syntheticdata.rotate(method='NE->RT',back_azimuth=BAz)
 
     # synthetic moment-tensor information
     time_shift, half_duration = synmod.tshift_halfdur(PD["event_id"])
@@ -177,7 +166,7 @@ def choose_config(config):
 
     return cfgdict[config]
 
-def run_pyflex(PD,st,inv,event,plot=False,config="UAF"):
+def run_pyflex(PD,st,inv,event,plot=False):
     """use pyflex to grab windows, current config set to defaults found on docs
 
     :type PD: dictionary
@@ -187,7 +176,7 @@ def run_pyflex(PD,st,inv,event,plot=False,config="UAF"):
     have acceptable match, also contains information about the window (see docs)
     """
     obs,syn = breakout_stream(st)
-    CD = choose_config(config)
+    CD = choose_config(PD["pyflex_config"])
     config = pyflex.Config(min_period=PD["bounds"][0],
                            max_period=PD["bounds"][1],
                            stalta_waterlevel=CD[0],
@@ -211,14 +200,12 @@ def run_pyflex(PD,st,inv,event,plot=False,config="UAF"):
                                     event=pf_event,
                                     station=pf_station,
                                     plot=plot)
+                                    
     if not windows:
         print("Empty windows")
         return None
 
     return windows
-
-def aggregate_windows(obs,syn,windows):
-
 
 
 def run_pyadjoint(PD,st,windows,output_path=None,plot=False):
@@ -306,7 +293,7 @@ def bobTheBuilder():
     :param PLOT: plot outputs of pyflex and pyadjoint, global switch
     """
     # =============== PARAMETER SET ===============
-    EVENT_IDS = ["2018p130600"]
+    EVENT_IDS = ["2014p240655"]
     STATION_NAMES = ['NZ.BFZ','NZ.BKZ','NZ.HAZ','NZ.HIZ','NZ.KNZ','NZ.MRZ',
                      'NZ.MWZ','NZ.OPRZ','NZ.PUZ','NZ.PXZ','NZ.RTZ','NZ.TLZ',
                      'NZ.TOZ','NZ.TSZ','NZ.VRZ','NZ.WAZ']
@@ -317,8 +304,9 @@ def bobTheBuilder():
     #                    'XX.RD21','XX.RD22']
     MINIMUM_FILTER_PERIOD = 6
     MAXIMUM_FILTER_PERIOD = 30
-    COMPONENT = "Z"
+    ROTATE = True
     UNIT_OUTPUT = "VEL"
+    PYFLEX_CONFIG = "UAF"
     # ADJOINT_TYPE = "cc_traveltime_misfit"
     # CONFIG = "default"
     ADJ_SRC_OUTPUT_PATH = pathnames()["kupedata"] + "ADJOINTSOURCES"
@@ -334,18 +322,17 @@ def bobTheBuilder():
                         "event_id":EVENT_ID,
                         "bounds":(MINIMUM_FILTER_PERIOD,
                                   MAXIMUM_FILTER_PERIOD),
-                        "component":COMPONENT,
-                        "output":UNIT_OUTPUT
+                        "rotate":ROTATE,
+                        "output":UNIT_OUTPUT,
+                        "pyflex_config":PYFLEX_CONFIG
                         }
 
             # PROCESSING
             st,inv,event = initial_data_gather(PAR_DICT)
-            if not st:
-                continue
+            if not st: continue
             windows = run_pyflex(PAR_DICT,st,inv,event,plot=PLOT)
+            if not windows: continue
             import ipdb;ipdb.set_trace()
-            if not windows:
-                continue
             adj_src = run_pyadjoint(PAR_DICT,st,windows,
                                     output_path=ADJ_SRC_OUTPUT_PATH,
                                     plot=PLOT)

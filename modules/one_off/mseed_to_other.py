@@ -19,7 +19,7 @@ def this_doesnt_work():
 			outname = os.path.join(outpath,filename,'.mat')
 			savemat(outname,mdict)
 
-def stream_to_2column_ascii():
+def stream_to_2column_ascii_GNS():
 	outpath = '/seis/prj/fwi/bchow/mseeds/ASCII/'
 	path = '/seis/prj/fwi/bchow/mseeds/ASCII/*KU15-3*.ascii'
 	allfiles = glob.glob(path)
@@ -35,7 +35,23 @@ def stream_to_2column_ascii():
 			with open(fidout,'w') as f:
 				for i,data in enumerate(tr.data):
 					f.write('{:.2f}\t{}\n'.format(i*dt,data))
+					
+def stream_to_2column_ascii_VUW():
+	path = '/Users/chowbr/Documents/subduction/mseeds/byEvent/NZ/to_ascii/*'
+	outpath = '/Users/chowbr/Documents/subduction/mseeds/ASCII/'
+	allfiles = glob.glob(path)
+	for fid in allfiles:
+		st = read(fid)
+		filename = os.path.basename(fid)
+		for tr in st:
+			filename = filename.split('.')[0]
+			newfid = "{}_{}".format(filename,tr.get_id()[-3:])
+			fidout = os.path.join(outpath,newfid)
+			dt = tr.stats.delta
+			with open(fidout,'w') as f:
+				for i,data in enumerate(tr.data):
+					f.write('{:.2f}\t{}\n'.format(i*dt,data))
 
 
 if __name__ == "__main__":
-	stream_to_2column_ascii()
+	stream_to_2column_ascii_VUW()

@@ -13,6 +13,7 @@ import numpy as np
 
 from getdata import pathnames
 from plotmod import pretty_grids
+from synmod import stf_convolve, tshift_halfdur
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -57,18 +58,21 @@ def estimate_MRP(sta):
         st_tmp[0].stats.location = NGLL
         st += st_tmp
 
+    # preprocess
     # determine common endtime
-    # ngll7_dt = 0.0107
-    # ngll5_dt = 0.016
     st[1].stats.delta=.0107
     commonend = min([st[0].stats.endtime,st[1].stats.endtime])
     commonSR = min([st[0].stats.sampling_rate,st[1].stats.sampling_rate])
     for tr in st:
         tr.trim(tr.stats.starttime,commonend)
-        tr.resample(commonSR)
+        tr.resample(commonSR)    
     commonlength = min([len(st[0].data),len(st[1].data)])
     st[0].data = st[0].data[0:commonlength]
     st[1].data = st[1].data[0:commonlength]
+    
+    # convolve with source time function
+    # time_shift,half_duration = tshift_halfdur('2018p130600')
+    stn = stf_convolve(st,half_duration=0.7)#,time_shift=time_shift)
 
     # setup plot
     f,ax = plt.subplots()
@@ -76,16 +80,17 @@ def estimate_MRP(sta):
 
     # setup time axis
     t_ngll5 = np.linspace(
-                    0,st[0].stats.endtime-st[0].stats.starttime,len(st[0].data))
+                0,stn[0].stats.endtime-stn[0].stats.starttime,len(stn[0].data))
     t_ngll7 = np.linspace(
-                    0,st[1].stats.endtime-st[1].stats.starttime,len(st[1].data))
+                0,stn[1].stats.endtime-stn[1].stats.starttime,len(stn[1].data))
 
     # plot steps of lowpass filters
     step = 0
+    import ipdb;ipdb.set_trace()
     for lowpass in np.arange(0,8,0.5):
-        st_filter = st.copy()
+        st_filter = stn.copy()
         if lowpass != 0:
-            st_filter.filter('lowpass',freq=1/lowpass)
+            st_filter.filter('lowpass',freq=1/lowpass,corners=4)
         for tr in st_filter:
             tr.data /= tr.data.max()
             tr.data += step

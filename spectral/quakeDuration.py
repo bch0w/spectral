@@ -576,6 +576,8 @@ def loop_waveform_plotter(event_id,corners,choice='GN',
     if choice == "GN":
         durations = []
         for i,sta in enumerate(names):
+            if sta != 'MWZ':
+                continue
             try:
                 if true_if_outside_bounds(lats[i],lons[i],corners):
                     durations.append(np.nan)
@@ -666,7 +668,7 @@ if __name__ == "__main__":
                    }
     corners=corner_dict['default']
 
-    event_id = event_id_list[3]
+    event_id = event_id_list[0]
     global bounds
     bounds = [10,100]
     for choice in ["GN"]:#,"ITO"]:
