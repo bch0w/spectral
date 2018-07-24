@@ -12,6 +12,9 @@ import numpy as np
 from os.path import join
 from obspy import UTCDateTime, read, Stream
 
+import windowMaker
+import mapMaker
+
 # module functions
 sys.path.append('../../modules/')
 import getdata
@@ -175,7 +178,6 @@ def run_pyflex(PD,st,inv,event,plot=False):
     :return windows: windows containing selected timespans where waveforms
     have acceptable match, also contains information about the window (see docs)
     """
-    obs,syn = breakout_stream(st)
     CD = choose_config(PD["pyflex_config"])
     config = pyflex.Config(min_period=PD["bounds"][0],
                            max_period=PD["bounds"][1],
@@ -194,12 +196,17 @@ def run_pyflex(PD,st,inv,event,plot=False):
     pf_station = pyflex.Station(latitude=inv[0][0].latitude,
                                 longitude=inv[0][0].longitude)
 
-    windows = pyflex.select_windows(observed=obs,
-                                    synthetic=syn,
-                                    config=config,
-                                    event=pf_event,
-                                    station=pf_station,
-                                    plot=plot)
+    # iterate windows by component and place into dictionary output
+    windows = {}
+    for comp in PD["comp_list"]:
+        obs,syn = breakout_stream(st.select(component=comp))
+        window = pyflex.select_windows(observed=obs,
+                                        synthetic=syn,
+                                        config=config,
+                                        event=pf_event,
+                                        station=pf_station,
+                                        plot=plot)
+        windows[comp] = window
                                     
     if not windows:
         print("Empty windows")
@@ -292,7 +299,8 @@ def bobTheBuilder():
     :type PLOT: bool
     :param PLOT: plot outputs of pyflex and pyadjoint, global switch
     """
-    # =============== PARAMETER SET ===============
+    # ============================== PARAMETER SET =============================
+    
     EVENT_IDS = ["2014p240655"]
     STATION_NAMES = ['NZ.BFZ','NZ.BKZ','NZ.HAZ','NZ.HIZ','NZ.KNZ','NZ.MRZ',
                      'NZ.MWZ','NZ.OPRZ','NZ.PUZ','NZ.PXZ','NZ.RTZ','NZ.TLZ',
@@ -307,13 +315,18 @@ def bobTheBuilder():
     ROTATE = True
     UNIT_OUTPUT = "VEL"
     PYFLEX_CONFIG = "UAF"
-    # ADJOINT_TYPE = "cc_traveltime_misfit"
-    # CONFIG = "default"
     ADJ_SRC_OUTPUT_PATH = pathnames()["kupedata"] + "ADJOINTSOURCES"
-    ADJ_SRC_OUTPUT_PATH = None
-    PLOT = True
-    # =============== PARAMETER SET ===============
+    PLOT = False
+    # ADJOINT_TYPE = "cc_traveltime_misfit"
 
+    # ============================== PARAMETER SET =============================
+    
+    # PARAMETER DEFUALT SET
+    COMPONENT_LIST = ["N","E","Z"]
+    if ROTATE:
+        COMPONENT_LIST = ["R","T","Z"]
+    
+    # MAIN ITERATE OVER EVENTS
     for EVENT_ID in EVENT_IDS:
         for STATION_NAME in STATION_NAMES:
             print(STATION_NAME)
@@ -324,21 +337,23 @@ def bobTheBuilder():
                                   MAXIMUM_FILTER_PERIOD),
                         "rotate":ROTATE,
                         "output":UNIT_OUTPUT,
-                        "pyflex_config":PYFLEX_CONFIG
+                        "pyflex_config":PYFLEX_CONFIG,
+                        "comp_list":COMPONENT_LIST
                         }
-
-            # PROCESSING
+            
+            # MAIN PROCESSING
             st,inv,event = initial_data_gather(PAR_DICT)
+            import ipdb;ipdb.set_trace()
             if not st: continue
             windows = run_pyflex(PAR_DICT,st,inv,event,plot=PLOT)
             if not windows: continue
-            import ipdb;ipdb.set_trace()
+            f,axes = windowMaker.window_maker(st,windows,PD=PAR_DICT)
             adj_src = run_pyadjoint(PAR_DICT,st,windows,
                                     output_path=ADJ_SRC_OUTPUT_PATH,
                                     plot=PLOT)
-
-
+                                                                     
 
 # =================================== MAIN ====================================
 if __name__ == "__main__":
     bobTheBuilder()
+

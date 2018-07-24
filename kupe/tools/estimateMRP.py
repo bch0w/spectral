@@ -60,7 +60,7 @@ def estimate_MRP(sta):
 
     # preprocess
     # determine common endtime
-    st[1].stats.delta=.0107
+    st[1].stats.delta=0.00775
     commonend = min([st[0].stats.endtime,st[1].stats.endtime])
     commonSR = min([st[0].stats.sampling_rate,st[1].stats.sampling_rate])
     for tr in st:
@@ -86,7 +86,6 @@ def estimate_MRP(sta):
 
     # plot steps of lowpass filters
     step = 0
-    import ipdb;ipdb.set_trace()
     for lowpass in np.arange(0,8,0.5):
         st_filter = stn.copy()
         if lowpass != 0:

@@ -3,11 +3,40 @@ produces a basemap with beachball and all available stations as well as the
 relevant station highlighted. important information annotated (e.g. 
 misift information, distance, BAz etc.)
 """
+import numpy as np
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+from mpl_toolkits.basemap import Basemap, cm
+from obspy.imaging.beachball import beach
+from obspy.geodetics import gps2dist_azimuth
 
-def event_beachball(MT,shift=[0,0]):
+mpl.rcParams['font.size'] = 12
+mpl.rcParams['lines.linewidth'] = 1.25
+mpl.rcParams['lines.markersize'] = 10
+mpl.rcParams['axes.linewidth'] = 2
+
+
+def trace_trench(m):
+    """trace the hikurangi trench on a basemap object 'm'
+    """
+    trenchcoordspath = pathnames()['data'] + \
+                                        'KUPEDATA/hikurangiTrenchCoords.npz'
+    trenchcoords = np.load(trenchcoordspath)
+    lats = trenchcoords['LAT']
+    lons = trenchcoords['LON']
+    x,y = m(lons,lats)
+
+    # interpolate points to make a smoother curve
+    xprime = np.flip(x,axis=0)
+    yprime = np.flip(y,axis=0)
+    xprimenew = np.linspace(x.min(),x.max(),100)
+    yprimenew = np.interp(xprimenew,xprime,yprime)
+
+    m.plot(xprimenew,yprimenew,'--',linewidth=1.25,color='k',zorder=2)    
+
+def event_beachball(m,MT):
     """plot event beachball on basemap 'm' object for a given geonet event_id
     """
-    from obspy.imaging.beachball import beach
     eventx,eventy = m(MT['Longitude'],MT['Latitude'])
     FM = [MT['strike2'],MT['dip2'],MT['rake2']]
 
@@ -18,20 +47,83 @@ def event_beachball(MT,shift=[0,0]):
     b.set_zorder(1000)
     ax = plt.gca()
     ax.add_collection(b)
-    yshift = shift[0] * (m.ymax-m.ymin)
-    xshift = shift[1] * (m.xmax-m.xmin)
-    plt.annotate("M{m}\n{e}\n(depth: {d:} km)".format(m=MT['Mw'],
-                                         e=event_id,#!!!
-                                         d=int(MT['CD'])),
-                 xy=(eventx,eventy),
-                 xytext=(eventx+xshift,eventy+yshift),
-                 fontsize=10,
-                 zorder=200,
-                 weight='bold',
-                 multialignment='center')
 
 
-def generate_duration_map(corners):
+def source_receiver(event,inv):
+    """determine source receiver parameters such as great circle distance,
+    backazimuth etc.
+    source = A, receiver = B
+    """
+    MT = get_moment_tensor(event_id=event_id)
+    event_lat,event_lon = event.origins[0].latitude,event.origins[0].longitude
+    sta_lat,sta_lon = inv[0][0].latitude,inv[0][0].longitude
+    GCDist,Az,BAz = gps2dist_azimuth(event_lat,event_lon,sta_lat,sta_lon)
+    
+    # get magnitude M
+    for mag in event.magnitudes:
+        if m.magnitude_type == "M":
+            magnitude = m.mag
+    
+    # dictionary output for use in annotations
+    srcrcvdict = {"distance":GCDist,
+                  "backazimuth":BAz,
+                  "date":event.origins[0].time,
+                  "depth":event.origins[0].depth*1E-3,
+                  "magnitude":magnitude,
+                  }
+    
+    return srcrcvdict, MT
+    
+
+def initiate_basemap(map_corners=[-50,-32.5,165,180],figsize=(10,9.4),dpi=100):
+    """set up local map of NZ to be filled
+    default map corners give a rough box around new zealand
+    etopo_else_flat_map: bool to control continent fill with either low res topo
+    or solid line representation
+    """
+    # flat map configuration
+    continent_color = 'w'
+    lake_color = 'w'
+
+    # initiate map
+    fig = plt.figure(figsize=figsize,dpi=dpi)
+    m = Basemap(projection = 'stere',
+                resolution = 'h',
+                rsphere = 6371200,
+                lat_0 = np.mean(map_corners[:2]),
+                lon_0 = np.mean(map_corners[2:]),
+                llcrnrlat = map_corners[0],
+                llcrnrlon = map_corners[2],
+                urcrnrlat = map_corners[1],
+                urcrnrlon = map_corners[3],
+                )
+
+    m.fillcontinents(color=continent_color,lake_color=lake_color)
+    m.drawcoastlines(linewidth=1.5)
+    trace_trench(m)
+
+    return fig, m
+
+def populate_basemap(m,lats,lons,names=None):
+    """fill map with latitude/longitude pairs, i.e. stations, events
+    """
+    if names is None: names = []
+
+    X,Y = m(lons,lats)
+    scatter = m.scatter(X,Y,
+                        marker='v',
+                        color=w,
+                        edgecolor='k',
+                        s=50,
+                        zorder=5)
+
+    if len(names) != 0:
+        for n_,x_,y_ in zip(names,X,Y):
+            plt.annotate(n_,xy=(x_,y_),xytext=(x_,y_),zorder=6,fontsize=8.5)
+
+
+def generate_map(event,inv,corners=[-42.5007,-36.9488,172.9998,179.5077],
+                                                                      **kwargs):
     """initiate and populate a basemap object for New Zealands north island.
     Functionality to manually ignore stations based on user quality control
     Takes station coordinates and coloring from npz files
@@ -41,106 +133,24 @@ def generate_duration_map(corners):
     :param corners: values for map corners to set bounds
      e.g. [lat_bot,lat_top,lon_left,lon_right]
     """
-    f,m = mapmod.initiate_basemap(map_corners=corners,draw_lines=False)
-
-    # load in duration values
-    npzfolder = pathnames()['data'] + 'DURATIONS'
-    stationfile = '{e}_{b0}_{b1}_durations.npz'.format(e=event_id,
-                                                       b0=bounds[0],
-                                                       b1=bounds[1]
-                                                       )
-    sta = np.load(os.path.join(npzfolder,stationfile))
-
-    # manual ignorance
-    names,lats,lons,durs = sta['NAME'],sta['LAT'],sta['LON'],sta['DURATION']
-    for MI in manual_ignore:
-        if MI in names:
-            ind = np.where(names==MI)[0][0]
-            names = np.delete(names,ind)
-            lats = np.delete(lats,ind)
-            lons = np.delete(lons,ind)
-            durs = np.delete(durs,ind)
-
-    # set colormap to the values of duration
-    vmax = myround(np.nanmax(durs),base=50,choice='up')
-    vmin = myround(np.nanmin(durs),base=50,choice='down')
-    norm = mpl.colors.Normalize(vmin=vmin,vmax=vmax)
-    cmap = cm.jet
-    colormap = cm.ScalarMappable(norm=norm,cmap=cmap)
-
-    # plot individual stations with color and zorder set by duration length
-    for i,D in enumerate(durs):
-        if np.isnan(D):
-            continue
-            color = 'w'
-            D = 10
-        else:
-            color = colormap.to_rgba(durs[i])
-        X,Y = m(lons[i],lats[i])
-        m.scatter(X,Y,marker='v',
-                        color=color,
-                        s=100,
-                        linewidth=1.1,
-                        edgecolor='k',
-                        zorder=int(D))
-
-        # fine tuned annotations
-        """annotation dictionary
-        2014p051675 HAZ yshift=.0035 xshift=.0125, PUZ yshift=-.0255 xshift=-.05
-        2015p768477 TOZ yshift=.01 xshift=.01, KU15-3 yshift=-.0255 xshift=-.075
-        2014p715167 OPRZ yshift=.01 xshift=.01 , PUZ yshift=.015 xshift=-.05
-        2014p240655 MXZ yshift=.01 xshift=.01, MKAZ yshift=-.025,xshift=-.05
-        2014p864702 MXZ yshift=.01 xshift=.015, EBPR-2 yshift=.005, xshift=.015
-        """
-        ano = {"2014p051675":["HAZ",.0035,.0125,"PUZ",-.0255,-.05],
-               "2015p768477":["TOZ",.01,.01,"KU15-3",-.0255,-.075],
-               "2014p864702":["MXZ",.01,.015,"EBPR-2",.005,.015],
-               "2015p822263":["MRZ",.01,.015,"PUZ",-.0255,0.015],
-               "2014p240655":["MXZ",.01,.015,"MKAZ",-.025,-.05]
-               }
-               
-        STA1 = ano[event_id][0]
-        STA2 = ano[event_id][3]
-        if (names[i] == STA1) or (names[i] == STA2):
-            if names[i] == STA1:
-                yshift = ano[event_id][1] * (m.ymax-m.ymin)
-                xshift = ano[event_id][2] * (m.xmax-m.xmin)
-            elif names[i] == STA2:
-                yshift = ano[event_id][4] * (m.ymax-m.ymin)
-                xshift = ano[event_id][5] * (m.xmax-m.xmin)
-            plt.annotate(names[i],
-                         xy=(X,Y),
-                         xytext=(X+xshift,Y+yshift),
-                         fontsize=10,
-                         zorder=1000,
-                         weight='bold')
-        # plt.annotate(names[i],
-        #              xy=(X,Y),
-        #              xytext=(X,Y),
-        #              fontsize=10,
-        #              zorder=1000,
-        #              weight='bold')
-
-    plt.annotate("(depth: 21 km)\n(depth: 14 km)\n(depth: 20 km)\n(depth: 60 km)\n(depth: 19 km)",
-                xy=(X,Y+0.02*(m.ymax-m.ymin)),fontsize=8,zorder=1000,weight='bold')
-    # additional map objects
-    trace_trench(m)
-    event_beachball_durationmap(event_id,m,anno=True)
-    # m.drawmapscale(179.65,-41.75, 179.65,-41.75, 100,yoffset=0.01*(m.ymax-m.ymin))
+    PD = kwargs['PD']
+    
+    f,m = initiate_basemap(map_corners=corners)
+    srcrcvdict,MT = source_receiver(event,inv,PD)
+    event_beachball(m,MT)
+    
+    stationfile = pathnames()['data'] + 'STATIONXML/GEONET_AND_FATHOM.npz'
+    stationlist = np.load(stationfile)
+    
+    populate_basemap(m,stationlist['LAT'],stationlist['LON'])
+    
+    # final plot additions
     m.drawmapscale(179,-41.75, 179,-41.75, 100,yoffset=0.01*(m.ymax-m.ymin))
-
-    # colorbar
-    colormap.set_array(durs)
-    cbar = f.colorbar(colormap,fraction=0.046,pad=0.04)
-    cbar.set_label('duration (s)',rotation=270,labelpad=17,fontsize=14.5)
-
-    # plt.title(event_id)
-
-    if save:
-        outputfolder = pathnames()['spectralplots'] + 'durations/PAPEROUT'
-        fid = 'map_{e}_{b0}_{b1}.png'.format(e=event_id,
-                                                b0=bounds[0],b1=bounds[1])
-        fidout = os.path.join(outputfolder,fid)
-        plt.savefig(fidout,dpi=plt.gcf().dpi)
-    if show:
-        plt.show()
+    # plt.title(PD['event_id'])
+    
+    
+_test_generate_map():
+    
+        
+if __name__ == "__main__":
+    generate_map()

@@ -730,7 +730,7 @@ def get_those_stations():
     # RDF surround
     inv = c.get_stations(network='NZ',
                         station='*Z',
-                        channel='HH*',
+                        channel='?H*',
                         latitude=center_lat_lon[0],
                         longitude=center_lat_lon[1],
                         maxradius=1.01,
