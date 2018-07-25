@@ -343,11 +343,12 @@ def bobTheBuilder():
             
             # MAIN PROCESSING
             st,inv,event = initial_data_gather(PAR_DICT)
-            import ipdb;ipdb.set_trace()
             if not st: continue
             windows = run_pyflex(PAR_DICT,st,inv,event,plot=PLOT)
             if not windows: continue
-            f,axes = windowMaker.window_maker(st,windows,PD=PAR_DICT)
+            fw,axes = windowMaker.window_maker(st,windows,PD=PAR_DICT)
+            fm,map = mapMaker.generate_map(event,inv,show=False)
+            import ipdb;ipdb.set_trace()
             adj_src = run_pyadjoint(PAR_DICT,st,windows,
                                     output_path=ADJ_SRC_OUTPUT_PATH,
                                     plot=PLOT)

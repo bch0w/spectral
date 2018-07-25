@@ -138,11 +138,10 @@ def window_maker(st,windows,*args,**kwargs):
     # figure settings
     PD = kwargs['PD']
     titletext = "{s} [{b0},{b1}]".format(s=PD['station_name'],
-                                         b0=PD['bounds'][0][0],
-                                         b1=PD['bounds'][0][1])
+                                         b0=PD['bounds'][0],
+                                         b1=PD['bounds'][1])
     axes[0].set_title(titletext)
     axes[-1].set_xlabel("time [s]")
-    plt.show()
     
     return f,axes
     
