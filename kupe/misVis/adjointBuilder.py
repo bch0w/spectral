@@ -279,7 +279,31 @@ def run_pyadjoint(PD,st,windows,output_path=None,plot=False):
 
     return adj_src
 
-def bobTheBuilder():
+def build_figure(st,inv,event,windows,PD):
+    """take outputs of mapMaker and windowMaker and put them into one figure
+    """
+    import matplotlib as mpl
+    import matplotlib.pyplot as plt
+        
+    # F = plt.figure(figsize=(11.69,8.27),dpi=100)
+    # width_ratios = [1,1]
+    # GS = mpl.gridspec.GridSpec(1,2,width_ratios=width_ratios)
+    # 
+    # F1 = F.add_subplot(GS[0])
+    # axes = windowMaker.window_maker(st,windows,PD=PD)
+    # 
+    # F2 = F.add_subplot(GS[1])
+    # axes = windowMaker.window_maker(st,windows,PD=PD)
+    
+    f2 = plt.figure(figsize=(11.69,8.27),dpi=100)
+    axes = windowMaker.window_maker(st,windows,PD=PD)
+    
+    f2 = plt.figure(figsize=(10,9.4),dpi=100)
+    map = mapMaker.generate_map(event,inv)
+    
+    plt.show()
+    
+def bob_the_builder():
     """main processing script
 
     ++intra-function parameters and choices:
@@ -346,15 +370,31 @@ def bobTheBuilder():
             if not st: continue
             windows = run_pyflex(PAR_DICT,st,inv,event,plot=PLOT)
             if not windows: continue
-            fw,axes = windowMaker.window_maker(st,windows,PD=PAR_DICT)
-            fm,map = mapMaker.generate_map(event,inv,show=False)
-            import ipdb;ipdb.set_trace()
-            adj_src = run_pyadjoint(PAR_DICT,st,windows,
-                                    output_path=ADJ_SRC_OUTPUT_PATH,
-                                    plot=PLOT)
+            build_figure(st,inv,event,windows,PAR_DICT)
+            # adj_src = run_pyadjoint(PAR_DICT,st,windows,
+            #                         output_path=ADJ_SRC_OUTPUT_PATH,
+            #                         plot=PLOT)
                                                                      
+
+def _test_build_figure():
+    """test figure building with example data
+    """
+    from obspy import read_events, read_inventory
+    boundsdict = {"station_name":"TEST","bounds":(6,30)}
+    streampath = pathnames()['data'] + 'WINDOWTESTING/testmseed.pickle'
+    windowpath = pathnames()['data'] + 'WINDOWTESTING/testwindows.npz'
+    st = read(streampath)
+    windows = np.load(windowpath)
+    eventpath = pathnames()['data'] + "WINDOWTESTING/testevent.xml"
+    invpath = pathnames()['data'] + "WINDOWTESTING/testinv.xml"
+    cat = read_events(eventpath)
+    event = cat[0]
+    inv = read_inventory(invpath)
+    
+    build_figure(st,inv,event,windows,boundsdict)
 
 # =================================== MAIN ====================================
 if __name__ == "__main__":
-    bobTheBuilder()
+    # _test_build_figure()
+    bob_the_builder()
 

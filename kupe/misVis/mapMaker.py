@@ -60,7 +60,7 @@ def event_beachball(m,MT):
         return False
         
 
-def initiate_basemap(map_corners=[-50,-32.5,165,180],figsize=(10,9.4),dpi=100):
+def initiate_basemap(map_corners=[-50,-32.5,165,180]):
     """set up local map of NZ to be filled
     default map corners give a rough box around new zealand
     etopo_else_flat_map: bool to control continent fill with either low res topo
@@ -71,7 +71,6 @@ def initiate_basemap(map_corners=[-50,-32.5,165,180],figsize=(10,9.4),dpi=100):
     lake_color = 'w'
 
     # initiate map
-    fig = plt.figure(figsize=figsize,dpi=dpi)
     m = Basemap(projection = 'stere',
                 resolution = 'h',
                 rsphere = 6371200,
@@ -91,7 +90,7 @@ def initiate_basemap(map_corners=[-50,-32.5,165,180],figsize=(10,9.4),dpi=100):
                                     labels=[0,0,0,1], linewidth=0.0)
     trace_trench(m)
 
-    return fig, m
+    return m
 
 def populate_basemap(m,lats,lons,names=None):
     """fill map with latitude/longitude pairs, i.e. stations, events
@@ -199,7 +198,7 @@ def generate_map(event,inv,corners=[-42.5007,-36.9488,172.9998,179.5077],
     :param corners: values for map corners to set bounds
      e.g. [lat_bot,lat_top,lon_left,lon_right]
     """
-    f,m = initiate_basemap(map_corners=corners)
+    m = initiate_basemap(map_corners=corners)
     srcrcvdict = source_receiver(m,event,inv)
     event_info_anno(m,srcrcvdict)
     
@@ -210,11 +209,9 @@ def generate_map(event,inv,corners=[-42.5007,-36.9488,172.9998,179.5077],
     scalelon,scalelat = 178.75,-37.2
     m.drawmapscale(scalelon,scalelat,scalelon,scalelat,100,
                                                 yoffset=0.01*(m.ymax-m.ymin))
-                                                
-    if kwargs['show']:
-        plt.show()
+
     
-    return f,m
+    return m
     
     
 def _test_generate_map():

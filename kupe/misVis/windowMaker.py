@@ -40,7 +40,9 @@ def pretty_grids(input_ax):
 def setup_plot(number_of,twax=True):
     """dynamically set up plots according to number of files
     """
-    f = plt.figure(figsize=(11.69,8.27),dpi=100)
+    # if not f:
+    #     f = plt.figure(figsize=(11.69,8.27),dpi=100)
+
     nrows,ncols=number_of,1
     height_ratios = [1] * (number_of)
     gs = mpl.gridspec.GridSpec(nrows,ncols,height_ratios=height_ratios,hspace=0)
@@ -65,7 +67,7 @@ def setup_plot(number_of,twax=True):
     for ax in axes[0:-1]:
         plt.setp(ax.get_xticklabels(),visible=False)
     
-    return f,axes,twaxes
+    return axes,twaxes
 
 def make_t_axis(st):
     """return a time axis for plotting
@@ -92,7 +94,7 @@ def window_maker(st,windows,*args,**kwargs):
     # function setup
     NUMBER_OF_TRACES = len(st)//2
     MIDDLE_TRACE = NUMBER_OF_TRACES//2
-    f,axes,_ = setup_plot(NUMBER_OF_TRACES,twax=False)
+    axes,_ = setup_plot(number_of=NUMBER_OF_TRACES,twax=False)
     t = make_t_axis(st)
     complist = create_component_list(st)
     
@@ -137,13 +139,14 @@ def window_maker(st,windows,*args,**kwargs):
     
     # figure settings
     PD = kwargs['PD']
+    
     titletext = "{s} [{b0},{b1}]".format(s=PD['station_name'],
                                          b0=PD['bounds'][0],
                                          b1=PD['bounds'][1])
     axes[0].set_title(titletext)
     axes[-1].set_xlabel("time [s]")
     
-    return f,axes
+    return axes
     
 def _test_window_maker():
     """check that window maker works proper by using internal test data
@@ -153,7 +156,7 @@ def _test_window_maker():
     windowpath = pathnames()['data'] + 'WINDOWTESTING/testwindows.npz'
     st = read(streampath)
     windows = np.load(windowpath)
-    f,axes = window_maker(st,windows,PD=boundsdict)      
+    axes = window_maker(st,windows,PD=boundsdict)      
     
     
 if __name__ == "__main__":
