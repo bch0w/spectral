@@ -109,7 +109,7 @@ def initial_data_gather(PD):
     # grab observation data
     observationdata,inv,cat = getdata.event_stream(code=PD["code"],
                                                     event_id=PD["event_id"],
-                                                    startpad=0,
+                                                    startpad=20,
                                                     endpad=180)
     event = cat[0]
     if inv[0][0].latitude == 0.0:
@@ -206,8 +206,13 @@ def run_pyflex(PD,st,inv,event,plot=False):
                                         event=pf_event,
                                         station=pf_station,
                                         plot=plot)
+        # stalta = pyflex.stalta.sta_lta(data=syn[0].data,
+        #                                dt=syn[0].stats.delta,
+        #                                min_period=PD["bounds"][0])
         windows[comp] = window
-                                    
+    
+    # staltas['waterlevel'] = CD[0]      
+                              
     if not windows:
         print("Empty windows")
         return None
@@ -255,7 +260,6 @@ def run_pyadjoint(PD,st,windows,output_path=None,plot=False):
                                                   measure_type='dt',
                                                   dt_sigma_min=1.0,
                                                   dlna_sigma_min=0.5)
-
 
     adj_src = pyadjoint.calculate_adjoint_source(
                                  adj_src_type="cc_traveltime_misfit",
@@ -341,6 +345,7 @@ def bob_the_builder():
     PYFLEX_CONFIG = "UAF"
     ADJ_SRC_OUTPUT_PATH = pathnames()["kupedata"] + "ADJOINTSOURCES"
     PLOT = False
+    SAVE_PLOT = True
     # ADJOINT_TYPE = "cc_traveltime_misfit"
 
     # ============================== PARAMETER SET =============================
@@ -395,6 +400,6 @@ def _test_build_figure():
 
 # =================================== MAIN ====================================
 if __name__ == "__main__":
-    # _test_build_figure()
-    bob_the_builder()
+    _test_build_figure()
+    # bob_the_builder()
 

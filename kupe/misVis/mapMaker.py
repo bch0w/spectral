@@ -38,7 +38,33 @@ def trace_trench(m):
     yprimenew = np.interp(xprimenew,xprime,yprime)
 
     m.plot(xprimenew,yprimenew,'--',linewidth=1.25,color='k',zorder=2)    
-
+    
+def onshore_offshore_faults(m):
+    """plot onshore and offshore fault coordinate files
+    """
+    onshore_fault_path = pathnames()['data'] + "FAULTS/onshoreFaultCoords.npz"
+    offshore_fault_path = pathnames()['data'] + "FAULTS/offshoreFaultCoords.npz"
+    
+    onshore = np.load(onshore_fault_path)
+    offshore = np.load(offshore_fault_path)
+    
+    for shore in [onshore,offshore]:
+        lats = shore['LAT']
+        lons = shore['LON']
+        faults = shore['FAULT']
+    
+        f0 = faults[0]
+        ind = 0
+        for i,f in enumerate(faults):
+            import ipdb;ipdb.set_trace()
+            if f == f0:
+                continue
+            else:
+                x,y = m(lons[ind:i],lats[ind:i])
+                m.plot(x,y,'--',linewidth=0.5,color='k',zorder=2,alpha=0.25)
+                ind = i
+            f0 = f    
+    
 def event_beachball(m,MT):
     """plot event beachball on basemap 'm' object for a given geonet event_id
     """
@@ -89,6 +115,7 @@ def initiate_basemap(map_corners=[-50,-32.5,165,180]):
     m.drawmeridians(np.arange(int(map_corners[2]),int(map_corners[3])+1,1),
                                     labels=[0,0,0,1], linewidth=0.0)
     trace_trench(m)
+    onshore_offshore_faults(m)
 
     return m
 
