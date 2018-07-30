@@ -53,17 +53,10 @@ def onshore_offshore_faults(m):
         lons = shore['LON']
         faults = shore['FAULT']
     
-        f0 = faults[0]
-        ind = 0
-        for i,f in enumerate(faults):
-            import ipdb;ipdb.set_trace()
-            if f == f0:
-                continue
-            else:
-                x,y = m(lons[ind:i],lats[ind:i])
-                m.plot(x,y,'--',linewidth=0.5,color='k',zorder=2,alpha=0.25)
-                ind = i
-            f0 = f    
+        for i in range(faults.min(),faults.max()+1,1):
+            indices = np.where(faults==i)
+            x,y = m(lons[indices],lats[indices])
+            m.plot(x,y,'--',linewidth=0.5,color='k',zorder=2,alpha=0.25)
     
 def event_beachball(m,MT):
     """plot event beachball on basemap 'm' object for a given geonet event_id
@@ -115,7 +108,6 @@ def initiate_basemap(map_corners=[-50,-32.5,165,180]):
     m.drawmeridians(np.arange(int(map_corners[2]),int(map_corners[3])+1,1),
                                     labels=[0,0,0,1], linewidth=0.0)
     trace_trench(m)
-    onshore_offshore_faults(m)
 
     return m
 
@@ -142,6 +134,7 @@ def event_info_anno(m,srcrcvdict):
     # annotemplate = ("{id} / {sta}\n{date}\n({evlat:.2f},{evlon:.2f}),"
     #                 "({stalat:.2f},{stalon:.2f})\n{type}={mag:.2f}"
     #                 "\ndepth={depth:.2f}\ndist={dist:.2f}\nBAz={baz:.2f}")
+    
     annotemplate = ("{id} / {sta}\n{date}\n{type}={mag:.2f}"
             "\nDepth(km)={depth:.2f}\nDist(km)={dist:.2f}\nBAz(deg)={baz:.2f}")
     plt.annotate(s=annotemplate.format(id=srcrcvdict['event_id'],
@@ -215,7 +208,7 @@ def source_receiver(m,event,inv):
     return srcrcvdict
     
 def generate_map(event,inv,corners=[-42.5007,-36.9488,172.9998,179.5077],
-                                                                      **kwargs):
+                                                        faults=False,**kwargs):
     """initiate and populate a basemap object for New Zealands north island.
     Functionality to manually ignore stations based on user quality control
     Takes station coordinates and coloring from npz files
@@ -228,6 +221,9 @@ def generate_map(event,inv,corners=[-42.5007,-36.9488,172.9998,179.5077],
     m = initiate_basemap(map_corners=corners)
     srcrcvdict = source_receiver(m,event,inv)
     event_info_anno(m,srcrcvdict)
+    if faults:
+        onshore_offshore_faults(m)
+
     
     stationfile = pathnames()['data'] + 'STATIONXML/GEONET_AND_FATHOM.npz'
     stationlist = np.load(stationfile)

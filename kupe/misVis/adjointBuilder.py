@@ -288,7 +288,8 @@ def build_figure(st,inv,event,windows,PD):
     """
     import matplotlib as mpl
     import matplotlib.pyplot as plt
-        
+    
+    # attempting to plot everything on one figure, mpl doesn't like
     # F = plt.figure(figsize=(11.69,8.27),dpi=100)
     # width_ratios = [1,1]
     # GS = mpl.gridspec.GridSpec(1,2,width_ratios=width_ratios)
@@ -303,7 +304,7 @@ def build_figure(st,inv,event,windows,PD):
     axes = windowMaker.window_maker(st,windows,PD=PD)
     
     f2 = plt.figure(figsize=(10,9.4),dpi=100)
-    map = mapMaker.generate_map(event,inv)
+    map = mapMaker.generate_map(event,inv,faults=PD['plot_faults'])
     
     plt.show()
     
@@ -345,6 +346,7 @@ def bob_the_builder():
     PYFLEX_CONFIG = "UAF"
     ADJ_SRC_OUTPUT_PATH = pathnames()["kupedata"] + "ADJOINTSOURCES"
     PLOT = False
+    PLOT_FAULTS = True
     SAVE_PLOT = True
     # ADJOINT_TYPE = "cc_traveltime_misfit"
 
@@ -367,7 +369,9 @@ def bob_the_builder():
                         "rotate":ROTATE,
                         "output":UNIT_OUTPUT,
                         "pyflex_config":PYFLEX_CONFIG,
-                        "comp_list":COMPONENT_LIST
+                        "comp_list":COMPONENT_LIST,
+                        "save_plot":SAVE_PLOT,
+                        "plot_faults":PLOT_FAULTS
                         }
             
             # MAIN PROCESSING
@@ -400,6 +404,6 @@ def _test_build_figure():
 
 # =================================== MAIN ====================================
 if __name__ == "__main__":
-    _test_build_figure()
-    # bob_the_builder()
+    # _test_build_figure()
+    bob_the_builder()
 
