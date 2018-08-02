@@ -7,6 +7,7 @@ import os
 import sys
 import pprint
 import pyflex
+import pyasdf
 import pyadjoint
 import numpy as np
 from os.path import join
@@ -154,7 +155,19 @@ def initial_data_gather(PD):
     st_IDG.filter('bandpass',freqmin=1/tmax,
                              freqmax=1/tmin,
                              corners=2,
-                             zerophase=True)
+                             zerophase=True)        
+    
+    # save into pyasdf dataset if applicable. add function automatically writes
+    if PD["dataset"]:
+        PD["dataset"].add_quakeml(event)
+        PD["dataset"].add_stationxml(inv)
+        obsout,synout = breakout_stream(st_IDG)
+        PD["dataset"].add_waveforms(waveform=obsout,
+                                    tag="observed_processed",
+                                    event_id=event)
+        PD["dataset"].add_waveforms(waveform=synout,
+                                    tag="synthetic_processed",
+                                    event_id=event)
 
     return st_IDG,inv,event
 
@@ -169,7 +182,7 @@ def choose_config(config):
 
     return cfgdict[config]
 
-def run_pyflex(PD,st,inv,event,plot=False):
+def run_pyflex(PD,st,inv,event):
     """use pyflex to grab windows, current config set to defaults found on docs
 
     :type PD: dictionary
@@ -205,17 +218,26 @@ def run_pyflex(PD,st,inv,event,plot=False):
                                         config=config,
                                         event=pf_event,
                                         station=pf_station,
-                                        plot=plot)
-        # stalta = pyflex.stalta.sta_lta(data=syn[0].data,
-        #                                dt=syn[0].stats.delta,
-        #                                min_period=PD["bounds"][0])
+                                        plot=False)
         windows[comp] = window
-    
-    # staltas['waterlevel'] = CD[0]      
-                              
+                                  
     if not windows:
         print("Empty windows")
         return None
+        
+    if PD["dataset"]:
+        for comp in windows.keys():
+            internalpath = "{evid}/{net}_{sta}_{comp}".format(
+                                                        evid=PD["event_id"],
+                                                        net=PD["network"],
+                                                        sta=PD["station"],
+                                                        comp=comp
+                                                        )
+            PD["dataset"].add_auxiliary_data(data=windows[comp],
+                                             data_type="pyflexWindows",
+                                             path=internalpath
+                                             )
+
 
     return windows
 
@@ -306,6 +328,15 @@ def build_figure(st,inv,event,windows,PD):
     f2 = plt.figure(figsize=(10,9.4),dpi=100)
     map = mapMaker.generate_map(event,inv,faults=PD['plot_faults'])
     
+    if PD['save_plot'][0]:
+        import matplotlib.backends.backend_pdf as backend
+        outfid = os.path.join(PD['save_plot'][1],
+                              '{}_wavmap.pdf'.format(PD["event_id"]))
+        pdf = backend.PdfPages(outfid)
+        for fig in range(1,figure().number): 
+            pdf.savefig(fig)
+        pdf.close()
+    
     plt.show()
     
 def bob_the_builder():
@@ -328,29 +359,38 @@ def bob_the_builder():
     :type PLOT: bool
     :param PLOT: plot outputs of pyflex and pyadjoint, global switch
     """
-    # ============================== PARAMETER SET =============================
-    
+    # ============================ vPARAMETER SETv =============================
+    # SOURCE-RECEIVER
     EVENT_IDS = ["2014p240655"]
-    STATION_NAMES = ['NZ.BFZ','NZ.BKZ','NZ.HAZ','NZ.HIZ','NZ.KNZ','NZ.MRZ',
-                     'NZ.MWZ','NZ.OPRZ','NZ.PUZ','NZ.PXZ','NZ.RTZ','NZ.TLZ',
-                     'NZ.TOZ','NZ.TSZ','NZ.VRZ','NZ.WAZ']
-    # STATION_NAMES = ['XX.RD01','XX.RD02','XX.RD03','XX.RD04','XX.RD05',
-    #                    'XX.RD06','XX.RD07','XX.RD08','XX.RD09','XX.RD10',
-    #                    'XX.RD11','XX.RD12','XX.RD13','XX.RD14','XX.RD15',
-    #                    'XX.RD16','XX.RD17','XX.RD18','XX.RD19','XX.RD20',
-    #                    'XX.RD21','XX.RD22']
+    ALLSTATIONS = {"GEONET":['NZ.BFZ','NZ.BKZ','NZ.HAZ','NZ.HIZ','NZ.KNZ',
+                    'NZ.MRZ','NZ.MWZ','NZ.OPRZ','NZ.PUZ','NZ.PXZ','NZ.RTZ',
+                    'NZ.TLZ','NZ.TOZ','NZ.TSZ','NZ.VRZ','NZ.WAZ'],
+                   "FATHOM":['XX.RD01','XX.RD02','XX.RD03','XX.RD04','XX.RD05',
+                    'XX.RD06','XX.RD07','XX.RD08','XX.RD09','XX.RD10',
+                    'XX.RD11','XX.RD12','XX.RD13','XX.RD14','XX.RD15',
+                    'XX.RD16','XX.RD17','XX.RD18','XX.RD19','XX.RD20',
+                    'XX.RD21','XX.RD22']
+                    }
+    STANET_NAMES = ALLSTATIONS["GEONET"]
+    # >> PREPROCESSING
     MINIMUM_FILTER_PERIOD = 6
     MAXIMUM_FILTER_PERIOD = 30
     ROTATE = True
     UNIT_OUTPUT = "VEL"
+    # >> PYFLEX
     PYFLEX_CONFIG = "UAF"
-    ADJ_SRC_OUTPUT_PATH = pathnames()["kupedata"] + "ADJOINTSOURCES"
+    # >> PYADJOINT
+    ADJ_SRC_OUTPATH = pathnames()["kupedata"] + "ADJOINTSOURCES"
+    ADJOINT_TYPE = "cc_traveltime_misfit"
+    # >> PYASDF
+    SAVE_PYASDF = True
+    PYASDF_OUTPATH = pathnames()["kupedata"] + "PYASDF"
+    # >> PLOTTING
     PLOT = False
-    PLOT_FAULTS = True
-    SAVE_PLOT = True
-    # ADJOINT_TYPE = "cc_traveltime_misfit"
+    SAVE_PLOT = (True,pathnames()["kupeplots"] + "misvis")
+    PLOT_FAULTS_ON_MAP = True
 
-    # ============================== PARAMETER SET =============================
+    # ============================ ^PARAMETER SET^ =============================
     
     # PARAMETER DEFUALT SET
     COMPONENT_LIST = ["N","E","Z"]
@@ -359,10 +399,19 @@ def bob_the_builder():
     
     # MAIN ITERATE OVER EVENTS
     for EVENT_ID in EVENT_IDS:
-        for STATION_NAME in STATION_NAMES:
-            print(STATION_NAME)
-            PAR_DICT = {"station_name":STATION_NAME,
-                        "code":"{}.*.HH?".format(STATION_NAME),
+        # if everything should be stored, initiate pyasdf dataset, also reads
+        # existing pyasdf datasets if they already exist
+        if SAVE_PYASDF:
+            datasetname = os.path.join(PYASDF_OUTPATH,EVENT_ID+'.h5')
+            DATASET = pyasdf.ASDFDataSet(datasetname,compression="gzip-3")
+        else:
+            DATASET = None
+        
+        for STANET_NAME in STANET_NAMES:
+            print(STANET_NAME)
+            PAR_DICT = {"network":STANET_NAME.split('.')[0],
+                        "station":STANET_NAME.split('.')[1],
+                        "code":"{}.*.HH?".format(STANET_NAME),
                         "event_id":EVENT_ID,
                         "bounds":(MINIMUM_FILTER_PERIOD,
                                   MAXIMUM_FILTER_PERIOD),
@@ -371,17 +420,19 @@ def bob_the_builder():
                         "pyflex_config":PYFLEX_CONFIG,
                         "comp_list":COMPONENT_LIST,
                         "save_plot":SAVE_PLOT,
-                        "plot_faults":PLOT_FAULTS
+                        "plot_faults":PLOT_FAULTS_ON_MAP,
+                        "dataset":DATASET
                         }
             
             # MAIN PROCESSING
             st,inv,event = initial_data_gather(PAR_DICT)
             if not st: continue
-            windows = run_pyflex(PAR_DICT,st,inv,event,plot=PLOT)
+            windows = run_pyflex(PAR_DICT,st,inv,event)
+            import ipdb;ipdb.set_trace()
             if not windows: continue
             build_figure(st,inv,event,windows,PAR_DICT)
             # adj_src = run_pyadjoint(PAR_DICT,st,windows,
-            #                         output_path=ADJ_SRC_OUTPUT_PATH,
+            #                         output_path=ADJ_SRC_OUTPATH,
             #                         plot=PLOT)
                                                                      
 
