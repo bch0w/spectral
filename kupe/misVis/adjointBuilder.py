@@ -12,6 +12,7 @@ import pyadjoint
 import numpy as np
 from os.path import join
 from obspy import UTCDateTime, read, Stream
+from obspy.signal.filter import envelope
 
 import windowMaker
 import mapMaker
@@ -158,9 +159,21 @@ def initial_data_gather(PD):
                              zerophase=True)        
     
     # save into pyasdf dataset if applicable. add function automatically writes
+    # try except statements incase these objects already exist - hacky but
+    # excepts catch the errors when trying to add things that are already there
+    # add_waveforms will push 'already_exists' exceptions
     if PD["dataset"]:
-        PD["dataset"].add_quakeml(event)
-        PD["dataset"].add_stationxml(inv)
+        try:
+            PD["dataset"].add_quakeml(event)
+        except ValueError:
+            print('Event already added - exception passed')
+            pass
+        try:
+            PD["dataset"].add_stationxml(inv)
+        except TypeError:
+            print('Station already added - exception passed')
+            pass
+        
         obsout,synout = breakout_stream(st_IDG)
         PD["dataset"].add_waveforms(waveform=obsout,
                                     tag="observed_processed",
@@ -168,6 +181,7 @@ def initial_data_gather(PD):
         PD["dataset"].add_waveforms(waveform=synout,
                                     tag="synthetic_processed",
                                     event_id=event)
+
 
     return st_IDG,inv,event
 
@@ -184,6 +198,8 @@ def choose_config(config):
 
 def run_pyflex(PD,st,inv,event):
     """use pyflex to grab windows, current config set to defaults found on docs
+    if writing into pyasdf files, window objects must be deconstructed and fed
+    in as a parameter dictionary
 
     :type PD: dictionary
     :param PD: parameter sets
@@ -210,7 +226,8 @@ def run_pyflex(PD,st,inv,event):
                                 longitude=inv[0][0].longitude)
 
     # iterate windows by component and place into dictionary output
-    windows = {}
+    # create stalta data from envelopes of synthetic data
+    windows,staltas = {},{}
     for comp in PD["comp_list"]:
         obs,syn = breakout_stream(st.select(component=comp))
         window = pyflex.select_windows(observed=obs,
@@ -220,11 +237,20 @@ def run_pyflex(PD,st,inv,event):
                                         station=pf_station,
                                         plot=False)
         windows[comp] = window
-                                  
+        
+        syn_envelope = envelope(syn[0].data)
+        stalta = pyflex.stalta.sta_lta(data=syn_envelope,
+                                       dt=syn[0].stats.delta,
+                                       min_period=PD["bounds"][0])
+        staltas[comp] = stalta
+        
     if not windows:
         print("Empty windows")
         return None
-        
+    
+    # save windows into pyasdf file with stalta as the data and window- 
+    # parameter dictionaries as external information. dictionary needs
+    # to be modified to work in pyasdf format
     if PD["dataset"]:
         for comp in windows.keys():
             internalpath = "{evid}/{net}_{sta}_{comp}".format(
@@ -233,14 +259,35 @@ def run_pyflex(PD,st,inv,event):
                                                         sta=PD["station"],
                                                         comp=comp
                                                         )
-            PD["dataset"].add_auxiliary_data(data=windows[comp],
-                                             data_type="pyflexWindows",
-                                             path=internalpath
-                                             )
+            for window in windows[comp]:
+                winnDixie = create_window_dictionary(window)
+                PD["dataset"].add_auxiliary_data(data=staltas[comp],
+                                                 data_type="MisfitWindows",
+                                                 path=internalpath,
+                                                 parameters=winnDixie)
 
+    return windows, staltas
 
-    return windows
-
+def create_window_dictionary(window):
+    """HDF5 doesnt play nice with nonstandard objects in dictionaries, e.g.
+    nested dictionaries, UTCDateTime objects. So remake the pyflex window
+    json dictionary into something that will sit well in a pyasdf object
+    """
+    winnDixie = window._get_json_content()
+    
+    # change UTCDateTime objects into strings
+    winnDixie['absolute_endtime'] = str(winnDixie['absolute_endtime'])
+    winnDixie['absolute_starttime'] = str(winnDixie['absolute_starttime'])
+    winnDixie['time_of_first_sample'] = str(winnDixie['time_of_first_sample'])
+    
+    phase_arrivals = winnDixie['phase_arrivals']
+    for phase in phase_arrivals:
+        winnDixie['phase_arrival_{}'.format(phase['name'])] = phase['time']
+    
+    winnDixie.pop('phase_arrivals')
+    
+    return winnDixie
+        
 
 def run_pyadjoint(PD,st,windows,output_path=None,plot=False):
     """function to call pyadjoint with preset configurations
@@ -293,8 +340,8 @@ def run_pyadjoint(PD,st,windows,output_path=None,plot=False):
                                  )
 
     if output_path:
-        output_file = os.path.join(output_path,
-                                   "{NET}.{STA}.{CHA}.{EVENT_ID}.adj".format(
+        output_file = join(output_path,
+                           "{NET}.{STA}.{CHA}.{EVENT_ID}.adj".format(
                                                      NET=net,
                                                      STA=sta,
                                                      CHA=cha,
@@ -311,27 +358,15 @@ def build_figure(st,inv,event,windows,PD):
     import matplotlib as mpl
     import matplotlib.pyplot as plt
     
-    # attempting to plot everything on one figure, mpl doesn't like
-    # F = plt.figure(figsize=(11.69,8.27),dpi=100)
-    # width_ratios = [1,1]
-    # GS = mpl.gridspec.GridSpec(1,2,width_ratios=width_ratios)
-    # 
-    # F1 = F.add_subplot(GS[0])
-    # axes = windowMaker.window_maker(st,windows,PD=PD)
-    # 
-    # F2 = F.add_subplot(GS[1])
-    # axes = windowMaker.window_maker(st,windows,PD=PD)
-    
     f2 = plt.figure(figsize=(11.69,8.27),dpi=100)
-    axes = windowMaker.window_maker(st,windows,PD=PD)
+    axes = windowMaker.window_maker(st,windows,staltas,PD=PD)
     
     f2 = plt.figure(figsize=(10,9.4),dpi=100)
     map = mapMaker.generate_map(event,inv,faults=PD['plot_faults'])
     
     if PD['save_plot'][0]:
         import matplotlib.backends.backend_pdf as backend
-        outfid = os.path.join(PD['save_plot'][1],
-                              '{}_wavmap.pdf'.format(PD["event_id"]))
+        outfid = join(PD['save_plot'][1],'{}_wavmap.pdf'.format(PD["event_id"]))
         pdf = backend.PdfPages(outfid)
         for fig in range(1,figure().number): 
             pdf.savefig(fig)
@@ -402,7 +437,7 @@ def bob_the_builder():
         # if everything should be stored, initiate pyasdf dataset, also reads
         # existing pyasdf datasets if they already exist
         if SAVE_PYASDF:
-            datasetname = os.path.join(PYASDF_OUTPATH,EVENT_ID+'.h5')
+            datasetname = join(PYASDF_OUTPATH,EVENT_ID+'.h5')
             DATASET = pyasdf.ASDFDataSet(datasetname,compression="gzip-3")
         else:
             DATASET = None
@@ -427,15 +462,15 @@ def bob_the_builder():
             # MAIN PROCESSING
             st,inv,event = initial_data_gather(PAR_DICT)
             if not st: continue
-            windows = run_pyflex(PAR_DICT,st,inv,event)
+            windows,staltas = run_pyflex(PAR_DICT,st,inv,event)
             import ipdb;ipdb.set_trace()
             if not windows: continue
-            build_figure(st,inv,event,windows,PAR_DICT)
+            build_figure(st,inv,event,windows,staltas,PAR_DICT)
             # adj_src = run_pyadjoint(PAR_DICT,st,windows,
             #                         output_path=ADJ_SRC_OUTPATH,
             #                         plot=PLOT)
                                                                      
-
+# =================================== TESTS ====================================
 def _test_build_figure():
     """test figure building with example data
     """
@@ -451,10 +486,32 @@ def _test_build_figure():
     event = cat[0]
     inv = read_inventory(invpath)
     
+    import ipdb;ipdb.set_trace()
+    
     build_figure(st,inv,event,windows,boundsdict)
+
+def _test_window_saving():
+    windowpath = pathnames()['data'] + 'WINDOWTESTING/testwindows.npz'
+    windows = np.load(windowpath)
+    datasetname = pathnames()['data'] +'KUPEDATA/PYASDF/2014p240655.h5'
+    DATASET = pyasdf.ASDFDataSet(datasetname,compression="gzip-3")
+    for comp in windows.keys():
+        internalpath = "{evid}/{net}_{sta}_{comp}".format(
+                                                    evid='2014p240655',
+                                                    net='NZ',
+                                                    sta='BFZ',
+                                                    comp=comp
+                                                    )
+        import ipdb;ipdb.set_trace()
+        DATASET.add_auxiliary_data(data=windows[comp],
+                                     data_type="PyflexWindows",
+                                     path=internalpath,
+                                     parameters={'test':'test'}
+                                     )
 
 # =================================== MAIN ====================================
 if __name__ == "__main__":
     # _test_build_figure()
+    # _test_window_saving()
     bob_the_builder()
 

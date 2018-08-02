@@ -87,7 +87,7 @@ def create_component_list(st):
     
     return complist
         
-def window_maker(st,windows,*args,**kwargs):
+def window_maker(st,windows,staltas,*args,**kwargs):
     """plot streams and windows. assumes you have N observation traces and 
     N synthetic traces for a 2N length stream object
     """
@@ -110,8 +110,10 @@ def window_maker(st,windows,*args,**kwargs):
         axes[i].plot(t,syn[0].data,'r',
                      label="{} (SYN)".format(syn[0].get_id()),
                      zorder=5)
-        
-        # plot windows as transparent boxes
+                     
+        # plot stalta data
+        import ipdb;ipdb.set_trace()
+        # plot windows as semi-transparent boxes
         ymin,ymax = axes[i].get_ylim()
         for window in windowlist:
             xwindow = np.arange(window.left,window.right,1)
