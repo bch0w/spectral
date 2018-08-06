@@ -1,6 +1,6 @@
 """misfit visualization tool to be called through adjointBuilder
 produces a basemap with beachball and all available stations as well as the
-relevant station highlighted. important information annotated (e.g. 
+relevant station highlighted. important information annotated (e.g.
 misift information, distance, BAz etc.)
 """
 import sys
@@ -37,27 +37,27 @@ def trace_trench(m):
     xprimenew = np.linspace(x.min(),x.max(),100)
     yprimenew = np.interp(xprimenew,xprime,yprime)
 
-    m.plot(xprimenew,yprimenew,'--',linewidth=1.25,color='k',zorder=2)    
-    
+    m.plot(xprimenew,yprimenew,'--',linewidth=1.25,color='k',zorder=2)
+
 def onshore_offshore_faults(m):
     """plot onshore and offshore fault coordinate files
     """
     onshore_fault_path = pathnames()['data'] + "FAULTS/onshoreFaultCoords.npz"
     offshore_fault_path = pathnames()['data'] + "FAULTS/offshoreFaultCoords.npz"
-    
+
     onshore = np.load(onshore_fault_path)
     offshore = np.load(offshore_fault_path)
-    
+
     for shore in [onshore,offshore]:
         lats = shore['LAT']
         lons = shore['LON']
         faults = shore['FAULT']
-    
+
         for i in range(faults.min(),faults.max()+1,1):
             indices = np.where(faults==i)
             x,y = m(lons[indices],lats[indices])
             m.plot(x,y,'--',linewidth=0.5,color='k',zorder=2,alpha=0.25)
-    
+
 def event_beachball(m,MT):
     """plot event beachball on basemap 'm' object for a given geonet event_id
     """
@@ -77,7 +77,7 @@ def event_beachball(m,MT):
         print('No moment tensor information found, beachball not available')
         plt.plot()
         return False
-        
+
 
 def initiate_basemap(map_corners=[-50,-32.5,165,180]):
     """set up local map of NZ to be filled
@@ -107,7 +107,6 @@ def initiate_basemap(map_corners=[-50,-32.5,165,180]):
                                     labels=[1,0,0,0], linewidth=0.0)
     m.drawmeridians(np.arange(int(map_corners[2]),int(map_corners[3])+1,1),
                                     labels=[0,0,0,1], linewidth=0.0)
-    trace_trench(m)
 
     return m
 
@@ -134,7 +133,7 @@ def event_info_anno(m,srcrcvdict):
     # annotemplate = ("{id} / {sta}\n{date}\n({evlat:.2f},{evlon:.2f}),"
     #                 "({stalat:.2f},{stalon:.2f})\n{type}={mag:.2f}"
     #                 "\ndepth={depth:.2f}\ndist={dist:.2f}\nBAz={baz:.2f}")
-    
+
     annotemplate = ("{id} / {sta}\n{date}\n{type}={mag:.2f}"
             "\nDepth(km)={depth:.2f}\nDist(km)={dist:.2f}\nBAz(deg)={baz:.2f}")
     plt.annotate(s=annotemplate.format(id=srcrcvdict['event_id'],
@@ -153,7 +152,7 @@ def event_info_anno(m,srcrcvdict):
                  # weight='bold',
                  multialignment='right',
                  fontsize=10)
-    
+
 def source_receiver(m,event,inv):
     """determine source receiver parameters such as great circle distance,
     backazimuth etc., plot the source and receiver with a line
@@ -165,19 +164,19 @@ def source_receiver(m,event,inv):
     event_lat,event_lon = event.origins[0].latitude,event.origins[0].longitude
     sta_lat,sta_lon = inv[0][0].latitude,inv[0][0].longitude
     GCDist,Az,BAz = gps2dist_azimuth(event_lat,event_lon,sta_lat,sta_lon)
-    
+
     # modify entries to dictionary
     origintime = event.origins[0].time
     origintime.precision = 0
     GCDist *= 1E-3
     depth = event.origins[0].depth*1E-3
-    
+
     # get magnitude M
     for magni in event.magnitudes:
         if magni.magnitude_type == "M":
             magnitude = magni.mag
             magnitude_type = magni.magnitude_type
-    
+
     # dictionary output for use in annotations
     srcrcvdict = {"station":station,
                   "sta_lat":sta_lat,
@@ -192,21 +191,21 @@ def source_receiver(m,event,inv):
                   "magnitude":magnitude,
                   "magnitude_type":magnitude_type
                   }
-                  
+
     # connect source receiever with line and color receiver, plot event
     event_x,event_y = m(event_lon,event_lat)
     sta_x,sta_y = m(sta_lon,sta_lat)
     X,Y = [event_x,sta_x],[event_y,sta_y]
     m.plot(X,Y,'--',linewidth=1.1,c='k',zorder=2)
-    m.scatter(X,Y,marker='v',color='r',edgecolor='k',s=80,zorder=6)    
-    
+    m.scatter(X,Y,marker='v',color='r',edgecolor='k',s=80,zorder=6)
+
     beachballcheck = event_beachball(m,MT)
     if not beachballcheck:
         m.scatter(event_x,event_y,marker='o',color='r',edgecolor='k',
-                                                        s=200,zorder=6)    
-                  
+                                                        s=200,zorder=6)
+
     return srcrcvdict
-    
+
 def generate_map(event,inv,corners=[-42.5007,-36.9488,172.9998,179.5077],
                                                         faults=False,**kwargs):
     """initiate and populate a basemap object for New Zealands north island.
@@ -222,35 +221,35 @@ def generate_map(event,inv,corners=[-42.5007,-36.9488,172.9998,179.5077],
     srcrcvdict = source_receiver(m,event,inv)
     event_info_anno(m,srcrcvdict)
     if faults:
+        trace_trench(m)
         onshore_offshore_faults(m)
 
-    
     stationfile = pathnames()['data'] + 'STATIONXML/GEONET_AND_FATHOM.npz'
     stationlist = np.load(stationfile)
-    
+
     populate_basemap(m,stationlist['LAT'],stationlist['LON'])
     scalelon,scalelat = 178.75,-37.2
     m.drawmapscale(scalelon,scalelat,scalelon,scalelat,100,
                                                 yoffset=0.01*(m.ymax-m.ymin))
 
-    
+
     return m
-    
-    
+
+
 def _test_generate_map():
     """test map making functions with example data
     """
     from obspy import read_events, read_inventory
-    
+
     eventpath = pathnames()['data'] + "WINDOWTESTING/testevent.xml"
     invpath = pathnames()['data'] + "WINDOWTESTING/testinv.xml"
 
     cat = read_events(eventpath)
     event = cat[0]
     inv = read_inventory(invpath)
-    
+
     f,m = generate_map(event,inv,show=True)
-    
-        
+
+
 if __name__ == "__main__":
     _test_generate_map()

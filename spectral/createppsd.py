@@ -94,8 +94,8 @@ def mass_process():
     """main processing function
     """
     # common parameter set
-    start = '2017-199'
-    end = '2018-001'
+    start = '2018-001'
+    end = '2018-072'
     decimate_by = 5
     for i in range(1,23):
         # if i in [10,11,17]:

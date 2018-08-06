@@ -36,7 +36,7 @@ def pretty_grids(input_ax):
     input_ax.ticklabel_format(style='sci',
                             axis='y',
                             scilimits=(0,0))
-                            
+
 def setup_plot(number_of,twax=True):
     """dynamically set up plots according to number of files
     """
@@ -66,7 +66,7 @@ def setup_plot(number_of,twax=True):
     # remove x-tick labels except for last axis
     for ax in axes[0:-1]:
         plt.setp(ax.get_xticklabels(),visible=False)
-    
+
     return axes,twaxes
 
 def make_t_axis(st):
@@ -75,7 +75,7 @@ def make_t_axis(st):
     stats = st[0].stats
     t = np.linspace(0,stats.endtime-stats.starttime,len(st[0].data))
     return t
-    
+
 def create_component_list(st):
     """figure out if NEZ or RTZ components for proper list iteration
     """
@@ -84,11 +84,11 @@ def create_component_list(st):
         complist.append(tr.get_id()[-1])
     complist = list(set(complist))
     complist.sort()
-    
+
     return complist
-        
+
 def window_maker(st,windows,staltas,*args,**kwargs):
-    """plot streams and windows. assumes you have N observation traces and 
+    """plot streams and windows. assumes you have N observation traces and
     N synthetic traces for a 2N length stream object
     """
     # function setup
@@ -97,12 +97,12 @@ def window_maker(st,windows,staltas,*args,**kwargs):
     axes,_ = setup_plot(number_of=NUMBER_OF_TRACES,twax=False)
     t = make_t_axis(st)
     complist = create_component_list(st)
-    
+
     for i,comp in enumerate(complist):
         # distribute data
         obs,syn = breakout_stream(st.select(component=comp))
         windowlist = windows[comp]
-        
+
         # plot waveforms (synthetics red, observations black)
         axes[i].plot(t,obs[0].data,'k',
                      label="{} (OBS)".format(obs[0].get_id()),
@@ -110,9 +110,12 @@ def window_maker(st,windows,staltas,*args,**kwargs):
         axes[i].plot(t,syn[0].data,'r',
                      label="{} (SYN)".format(syn[0].get_id()),
                      zorder=5)
-                     
+
         # plot stalta data
-        import ipdb;ipdb.set_trace()
+        axes[i].plot(t,staltas[comp],'gray',alpha=0.4,zorder=4,
+                                                        label="STA/LTA (SYN)")
+
+
         # plot windows as semi-transparent boxes
         ymin,ymax = axes[i].get_ylim()
         for window in windowlist:
@@ -123,7 +126,7 @@ def window_maker(st,windows,staltas,*args,**kwargs):
                                  edgecolor='k',
                                  linewidth=0.5,
                                  alpha=0.25)
-                                 
+
             # annotate boxes with information from window
             winanno = "maxCC:{mcc:.4f}\nccShift:{ccs}\ndlnA:{dln:.4f}".format(
                                             mcc=window.max_cc_value,
@@ -131,25 +134,25 @@ def window_maker(st,windows,staltas,*args,**kwargs):
                                             dln=window.dlnA)
             axes[i].annotate(s=winanno,xy=(twindow[10],ymax*0.5),
                                                     zorder=4,fontsize=7)
-            
+
         # final plot adjustments
         axes[i].set_xlim([t[0],t[-1]])
         axes[i].legend(prop={"size":9})
         if i == MIDDLE_TRACE:
             comp = "displacement [m]\n{}".format(comp)
         axes[i].set_ylabel(comp)
-    
+
     # figure settings
     PD = kwargs['PD']
-    
-    titletext = "{s} [{b0},{b1}]".format(s=PD['station_name'],
+
+    titletext = "{s} [{b0},{b1}]".format(s=PD['station'],
                                          b0=PD['bounds'][0],
                                          b1=PD['bounds'][1])
     axes[0].set_title(titletext)
     axes[-1].set_xlabel("time [s]")
-    
+
     return axes
-    
+
 def _test_window_maker():
     """check that window maker works proper by using internal test data
     """
@@ -158,23 +161,8 @@ def _test_window_maker():
     windowpath = pathnames()['data'] + 'WINDOWTESTING/testwindows.npz'
     st = read(streampath)
     windows = np.load(windowpath)
-    axes = window_maker(st,windows,PD=boundsdict)      
-    
-    
+    axes = window_maker(st,windows,PD=boundsdict)
+
+
 if __name__ == "__main__":
     _test_window_maker()
-        
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
