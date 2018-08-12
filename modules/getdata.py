@@ -26,7 +26,6 @@ def pathnames():
     tomo = os.path.join(base,'tomo')
     mseeds = os.path.join(base,'mseeds')
     spectral = os.path.join(base,'spectral')
-    common = os.path.join(spectral,'common')
 
     path_dictionary = {"spectral":os.path.join(spectral,''),
             "kupe":os.path.join(spectral,'kupe',''),
@@ -34,12 +33,12 @@ def pathnames():
             "mseeds":os.path.join(base,'mseeds',''),
             "fathom":os.path.join(mseeds,'FATHOM',''),
             "syns":os.path.join(mseeds,'SYNTH',''),
-            "plots":os.path.join(common,'OUTPUT_PLOTS',''),
-            "spectralplots":os.path.join(common,'OUTPUT_PLOTS','spectral',''),
-            "kupeplots":os.path.join(common,'OUTPUT_PLOTS','kupe',''),
-            "ppsd":os.path.join(common,'DATA','PPSD',''),
-            "data":os.path.join(common,'DATA',''),
-            "kupedata":os.path.join(common,'DATA','KUPEDATA',''),
+            "plots":os.path.join(base,'plots',''),
+            "spectralplots":os.path.join(base,'plots','spectral',''),
+            "kupeplots":os.path.join(base,'plots','kupe',''),
+            "ppsd":os.path.join(base,'data','PPSD',''),
+            "data":os.path.join(base,'data',''),
+            "kupedata":os.path.join(base,'data','KUPEDATA',''),
             "xyz":os.path.join(tomo,'myMeshes','xyzTopoMoho',''),
             "where": where
                     }
