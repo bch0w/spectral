@@ -94,7 +94,7 @@ def window_maker(st,windows,staltas,*args,**kwargs):
     # function setup
     NUMBER_OF_TRACES = len(st)//2
     MIDDLE_TRACE = NUMBER_OF_TRACES//2
-    axes,_ = setup_plot(number_of=NUMBER_OF_TRACES,twax=False)
+    axes,twaxes = setup_plot(number_of=NUMBER_OF_TRACES,twax=True)
     t = make_t_axis(st)
     complist = create_component_list(st)
 
@@ -112,7 +112,7 @@ def window_maker(st,windows,staltas,*args,**kwargs):
                      zorder=5)
 
         # plot stalta data
-        axes[i].plot(t,staltas[comp],'gray',alpha=0.4,zorder=4,
+        twaxes[i].plot(t,staltas[comp],'gray',alpha=0.4,zorder=4,
                                                         label="STA/LTA (SYN)")
 
 
@@ -132,13 +132,14 @@ def window_maker(st,windows,staltas,*args,**kwargs):
                                             mcc=window.max_cc_value,
                                             ccs=window.cc_shift,
                                             dln=window.dlnA)
-            axes[i].annotate(s=winanno,xy=(twindow[10],ymax*0.5),
-                                                    zorder=4,fontsize=7)
+            # axes[i].annotate(s=winanno,xy=(twindow[10],ymax*0.5),
+            #                                         zorder=4,fontsize=7)
 
         # final plot adjustments
         axes[i].set_xlim([t[0],t[-1]])
         axes[i].legend(prop={"size":9})
         if i == MIDDLE_TRACE:
+            twaxes[i].set_ylabel("STA/LTA",rotation=90)
             comp = "displacement [m]\n{}".format(comp)
         axes[i].set_ylabel(comp)
 

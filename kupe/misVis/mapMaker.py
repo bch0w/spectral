@@ -234,21 +234,56 @@ def generate_map(event,inv,corners=[-42.5007,-36.9488,172.9998,179.5077],
 
 
     return m
+    
+def generate_map_NOEVENT(inv,corners=[-42.5007,-36.9488,172.9998,179.5077],
+                                                        faults=False,**kwargs):
+    """same as above, but just plot station locations for a map
+    """
+    m = initiate_basemap(map_corners=corners)
+    if faults:
+        trace_trench(m)
+        onshore_offshore_faults(m)
 
+    stationfile = pathnames()['data'] + 'STATIONXML/GEONET_AND_FATHOM.npz'
+    stationlist = np.load(stationfile)
+
+    colors = []
+    for name in stationlist['NAME']:
+        if name[:2] == "RD":
+            colors.append('r')
+        else:
+            colors.append('g')
+    X,Y = m(stationlist['LON'],stationlist['LAT'])
+    scatter = m.scatter(X,Y,
+                        marker='v',
+                        color=colors,
+                        edgecolor='k',
+                        s=60,
+                        zorder=5)
+    scalelon,scalelat = 178.75,-37.2
+
+    m.drawmapscale(scalelon,scalelat,scalelon,scalelat,100,
+                                                yoffset=0.01*(m.ymax-m.ymin))
+                                                
+    plt.show()
+
+
+    return m
 
 def _test_generate_map():
     """test map making functions with example data
     """
     from obspy import read_events, read_inventory
 
-    eventpath = pathnames()['data'] + "WINDOWTESTING/testevent.xml"
+    # eventpath = pathnames()['data'] + "WINDOWTESTING/testevent.xml"
     invpath = pathnames()['data'] + "WINDOWTESTING/testinv.xml"
 
-    cat = read_events(eventpath)
-    event = cat[0]
+    # cat = read_events(eventpath)
+    # event = cat[0]
     inv = read_inventory(invpath)
-
-    f,m = generate_map(event,inv,show=True)
+    
+    m = generate_map_NOEVENT(inv,show=True,faults=True)
+    # f,m = generate_map(event,inv,show=True)
 
 
 if __name__ == "__main__":

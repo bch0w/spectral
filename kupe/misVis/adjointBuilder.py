@@ -127,7 +127,7 @@ def initial_data_gather(PD):
     observationdata = procmod.preprocess(observationdata,
                                                 inv=inv,
                                                 output=PD["output"])
-
+    
     # rotate to theoretical backazimuth if necessary
     if PD["rotate"] == True:
         BAz = find_BAz(inv,event)
@@ -156,8 +156,8 @@ def initial_data_gather(PD):
     st_IDG.filter('bandpass',freqmin=1/tmax,
                              freqmax=1/tmin,
                              corners=2,
-                             zerophase=True)
-
+                             zerophase=True)        
+    
     # save into pyasdf dataset if applicable. add function automatically writes
     # try except statements incase these objects already exist - hacky but
     # excepts catch the errors when trying to add things that are already there
@@ -173,7 +173,7 @@ def initial_data_gather(PD):
         except TypeError:
             print('Station already added - exception passed')
             pass
-
+        
         obsout,synout = breakout_stream(st_IDG)
         PD["dataset"].add_waveforms(waveform=obsout,
                                     tag="observed_processed",
@@ -237,18 +237,18 @@ def run_pyflex(PD,st,inv,event):
                                         station=pf_station,
                                         plot=False)
         windows[comp] = window
-
+        
         syn_envelope = envelope(syn[0].data)
         stalta = pyflex.stalta.sta_lta(data=syn_envelope,
                                        dt=syn[0].stats.delta,
                                        min_period=PD["bounds"][0])
         staltas[comp] = stalta
-
+        
     if not windows:
         print("Empty windows")
         return None
-
-    # save windows into pyasdf file with stalta as the data and window-
+    
+    # save windows into pyasdf file with stalta as the data and window- 
     # parameter dictionaries as external information. dictionary needs
     # to be modified to work in pyasdf format
     if PD["dataset"]:
@@ -260,6 +260,8 @@ def run_pyflex(PD,st,inv,event):
                                                         comp=comp
                                                         )
             for window in windows[comp]:
+                # still need to figure out how to properly distribute windows 
+                # into auxiliary data
                 winnDixie = create_window_dictionary(window)
                 PD["dataset"].add_auxiliary_data(data=staltas[comp],
                                                  data_type="MisfitWindows",
@@ -274,20 +276,20 @@ def create_window_dictionary(window):
     json dictionary into something that will sit well in a pyasdf object
     """
     winnDixie = window._get_json_content()
-
+    
     # change UTCDateTime objects into strings
     winnDixie['absolute_endtime'] = str(winnDixie['absolute_endtime'])
     winnDixie['absolute_starttime'] = str(winnDixie['absolute_starttime'])
     winnDixie['time_of_first_sample'] = str(winnDixie['time_of_first_sample'])
-
+    
     phase_arrivals = winnDixie['phase_arrivals']
     for phase in phase_arrivals:
         winnDixie['phase_arrival_{}'.format(phase['name'])] = phase['time']
-
+    
     winnDixie.pop('phase_arrivals')
-
+    
     return winnDixie
-
+        
 
 def run_pyadjoint(PD,st,windows,output_path=None,plot=False):
     """function to call pyadjoint with preset configurations
@@ -357,23 +359,23 @@ def build_figure(st,inv,event,windows,staltas,PD):
     """
     import matplotlib as mpl
     import matplotlib.pyplot as plt
-
+    
     f2 = plt.figure(figsize=(11.69,8.27),dpi=100)
     axes = windowMaker.window_maker(st,windows,staltas,PD=PD)
-
+    
     f2 = plt.figure(figsize=(10,9.4),dpi=100)
     map = mapMaker.generate_map(event,inv,faults=PD['plot_faults'])
-
+    
     if PD['save_plot'][0]:
         import matplotlib.backends.backend_pdf as backend
         outfid = join(PD['save_plot'][1],'{}_wavmap.pdf'.format(PD["event_id"]))
         pdf = backend.PdfPages(outfid)
-        for fig in range(1,figure().number):
+        for fig in range(1,figure().number): 
             pdf.savefig(fig)
         pdf.close()
-
+    
     plt.show()
-
+    
 def bob_the_builder():
     """main processing script
 
@@ -407,31 +409,32 @@ def bob_the_builder():
                     'XX.RD21','XX.RD22']
                     }
     STANET_NAMES = ALLSTATIONS["GEONET"]
+    STANET_NAMES = ["NZ.HIZ"]
     # >> PREPROCESSING
     MINIMUM_FILTER_PERIOD = 6
     MAXIMUM_FILTER_PERIOD = 30
-    ROTATE_TO_RTZ = True
+    ROTATE = True
     UNIT_OUTPUT = "VEL"
     # >> PYFLEX
     PYFLEX_CONFIG = "UAF"
     # >> PYADJOINT
-    ADJ_SRC_OUTPATH = pathnames()["kupedata"] + "ADJOINTSOURCES" #dep?
+    ADJ_SRC_OUTPATH = pathnames()["kupedata"] + "ADJOINTSOURCES"
     ADJOINT_TYPE = "cc_traveltime_misfit"
     # >> PYASDF
-    SAVE_PYASDF = True
+    SAVE_PYASDF = False
     PYASDF_OUTPATH = pathnames()["kupedata"] + "PYASDF"
     # >> PLOTTING
-    PLOT = False
-    SAVE_PLOT = (True,pathnames()["kupeplots"] + "misvis")
-    PLOT_FAULTS_ON_MAP = False
+    PLOT = True
+    SAVE_PLOT = (False,pathnames()["kupeplots"] + "misvis")
+    PLOT_FAULTS_ON_MAP = True
 
     # ============================ ^PARAMETER SET^ =============================
-
+    
     # PARAMETER DEFUALT SET
     COMPONENT_LIST = ["N","E","Z"]
-    if ROTATE_TO_RTZ:
+    if ROTATE:
         COMPONENT_LIST = ["R","T","Z"]
-
+    
     # MAIN ITERATE OVER EVENTS
     for EVENT_ID in EVENT_IDS:
         # if everything should be stored, initiate pyasdf dataset, also reads
@@ -441,7 +444,7 @@ def bob_the_builder():
             DATASET = pyasdf.ASDFDataSet(datasetname,compression="gzip-3")
         else:
             DATASET = None
-
+        
         for STANET_NAME in STANET_NAMES:
             print(STANET_NAME)
             PAR_DICT = {"network":STANET_NAME.split('.')[0],
@@ -450,7 +453,7 @@ def bob_the_builder():
                         "event_id":EVENT_ID,
                         "bounds":(MINIMUM_FILTER_PERIOD,
                                   MAXIMUM_FILTER_PERIOD),
-                        "rotate":ROTATE_TO_RTZ,
+                        "rotate":ROTATE,
                         "output":UNIT_OUTPUT,
                         "pyflex_config":PYFLEX_CONFIG,
                         "comp_list":COMPONENT_LIST,
@@ -458,7 +461,7 @@ def bob_the_builder():
                         "plot_faults":PLOT_FAULTS_ON_MAP,
                         "dataset":DATASET
                         }
-
+            
             # MAIN PROCESSING
             st,inv,event = initial_data_gather(PAR_DICT)
             if not st: continue
@@ -468,7 +471,7 @@ def bob_the_builder():
             # adj_src = run_pyadjoint(PAR_DICT,st,windows,
             #                         output_path=ADJ_SRC_OUTPATH,
             #                         plot=PLOT)
-
+                                                                     
 # =================================== TESTS ====================================
 def _test_build_figure():
     """test figure building with example data
@@ -484,9 +487,8 @@ def _test_build_figure():
     cat = read_events(eventpath)
     event = cat[0]
     inv = read_inventory(invpath)
-
-    import ipdb;ipdb.set_trace()
-
+    
+    
     build_figure(st,inv,event,windows,boundsdict)
 
 def _test_window_saving():
@@ -513,3 +515,4 @@ if __name__ == "__main__":
     # _test_build_figure()
     # _test_window_saving()
     bob_the_builder()
+
