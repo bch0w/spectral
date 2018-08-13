@@ -97,6 +97,10 @@ def window_maker(st,windows,staltas,*args,**kwargs):
     axes,twaxes = setup_plot(number_of=NUMBER_OF_TRACES,twax=True)
     t = make_t_axis(st)
     complist = create_component_list(st)
+    
+    UNIT_DICT = {"DISP":"displacement [m]",
+                 "VEL":"velocity [m/s]",
+                 "ACC":"acceleration [m/s^2]"}
 
     for i,comp in enumerate(complist):
         # distribute data
@@ -140,7 +144,7 @@ def window_maker(st,windows,staltas,*args,**kwargs):
         axes[i].legend(prop={"size":9})
         if i == MIDDLE_TRACE:
             twaxes[i].set_ylabel("STA/LTA",rotation=90)
-            comp = "displacement [m]\n{}".format(comp)
+            comp = "{}\n{}".format(UNIT_DICT[PD['output']],comp)
         axes[i].set_ylabel(comp)
 
     # figure settings

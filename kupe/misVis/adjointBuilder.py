@@ -72,6 +72,26 @@ def get_station_latlon(sta):
     sta_lon = nz_bb['LON'][bb_ind]
 
     return sta_lat, sta_lon
+    
+def create_window_dictionary(window):
+    """HDF5 doesnt play nice with nonstandard objects in dictionaries, e.g.
+    nested dictionaries, UTCDateTime objects. So remake the pyflex window
+    json dictionary into something that will sit well in a pyasdf object
+    """
+    winnDixie = window._get_json_content()
+    
+    # change UTCDateTime objects into strings
+    winnDixie['absolute_endtime'] = str(winnDixie['absolute_endtime'])
+    winnDixie['absolute_starttime'] = str(winnDixie['absolute_starttime'])
+    winnDixie['time_of_first_sample'] = str(winnDixie['time_of_first_sample'])
+    
+    phase_arrivals = winnDixie['phase_arrivals']
+    for phase in phase_arrivals:
+        winnDixie['phase_arrival_{}'.format(phase['name'])] = phase['time']
+    
+    winnDixie.pop('phase_arrivals')
+    
+    return winnDixie
 
 # ============================= MAIN FUNCTIONS =================================
 def initial_data_gather(PD):
@@ -120,13 +140,12 @@ def initial_data_gather(PD):
         inv[0][0].longitude = sta_lon
 
     if not observationdata:
-        print("No observation data")
-        return None,None,None
+        raise Exception("No observation data")
 
     # observation preprocessing + instrument response
     observationdata = procmod.preprocess(observationdata,
                                                 inv=inv,
-                                                output=PD["output"])
+                                                output=PD["units"])
     
     # rotate to theoretical backazimuth if necessary
     if PD["rotate"] == True:
@@ -144,7 +163,7 @@ def initial_data_gather(PD):
                                                  time_shift=time_shift)
 
     syntheticdata = procmod.preprocess(syntheticdata,inv=None,
-                                                        output=PD["output"])
+                                                        output=PD["units"])
 
 
     # combine and trim to common time
@@ -185,17 +204,42 @@ def initial_data_gather(PD):
 
     return st_IDG,inv,event
 
-def choose_config(config):
-    """helper function to avoid typing out the full pyflex config, stores values
-    in a list with the following order
+def choose_config(choice,PD):
+    """helper function to avoid typing out the full pyflex or pyadjoint config:
+    PYFLEX: 
+    stores values in a list with the following order
     0:stalta_Waterlevel, 1:tshift_acceptance_level, 2:dlna_acceptance_level,
     3:cc_acceptance_level, 4:c_0, 5:c_1, 6:c_2, 7:c_3a, 8:c_3b, 10:c_4a, 11:c_4b
+    PYADJOINT: 
+    
     """
-    cfgdict = {"default":[.08,15.,1.,.8,.7,4.,0.,1.,2.,3.,10.],
-                  "UAF":[.18,4.,1.5,.71,.7,2.,0.,3.,2.,2.5,12.]}
+    if choice == "pyflex":
+        cfgdict = {"default":[.08,15.,1.,.8,.7,4.,0.,1.,2.,3.,10.],
+                      "UAF":[.18,4.,1.5,.71,.7,2.,0.,3.,2.,2.5,12.]}
+        cfgout = cfgdict[PD["pyflex_config"]]
+    
+    elif choice == "pyadjoint":
+        if PD["adj_src_type"] == "waveform":
+            cfgout = pyadjoint.ConfigWaveForm(min_period=PD["bounds"][0],
+                                                max_period=PD["bounds"][1],
+                                                taper_type="hann",
+                                                taper_percentage=0.15)
+        elif PD["adj_src_type"] == "cc_traveltime_misfit":    
+            cfgout = pyadjoint.ConfigCrossCorrelation(
+                                                    min_period=PD["bounds"][0],
+                                                    max_period=PD["bounds"][1],
+                                                    taper_type='hann',
+                                                    taper_percentage=0.3,
+                                                    measure_type='dt',
+                                                    dt_sigma_min=1.0,
+                                                    dlna_sigma_min=0.5)
+        elif PD["adj_src_type"] == "multitaper":
+            cfgout = pyadjoint.ConfigMultiTaper()
 
-    return cfgdict[config]
+    return cfgout
 
+
+# ================================ RUN SCRIPTS =================================
 def run_pyflex(PD,st,inv,event):
     """use pyflex to grab windows, current config set to defaults found on docs
     if writing into pyasdf files, window objects must be deconstructed and fed
@@ -207,7 +251,7 @@ def run_pyflex(PD,st,inv,event):
     :return windows: windows containing selected timespans where waveforms
     have acceptable match, also contains information about the window (see docs)
     """
-    CD = choose_config(PD["pyflex_config"])
+    CD = choose_config("pyflex",PD)
     config = pyflex.Config(min_period=PD["bounds"][0],
                            max_period=PD["bounds"][1],
                            stalta_waterlevel=CD[0],
@@ -228,6 +272,7 @@ def run_pyflex(PD,st,inv,event):
     # iterate windows by component and place into dictionary output
     # create stalta data from envelopes of synthetic data
     windows,staltas = {},{}
+    empties = 0
     for comp in PD["comp_list"]:
         obs,syn = breakout_stream(st.select(component=comp))
         window = pyflex.select_windows(observed=obs,
@@ -236,25 +281,28 @@ def run_pyflex(PD,st,inv,event):
                                         event=pf_event,
                                         station=pf_station,
                                         plot=False)
-        windows[comp] = window
         
+        # check if pyflex is returning empty windows
+        if not window:
+            empties+=1
+            continue
+                                                    
+        windows[comp] = window
         syn_envelope = envelope(syn[0].data)
         stalta = pyflex.stalta.sta_lta(data=syn_envelope,
                                        dt=syn[0].stats.delta,
                                        min_period=PD["bounds"][0])
         staltas[comp] = stalta
         
-    if not windows:
-        print("Empty windows")
-        return None
+    if empties == len(PD["comp_list"]):
+        raise Exception("Empty windows")
     
     # save windows into pyasdf file with stalta as the data and window- 
     # parameter dictionaries as external information. dictionary needs
     # to be modified to work in pyasdf format
     if PD["dataset"]:
         for comp in windows.keys():
-            internalpath = "{evid}/{net}_{sta}_{comp}".format(
-                                                        evid=PD["event_id"],
+            internalpath = "{net}_{sta}_{comp}".format(evid=PD["event_id"],
                                                         net=PD["network"],
                                                         sta=PD["station"],
                                                         comp=comp
@@ -269,29 +317,9 @@ def run_pyflex(PD,st,inv,event):
                                                  parameters=winnDixie)
 
     return windows, staltas
-
-def create_window_dictionary(window):
-    """HDF5 doesnt play nice with nonstandard objects in dictionaries, e.g.
-    nested dictionaries, UTCDateTime objects. So remake the pyflex window
-    json dictionary into something that will sit well in a pyasdf object
-    """
-    winnDixie = window._get_json_content()
-    
-    # change UTCDateTime objects into strings
-    winnDixie['absolute_endtime'] = str(winnDixie['absolute_endtime'])
-    winnDixie['absolute_starttime'] = str(winnDixie['absolute_starttime'])
-    winnDixie['time_of_first_sample'] = str(winnDixie['time_of_first_sample'])
-    
-    phase_arrivals = winnDixie['phase_arrivals']
-    for phase in phase_arrivals:
-        winnDixie['phase_arrival_{}'.format(phase['name'])] = phase['time']
-    
-    winnDixie.pop('phase_arrivals')
-    
-    return winnDixie
         
 
-def run_pyadjoint(PD,st,windows,output_path=None,plot=False):
+def run_pyadjoint(st,windows,PD):
     """function to call pyadjoint with preset configurations
     ++not in the docs:
     in pyadjoint.calculate_adjoint_source: window needs to be a list of lists,
@@ -311,48 +339,36 @@ def run_pyadjoint(PD,st,windows,output_path=None,plot=False):
     """
     obs,syn = breakout_stream(st)
     net,sta,loc,cha = PD["code"].split('.')
-    cha=cha[:2]+PD["component"]
-
-    # collect all windows into a single list object
-    adjoint_windows = []
+    
     delta = st[0].stats.delta
-    for win in windows:
-        adj_win = [win.left*delta,win.right*delta]
-        adjoint_windows.append(adj_win)
+    cfg = choose_config("pyadjoint",PD)
 
-    config = pyadjoint.ConfigWaveForm(min_period=PD["bounds"][0],
-                                      max_period=PD["bounds"][1],
-                                      taper_type="hann",
-                                      taper_percentage=0.15)
-    config_adj = pyadjoint.ConfigCrossCorrelation(min_period=PD["bounds"][0],
-                                                  max_period=PD["bounds"][1],
-                                                  taper_type='hann',
-                                                  taper_percentage=0.3,
-                                                  measure_type='dt',
-                                                  dt_sigma_min=1.0,
-                                                  dlna_sigma_min=0.5)
+    # iterate through available window components
+    adjoint_sources = {}
+    for key in windows:
+        obs_adj = obs.select(component=key)[0]
+        syn_adj = syn.select(component=key)[0]
 
-    adj_src = pyadjoint.calculate_adjoint_source(
-                                 adj_src_type="cc_traveltime_misfit",
-                                 observed=obs,
-                                 synthetic=syn,
-                                 config=config_adj,
-                                 window=adjoint_windows,
-                                 plot=plot
-                                 )
-
-    if output_path:
-        output_file = join(output_path,
-                           "{NET}.{STA}.{CHA}.{EVENT_ID}.adj".format(
-                                                     NET=net,
-                                                     STA=sta,
-                                                     CHA=cha,
-                                                     EVENT_ID=PD["event_id"]))
-        adj_src.write(output_file,
-                      format="SPECFEM",
-                      time_offset=0)
-
-    return adj_src
+        # collect all windows into a single list object
+        adjoint_windows = []
+        for win in windows[key]:
+            adj_win = [win.left*delta,win.right*delta]
+            adjoint_windows.append(adj_win)
+        
+        adj_src = pyadjoint.calculate_adjoint_source(
+                                             adj_src_type=PD["adj_src_type"],
+                                             observed=obs_adj,
+                                             synthetic=syn_adj,
+                                             config=cfg,
+                                             window=adjoint_windows,
+                                             plot=False
+                                             )
+        adjoint_sources[key] = adj_src
+        
+        if PD["dataset"]:
+            adj_src.write_to_asdf(PD["dataset"],time_offset=0)
+        
+    return adjoint_sources
 
 def build_figure(st,inv,event,windows,staltas,PD):
     """take outputs of mapMaker and windowMaker and put them into one figure
@@ -368,6 +384,7 @@ def build_figure(st,inv,event,windows,staltas,PD):
     
     if PD['save_plot'][0]:
         import matplotlib.backends.backend_pdf as backend
+        import ipdb;ipdb.set_trace()
         outfid = join(PD['save_plot'][1],'{}_wavmap.pdf'.format(PD["event_id"]))
         pdf = backend.PdfPages(outfid)
         for fig in range(1,figure().number): 
@@ -409,38 +426,37 @@ def bob_the_builder():
                     'XX.RD21','XX.RD22']
                     }
     STANET_NAMES = ALLSTATIONS["GEONET"]
-    STANET_NAMES = ["NZ.HIZ"]
+    STANET_NAMES = ['NZ.HAZ']
     # >> PREPROCESSING
     MINIMUM_FILTER_PERIOD = 6
     MAXIMUM_FILTER_PERIOD = 30
-    ROTATE = True
-    UNIT_OUTPUT = "VEL"
+    ROTATE_TO_RTZ = True
+    UNIT_OUTPUT = "DISP"
     # >> PYFLEX
     PYFLEX_CONFIG = "UAF"
     # >> PYADJOINT
-    ADJ_SRC_OUTPATH = pathnames()["kupedata"] + "ADJOINTSOURCES"
-    ADJOINT_TYPE = "cc_traveltime_misfit"
-    # >> PYASDF
-    SAVE_PYASDF = False
-    PYASDF_OUTPATH = pathnames()["kupedata"] + "PYASDF"
+    ADJOINT_SRC_TYPE = "cc_traveltime_misfit"
     # >> PLOTTING
     PLOT = True
-    SAVE_PLOT = (False,pathnames()["kupeplots"] + "misvis")
     PLOT_FAULTS_ON_MAP = True
-
+    # >> SAVING
+    SAVE_PYASDF = (False,pathnames()["kupedata"] + "PYASDF")
+    SAVE_ADJSRC_SEPARATE = False
+    SAVE_PLOT = (False,pathnames()["kupeplots"] + "misvis")
     # ============================ ^PARAMETER SET^ =============================
     
     # PARAMETER DEFUALT SET
     COMPONENT_LIST = ["N","E","Z"]
-    if ROTATE:
+    if ROTATE_TO_RTZ:
         COMPONENT_LIST = ["R","T","Z"]
+
     
     # MAIN ITERATE OVER EVENTS
     for EVENT_ID in EVENT_IDS:
         # if everything should be stored, initiate pyasdf dataset, also reads
         # existing pyasdf datasets if they already exist
-        if SAVE_PYASDF:
-            datasetname = join(PYASDF_OUTPATH,EVENT_ID+'.h5')
+        if SAVE_PYASDF[0]:
+            datasetname = join(SAVE_PYASDF[1],EVENT_ID+'.h5')
             DATASET = pyasdf.ASDFDataSet(datasetname,compression="gzip-3")
         else:
             DATASET = None
@@ -453,24 +469,29 @@ def bob_the_builder():
                         "event_id":EVENT_ID,
                         "bounds":(MINIMUM_FILTER_PERIOD,
                                   MAXIMUM_FILTER_PERIOD),
-                        "rotate":ROTATE,
-                        "output":UNIT_OUTPUT,
+                        "rotate":ROTATE_TO_RTZ,
+                        "units":UNIT_OUTPUT,
                         "pyflex_config":PYFLEX_CONFIG,
+                        "adj_src_type":ADJOINT_SRC_TYPE,
+                        "save_adj_src":SAVE_ADJSRC_SEPARATE,
                         "comp_list":COMPONENT_LIST,
                         "save_plot":SAVE_PLOT,
                         "plot_faults":PLOT_FAULTS_ON_MAP,
                         "dataset":DATASET
                         }
+
             
             # MAIN PROCESSING
+            # try:
             st,inv,event = initial_data_gather(PAR_DICT)
-            if not st: continue
             windows,staltas = run_pyflex(PAR_DICT,st,inv,event)
-            if not windows: continue
+            adj_src = run_pyadjoint(st,windows,PAR_DICT)
+
             build_figure(st,inv,event,windows,staltas,PAR_DICT)
-            # adj_src = run_pyadjoint(PAR_DICT,st,windows,
-            #                         output_path=ADJ_SRC_OUTPATH,
-            #                         plot=PLOT)
+            # except Exception as e:
+            #     print(e)
+            #     continue
+
                                                                      
 # =================================== TESTS ====================================
 def _test_build_figure():
