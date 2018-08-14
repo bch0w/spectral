@@ -14,8 +14,11 @@ from os.path import join
 from obspy import UTCDateTime, read, Stream
 from obspy.signal.filter import envelope
 
+# internal scripts
 import windowMaker
 import mapMaker
+sys.path.append('./tests')
+from tests import func_test
 
 # module functions
 sys.path.append('../../modules/')
@@ -29,7 +32,7 @@ import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 # ============================ HELPER FUNCTIONS ================================
-def find_BAz(inv,event):
+def _find_BAz(inv,event):
     """get backazimuth based on obspy inventory and event information
     """
     from obspy.geodetics import gps2dist_azimuth
@@ -40,6 +43,20 @@ def find_BAz(inv,event):
     dist,Az,BAz = gps2dist_azimuth(event_lat,event_lon,station_lat,station_lon)
 
     return BAz
+
+def _get_station_latlon(sta):
+    """geonet response files dont have station information, so grab it internal
+    """
+    # find station coordinates
+    nz_bb_path = pathnames()['data'] + 'STATIONXML/NZ_BB_coords.npz'
+    nz_bb = np.load(nz_bb_path)
+    nz_bb_names = nz_bb['NAME']
+
+    bb_ind = np.where(nz_bb_names==sta)[0][0]
+    sta_lat = nz_bb['LAT'][bb_ind]
+    sta_lon = nz_bb['LON'][bb_ind]
+
+    return sta_lat, sta_lon
 
 def breakout_stream(st):
     """get observed and synthetic parts of a stream object
@@ -58,21 +75,7 @@ def breakout_stream(st):
     syn_stream = st.select(channel="BX?")
 
     return obs_stream, syn_stream
-
-def get_station_latlon(sta):
-    """geonet response files dont have station information, so grab it internal
-    """
-    # find station coordinates
-    nz_bb_path = pathnames()['data'] + 'STATIONXML/NZ_BB_coords.npz'
-    nz_bb = np.load(nz_bb_path)
-    nz_bb_names = nz_bb['NAME']
-
-    bb_ind = np.where(nz_bb_names==sta)[0][0]
-    sta_lat = nz_bb['LAT'][bb_ind]
-    sta_lon = nz_bb['LON'][bb_ind]
-
-    return sta_lat, sta_lon
-
+    
 def create_window_dictionary(window):
     """HDF5 doesnt play nice with nonstandard objects in dictionaries, e.g.
     nested dictionaries, UTCDateTime objects. So remake the pyflex window
@@ -94,6 +97,32 @@ def create_window_dictionary(window):
     return winnDixie
 
 # ============================= MAIN FUNCTIONS =================================
+def build_figure(st,inv,event,windows,staltas,PD):
+    """take outputs of mapMaker and windowMaker and put them into one figure
+    """
+    import matplotlib as mpl
+    import matplotlib.pyplot as plt
+    if PD["verbose"]:
+        print("Generating waveform plots and source-receiver map")
+
+    if PD["plot"][0]:
+        f2 = plt.figure(figsize=(11.69,8.27),dpi=100)
+        axes = windowMaker.window_maker(st,windows,staltas,PD=PD)
+    if PD["plot"][1]:
+        f2 = plt.figure(figsize=(10,9.4),dpi=100)
+        map = mapMaker.generate_map(event,inv,faults=PD["plot"][2])
+
+    if PD['save_plot'][0]:
+        import matplotlib.backends.backend_pdf as backend
+        import ipdb;ipdb.set_trace()
+        outfid = join(PD['save_plot'][1],'{}_wavmap.pdf'.format(PD["event_id"]))
+        pdf = backend.PdfPages(outfid)
+        for fig in range(1,figure().number):
+            pdf.savefig(fig)
+        pdf.close()
+
+    plt.show()
+    
 def initial_data_gather(PD):
     """gather event information, observation and synthetic traces.
     preprocess all traces accordingly and return one stream object with 6 traces
@@ -108,7 +137,6 @@ def initial_data_gather(PD):
     :rtype event: obspy.event
     :return event: event information
     """
-    if PD["verbose"]:print("Initial data gather")
     # station information
     net,sta,loc,cha = PD["code"].split('.')
 
@@ -129,7 +157,7 @@ def initial_data_gather(PD):
                                                     endpad=180)
     event = cat[0]
     if inv[0][0].latitude == 0.0:
-        sta_lat,sta_lon = get_station_latlon(sta)
+        sta_lat,sta_lon = _get_station_latlon(sta)
         inv[0][0].latitude = sta_lat
         inv[0][0].longitude = sta_lon
 
@@ -144,7 +172,7 @@ def initial_data_gather(PD):
 
     # rotate to theoretical backazimuth if necessary
     if PD["rotate"] == True:
-        BAz = find_BAz(inv,event)
+        BAz = _find_BAz(inv,event)
         observationdata.rotate(method='NE->RT',back_azimuth=BAz)
         syntheticdata.rotate(method='NE->RT',back_azimuth=BAz)
 
@@ -174,7 +202,7 @@ def initial_data_gather(PD):
                              corners=2,
                              zerophase=True)
 
-    # save into pyasdf dataset if applicable. add function automatically writes
+    # save into pyasdf dataset if applicable. 'add' function auto writes to file
     # try except statements incase these objects already exist - hacky but
     # excepts catch the errors when trying to add things that are already there
     # add_waveforms will push 'already_exists' exceptions
@@ -205,12 +233,26 @@ def initial_data_gather(PD):
 
 def choose_config(choice,PD):
     """helper function to avoid typing out the full pyflex or pyadjoint config:
-    PYFLEX:
-    stores values in a list with the following order
-    0:stalta_Waterlevel, 1:tshift_acceptance_level, 2:dlna_acceptance_level,
-    3:cc_acceptance_level, 4:c_0, 5:c_1, 6:c_2, 7:c_3a, 8:c_3b, 10:c_4a, 11:c_4b
-    PYADJOINT:
-
+    
+    ++PYFLEX (Maggi et al. 2009)
+    i  Standard Tuning Parameters:
+    0: water level for STA/LTA (short term average/long term average)
+    1: time lag acceptance level
+    2: amplitude ratio acceptance level (dlna)
+    3: normalized cross correlation acceptance level
+    i  Fine Tuning Parameters
+    4: c_0 = for rejection of internal minima 
+    5: c_1 = for rejection of short windows
+    6: c_2 = for rejection of un-prominent windows
+    7: c_3a = for rejection of multiple distinct arrivals
+    8: c_3b = for rejection of multiple distinct arrivals
+    9: c_4a = for curtailing windows w/ emergent starts and/or codas
+    10:c_4b = for curtailing windows w/ emergent starts and/or codas
+    
+    ++PYADJOINT:
+    different misfit measures detailed in pyadjoint docs, multitaper approach is
+    what was used in Tape et al. (2010). All inputs taken from what is specified
+    in source code, many are left as default
     """
     if choice == "pyflex":
         cfgdict = {"default":[.08,15.,1.,.8,.7,4.,0.,1.,2.,3.,10.],
@@ -231,14 +273,35 @@ def choose_config(choice,PD):
                                                     taper_type='hann',
                                                     taper_percentage=0.3,
                                                     measure_type='dt',
+                                                    use_cc_error=True,
                                                     dt_sigma_min=1.0,
                                                     dlna_sigma_min=0.5)
-        elif PD["adj_src_type"] == "multitaper":
-            cfgout = pyadjoint.ConfigMultiTaper()
+        elif PD["adj_src_type"] == "multitaper_misfit":
+            cfgout = pyadjoint.ConfigMultiTaper(min_period=PD["bounds"][0],
+                                                max_period=PD["bounds"][1],
+                                                lnpt=15,
+                                                transfunc_waterlevel=1e-10,
+                                                water_threshold=0.02,
+                                                ipower_costaper=10,
+                                                min_cycle_in_window=0.5,
+                                                taper_type='hann',
+                                                taper_percentage=0.3,
+                                                mt_nw=4.0,
+                                                num_taper=5,
+                                                dt_fac=2.0,
+                                                phase_step=1.5,
+                                                err_fac=2.5,
+                                                dt_max_scale=3.5,
+                                                measure_type='dt',
+                                                dt_sigma_min=1.0,
+                                                dlna_sigma_min=0.5,
+                                                use_cc_error=True,
+                                                use_mt_error=False)
+        else:
+            raise Exception("Pyadjoint 'adj_src_type' incorrectly specified")
 
     return cfgout
-
-
+    
 # ================================ RUN SCRIPTS =================================
 def run_pyflex(PD,st,inv,event):
     """use pyflex to grab windows, current config set to defaults found on docs
@@ -252,7 +315,8 @@ def run_pyflex(PD,st,inv,event):
     have acceptable match, also contains information about the window (see docs)
     """
     if PD["verbose"]:
-        print("Running pyflex for {} configuration".format(PD["pyflex_config"]))
+        print("Running pyflex for [{}] configuration".format(
+                                                        PD["pyflex_config"]))
 
     CD = choose_config("pyflex",PD)
     config = pyflex.Config(min_period=PD["bounds"][0],
@@ -350,7 +414,7 @@ def run_pyadjoint(st,windows,PD):
     :rtpye adj_src: pyadjoint
     """
     if PD["verbose"]:
-        print("Running pyAdjoint for type {} ".format(PD["adj_src_type"]))
+        print("Running pyAdjoint for type [{}] ".format(PD["adj_src_type"]))
 
     obs,syn = breakout_stream(st)
     net,sta,loc,cha = PD["code"].split('.')
@@ -377,61 +441,53 @@ def run_pyadjoint(st,windows,PD):
                                              synthetic=syn_adj,
                                              config=cfg,
                                              window=adjoint_windows,
-                                             plot=False
+                                             plot=True
                                              )
         adjoint_sources[key] = adj_src
-
+        
+        import ipdb;ipdb.set_trace()
+        
         if PD["dataset"]:
             if PD["verbose"]:print("Saving adjoint source to pyASDF dataset")
             adj_src.write_to_asdf(PD["dataset"],time_offset=0)
 
     return adjoint_sources
 
-def build_figure(st,inv,event,windows,staltas,PD):
-    """take outputs of mapMaker and windowMaker and put them into one figure
-    """
-    import matplotlib as mpl
-    import matplotlib.pyplot as plt
-    if PD["verbose"]:
-        print("Generating waveform plots and source-receiver map")
-
-    if PD["plot"][0]:
-        f2 = plt.figure(figsize=(11.69,8.27),dpi=100)
-        axes = windowMaker.window_maker(st,windows,staltas,PD=PD)
-    if PD["plot"][1]:
-        f2 = plt.figure(figsize=(10,9.4),dpi=100)
-        map = mapMaker.generate_map(event,inv,faults=PD["plot"][2])
-
-    if PD['save_plot'][0]:
-        import matplotlib.backends.backend_pdf as backend
-        import ipdb;ipdb.set_trace()
-        outfid = join(PD['save_plot'][1],'{}_wavmap.pdf'.format(PD["event_id"]))
-        pdf = backend.PdfPages(outfid)
-        for fig in range(1,figure().number):
-            pdf.savefig(fig)
-        pdf.close()
-
-    plt.show()
 
 def bob_the_builder():
     """main processing script
 
     ++intra-function parameters and choices:
-    :type EVENT_ID: str
-    :param EVENT_ID: GEONET event ID
-    :type STATION_NAME: str
-    :param STATION_NAME: identifier for data fetching, in the form NN.SSS(S)
+    :type EVENT_ID: list of str
+    :param EVENT_ID: GEONET event ID's
+    :type STANET_NAMES: list of str
+    :param STANET_NAMES: identifiers for data fetching, in the form NN.SSS(S)
                          examples: NZ.HIZ, XX.RD01
     :type MINIMUM/MAXIMUM_FILTER_PERIOD: int
     :param MINIMUM/MAXIMUM_FILTER_PERIOD: bandpass filtering bounds in seconds
-    :type COMPONENT: str
-    :param COMPONENT: component of choice to be used, available N,E,Z,T,R
+    :type ROTATE_TO_RTZ: bool
+    :param ROTATE_TO_RTZ: RTZ if True, NEZ if False
     :type UNIT_OUTPUT: str
-    :param UNIT_OUTPUT: available DISP, VEL, ACC
-    :type ADJ_SRC_OUTPUT_PATH: str
-    :param ADJ_SRC_OUTPUT_PATH: "path/to/save/adjoint_source/"
-    :type PLOT: bool
-    :param PLOT: plot outputs of pyflex and pyadjoint, global switch
+    :param UNIT_OUTPUT: from obspy, choices: "DISP", "VEL", "ACC"
+    :type PYFLEX_CONFIG: str
+    :param PYFLEX_CONFIG: choice of configuration for pyflex, choices:
+                    "default": what is listed on the pyflex docs
+                    "UAF": values taken from Tape et al. at Fairbanks
+                    "NZ": values deemed best for New Zealand context
+    :type ADJOINT_SRC_TYPE: str
+    :param ADJOINT_SRC_TYPE: from pyadjoint, misfit calculation style, choices:
+                    "cc_traveltime_misfit": squared traveltime differences
+                    "multitaper_misfit": freq. dependent phgase differences
+                    "waveform_misfit": squared difference of waveforms
+    :type PLOT_*: bool
+    :param PLOT_*: plot waveform (WAV), src-rcv map (MAP), active faults take 
+                   some time to plot, faster without (FAULTS_ON_MAP)
+    :type SAVE_*: tuple -> (bool,str)
+    :param SAVE_*: save figures (PLOT) or all data (PYASDF), if so output path
+                   adjoint sources can be saved on their own for easy input 
+                   to specfem (ADJSRC_SEPARATE)
+    :type VERBOSE: bool
+    :param VERBOSE: enable print statements throughout 
     """
     # ============================ vPARAMETER SETv =============================
     # SOURCE-RECEIVER
@@ -454,7 +510,7 @@ def bob_the_builder():
     # >> PYFLEX
     PYFLEX_CONFIG = "UAF"
     # >> PYADJOINT
-    ADJOINT_SRC_TYPE = "cc_traveltime_misfit"
+    ADJOINT_SRC_TYPE = "multitaper_misfit"
     # >> PLOTTING
     PLOT_WAV = True
     PLOT_MAP = False
@@ -464,7 +520,7 @@ def bob_the_builder():
     SAVE_PYASDF = (False,pathnames()["kupedata"] + "PYASDF")
     SAVE_ADJSRC_SEPARATE = (False,pathnames()["kupedata"] + "ADJSRC")
     # >> MISC.
-    VERBOSE = False
+    VERBOSE = True
     # ============================ ^PARAMETER SET^ =============================
     if VERBOSE:
         # print the parameters in std. out
@@ -493,7 +549,7 @@ def bob_the_builder():
     for EVENT_ID in EVENT_IDS:
         print("===={}====".format(EVENT_ID))
 
-        # if everything should be stored, initiate pyasdf dataset, also reads
+        # if data should be stored, initiate pyasdf dataset, also reads
         # existing pyasdf datasets if they already exist
         if SAVE_PYASDF[0]:
             datasetname = join(SAVE_PYASDF[1],EVENT_ID+'.h5')
@@ -522,57 +578,17 @@ def bob_the_builder():
                         }
 
             # MAIN PROCESSING
-            # try:
-            st,inv,event = initial_data_gather(PAR_DICT)
-            windows,staltas,PAR_DICT = run_pyflex(PAR_DICT,st,inv,event)
-            adj_src = run_pyadjoint(st,windows,PAR_DICT)
+            try:
+                st,inv,event = initial_data_gather(PAR_DICT)
+                windows,staltas,PAR_DICT = run_pyflex(PAR_DICT,st,inv,event)
+                adj_src = run_pyadjoint(st,windows,PAR_DICT)
+                build_figure(st,inv,event,windows,staltas,PAR_DICT)
+            except Exception as e:
+                print(e)
+                continue
 
-            build_figure(st,inv,event,windows,staltas,PAR_DICT)
-            # except Exception as e:
-            #     print(e)
-            #     continue
-
-
-# =================================== TESTS ====================================
-def _test_build_figure():
-    """test figure building with example data
-    """
-    from obspy import read_events, read_inventory
-    boundsdict = {"station_name":"TEST","bounds":(6,30)}
-    streampath = pathnames()['data'] + 'WINDOWTESTING/testmseed.pickle'
-    windowpath = pathnames()['data'] + 'WINDOWTESTING/testwindows.npz'
-    st = read(streampath)
-    windows = np.load(windowpath)
-    eventpath = pathnames()['data'] + "WINDOWTESTING/testevent.xml"
-    invpath = pathnames()['data'] + "WINDOWTESTING/testinv.xml"
-    cat = read_events(eventpath)
-    event = cat[0]
-    inv = read_inventory(invpath)
-
-
-    build_figure(st,inv,event,windows,boundsdict)
-
-def _test_window_saving():
-    windowpath = pathnames()['data'] + 'WINDOWTESTING/testwindows.npz'
-    windows = np.load(windowpath)
-    datasetname = pathnames()['data'] +'KUPEDATA/PYASDF/2014p240655.h5'
-    DATASET = pyasdf.ASDFDataSet(datasetname,compression="gzip-3")
-    for comp in windows.keys():
-        internalpath = "{evid}/{net}_{sta}_{comp}".format(
-                                                    evid='2014p240655',
-                                                    net='NZ',
-                                                    sta='BFZ',
-                                                    comp=comp
-                                                    )
-        import ipdb;ipdb.set_trace()
-        DATASET.add_auxiliary_data(data=windows[comp],
-                                     data_type="PyflexWindows",
-                                     path=internalpath,
-                                     parameters={'test':'test'}
-                                     )
 
 # =================================== MAIN ====================================
 if __name__ == "__main__":
-    # _test_build_figure()
-    # _test_window_saving()
-    bob_the_builder()
+    # bob_the_builder()
+    func_test.test_calculate_adj_src()
