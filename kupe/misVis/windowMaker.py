@@ -37,6 +37,21 @@ def pretty_grids(input_ax):
                             axis='y',
                             scilimits=(0,0))
 
+def format_axis(input_ax):
+    """sit the tick marks away from the plot edges to prevent overlapping when
+    multiple subplots are stacked atop one another, and for general gooood looks
+    will check if the plot is two sided (e.g. waveforms) or only positive
+    (e.g. STA/LTA)
+    """
+    ymin,ymax= input_ax.get_ylim()
+    maxvalue = max([abs(_) for _ in input_ax.get_ylim()])
+    percentover = maxvalue*0.125
+    if abs(round(ymin/ymax)) == 1:
+        bounds = (-1*(maxvalue+percentover),(maxvalue+percentover))
+    else:# elif abs(round(ymin/ymax)) == 0:
+        bounds = (-0.05,(maxvalue+percentover))
+    input_ax.set_ylim(bounds)
+
 def setup_plot(number_of,twax=True):
     """dynamically set up plots according to number of files
     """
@@ -91,13 +106,15 @@ def window_maker(st,windows,staltas,*args,**kwargs):
     """plot streams and windows. assumes you have N observation traces and
     N synthetic traces for a 2N length stream object
     """
+    PD = kwargs['PD']
+
     # function setup
     NUMBER_OF_TRACES = len(st)//2
     MIDDLE_TRACE = NUMBER_OF_TRACES//2
     axes,twaxes = setup_plot(number_of=NUMBER_OF_TRACES,twax=True)
     t = make_t_axis(st)
     complist = create_component_list(st)
-    
+
     UNIT_DICT = {"DISP":"displacement [m]",
                  "VEL":"velocity [m/s]",
                  "ACC":"acceleration [m/s^2]"}
@@ -105,51 +122,61 @@ def window_maker(st,windows,staltas,*args,**kwargs):
     for i,comp in enumerate(complist):
         # distribute data
         obs,syn = breakout_stream(st.select(component=comp))
-        windowlist = windows[comp]
 
         # plot waveforms (synthetics red, observations black)
-        axes[i].plot(t,obs[0].data,'k',
+        A1, = axes[i].plot(t,obs[0].data,'k',
                      label="{} (OBS)".format(obs[0].get_id()),
                      zorder=5)
-        axes[i].plot(t,syn[0].data,'r',
+        A2, = axes[i].plot(t,syn[0].data,'r',
                      label="{} (SYN)".format(syn[0].get_id()),
                      zorder=5)
 
-        # plot stalta data
-        twaxes[i].plot(t,staltas[comp],'gray',alpha=0.4,zorder=4,
-                                                        label="STA/LTA (SYN)")
+        # plot stalta data and water level
+        T1, = twaxes[i].plot(t,staltas[comp],'gray',alpha=0.4,zorder=4,
+                        label="STA/LTA (SYN), WL={}".format(PD["stalta_wl"]))
+        T2 = twaxes[i].axhline(y=PD["stalta_wl"],xmin=t[0],xmax=t[-1],
+                      alpha=0.2,zorder=3,linewidth=1.5,c='k',linestyle='--')
 
 
-        # plot windows as semi-transparent boxes
+        # plot windows (if available) as semi-transparent boxes
         ymin,ymax = axes[i].get_ylim()
-        for window in windowlist:
-            xwindow = np.arange(window.left,window.right,1)
-            twindow = t[xwindow]
-            axes[i].fill_between(twindow,ymin,ymax,
-                                 facecolor='orange',
-                                 edgecolor='k',
-                                 linewidth=0.5,
-                                 alpha=0.25)
+        window_anno_template = "maxCC:{mcc:.4f}\nccShift:{ccs}\ndlnA:{dln:.4f}"
+        try:
+            for window in windows[comp]:
+                xwindow = np.arange(window.left,window.right,1)
+                twindow = t[xwindow]
+                F1 = axes[i].fill_between(twindow,ymin,ymax,
+                                     facecolor='orange',
+                                     edgecolor='k',
+                                     linewidth=0.5,
+                                     alpha=0.25)
 
-            # annotate boxes with information from window
-            winanno = "maxCC:{mcc:.4f}\nccShift:{ccs}\ndlnA:{dln:.4f}".format(
-                                            mcc=window.max_cc_value,
-                                            ccs=window.cc_shift,
-                                            dln=window.dlnA)
-            # axes[i].annotate(s=winanno,xy=(twindow[10],ymax*0.5),
-            #                                         zorder=4,fontsize=7)
+                # annotate boxes with information from window
+                winanno = window_anno_template.format(mcc=window.max_cc_value,
+                                                      ccs=window.cc_shift,
+                                                      dln=window.dlnA)
+                axes[i].annotate(s=winanno,xy=(twindow[10],ymax*0.5),
+                                                        zorder=4,fontsize=7)
+        except KeyError:
+            pass
 
-        # final plot adjustments
-        axes[i].set_xlim([t[0],t[-1]])
-        axes[i].legend(prop={"size":9})
+        # label units and twin axis
         if i == MIDDLE_TRACE:
             twaxes[i].set_ylabel("STA/LTA",rotation=90)
-            comp = "{}\n{}".format(UNIT_DICT[PD['output']],comp)
+            comp = "{}\n{}".format(UNIT_DICT[PD['units']],comp)
+
+            # combine legends
+            lines = [A1,A2,T1]
+            labels = [l.get_label() for l in lines]
+            axes[i].legend(lines,labels,prop={"size":9})
+
         axes[i].set_ylabel(comp)
+        axes[i].set_xlim([t[0],t[-1]])
+        for AX in [axes[i],twaxes[i]]:
+            format_axis(AX)
+
 
     # figure settings
-    PD = kwargs['PD']
-
     titletext = "{s} [{b0},{b1}]".format(s=PD['station'],
                                          b0=PD['bounds'][0],
                                          b1=PD['bounds'][1])

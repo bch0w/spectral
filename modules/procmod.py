@@ -13,7 +13,7 @@ def myround(x,base=5,choice='near'):
 
     return roundout
 
-def preprocess(st,resample=50,inv=None,output="VEL",filter=False):
+def preprocess(st,resample=50,inv=None,output="VEL",filter=False,verbose=False):
     """preprocess waveform data:
     resample, demean, detrend, taper, remv. resp. (if applicable)
     """
@@ -39,13 +39,14 @@ def preprocess(st,resample=50,inv=None,output="VEL",filter=False):
     # change units from default velocity if necessary
     elif not inv:
         if output == "DISP":
-            st_manipulate.differentiate(method="gradient")
-        elif output == "ACC":
             st_manipulate.integrate(method="cumtrapz")
+        elif output == "ACC":
+            st_manipulate.differentiate(method="gradient")
         st_manipulate.taper(max_percentage=0.05)
 
     code = st[0].get_id()
-    print("\t[procmod.preprocess] {ID} {r}Hz resample, response: {i}".format(
+    if verbose:
+        print("\t[procmod.preprocess] {ID} {r}Hz resamp, response: {i}".format(
                                                                 ID=code,
                                                                 r=resample,
                                                                 i=inv_print))

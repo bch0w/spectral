@@ -72,25 +72,25 @@ def get_station_latlon(sta):
     sta_lon = nz_bb['LON'][bb_ind]
 
     return sta_lat, sta_lon
-    
+
 def create_window_dictionary(window):
     """HDF5 doesnt play nice with nonstandard objects in dictionaries, e.g.
     nested dictionaries, UTCDateTime objects. So remake the pyflex window
     json dictionary into something that will sit well in a pyasdf object
     """
     winnDixie = window._get_json_content()
-    
+
     # change UTCDateTime objects into strings
     winnDixie['absolute_endtime'] = str(winnDixie['absolute_endtime'])
     winnDixie['absolute_starttime'] = str(winnDixie['absolute_starttime'])
     winnDixie['time_of_first_sample'] = str(winnDixie['time_of_first_sample'])
-    
+
     phase_arrivals = winnDixie['phase_arrivals']
     for phase in phase_arrivals:
         winnDixie['phase_arrival_{}'.format(phase['name'])] = phase['time']
-    
+
     winnDixie.pop('phase_arrivals')
-    
+
     return winnDixie
 
 # ============================= MAIN FUNCTIONS =================================
@@ -98,13 +98,6 @@ def initial_data_gather(PD):
     """gather event information, observation and synthetic traces.
     preprocess all traces accordingly and return one stream object with 6 traces
     stolen and modified from obsynth.py
-
-    TODO:
-        +by default grabs all components, could be modified to only grab
-        necessary components, if the speedup is worthwhile
-        +change the stream length by the theoretical arrival times or
-        source-receiver distance (?)
-
 
     :type PD: dictionary
     :param PD: parameter dictionary
@@ -115,10 +108,11 @@ def initial_data_gather(PD):
     :rtype event: obspy.event
     :return event: event information
     """
+    if PD["verbose"]:print("Initial data gather")
     # station information
     net,sta,loc,cha = PD["code"].split('.')
 
-    # grab synthetic data locally, decide
+    # grab synthetic data locally, by default I was saving mseeds in velocity
     syntheticdata_path = join(pathnames()['syns'],PD["event_id"],'')
 
     syntheticdata = Stream()
@@ -143,10 +137,11 @@ def initial_data_gather(PD):
         raise Exception("No observation data")
 
     # observation preprocessing + instrument response
+    if PD["verbose"]:print("Preprocessing observation data")
     observationdata = procmod.preprocess(observationdata,
-                                                inv=inv,
-                                                output=PD["units"])
-    
+                                         inv=inv,
+                                         output=PD["units"])
+
     # rotate to theoretical backazimuth if necessary
     if PD["rotate"] == True:
         BAz = find_BAz(inv,event)
@@ -162,8 +157,9 @@ def initial_data_gather(PD):
                                                  half_duration=half_duration,
                                                  time_shift=time_shift)
 
+    if PD["verbose"]:print("Preprocessing synthetic data")
     syntheticdata = procmod.preprocess(syntheticdata,inv=None,
-                                                        output=PD["units"])
+                                       output=PD["units"])
 
 
     # combine and trim to common time
@@ -172,16 +168,19 @@ def initial_data_gather(PD):
 
     # filter
     tmin,tmax = PD["bounds"]
+    if PD["verbose"]:print("Filtering at {0} to {1} seconds".format(tmin,tmax))
     st_IDG.filter('bandpass',freqmin=1/tmax,
                              freqmax=1/tmin,
                              corners=2,
-                             zerophase=True)        
-    
+                             zerophase=True)
+
     # save into pyasdf dataset if applicable. add function automatically writes
     # try except statements incase these objects already exist - hacky but
     # excepts catch the errors when trying to add things that are already there
     # add_waveforms will push 'already_exists' exceptions
     if PD["dataset"]:
+        if PD["verbose"]:
+            print("Saving station, event and waveforms to pyASDF dataset")
         try:
             PD["dataset"].add_quakeml(event)
         except ValueError:
@@ -192,7 +191,7 @@ def initial_data_gather(PD):
         except TypeError:
             print('Station already added - exception passed')
             pass
-        
+
         obsout,synout = breakout_stream(st_IDG)
         PD["dataset"].add_waveforms(waveform=obsout,
                                     tag="observed_processed",
@@ -206,25 +205,26 @@ def initial_data_gather(PD):
 
 def choose_config(choice,PD):
     """helper function to avoid typing out the full pyflex or pyadjoint config:
-    PYFLEX: 
+    PYFLEX:
     stores values in a list with the following order
     0:stalta_Waterlevel, 1:tshift_acceptance_level, 2:dlna_acceptance_level,
     3:cc_acceptance_level, 4:c_0, 5:c_1, 6:c_2, 7:c_3a, 8:c_3b, 10:c_4a, 11:c_4b
-    PYADJOINT: 
-    
+    PYADJOINT:
+
     """
     if choice == "pyflex":
         cfgdict = {"default":[.08,15.,1.,.8,.7,4.,0.,1.,2.,3.,10.],
-                      "UAF":[.18,4.,1.5,.71,.7,2.,0.,3.,2.,2.5,12.]}
+                   "UAF":[.18,4.,1.5,.71,.7,2.,0.,3.,2.,2.5,12.],
+                   "NZ":[]}
         cfgout = cfgdict[PD["pyflex_config"]]
-    
+
     elif choice == "pyadjoint":
         if PD["adj_src_type"] == "waveform":
             cfgout = pyadjoint.ConfigWaveForm(min_period=PD["bounds"][0],
                                                 max_period=PD["bounds"][1],
                                                 taper_type="hann",
                                                 taper_percentage=0.15)
-        elif PD["adj_src_type"] == "cc_traveltime_misfit":    
+        elif PD["adj_src_type"] == "cc_traveltime_misfit":
             cfgout = pyadjoint.ConfigCrossCorrelation(
                                                     min_period=PD["bounds"][0],
                                                     max_period=PD["bounds"][1],
@@ -251,6 +251,9 @@ def run_pyflex(PD,st,inv,event):
     :return windows: windows containing selected timespans where waveforms
     have acceptable match, also contains information about the window (see docs)
     """
+    if PD["verbose"]:
+        print("Running pyflex for {} configuration".format(PD["pyflex_config"]))
+
     CD = choose_config("pyflex",PD)
     config = pyflex.Config(min_period=PD["bounds"][0],
                            max_period=PD["bounds"][1],
@@ -274,6 +277,8 @@ def run_pyflex(PD,st,inv,event):
     windows,staltas = {},{}
     empties = 0
     for comp in PD["comp_list"]:
+        print(comp,end='... ')
+
         obs,syn = breakout_stream(st.select(component=comp))
         window = pyflex.select_windows(observed=obs,
                                         synthetic=syn,
@@ -281,26 +286,33 @@ def run_pyflex(PD,st,inv,event):
                                         event=pf_event,
                                         station=pf_station,
                                         plot=False)
-        
-        # check if pyflex is returning empty windows
-        if not window:
-            empties+=1
-            continue
-                                                    
-        windows[comp] = window
+
+        # calculate stalta
         syn_envelope = envelope(syn[0].data)
         stalta = pyflex.stalta.sta_lta(data=syn_envelope,
                                        dt=syn[0].stats.delta,
                                        min_period=PD["bounds"][0])
         staltas[comp] = stalta
-        
+
+        # check if pyflex is returning empty windows
+        print("{} window(s)".format(len(window)))
+        if not window:
+            empties+=1
+            continue
+        windows[comp] = window
+
+    # if all components show empty windows, raise the alarm
     if empties == len(PD["comp_list"]):
         raise Exception("Empty windows")
-    
-    # save windows into pyasdf file with stalta as the data and window- 
+
+    # append STA/LTA water level to Par. dict. for plotting
+    PD["stalta_wl"] = CD[0]
+
+    # save windows into pyasdf file with stalta as the data and window-
     # parameter dictionaries as external information. dictionary needs
     # to be modified to work in pyasdf format
     if PD["dataset"]:
+        if PD["verbose"]:print("Saving windows to PyASDF dataset")
         for comp in windows.keys():
             internalpath = "{net}_{sta}_{comp}".format(evid=PD["event_id"],
                                                         net=PD["network"],
@@ -308,7 +320,7 @@ def run_pyflex(PD,st,inv,event):
                                                         comp=comp
                                                         )
             for window in windows[comp]:
-                # still need to figure out how to properly distribute windows 
+                # still need to figure out how to properly distribute windows
                 # into auxiliary data
                 winnDixie = create_window_dictionary(window)
                 PD["dataset"].add_auxiliary_data(data=staltas[comp],
@@ -316,8 +328,8 @@ def run_pyflex(PD,st,inv,event):
                                                  path=internalpath,
                                                  parameters=winnDixie)
 
-    return windows, staltas
-        
+    return windows, staltas, PD
+
 
 def run_pyadjoint(st,windows,PD):
     """function to call pyadjoint with preset configurations
@@ -337,15 +349,19 @@ def run_pyadjoint(st,windows,PD):
     :param output_path: where to save the adjoint source, if none, no saving
     :rtpye adj_src: pyadjoint
     """
+    if PD["verbose"]:
+        print("Running pyAdjoint for type {} ".format(PD["adj_src_type"]))
+
     obs,syn = breakout_stream(st)
     net,sta,loc,cha = PD["code"].split('.')
-    
+
     delta = st[0].stats.delta
     cfg = choose_config("pyadjoint",PD)
 
     # iterate through available window components
     adjoint_sources = {}
     for key in windows:
+
         obs_adj = obs.select(component=key)[0]
         syn_adj = syn.select(component=key)[0]
 
@@ -354,7 +370,7 @@ def run_pyadjoint(st,windows,PD):
         for win in windows[key]:
             adj_win = [win.left*delta,win.right*delta]
             adjoint_windows.append(adj_win)
-        
+
         adj_src = pyadjoint.calculate_adjoint_source(
                                              adj_src_type=PD["adj_src_type"],
                                              observed=obs_adj,
@@ -364,10 +380,11 @@ def run_pyadjoint(st,windows,PD):
                                              plot=False
                                              )
         adjoint_sources[key] = adj_src
-        
+
         if PD["dataset"]:
+            if PD["verbose"]:print("Saving adjoint source to pyASDF dataset")
             adj_src.write_to_asdf(PD["dataset"],time_offset=0)
-        
+
     return adjoint_sources
 
 def build_figure(st,inv,event,windows,staltas,PD):
@@ -375,24 +392,27 @@ def build_figure(st,inv,event,windows,staltas,PD):
     """
     import matplotlib as mpl
     import matplotlib.pyplot as plt
-    
-    f2 = plt.figure(figsize=(11.69,8.27),dpi=100)
-    axes = windowMaker.window_maker(st,windows,staltas,PD=PD)
-    
-    f2 = plt.figure(figsize=(10,9.4),dpi=100)
-    map = mapMaker.generate_map(event,inv,faults=PD['plot_faults'])
-    
+    if PD["verbose"]:
+        print("Generating waveform plots and source-receiver map")
+
+    if PD["plot"][0]:
+        f2 = plt.figure(figsize=(11.69,8.27),dpi=100)
+        axes = windowMaker.window_maker(st,windows,staltas,PD=PD)
+    if PD["plot"][1]:
+        f2 = plt.figure(figsize=(10,9.4),dpi=100)
+        map = mapMaker.generate_map(event,inv,faults=PD["plot"][2])
+
     if PD['save_plot'][0]:
         import matplotlib.backends.backend_pdf as backend
         import ipdb;ipdb.set_trace()
         outfid = join(PD['save_plot'][1],'{}_wavmap.pdf'.format(PD["event_id"]))
         pdf = backend.PdfPages(outfid)
-        for fig in range(1,figure().number): 
+        for fig in range(1,figure().number):
             pdf.savefig(fig)
         pdf.close()
-    
+
     plt.show()
-    
+
 def bob_the_builder():
     """main processing script
 
@@ -426,7 +446,6 @@ def bob_the_builder():
                     'XX.RD21','XX.RD22']
                     }
     STANET_NAMES = ALLSTATIONS["GEONET"]
-    STANET_NAMES = ['NZ.HAZ']
     # >> PREPROCESSING
     MINIMUM_FILTER_PERIOD = 6
     MAXIMUM_FILTER_PERIOD = 30
@@ -437,22 +456,43 @@ def bob_the_builder():
     # >> PYADJOINT
     ADJOINT_SRC_TYPE = "cc_traveltime_misfit"
     # >> PLOTTING
-    PLOT = True
+    PLOT_WAV = True
+    PLOT_MAP = False
     PLOT_FAULTS_ON_MAP = True
     # >> SAVING
+    SAVE_PLOT = (False,pathnames()["kupeplots"] + "MISVIS")
     SAVE_PYASDF = (False,pathnames()["kupedata"] + "PYASDF")
-    SAVE_ADJSRC_SEPARATE = False
-    SAVE_PLOT = (False,pathnames()["kupeplots"] + "misvis")
+    SAVE_ADJSRC_SEPARATE = (False,pathnames()["kupedata"] + "ADJSRC")
+    # >> MISC.
+    VERBOSE = False
     # ============================ ^PARAMETER SET^ =============================
-    
+    if VERBOSE:
+        # print the parameters in std. out
+        import time
+        template = ("\n\tPARAMETERS\n{lines}\n\n"
+                    "Stations: {sta}\nBandpass: {tmin},{tmax}s\n"
+                    "Rotate: {rot}\nUnits: {uni}\nPyflex: {pyf}\n"
+                    "Pyadjoint: {pya}\nPlot Wav/Map/Faults: {wav}/{map}/{fau}\n"
+                    "Save plots: {sav}\nSave Pyasdf: {asdf}\n"
+                    "Verbose: {ver}\n{lines}"
+                    )
+        print(template.format(sta=STANET_NAMES,tmin=MINIMUM_FILTER_PERIOD,
+                              tmax=MAXIMUM_FILTER_PERIOD,rot=ROTATE_TO_RTZ,
+                              uni=UNIT_OUTPUT,pyf=PYFLEX_CONFIG,
+                              pya=ADJOINT_SRC_TYPE,wav=PLOT_WAV,map=PLOT_MAP,
+                              fau=PLOT_FAULTS_ON_MAP,sav=SAVE_PLOT,
+                              asdf=SAVE_PYASDF,ver=VERBOSE,lines="_"*79))
+        time.sleep(2)
+
     # PARAMETER DEFUALT SET
     COMPONENT_LIST = ["N","E","Z"]
     if ROTATE_TO_RTZ:
         COMPONENT_LIST = ["R","T","Z"]
 
-    
     # MAIN ITERATE OVER EVENTS
     for EVENT_ID in EVENT_IDS:
+        print("===={}====".format(EVENT_ID))
+
         # if everything should be stored, initiate pyasdf dataset, also reads
         # existing pyasdf datasets if they already exist
         if SAVE_PYASDF[0]:
@@ -460,9 +500,9 @@ def bob_the_builder():
             DATASET = pyasdf.ASDFDataSet(datasetname,compression="gzip-3")
         else:
             DATASET = None
-        
+
         for STANET_NAME in STANET_NAMES:
-            print(STANET_NAME)
+            print("\n{}\n".format(STANET_NAME))
             PAR_DICT = {"network":STANET_NAME.split('.')[0],
                         "station":STANET_NAME.split('.')[1],
                         "code":"{}.*.HH?".format(STANET_NAME),
@@ -476,15 +516,15 @@ def bob_the_builder():
                         "save_adj_src":SAVE_ADJSRC_SEPARATE,
                         "comp_list":COMPONENT_LIST,
                         "save_plot":SAVE_PLOT,
-                        "plot_faults":PLOT_FAULTS_ON_MAP,
-                        "dataset":DATASET
+                        "plot":(PLOT_WAV,PLOT_MAP,PLOT_FAULTS_ON_MAP),
+                        "dataset":DATASET,
+                        "verbose":VERBOSE
                         }
 
-            
             # MAIN PROCESSING
             # try:
             st,inv,event = initial_data_gather(PAR_DICT)
-            windows,staltas = run_pyflex(PAR_DICT,st,inv,event)
+            windows,staltas,PAR_DICT = run_pyflex(PAR_DICT,st,inv,event)
             adj_src = run_pyadjoint(st,windows,PAR_DICT)
 
             build_figure(st,inv,event,windows,staltas,PAR_DICT)
@@ -492,7 +532,7 @@ def bob_the_builder():
             #     print(e)
             #     continue
 
-                                                                     
+
 # =================================== TESTS ====================================
 def _test_build_figure():
     """test figure building with example data
@@ -508,8 +548,8 @@ def _test_build_figure():
     cat = read_events(eventpath)
     event = cat[0]
     inv = read_inventory(invpath)
-    
-    
+
+
     build_figure(st,inv,event,windows,boundsdict)
 
 def _test_window_saving():
@@ -536,4 +576,3 @@ if __name__ == "__main__":
     # _test_build_figure()
     # _test_window_saving()
     bob_the_builder()
-
