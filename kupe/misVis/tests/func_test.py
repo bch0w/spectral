@@ -7,16 +7,17 @@ import adjointBuilder
 from obspy import read, read_events, read_inventory
 
 
-def convert_from_npz_window(npzwindow):
+def load_n_convert(fid):
     """windows saved as .npz are turned into numpy objects, rearrange structure
     so that they are the same as the output of run_pyflex
     """
-    keys = npzwindow.keys()
-    windows = {}
+    npzfile = np.load(fid)
+    keys = npzfile.keys()
+    output = {}
     for key in keys:
-        windows[key] = npzwindow[key].tolist()
+        output[key] = npzfile[key].tolist()
         
-    return windows
+    return output
     
     
 def test_calculate_adj_src():
@@ -44,23 +45,38 @@ def test_calculate_adj_src():
     
     adj_src = adjointBuilder.run_pyadjoint(st,windows,EXAMPLE_PAR_DICT)
     
-                                     
+                                 
 def test_build_figure():
     """test figure building with example data
     """
-    boundsdict = {"station_name":"TEST","bounds":(6,30)}
-    streampath = './tests/test_data/testmseed.pickle'
-    windowpath = './tests/test_data/testwindows.npz'
-    st = read(streampath)
-    windows = np.load(windowpath)
-    eventpath = './tests/test_data/testevent.xml'
-    invpath = './tests/test_data/testinv.xml'
-    cat = read_events(eventpath)
+    EXAMPLE_PAR_DICT = {"network":'NZ',
+                        "station":'BFZ',
+                        "code":'NZ.BFZ.*.HH?',
+                        "event_id":'2014p240655',
+                        "bounds":(6,30),
+                        "rotate":True,
+                        "units":'DISP',
+                        "pyflex_config":'UAF',
+                        "adj_src_type":'multitaper_misfit',
+                        "save_adj_src":(False, None),
+                        "comp_list":['R','T','Z'],
+                        "save_plot":(False, None),
+                        "plot":(True,False,True),
+                        "dataset":None,
+                        "verbose":True,
+                        "stalta_wl":0.18
+                        }    
+    st = read('./tests/test_data/testmseed.pickle')
+    cat = read_events('./tests/test_data/testevent.xml')
     event = cat[0]
-    inv = read_inventory(invpath)
+    inv = read_inventory('./tests/test_data/testinv.xml')
+    
+    windows = load_n_convert('./tests/test_data/testwindows.npz')
+    staltas = load_n_convert('./tests/test_data/teststalta.npz')
+    adj_src = load_n_convert('./tests/test_data/testadjsrc.npz')
 
-
-    build_figure(st,inv,event,windows,boundsdict)
+    adjointBuilder.build_figure(st,inv,event,windows,staltas,adj_src,
+                                                            EXAMPLE_PAR_DICT)
 
 
 def test_window_saving():

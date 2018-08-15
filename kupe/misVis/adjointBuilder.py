@@ -97,7 +97,7 @@ def create_window_dictionary(window):
     return winnDixie
 
 # ============================= MAIN FUNCTIONS =================================
-def build_figure(st,inv,event,windows,staltas,PD):
+def build_figure(st,inv,event,windows,staltas,adj_src,PD):
     """take outputs of mapMaker and windowMaker and put them into one figure
     """
     import matplotlib as mpl
@@ -107,7 +107,7 @@ def build_figure(st,inv,event,windows,staltas,PD):
 
     if PD["plot"][0]:
         f2 = plt.figure(figsize=(11.69,8.27),dpi=100)
-        axes = windowMaker.window_maker(st,windows,staltas,PD=PD)
+        axes = windowMaker.window_maker(st,windows,staltas,adj_src,PD=PD)
     if PD["plot"][1]:
         f2 = plt.figure(figsize=(10,9.4),dpi=100)
         map = mapMaker.generate_map(event,inv,faults=PD["plot"][2])
@@ -441,12 +441,10 @@ def run_pyadjoint(st,windows,PD):
                                              synthetic=syn_adj,
                                              config=cfg,
                                              window=adjoint_windows,
-                                             plot=True
+                                             plot=False
                                              )
         adjoint_sources[key] = adj_src
-        
-        import ipdb;ipdb.set_trace()
-        
+                
         if PD["dataset"]:
             if PD["verbose"]:print("Saving adjoint source to pyASDF dataset")
             adj_src.write_to_asdf(PD["dataset"],time_offset=0)
@@ -489,9 +487,7 @@ def bob_the_builder():
     :type VERBOSE: bool
     :param VERBOSE: enable print statements throughout 
     """
-    # ============================ vPARAMETER SETv =============================
-    # SOURCE-RECEIVER
-    EVENT_IDS = ["2014p240655"]
+    
     ALLSTATIONS = {"GEONET":['NZ.BFZ','NZ.BKZ','NZ.HAZ','NZ.HIZ','NZ.KNZ',
                     'NZ.MRZ','NZ.MWZ','NZ.OPRZ','NZ.PUZ','NZ.PXZ','NZ.RTZ',
                     'NZ.TLZ','NZ.TOZ','NZ.TSZ','NZ.VRZ','NZ.WAZ'],
@@ -499,9 +495,13 @@ def bob_the_builder():
                     'XX.RD06','XX.RD07','XX.RD08','XX.RD09','XX.RD10',
                     'XX.RD11','XX.RD12','XX.RD13','XX.RD14','XX.RD15',
                     'XX.RD16','XX.RD17','XX.RD18','XX.RD19','XX.RD20',
-                    'XX.RD21','XX.RD22']
+                    'XX.RD21','XX.RD22'],
+                    "TEST":['NZ.BFZ']
                     }
-    STANET_NAMES = ALLSTATIONS["GEONET"]
+    # ============================ vPARAMETER SETv =============================
+    # SOURCE-RECEIVER
+    EVENT_IDS = ["2014p240655"]
+    STANET_CHOICE = "TEST"
     # >> PREPROCESSING
     MINIMUM_FILTER_PERIOD = 6
     MAXIMUM_FILTER_PERIOD = 30
@@ -513,6 +513,7 @@ def bob_the_builder():
     ADJOINT_SRC_TYPE = "multitaper_misfit"
     # >> PLOTTING
     PLOT_WAV = True
+    PLOT_ADJ_SRC_OR_STALTA = "ADJ_SRC"
     PLOT_MAP = False
     PLOT_FAULTS_ON_MAP = True
     # >> SAVING
@@ -522,28 +523,35 @@ def bob_the_builder():
     # >> MISC.
     VERBOSE = True
     # ============================ ^PARAMETER SET^ =============================
-    if VERBOSE:
-        # print the parameters in std. out
-        import time
-        template = ("\n\tPARAMETERS\n{lines}\n\n"
-                    "Stations: {sta}\nBandpass: {tmin},{tmax}s\n"
-                    "Rotate: {rot}\nUnits: {uni}\nPyflex: {pyf}\n"
-                    "Pyadjoint: {pya}\nPlot Wav/Map/Faults: {wav}/{map}/{fau}\n"
-                    "Save plots: {sav}\nSave Pyasdf: {asdf}\n"
-                    "Verbose: {ver}\n{lines}"
-                    )
-        print(template.format(sta=STANET_NAMES,tmin=MINIMUM_FILTER_PERIOD,
-                              tmax=MAXIMUM_FILTER_PERIOD,rot=ROTATE_TO_RTZ,
-                              uni=UNIT_OUTPUT,pyf=PYFLEX_CONFIG,
-                              pya=ADJOINT_SRC_TYPE,wav=PLOT_WAV,map=PLOT_MAP,
-                              fau=PLOT_FAULTS_ON_MAP,sav=SAVE_PLOT,
-                              asdf=SAVE_PYASDF,ver=VERBOSE,lines="_"*79))
-        time.sleep(2)
-
-    # PARAMETER DEFUALT SET
+    # PARAMETER AUTO SET
     COMPONENT_LIST = ["N","E","Z"]
     if ROTATE_TO_RTZ:
         COMPONENT_LIST = ["R","T","Z"]
+    STANET_NAMES = ALLSTATIONS[STANET_CHOICE]    
+        
+    if VERBOSE:
+        # print the parameters in std. out
+        import time
+        template = ("\nPARAMETERS\n{lines}\n\n"
+                    "Stations:    {sta}\n"
+                    "Bandpass:    {tmin},{tmax}\n"
+                    "Rotate:      {rot}\n"
+                    "Units:       {uni}\n"
+                    "Pyflex:      {pyf}\n"
+                    "Pyadjoint:   {pya}\n"
+                    "Plot:        (Wav={wav}) (Map={map}) (Faults={fau})\n"
+                    "Save plot:   {sav0} to {sav1}\n"
+                    "Save Pyasdf: {asdf0} to {asdf1}\n"
+                    "Verbose:     {ver}\n{lines}"
+                    )
+        print(template.format(sta=STANET_CHOICE,tmin=MINIMUM_FILTER_PERIOD,
+                              tmax=MAXIMUM_FILTER_PERIOD,rot=ROTATE_TO_RTZ,
+                              uni=UNIT_OUTPUT,pyf=PYFLEX_CONFIG,
+                              pya=ADJOINT_SRC_TYPE,wav=PLOT_WAV,map=PLOT_MAP,
+                              fau=PLOT_FAULTS_ON_MAP,sav0=SAVE_PLOT[0],
+                              sav1=SAVE_PLOT[1],asdf0=SAVE_PYASDF[0],
+                              asdf1=SAVE_PYASDF[1],ver=VERBOSE,lines="_"*75))
+        time.sleep(2)
 
     # MAIN ITERATE OVER EVENTS
     for EVENT_ID in EVENT_IDS:
@@ -582,7 +590,7 @@ def bob_the_builder():
                 st,inv,event = initial_data_gather(PAR_DICT)
                 windows,staltas,PAR_DICT = run_pyflex(PAR_DICT,st,inv,event)
                 adj_src = run_pyadjoint(st,windows,PAR_DICT)
-                build_figure(st,inv,event,windows,staltas,PAR_DICT)
+                build_figure(st,inv,event,windows,staltas,adj_src,PAR_DICT)
             except Exception as e:
                 print(e)
                 continue
@@ -591,4 +599,4 @@ def bob_the_builder():
 # =================================== MAIN ====================================
 if __name__ == "__main__":
     # bob_the_builder()
-    func_test.test_calculate_adj_src()
+    func_test.test_build_figure()

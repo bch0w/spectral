@@ -52,28 +52,27 @@ def format_axis(input_ax):
         bounds = (-0.05,(maxvalue+percentover))
     input_ax.set_ylim(bounds)
 
-def setup_plot(number_of,twax=True):
+def setup_plot(number_of,num_twax=0):
     """dynamically set up plots according to number of files
+    twax sets up twin x axes for separate plotting, integer value for number of
+    extra twin x axes to set. if twax=0 twax returns an empty list, twaxes
     """
-    # if not f:
-    #     f = plt.figure(figsize=(11.69,8.27),dpi=100)
-
     nrows,ncols=number_of,1
     height_ratios = [1] * (number_of)
     gs = mpl.gridspec.GridSpec(nrows,ncols,height_ratios=height_ratios,hspace=0)
 
     # create gridspec subplots, sharex with the first axis
-    axes,twaxes = [],[]
+    axes = []
+    twaxes = [[] for _ in range(num_twax)]
     for i in range(number_of):
         if i == 0:
             ax = plt.subplot(gs[i])
         else:
             ax = plt.subplot(gs[i],sharex=axes[0])
-        if twax:
-            twinax = ax.twinx()
-            twaxes.append(twinax)
-        else:
-            twax = None
+        # dynamically generate twinx axes as a list of lists
+        twinax = ax.twinx()
+        for t in range(num_twax):
+            twaxes[t].append(twinax)
 
         pretty_grids(ax)
         axes.append(ax)
@@ -102,7 +101,7 @@ def create_component_list(st):
 
     return complist
 
-def window_maker(st,windows,staltas,*args,**kwargs):
+def window_maker(st,windows,staltas,adj_src,*args,**kwargs):
     """plot streams and windows. assumes you have N observation traces and
     N synthetic traces for a 2N length stream object
     """
@@ -111,13 +110,21 @@ def window_maker(st,windows,staltas,*args,**kwargs):
     # function setup
     NUMBER_OF_TRACES = len(st)//2
     MIDDLE_TRACE = NUMBER_OF_TRACES//2
-    axes,twaxes = setup_plot(number_of=NUMBER_OF_TRACES,twax=True)
+    axes,twaxes = setup_plot(number_of=NUMBER_OF_TRACES,num_twax=2)
     t = make_t_axis(st)
     complist = create_component_list(st)
 
     UNIT_DICT = {"DISP":"displacement [m]",
                  "VEL":"velocity [m/s]",
                  "ACC":"acceleration [m/s^2]"}
+
+    # distribute twinaxes for STALTA and adjoint source plotting, 
+    # put adjoint source axes infront of STALTA
+    ax_stalta = twaxes[0]
+    ax_adjsrc = twaxes[1]
+    for _ax_stalta,_ax_adjsrc in zip(ax_adjsrc,ax_stalta):
+        _ax_adjsrc.set_zorder(_ax_stalta.get_zorder()+1)
+        # _ax_adjsrc.set_visible(False)
 
     for i,comp in enumerate(complist):
         # distribute data
@@ -132,12 +139,11 @@ def window_maker(st,windows,staltas,*args,**kwargs):
                      zorder=5)
 
         # plot stalta data and water level
-        T1, = twaxes[i].plot(t,staltas[comp],'gray',alpha=0.4,zorder=4,
+        T1, = ax_stalta[i].plot(t,staltas[comp],'gray',alpha=0.4,zorder=4,
                         label="STA/LTA (SYN), WL={}".format(PD["stalta_wl"]))
-        T2 = twaxes[i].axhline(y=PD["stalta_wl"],xmin=t[0],xmax=t[-1],
+        T2 = ax_stalta[i].axhline(y=PD["stalta_wl"],xmin=t[0],xmax=t[-1],
                       alpha=0.2,zorder=3,linewidth=1.5,c='k',linestyle='--')
-
-
+        
         # plot windows (if available) as semi-transparent boxes
         ymin,ymax = axes[i].get_ylim()
         window_anno_template = "maxCC:{mcc:.4f}\nccShift:{ccs}\ndlnA:{dln:.4f}"
@@ -157,22 +163,30 @@ def window_maker(st,windows,staltas,*args,**kwargs):
                                                       dln=window.dlnA)
                 axes[i].annotate(s=winanno,xy=(twindow[10],ymax*0.5),
                                                         zorder=4,fontsize=7)
+                                                        
+            # plot adjoint source if available - if there are windows, then 
+            # there is also an adjoint source to plot
+            T3, = ax_adjsrc[i].plot(t,adj_src[comp].adjoint_source,
+                                    'g',alpha=0.75,
+                                    label="Adjoint Source, Misfit={}".format(
+                                                        adj_src[comp].misfit))
+
         except KeyError:
             pass
 
         # label units and twin axis
         if i == MIDDLE_TRACE:
-            twaxes[i].set_ylabel("STA/LTA",rotation=90)
+            ax_adjsrc[i].set_ylabel("Adjoint Source & STA/LTA",rotation=90)
             comp = "{}\n{}".format(UNIT_DICT[PD['units']],comp)
 
             # combine legends
-            lines = [A1,A2,T1]
+            lines = [A1,A2,T1,T3]
             labels = [l.get_label() for l in lines]
             axes[i].legend(lines,labels,prop={"size":9})
 
         axes[i].set_ylabel(comp)
         axes[i].set_xlim([t[0],t[-1]])
-        for AX in [axes[i],twaxes[i]]:
+        for AX in [axes[i],ax_stalta[i]]:
             format_axis(AX)
 
 
