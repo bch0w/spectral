@@ -37,7 +37,8 @@ def test_calculate_adj_src():
                         "save_plot":(False, None),
                         "plot":(True,False,True),
                         "dataset":None,
-                        "verbose":True
+                        "verbose":True,
+                        "stalta_wl":0.18
                         }    
     st = read('./tests/test_data/testmseed.pickle')
     npzwindows = np.load('./tests/test_data/testwindows.npz')

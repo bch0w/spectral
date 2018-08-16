@@ -5,6 +5,8 @@ outputted by pyflex
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
+from scipy.signal import detrend
 
 from adjointBuilder import breakout_stream
 
@@ -13,10 +15,11 @@ mpl.rcParams['lines.linewidth'] = 1.25
 mpl.rcParams['lines.markersize'] = 10
 mpl.rcParams['axes.linewidth'] = 2
 
-def normalize_zero_to_one(array):
+def normalize_a_to_b(array,a=0,b=1):
     """normalize an array from zero to one for easy plotting
     """
-    z = (array-array.min()) / (array.max()-array.min())
+    array = np.array(array)
+    z = ((b-a) * (array-array.min()) / (array.max()-array.min())) + a
     
     return z
 
@@ -150,35 +153,42 @@ def window_maker(st,windows,staltas,adj_src,*args,**kwargs):
                      label="{} (SYN)".format(syn[0].get_id()))
         lines_for_legend = [A1,A2]
 
-        # plot stalta data and water level
-        T1, = twaxes[i].plot(t,staltas[comp],'gray',alpha=0.4,zorder=4)
-        T2 = twaxes[i].axhline(y=PD["stalta_wl"],xmin=t[0],xmax=t[-1],
+        # plot stalta data and water level, normalize -1 to 1, shift water level
+        _stalta = normalize_a_to_b(staltas[comp],-1,1)
+        T1, = twaxes[i].plot(t,_stalta,'gray',alpha=0.4,zorder=4)
+        T2 = twaxes[i].axhline(y=PD["stalta_wl"]-1,xmin=t[0],xmax=t[-1],
                       alpha=0.2,zorder=3,linewidth=1.5,c='k',linestyle='--')
         
-        # plot windows (if available) as semi-transparent boxes
+        # plot windows (if available) as semi-transparent boxes,
+        # taken from pyflex plotting script
         ymin,ymax = axes[i].get_ylim()
         window_anno_template = "maxCC:{mcc:.4f}\nccShift:{ccs}\ndlnA:{dln:.4f}"
         try:
             for window in windows[comp]:
-                xwindow = np.arange(window.left,window.right,1)
-                twindow = t[xwindow]
-                F1 = axes[i].fill_between(twindow,ymin,ymax,
-                                     facecolor='orange',
-                                     edgecolor='k',
-                                     linewidth=0.5,
-                                     alpha=0.25)
-
+                l = window.relative_starttime
+                r = window.relative_endtime
+                re = Rectangle((l, axes[i].get_ylim()[0]), r - l,
+                                axes[i].get_ylim()[1] - axes[i].get_ylim()[0], 
+                                color="orange",
+                                alpha=(window.max_cc_value ** 2) * 0.5)
+                axes[i].add_patch(re)
+                
                 # annotate boxes with information from window
                 winanno = window_anno_template.format(mcc=window.max_cc_value,
                                                       ccs=window.cc_shift,
                                                       dln=window.dlnA)
+                twindow = t[np.arange(window.left,window.right,1)]
                 axes[i].annotate(s=winanno,xy=(twindow[10],ymax*0.5),
                                                         zorder=4,fontsize=7)
             
             
             # plot adjoint source if available - if there are windows, then 
             # there is also an adjoint source to plot
-            _adj_src = normalize_zero_to_one(adj_src[comp].adjoint_source)
+            # !!! real hacky way of putting sta/lta and adjoint source on the
+            # !!! same axis object, normalize them both -1 to 1 and remove the
+            # !!! mean of the adjoint source to set everything onto 0
+            _adj_src = normalize_a_to_b(adj_src[comp].adjoint_source,-1,1)
+            _adj_src = detrend(_adj_src,type="constant")
             T3, = twaxes[i].plot(t,_adj_src[::-1],'g',alpha=0.5,linestyle='-.',
                                 label="Adjoint Source, Misfit={:.4f}".format(
                                                         adj_src[comp].misfit))
@@ -190,16 +200,18 @@ def window_maker(st,windows,staltas,adj_src,*args,**kwargs):
         # label units and twin axis
         if i == MIDDLE_TRACE:
             twaxes[i].set_ylabel("Adjoint Source (Normalized) &\n"
-                                "STA/LTA, waterlevel=".format(PD["stalta_wl"]),
+                                 "STA/LTA (Waterlevel = {})".format(
+                                                            PD["stalta_wl"]),
                                 rotation=270,labelpad=20)
             comp = "{}\n{}".format(UNIT_DICT[PD['units']],comp)
 
         # combine legends
         labels = [l.get_label() for l in lines_for_legend]
-        axes[i].legend(lines_for_legend,labels,prop={"size":9})
+        axes[i].legend(lines_for_legend,labels,
+                       prop={"size":9},loc="upper right")
         
         # final adjustments
-        # twaxes[i].set_yticklabels([])
+        twaxes[i].set_yticklabels([])
         axes[i].set_ylabel(comp)
         axes[i].set_xlim([t[0],t[-1]])
         for AX in [axes[i],twaxes[i]]:

@@ -32,6 +32,13 @@ import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 # ============================ HELPER FUNCTIONS ================================
+def _check_path(path):
+    """small function to check if a path exists and if not, then to create it
+    """
+    if not os.path.exists(path):
+        os.makedirs(path)
+    
+
 def _find_BAz(inv,event):
     """get backazimuth based on obspy inventory and event information
     """
@@ -122,6 +129,7 @@ def build_figure(st,inv,event,windows,staltas,adj_src,PD):
         pdf.close()
 
     plt.show()
+    plt.close()
     
 def initial_data_gather(PD):
     """gather event information, observation and synthetic traces.
@@ -446,8 +454,18 @@ def run_pyadjoint(st,windows,PD):
         adjoint_sources[key] = adj_src
                 
         if PD["dataset"]:
-            if PD["verbose"]:print("Saving adjoint source to pyASDF dataset")
+            if PD["verbose"]:print("Saving adj src [{}] to pyASDF".format(key))
             adj_src.write_to_asdf(PD["dataset"],time_offset=0)
+    
+        if PD["save_adj_src"][0]:
+            _check_path(os.path.join(PD["save_adj_src"][1],PD['event_id']))
+            fidout = "{evid}/adjsrc_{net}_{sta}_{comp}".format(
+                                                        evid=PD['event_id'],
+                                                        net=PD['network'],
+                                                        sta=PD['station'],
+                                                        comp=key)
+            outpath = os.path.join(PD["save_adj_src"][1],fidout)
+            adj_src.write(outpath,format="SPECFEM")
 
     return adjoint_sources
 
@@ -501,7 +519,7 @@ def bob_the_builder():
     # ============================ vPARAMETER SETv =============================
     # SOURCE-RECEIVER
     EVENT_IDS = ["2014p240655"]
-    STANET_CHOICE = "TEST"
+    STANET_CHOICE = "GEONET"
     # >> PREPROCESSING
     MINIMUM_FILTER_PERIOD = 6
     MAXIMUM_FILTER_PERIOD = 30
@@ -518,7 +536,7 @@ def bob_the_builder():
     PLOT_FAULTS_ON_MAP = True
     # >> SAVING
     SAVE_PLOT = (False,pathnames()["kupeplots"] + "MISVIS")
-    SAVE_PYASDF = (False,pathnames()["kupedata"] + "PYASDF")
+    SAVE_PYASDF = (True,pathnames()["kupedata"] + "PYASDF")
     SAVE_ADJSRC_SEPARATE = (False,pathnames()["kupedata"] + "ADJSRC")
     # >> MISC.
     VERBOSE = True
