@@ -5,7 +5,6 @@ outputted by pyflex
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from matplotlib.patches import Rectangle
 from scipy.signal import detrend
 
 from adjointBuilder import breakout_stream
@@ -69,7 +68,7 @@ def format_axis(input_ax):
     ymin,ymax= input_ax.get_ylim()
     maxvalue = max([abs(_) for _ in input_ax.get_ylim()])
     percentover = maxvalue*0.125
-    if abs(round(ymin/ymax)) == 1:
+    if abs(round(ymin/ymax)) != 0:
         bounds = (-1*(maxvalue+percentover),(maxvalue+percentover))
     else:# elif abs(round(ymin/ymax)) == 0:
         bounds = (-0.05,1.05)
@@ -159,25 +158,23 @@ def window_maker(st,windows,staltas,adj_src,*args,**kwargs):
         T2 = twaxes[i].axhline(y=PD["stalta_wl"]-1,xmin=t[0],xmax=t[-1],
                       alpha=0.2,zorder=3,linewidth=1.5,c='k',linestyle='--')
         
-        # plot windows (if available) as semi-transparent boxes,
-        # taken from pyflex plotting script
+        # plot windows (if available) as semi-transparent boxes
         ymin,ymax = axes[i].get_ylim()
         window_anno_template = "maxCC:{mcc:.4f}\nccShift:{ccs}\ndlnA:{dln:.4f}"
         try:
             for window in windows[comp]:
-                l = window.relative_starttime
-                r = window.relative_endtime
-                re = Rectangle((l, axes[i].get_ylim()[0]), r - l,
-                                axes[i].get_ylim()[1] - axes[i].get_ylim()[0], 
-                                color="orange",
-                                alpha=(window.max_cc_value ** 2) * 0.5)
-                axes[i].add_patch(re)
-                
+                xwindow = np.arange(window.left,window.right,1)
+                twindow = t[xwindow]
+                F1 = axes[i].fill_between(twindow,ymin,ymax,
+                                     facecolor='orange',
+                                     edgecolor='k',
+                                     linewidth=0.5,
+                                     alpha=(window.max_cc_value ** 2) * 0.25)
+
                 # annotate boxes with information from window
                 winanno = window_anno_template.format(mcc=window.max_cc_value,
                                                       ccs=window.cc_shift,
                                                       dln=window.dlnA)
-                twindow = t[np.arange(window.left,window.right,1)]
                 axes[i].annotate(s=winanno,xy=(twindow[10],ymax*0.5),
                                                         zorder=4,fontsize=7)
             
@@ -199,8 +196,8 @@ def window_maker(st,windows,staltas,adj_src,*args,**kwargs):
 
         # label units and twin axis
         if i == MIDDLE_TRACE:
-            twaxes[i].set_ylabel("Adjoint Source (Normalized) &\n"
-                                 "STA/LTA (Waterlevel = {})".format(
+            twaxes[i].set_ylabel("adjoint source (normalized) &\n"
+                                 "STA/LTA (waterlevel = {})".format(
                                                             PD["stalta_wl"]),
                                 rotation=270,labelpad=20)
             comp = "{}\n{}".format(UNIT_DICT[PD['units']],comp)

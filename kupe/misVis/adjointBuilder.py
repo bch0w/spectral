@@ -63,7 +63,7 @@ def _get_station_latlon(sta):
     sta_lat = nz_bb['LAT'][bb_ind]
     sta_lon = nz_bb['LON'][bb_ind]
 
-    return sta_lat, sta_lon
+    return sta_lat, sta_lon    
 
 def breakout_stream(st):
     """get observed and synthetic parts of a stream object
@@ -109,27 +109,42 @@ def build_figure(st,inv,event,windows,staltas,adj_src,PD):
     """
     import matplotlib as mpl
     import matplotlib.pyplot as plt
-    if PD["verbose"]:
-        print("Generating waveform plots and source-receiver map")
-
-    if PD["plot"][0]:
-        f2 = plt.figure(figsize=(11.69,8.27),dpi=100)
-        axes = windowMaker.window_maker(st,windows,staltas,adj_src,PD=PD)
-    if PD["plot"][1]:
-        f2 = plt.figure(figsize=(10,9.4),dpi=100)
-        map = mapMaker.generate_map(event,inv,faults=PD["plot"][2])
 
     if PD['save_plot'][0]:
-        import matplotlib.backends.backend_pdf as backend
-        import ipdb;ipdb.set_trace()
-        outfid = join(PD['save_plot'][1],'{}_wavmap.pdf'.format(PD["event_id"]))
-        pdf = backend.PdfPages(outfid)
-        for fig in range(1,figure().number):
-            pdf.savefig(fig)
-        pdf.close()
+        outpath = join(PD['save_plot'][1],PD['event_id'])
+        _check_path(outpath)
+        
+    if PD["plot"][0]:
+        if PD["verbose"]: print("Generating waveform plot")
+        f1 = plt.figure(figsize=(11.69,8.27),dpi=100)
+        axes = windowMaker.window_maker(st,windows,staltas,adj_src,PD=PD)
+        if PD['save_plot'][0]:
+            f1.savefig(join(outpath,'{sta}_wav.png'.format(sta=PD["station"])))
 
-    plt.show()
-    plt.close()
+    if PD["plot"][1]:
+        if PD["verbose"]: print("Generating source receiver map")
+        f2 = plt.figure(figsize=(10,9.4),dpi=100)
+        map = mapMaker.generate_map(event,inv,faults=PD["plot"][2])
+        if PD['save_plot'][0]:
+            f2.savefig(join(outpath,'{sta}_map.png'.format(sta=PD["station"])))
+
+    # !!! code snippet to save all open figures into a single PDF, acrobat
+    # !!! was having trouble opening up the .pdf maps, but preview can
+    # !!! .pdf's much larger than .png so only for profesional outputs
+    # import matplotlib.backends.backend_pdf as backend
+    # outfid = join(PD['save_plot'][1],
+    #               '{id}_{sta}_wavmap.pdf'.format(id=PD["event_id"],
+    #                                              sta=PD["station"])
+    #                                              )
+    # pdf = backend.PdfPages(outfid)
+    # for fig in range(1,plt.gcf().number+1):
+    #     pdf.savefig(fig)
+    # pdf.close()
+    
+    if PD["show"]:
+        plt.show()
+
+    plt.close("all")
     
 def initial_data_gather(PD):
     """gather event information, observation and synthetic traces.
@@ -216,7 +231,7 @@ def initial_data_gather(PD):
     # add_waveforms will push 'already_exists' exceptions
     if PD["dataset"]:
         if PD["verbose"]:
-            print("Saving station, event and waveforms to pyASDF dataset")
+            print("Saving station, event and waveforms to PyASDF dataset")
         try:
             PD["dataset"].add_quakeml(event)
         except ValueError:
@@ -229,13 +244,15 @@ def initial_data_gather(PD):
             pass
 
         obsout,synout = breakout_stream(st_IDG)
-        PD["dataset"].add_waveforms(waveform=obsout,
-                                    tag="observed_processed",
-                                    event_id=event)
-        PD["dataset"].add_waveforms(waveform=synout,
-                                    tag="synthetic_processed",
-                                    event_id=event)
-
+        # ignore ASDFwarnings for already saved data when saving waveforms
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            PD["dataset"].add_waveforms(waveform=obsout,
+                                        tag="observed_processed",
+                                        event_id=event)
+            PD["dataset"].add_waveforms(waveform=synout,
+                                        tag="synthetic_processed",
+                                        event_id=event)
 
     return st_IDG,inv,event
 
@@ -395,10 +412,12 @@ def run_pyflex(PD,st,inv,event):
                 # still need to figure out how to properly distribute windows
                 # into auxiliary data
                 winnDixie = create_window_dictionary(window)
-                PD["dataset"].add_auxiliary_data(data=staltas[comp],
-                                                 data_type="MisfitWindows",
-                                                 path=internalpath,
-                                                 parameters=winnDixie)
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    PD["dataset"].add_auxiliary_data(data=staltas[comp],
+                                                     data_type="MisfitWindows",
+                                                     path=internalpath,
+                                                     parameters=winnDixie)
 
     return windows, staltas, PD
 
@@ -455,7 +474,9 @@ def run_pyadjoint(st,windows,PD):
                 
         if PD["dataset"]:
             if PD["verbose"]:print("Saving adj src [{}] to pyASDF".format(key))
-            adj_src.write_to_asdf(PD["dataset"],time_offset=0)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                adj_src.write_to_asdf(PD["dataset"],time_offset=0)
     
         if PD["save_adj_src"][0]:
             _check_path(os.path.join(PD["save_adj_src"][1],PD['event_id']))
@@ -514,7 +535,7 @@ def bob_the_builder():
                     'XX.RD11','XX.RD12','XX.RD13','XX.RD14','XX.RD15',
                     'XX.RD16','XX.RD17','XX.RD18','XX.RD19','XX.RD20',
                     'XX.RD21','XX.RD22'],
-                    "TEST":['NZ.BFZ']
+                    "TEST":['NZ.BKZ']
                     }
     # ============================ vPARAMETER SETv =============================
     # SOURCE-RECEIVER
@@ -531,12 +552,12 @@ def bob_the_builder():
     ADJOINT_SRC_TYPE = "multitaper_misfit"
     # >> PLOTTING
     PLOT_WAV = True
-    PLOT_ADJ_SRC_OR_STALTA = "ADJ_SRC"
     PLOT_MAP = False
     PLOT_FAULTS_ON_MAP = True
+    SHOW_PLOTS = True
     # >> SAVING
     SAVE_PLOT = (False,pathnames()["kupeplots"] + "MISVIS")
-    SAVE_PYASDF = (True,pathnames()["kupedata"] + "PYASDF")
+    SAVE_PYASDF = (False,pathnames()["kupedata"] + "PYASDF")
     SAVE_ADJSRC_SEPARATE = (False,pathnames()["kupedata"] + "ADJSRC")
     # >> MISC.
     VERBOSE = True
@@ -559,6 +580,7 @@ def bob_the_builder():
                     "Pyadjoint:   {pya}\n"
                     "Plot:        (Wav={wav}) (Map={map}) (Faults={fau})\n"
                     "Save plot:   {sav0} to {sav1}\n"
+                    "Show plot:   {show}\n"
                     "Save Pyasdf: {asdf0} to {asdf1}\n"
                     "Verbose:     {ver}\n{lines}"
                     )
@@ -567,8 +589,9 @@ def bob_the_builder():
                               uni=UNIT_OUTPUT,pyf=PYFLEX_CONFIG,
                               pya=ADJOINT_SRC_TYPE,wav=PLOT_WAV,map=PLOT_MAP,
                               fau=PLOT_FAULTS_ON_MAP,sav0=SAVE_PLOT[0],
-                              sav1=SAVE_PLOT[1],asdf0=SAVE_PYASDF[0],
-                              asdf1=SAVE_PYASDF[1],ver=VERBOSE,lines="_"*75))
+                              sav1=SAVE_PLOT[1],show=SHOW_PLOTS,
+                              asdf0=SAVE_PYASDF[0],asdf1=SAVE_PYASDF[1],
+                              ver=VERBOSE,lines="_"*75))
         time.sleep(2)
 
     # MAIN ITERATE OVER EVENTS
@@ -599,6 +622,7 @@ def bob_the_builder():
                         "comp_list":COMPONENT_LIST,
                         "save_plot":SAVE_PLOT,
                         "plot":(PLOT_WAV,PLOT_MAP,PLOT_FAULTS_ON_MAP),
+                        "show":SHOW_PLOTS,
                         "dataset":DATASET,
                         "verbose":VERBOSE
                         }
@@ -616,5 +640,5 @@ def bob_the_builder():
 
 # =================================== MAIN ====================================
 if __name__ == "__main__":
-    # bob_the_builder()
-    func_test.test_build_figure()
+    bob_the_builder()
+    # func_test.test_build_figure()

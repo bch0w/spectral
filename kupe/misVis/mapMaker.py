@@ -153,29 +153,36 @@ def event_info_anno(m,srcrcvdict):
                  multialignment='right',
                  fontsize=10)
 
-def source_receiver(m,event,inv):
+def source_receiver(m,event,inv=None):
     """determine source receiver parameters such as great circle distance,
-    backazimuth etc., plot the source and receiver with a line
+    backazimuth etc., plot the source and receiver with a line. have the ability
+    to not include an inventory, which will just plot the event then
     source = A, receiver = B
     """
-    station = inv[0][0].code
+    # get event information
     event_id = event.resource_id.id.split('/')[1]
     MT = get_moment_tensor(event_id=event_id)
-    event_lat,event_lon = event.origins[0].latitude,event.origins[0].longitude
-    sta_lat,sta_lon = inv[0][0].latitude,inv[0][0].longitude
-    GCDist,Az,BAz = gps2dist_azimuth(event_lat,event_lon,sta_lat,sta_lon)
-
+    event_lat,event_lon = (event.origins[0].latitude,
+                           event.origins[0].longitude)
     # modify entries to dictionary
     origintime = event.origins[0].time
     origintime.precision = 0
-    GCDist *= 1E-3
     depth = event.origins[0].depth*1E-3
-
     # get magnitude M
     for magni in event.magnitudes:
         if magni.magnitude_type == "M":
             magnitude = magni.mag
             magnitude_type = magni.magnitude_type
+        
+    # if you want to plot a station as well
+    if inv:
+        station = inv[0][0].code
+        sta_lat,sta_lon = inv[0][0].latitude,inv[0][0].longitude
+        GCDist,Az,BAz = gps2dist_azimuth(event_lat,event_lon,sta_lat,sta_lon)
+        GCDist *= 1E-3
+    else:
+        station,sta_lat,sta_lon, = None,None,None
+        GCDist,Az,BAz = None,None,None
 
     # dictionary output for use in annotations
     srcrcvdict = {"station":station,
@@ -194,9 +201,12 @@ def source_receiver(m,event,inv):
 
     # connect source receiever with line and color receiver, plot event
     event_x,event_y = m(event_lon,event_lat)
-    sta_x,sta_y = m(sta_lon,sta_lat)
-    X,Y = [event_x,sta_x],[event_y,sta_y]
-    m.plot(X,Y,'--',linewidth=1.1,c='k',zorder=2)
+    if inv:
+        sta_x,sta_y = m(sta_lon,sta_lat)
+        X,Y = [event_x,sta_x],[event_y,sta_y]
+        m.plot(X,Y,'--',linewidth=1.1,c='k',zorder=2)
+    else:
+        X,Y = event_x,event_y
     m.scatter(X,Y,marker='v',color='r',edgecolor='k',s=80,zorder=6)
 
     beachballcheck = event_beachball(m,MT)
@@ -270,11 +280,23 @@ def generate_map_NOEVENT(inv,corners=[-42.5007,-36.9488,172.9998,179.5077],
 
     return m
     
-def generate_misfit_map(inv,corners=[-42.5007,-36.9488,172.9998,179.5077],
+def generate_misfit_map(event_id,corners=[-42.5007,-36.9488,172.9998,179.5077],
                                                         faults=False,**kwargs):
-    """same as above, but just plot station locations for a map
+    """take an event id associated with a PyASDF dataset that has been filled 
+    out by the adjointBuilder and plot the misfits recorded at each station
     """
+    import pyasdf
+    
+    # import dataset
+    dspath = pathnames['kupedata'] + 'PYASDF/{}.h5'.format(event_id)
+    ds = pyasdf.ASDFDataSet(dspath)
+    
+    # break up dataset into constituent parts
+    event = ds.events[0]
+    
     m = initiate_basemap(map_corners=corners)
+    srcrcvdict = source_receiver(m,event,inv=None)
+    event_info_anno(m,srcrcvdict)
     if faults:
         trace_trench(m)
         onshore_offshore_faults(m)
@@ -282,23 +304,12 @@ def generate_misfit_map(inv,corners=[-42.5007,-36.9488,172.9998,179.5077],
     stationfile = pathnames()['data'] + 'STATIONXML/GEONET_AND_FATHOM.npz'
     stationlist = np.load(stationfile)
 
-    colors = []
-    for name in stationlist['NAME']:
-        if name[:2] == "RD":
-            colors.append('r')
-        else:
-            colors.append('g')
-    X,Y = m(stationlist['LON'],stationlist['LAT'])
-    scatter = m.scatter(X,Y,
-                        marker='v',
-                        color=colors,
-                        edgecolor='k',
-                        s=60,
-                        zorder=5)
+    populate_basemap(m,stationlist['LAT'],stationlist['LON'])
     scalelon,scalelat = 178.75,-37.2
-
     m.drawmapscale(scalelon,scalelat,scalelon,scalelat,100,
                                                 yoffset=0.01*(m.ymax-m.ymin))
+                                                
+    
                                                 
     plt.show()
 
