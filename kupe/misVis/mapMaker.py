@@ -130,19 +130,21 @@ def populate_basemap(m,lats,lons,names=None):
 def event_info_anno(m,srcrcvdict):
     """annotate event information into hard coded map area
     """
-    # annotemplate = ("{id} / {sta}\n{date}\n({evlat:.2f},{evlon:.2f}),"
-    #                 "({stalat:.2f},{stalon:.2f})\n{type}={mag:.2f}"
-    #                 "\ndepth={depth:.2f}\ndist={dist:.2f}\nBAz={baz:.2f}")
-
-    annotemplate = ("{id} / {sta}\n{date}\n{type}={mag:.2f}"
+    # change annotate template depending on what type of map is produced
+    if srcrcvdict['station']:
+        annotemplate = ("{id} / {sta}\n{date}\n{type}={mag:.2f}"
             "\nDepth(km)={depth:.2f}\nDist(km)={dist:.2f}\nBAz(deg)={baz:.2f}")
+    else:    
+        annotemplate = ("{id} / {sta}\n{date}\n"
+                        "{type}={mag:.2f}\nDepth(km)={depth:.2f}")
+    
     plt.annotate(s=annotemplate.format(id=srcrcvdict['event_id'],
                                        sta=srcrcvdict['station'],
                                        date=srcrcvdict['date'],
-                                       # stalat=srcrcvdict['sta_lat'],
-                                       # stalon=srcrcvdict['sta_lon'],
-                                       # evlat=srcrcvdict['ev_lat'],
-                                       # evlon=srcrcvdict['ev_lon'],
+                                       stalat=srcrcvdict['sta_lat'],
+                                       stalon=srcrcvdict['sta_lon'],
+                                       evlat=srcrcvdict['ev_lat'],
+                                       evlon=srcrcvdict['ev_lon'],
                                        type=srcrcvdict['magnitude_type'],
                                        mag=srcrcvdict['magnitude'],
                                        depth=srcrcvdict['depth'],
@@ -286,16 +288,18 @@ def generate_misfit_map(event_id,corners=[-42.5007,-36.9488,172.9998,179.5077],
     out by the adjointBuilder and plot the misfits recorded at each station
     """
     import pyasdf
+    from corkBoard import Cork
     
-    # import dataset
-    dspath = pathnames['kupedata'] + 'PYASDF/{}.h5'.format(event_id)
-    ds = pyasdf.ASDFDataSet(dspath)
-    
-    # break up dataset into constituent parts
-    event = ds.events[0]
+    f1 = plt.figure(figsize=(10,9.4),dpi=100)
+
+    # use corkBoard to interact with pyASDF dataformat
+    mycork = Cork(event_id)
+    mycork.populate()
+    mycork.get_srcrcv_information()
+    mycork.collect_misfits()
     
     m = initiate_basemap(map_corners=corners)
-    srcrcvdict = source_receiver(m,event,inv=None)
+    srcrcvdict = source_receiver(m,mycork.ds.events[0],inv=None)
     event_info_anno(m,srcrcvdict)
     if faults:
         trace_trench(m)
@@ -308,8 +312,6 @@ def generate_misfit_map(event_id,corners=[-42.5007,-36.9488,172.9998,179.5077],
     scalelon,scalelat = 178.75,-37.2
     m.drawmapscale(scalelon,scalelat,scalelon,scalelat,100,
                                                 yoffset=0.01*(m.ymax-m.ymin))
-                                                
-    
                                                 
     plt.show()
 
@@ -333,4 +335,5 @@ def _test_generate_map():
 
 
 if __name__ == "__main__":
-    _test_generate_map()
+    # _test_generate_map()
+    generate_misfit_map("2014p240655")

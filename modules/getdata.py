@@ -39,6 +39,8 @@ def pathnames():
             "ppsd":os.path.join(base,'data','PPSD',''),
             "data":os.path.join(base,'data',''),
             "kupedata":os.path.join(base,'data','KUPEDATA',''),
+            "adjtomodata":os.path.join(base,'data','ADJTOMO',''),
+            "adjtomoplots":os.path.join(base,'plots','adjtomo',''),
             "xyz":os.path.join(tomo,'myMeshes','xyzTopoMoho',''),
             "where": where
                     }

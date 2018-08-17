@@ -32,6 +32,20 @@ import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 # ============================ HELPER FUNCTIONS ================================
+def _create_log_fid(path):
+    """create log identifiers sequentially
+    """
+    import glob
+    logtemplate = "LOG_{:0>3}"
+    files = glob.glob(join(path,'*'))
+    if files:
+        lastlognumber = int(max(files).split('_')[1])
+    else:
+        lastlognumber = -1
+    fidout = logtemplate.format(lastlognumber+1)
+    
+    return fidout
+
 def _check_path(path):
     """small function to check if a path exists and if not, then to create it
     """
@@ -119,6 +133,7 @@ def build_figure(st,inv,event,windows,staltas,adj_src,PD):
         f1 = plt.figure(figsize=(11.69,8.27),dpi=100)
         axes = windowMaker.window_maker(st,windows,staltas,adj_src,PD=PD)
         if PD['save_plot'][0]:
+            if PD["verbose"]:print("Saving figure")
             f1.savefig(join(outpath,'{sta}_wav.png'.format(sta=PD["station"])))
 
     if PD["plot"][1]:
@@ -126,6 +141,7 @@ def build_figure(st,inv,event,windows,staltas,adj_src,PD):
         f2 = plt.figure(figsize=(10,9.4),dpi=100)
         map = mapMaker.generate_map(event,inv,faults=PD["plot"][2])
         if PD['save_plot'][0]:
+            if PD["verbose"]:print("Saving figure")
             f2.savefig(join(outpath,'{sta}_map.png'.format(sta=PD["station"])))
 
     # !!! code snippet to save all open figures into a single PDF, acrobat
@@ -403,18 +419,19 @@ def run_pyflex(PD,st,inv,event):
     if PD["dataset"]:
         if PD["verbose"]:print("Saving windows to PyASDF dataset")
         for comp in windows.keys():
-            internalpath = "{net}_{sta}_{comp}".format(evid=PD["event_id"],
-                                                        net=PD["network"],
-                                                        sta=PD["station"],
-                                                        comp=comp
-                                                        )
-            for window in windows[comp]:
-                # still need to figure out how to properly distribute windows
-                # into auxiliary data
+            for i,window in enumerate(windows[comp]):
+                internalpath = "{net}/{sta}_{comp}_{i}".format(
+                                                            evid=PD["event_id"],
+                                                            net=PD["network"],
+                                                            sta=PD["station"],
+                                                            comp=comp,
+                                                            i=i)
+                # auxiliary data requires a data object, even though we only
+                # want the window parameter dictionary. to save on space
                 winnDixie = create_window_dictionary(window)
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore")
-                    PD["dataset"].add_auxiliary_data(data=staltas[comp],
+                    PD["dataset"].add_auxiliary_data(data=np.array([True]),
                                                      data_type="MisfitWindows",
                                                      path=internalpath,
                                                      parameters=winnDixie)
@@ -479,13 +496,13 @@ def run_pyadjoint(st,windows,PD):
                 adj_src.write_to_asdf(PD["dataset"],time_offset=0)
     
         if PD["save_adj_src"][0]:
-            _check_path(os.path.join(PD["save_adj_src"][1],PD['event_id']))
+            _check_path(join(PD["save_adj_src"][1],PD['event_id']))
             fidout = "{evid}/adjsrc_{net}_{sta}_{comp}".format(
                                                         evid=PD['event_id'],
                                                         net=PD['network'],
                                                         sta=PD['station'],
                                                         comp=key)
-            outpath = os.path.join(PD["save_adj_src"][1],fidout)
+            outpath = join(PD["save_adj_src"][1],fidout)
             adj_src.write(outpath,format="SPECFEM")
 
     return adjoint_sources
@@ -540,7 +557,7 @@ def bob_the_builder():
     # ============================ vPARAMETER SETv =============================
     # SOURCE-RECEIVER
     EVENT_IDS = ["2014p240655"]
-    STANET_CHOICE = "GEONET"
+    STANET_CHOICE = "FATHOM"
     # >> PREPROCESSING
     MINIMUM_FILTER_PERIOD = 6
     MAXIMUM_FILTER_PERIOD = 30
@@ -556,22 +573,28 @@ def bob_the_builder():
     PLOT_FAULTS_ON_MAP = True
     SHOW_PLOTS = True
     # >> SAVING
-    SAVE_PLOT = (False,pathnames()["kupeplots"] + "MISVIS")
-    SAVE_PYASDF = (False,pathnames()["kupedata"] + "PYASDF")
-    SAVE_ADJSRC_SEPARATE = (False,pathnames()["kupedata"] + "ADJSRC")
+    SAVE_PLOT = (False,pathnames()["adjtomoplots"])
+    SAVE_PYASDF = (True,pathnames()["adjtomodata"] + "PYASDF")
+    SAVE_ADJSRC_SEPARATE = (False,pathnames()["adjtomodata"] + "ADJSRC")
     # >> MISC.
     VERBOSE = True
+    LOG = (False,pathnames()["adjtomodata"] + "LOGS")
     # ============================ ^PARAMETER SET^ =============================
+    # START LOGGING TO TEXTFILE
+    if LOG[0]:
+        sys.stdout = open(join(LOG[1],_create_log_fid(LOG[1])),"w")
+    
     # PARAMETER AUTO SET
     COMPONENT_LIST = ["N","E","Z"]
     if ROTATE_TO_RTZ:
         COMPONENT_LIST = ["R","T","Z"]
     STANET_NAMES = ALLSTATIONS[STANET_CHOICE]    
-        
+    
+    # PRINT PARAMETERS
     if VERBOSE:
         # print the parameters in std. out
         import time
-        template = ("\nPARAMETERS\n{lines}\n\n"
+        template = ("\nPARAMETERS {time}\n{lines}\n\n"
                     "Stations:    {sta}\n"
                     "Bandpass:    {tmin},{tmax}\n"
                     "Rotate:      {rot}\n"
@@ -591,8 +614,9 @@ def bob_the_builder():
                               fau=PLOT_FAULTS_ON_MAP,sav0=SAVE_PLOT[0],
                               sav1=SAVE_PLOT[1],show=SHOW_PLOTS,
                               asdf0=SAVE_PYASDF[0],asdf1=SAVE_PYASDF[1],
-                              ver=VERBOSE,lines="_"*75))
-        time.sleep(2)
+                              ver=VERBOSE,lines="_"*75,
+                              time=UTCDateTime()))
+        time.sleep(3)
 
     # MAIN ITERATE OVER EVENTS
     for EVENT_ID in EVENT_IDS:
@@ -633,6 +657,8 @@ def bob_the_builder():
                 windows,staltas,PAR_DICT = run_pyflex(PAR_DICT,st,inv,event)
                 adj_src = run_pyadjoint(st,windows,PAR_DICT)
                 build_figure(st,inv,event,windows,staltas,adj_src,PAR_DICT)
+            except KeyboardInterrupt:
+                sys.exit('Keyboard Interrupt')
             except Exception as e:
                 print(e)
                 continue
