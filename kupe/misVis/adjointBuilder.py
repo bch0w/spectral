@@ -33,7 +33,7 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 
 # ============================ HELPER FUNCTIONS ================================
 def _create_log_fid(path):
-    """create log identifiers sequentially
+    """create log identifiers sequentially based on whats available
     """
     import glob
     logtemplate = "LOG_{:0>3}"

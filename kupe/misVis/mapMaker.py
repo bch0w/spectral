@@ -6,21 +6,38 @@ misift information, distance, BAz etc.)
 import sys
 import numpy as np
 import matplotlib as mpl
+import matplotlib.cm as cm
 import matplotlib.pyplot as plt
-from mpl_toolkits.basemap import Basemap, cm
+from mpl_toolkits.basemap import Basemap
 from obspy.imaging.beachball import beach
 from obspy.geodetics import gps2dist_azimuth
 
 sys.path.append('../../modules')
 from getdata import pathnames
 from getdata import get_moment_tensor
+from procmod import myround
 
 mpl.rcParams['font.size'] = 12
 mpl.rcParams['lines.linewidth'] = 1.25
 mpl.rcParams['lines.markersize'] = 10
 mpl.rcParams['axes.linewidth'] = 2
 
+# ================================= UTILITIES ================================= 
+def build_colormap(array):
+    """build a custom range colormap 
+    """
+    # build colormap for misfits
+    vmax = myround(np.nanmax(array),base=1,choice='up')
+    vmin = myround(np.nanmin(array),base=1,choice='down')
+    # vmax = np.nanmax(array)
+    # vmin = np.nanmin(array)
+    norm = mpl.colors.Normalize(vmin=vmin,vmax=vmax)
+    cmap = cm.plasma
+    colormap = cm.ScalarMappable(norm=norm,cmap=cmap)
+    
+    return colormap
 
+# ============================ DRAWER FUNCTIONS ================================
 def trace_trench(m):
     """trace the hikurangi trench on a basemap object 'm'
     """
@@ -77,8 +94,9 @@ def event_beachball(m,MT):
         print('No moment tensor information found, beachball not available')
         plt.plot()
         return False
+    
 
-
+# ============================== MAP INITIATION ================================
 def initiate_basemap(map_corners=[-50,-32.5,165,180]):
     """set up local map of NZ to be filled
     default map corners give a rough box around new zealand
@@ -110,6 +128,7 @@ def initiate_basemap(map_corners=[-50,-32.5,165,180]):
 
     return m
 
+# ============================== MAP POPULATION ================================
 def populate_basemap(m,lats,lons,names=None):
     """fill map with latitude/longitude pairs, i.e. stations, events
     """
@@ -126,12 +145,12 @@ def populate_basemap(m,lats,lons,names=None):
     if len(names) != 0:
         for n_,x_,y_ in zip(names,X,Y):
             plt.annotate(n_,xy=(x_,y_),xytext=(x_,y_),zorder=6,fontsize=8.5)
-
+            
 def event_info_anno(m,srcrcvdict):
     """annotate event information into hard coded map area
     """
     # change annotate template depending on what type of map is produced
-    if srcrcvdict['station']:
+    if srcrcvdict['backazimuth']:
         annotemplate = ("{id} / {sta}\n{date}\n{type}={mag:.2f}"
             "\nDepth(km)={depth:.2f}\nDist(km)={dist:.2f}\nBAz(deg)={baz:.2f}")
     else:    
@@ -183,7 +202,7 @@ def source_receiver(m,event,inv=None):
         GCDist,Az,BAz = gps2dist_azimuth(event_lat,event_lon,sta_lat,sta_lon)
         GCDist *= 1E-3
     else:
-        station,sta_lat,sta_lon, = None,None,None
+        station,sta_lat,sta_lon = "Misfits",None,None
         GCDist,Az,BAz = None,None,None
 
     # dictionary output for use in annotations
@@ -218,6 +237,44 @@ def source_receiver(m,event,inv=None):
 
     return srcrcvdict
 
+def plot_misfits(f,m,cork,comp="Z",add_colorbar=True):
+    """take a misfit dictionary from a Cork object and plot onto the basemap
+    """
+
+    stations,latitudes,longitudes = [],[],[]
+    for sta in cork.stations:
+        coordict = cork.ds.waveforms[sta].coordinates
+        stations.append(sta)
+        latitudes.append(coordict["latitude"])
+        longitudes.append(coordict["longitude"])
+    
+    # break out misfit measures from cork object, build a colormap
+    misfits = np.fromiter(cork.misfit_values.values(),dtype="float")
+    colormap = build_colormap(misfits)
+    
+    # plot onto basemap object
+    xs,ys = m(longitudes,latitudes)
+    colors = []
+    for sta,X,Y in zip(stations,xs,ys):
+        stationcode = "{s}.HH{c}".format(s=sta,c=comp)
+        try:
+            misfit = cork.misfit_values[stationcode]
+        except KeyError:
+            continue
+        colors.append(colormap.to_rgba(misfit))
+    
+    m.scatter(xs,ys,marker='v',color=colors,edgecolor='k',s=150,zorder=6)
+    
+    if add_colorbar:
+        comp_dict = {"Z":"vertical","N":"north","E":"east",
+                     "T":"transvserse","R":"radial"}
+        colormap.set_array(misfits)
+        cbar = f.colorbar(colormap,fraction=0.046,pad=0.04)
+        cbar.set_label("{} misfit".format(comp_dict[comp]),
+                                    rotation=270,labelpad=17,fontsize=14.5)
+        
+
+# ============================== MAP GENERATION ================================
 def generate_map(event,inv,corners=[-42.5007,-36.9488,172.9998,179.5077],
                                                         faults=False,**kwargs):
     """initiate and populate a basemap object for New Zealands north island.
@@ -244,42 +301,6 @@ def generate_map(event,inv,corners=[-42.5007,-36.9488,172.9998,179.5077],
     m.drawmapscale(scalelon,scalelat,scalelon,scalelat,100,
                                                 yoffset=0.01*(m.ymax-m.ymin))
 
-
-    return m
-    
-def generate_map_NOEVENT(inv,corners=[-42.5007,-36.9488,172.9998,179.5077],
-                                                        faults=False,**kwargs):
-    """same as above, but just plot station locations for a map
-    """
-    m = initiate_basemap(map_corners=corners)
-    if faults:
-        trace_trench(m)
-        onshore_offshore_faults(m)
-
-    stationfile = pathnames()['data'] + 'STATIONXML/GEONET_AND_FATHOM.npz'
-    stationlist = np.load(stationfile)
-
-    colors = []
-    for name in stationlist['NAME']:
-        if name[:2] == "RD":
-            colors.append('r')
-        else:
-            colors.append('g')
-    X,Y = m(stationlist['LON'],stationlist['LAT'])
-    scatter = m.scatter(X,Y,
-                        marker='v',
-                        color=colors,
-                        edgecolor='k',
-                        s=60,
-                        zorder=5)
-    scalelon,scalelat = 178.75,-37.2
-
-    m.drawmapscale(scalelon,scalelat,scalelon,scalelat,100,
-                                                yoffset=0.01*(m.ymax-m.ymin))
-                                                
-    plt.show()
-
-
     return m
     
 def generate_misfit_map(event_id,corners=[-42.5007,-36.9488,172.9998,179.5077],
@@ -290,14 +311,14 @@ def generate_misfit_map(event_id,corners=[-42.5007,-36.9488,172.9998,179.5077],
     import pyasdf
     from corkBoard import Cork
     
-    f1 = plt.figure(figsize=(10,9.4),dpi=100)
+    f = plt.figure(figsize=(10,9.4),dpi=100)
 
     # use corkBoard to interact with pyASDF dataformat
     mycork = Cork(event_id)
     mycork.populate()
     mycork.get_srcrcv_information()
     mycork.collect_misfits()
-    
+        
     m = initiate_basemap(map_corners=corners)
     srcrcvdict = source_receiver(m,mycork.ds.events[0],inv=None)
     event_info_anno(m,srcrcvdict)
@@ -309,6 +330,8 @@ def generate_misfit_map(event_id,corners=[-42.5007,-36.9488,172.9998,179.5077],
     stationlist = np.load(stationfile)
 
     populate_basemap(m,stationlist['LAT'],stationlist['LON'])
+    plot_misfits(f,m,mycork)
+    
     scalelon,scalelat = 178.75,-37.2
     m.drawmapscale(scalelon,scalelat,scalelon,scalelat,100,
                                                 yoffset=0.01*(m.ymax-m.ymin))

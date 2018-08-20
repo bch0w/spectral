@@ -1,6 +1,8 @@
-"""adjointBuilder saves window information into pyAsdf data format. this class
+"""adjointBuilder saves window information into pyAsdf data format. Cork class
 contains functions to parse through this data format and provide easily visible 
-information on best windows, number of windows per station, etc.
+information on best windows, number of windows per station, etc. as well as
+printing and sorting functionalities to make it easier to interact with 
+all the available data
 """
 import os
 import sys
@@ -139,7 +141,7 @@ class Cork:
     #     """
     #     print("corkBoard for {id}".format(self.path)
     #     print("{s:^20}{w:^20}{m:^20}".format(
-    #                                         s="STATION",w="WINDOWS",m="MISFIT"))
+    #                                      s="STATION",w="WINDOWS",m="MISFIT"))
     #     for sta in self.stations:
     # 
     #         print("{s:^20}")
