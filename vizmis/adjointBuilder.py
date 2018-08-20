@@ -21,7 +21,7 @@ sys.path.append('./tests')
 from tests import func_test
 
 # module functions
-sys.path.append('../../modules/')
+sys.path.append('../modules/')
 import getdata
 import synmod
 import procmod
@@ -267,7 +267,8 @@ def initial_data_gather(PD):
                                         tag="observed_processed",
                                         event_id=event)
             PD["dataset"].add_waveforms(waveform=synout,
-                                        tag="synthetic_processed",
+                                        tag="synthetic_processed_{}".format(
+                                                                   PD['model']),
                                         event_id=event)
 
     return st_IDG,inv,event
@@ -420,10 +421,11 @@ def run_pyflex(PD,st,inv,event):
         if PD["verbose"]:print("Saving windows to PyASDF dataset")
         for comp in windows.keys():
             for i,window in enumerate(windows[comp]):
-                internalpath = "{net}/{sta}_{comp}_{i}".format(
+                internalpath = "{net}/{sta}_{comp}_{i}_{m}".format(
                                                             evid=PD["event_id"],
                                                             net=PD["network"],
                                                             sta=PD["station"],
+                                                            m=PD["model"]
                                                             comp=comp,
                                                             i=i)
                 # auxiliary data requires a data object, even though we only
@@ -497,10 +499,11 @@ def run_pyadjoint(st,windows,PD):
     
         if PD["save_adj_src"][0]:
             _check_path(join(PD["save_adj_src"][1],PD['event_id']))
-            fidout = "{evid}/adjsrc_{net}_{sta}_{comp}".format(
+            fidout = "{evid}/adjsrc_{net}_{sta}_{comp}_{mod}".format(
                                                         evid=PD['event_id'],
                                                         net=PD['network'],
                                                         sta=PD['station'],
+                                                        mod=PD['model'],
                                                         comp=key)
             outpath = join(PD["save_adj_src"][1],fidout)
             adj_src.write(outpath,format="SPECFEM")
@@ -555,6 +558,8 @@ def bob_the_builder():
                     "TEST":['NZ.BKZ']
                     }
     # ============================ vPARAMETER SETv =============================
+    # MODEL
+    MODEL_NUMBER = 0
     # SOURCE-RECEIVER
     EVENT_IDS = ["2014p240655"]
     STANET_CHOICE = "FATHOM"
@@ -589,25 +594,28 @@ def bob_the_builder():
     if ROTATE_TO_RTZ:
         COMPONENT_LIST = ["R","T","Z"]
     STANET_NAMES = ALLSTATIONS[STANET_CHOICE]    
+    MODEL_NUMBER = "m{:0>2}".format(MODEL_NUMBER)
     
     # PRINT PARAMETERS
     if VERBOSE:
         # print the parameters in std. out
         import time
         template = ("\nPARAMETERS {time}\n{lines}\n\n"
+                    "Model:       {mod}\n"
                     "Stations:    {sta}\n"
                     "Bandpass:    {tmin},{tmax}\n"
                     "Rotate:      {rot}\n"
                     "Units:       {uni}\n"
                     "Pyflex:      {pyf}\n"
                     "Pyadjoint:   {pya}\n"
-                    "Plot:        (Wav={wav}) (Map={map}) (Faults={fau})\n"
+                    "Plot:        Wav={wav}, Map={map}, Faults={fau}\n"
                     "Save plot:   {sav0} to {sav1}\n"
                     "Show plot:   {show}\n"
                     "Save Pyasdf: {asdf0} to {asdf1}\n"
                     "Verbose:     {ver}\n{lines}"
                     )
-        print(template.format(sta=STANET_CHOICE,tmin=MINIMUM_FILTER_PERIOD,
+        print(template.format(mod=MODEL_NUMBER,sta=STANET_CHOICE,
+                              tmin=MINIMUM_FILTER_PERIOD,
                               tmax=MAXIMUM_FILTER_PERIOD,rot=ROTATE_TO_RTZ,
                               uni=UNIT_OUTPUT,pyf=PYFLEX_CONFIG,
                               pya=ADJOINT_SRC_TYPE,wav=PLOT_WAV,map=PLOT_MAP,
@@ -632,7 +640,8 @@ def bob_the_builder():
 
         for STANET_NAME in STANET_NAMES:
             print("\n{}\n".format(STANET_NAME))
-            PAR_DICT = {"network":STANET_NAME.split('.')[0],
+            PAR_DICT = {"model":MODEL_NUMBER,
+                        "network":STANET_NAME.split('.')[0],
                         "station":STANET_NAME.split('.')[1],
                         "code":"{}.*.HH?".format(STANET_NAME),
                         "event_id":EVENT_ID,

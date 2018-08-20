@@ -12,7 +12,7 @@ from mpl_toolkits.basemap import Basemap
 from obspy.imaging.beachball import beach
 from obspy.geodetics import gps2dist_azimuth
 
-sys.path.append('../../modules')
+sys.path.append('../modules')
 from getdata import pathnames
 from getdata import get_moment_tensor
 from procmod import myround
@@ -337,7 +337,6 @@ def generate_misfit_map(event_id,corners=[-42.5007,-36.9488,172.9998,179.5077],
                                                 yoffset=0.01*(m.ymax-m.ymin))
                                                 
     plt.show()
-
 
     return m
 

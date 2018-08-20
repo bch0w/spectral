@@ -7,8 +7,10 @@ all the available data
 import os
 import sys
 import pyasdf
-sys.path.append('../../modules')
+import numpy as np
+sys.path.append('../modules')
 from getdata import pathnames
+from procmod import myround
 
 def distribute_to_corkBoard(event_id):
     """initiate a Cork object with the information given its event id
@@ -17,23 +19,26 @@ def distribute_to_corkBoard(event_id):
     import ipdb;ipdb.set_trace()
     mycork.aggregate()
     
-
 class Cork:
     """a class used to hold information related to source-receiver pairs, 
     misfit windows and adjoint sources
     """
     
-    def __init__(self,event_id):
+    def __init__(self,event_id=None):
         """fill up the Cork with empties
         """
         self.id = event_id
-        self.fid = event_id + '.h5'
+        if self.id:
+            self.fid = event_id + '.h5'
+        else:
+            self.fid = None
         self.path = None
         self.ds = None
         self.event = None
-        self.stations = []
-        self.adj_srcs = []
-        self.misfit_windows = []
+        self.stations = None
+        self.adj_srcs = None
+        self.misfit_windows = None
+        self.misfit_values = None
         
     # def __len__(self):
                     
@@ -47,7 +52,8 @@ class Cork:
         return template.format(pat=self.path,
                                nos=len(self.stations),
                                now=len(self.misfit_windows),
-                               noa=len(self.adj_srcs))
+                               noa=len(self.adj_srcs)
+                               )
         
     def _check_availability(self):
         """will determine if the data is available
@@ -55,12 +61,24 @@ class Cork:
         # local pathing, to be changed if this is used outside 
         data_location = pathnames()["adjtomodata"] + "PYASDF"
 
+        # if an event id is given, give filepath
+        if not self.fid:
+            import glob
+            available = glob.glob(os.path.join(data_location,"*.h5"))
+            print("No event id given, available event ids: ")
+            for tag in available:
+                print(os.path.basename(tag).split('.')[0])
+            event_id = input("Event ID: ")
+            self.id = event_id
+            self.fid = event_id + '.h5'
+        
         filepath = os.path.join(data_location,self.fid)
         if os.path.exists(filepath):
             self.path = filepath
         else:
             raise Exception("File does not exist")
-    
+
+
     def _read(self):
         """read in datafile
         """
@@ -79,6 +97,7 @@ class Cork:
         self.count_windows()
         self.collect_misfits()
         self.get_srcrcv_information()
+        self.collect_misfits()
         
     def populate(self):
         """fills self with all information available in pyasdf dataset
@@ -105,7 +124,7 @@ class Cork:
             
         self.counted_windows = counted_windows
         
-    def collect_misfits(self):
+    def collect_misfits(self,model="m00"):
         """for each station, collect the misfit value
         """
         misfit_values = {}
@@ -135,6 +154,25 @@ class Cork:
                                "backazimuth":BAz}
         
         self.source_receiver_info = srcrcvdict
+        
+    def misfit_histogram(self,m0=None,m_a=None,binsize=0.1):
+        """plot a histogram of misfits for models m0 and m_a (if available)
+        default will be initial model compared to final model
+        """
+        if self.misfit_values:
+            raise Exception("No misfit values available")
+        
+        # only import plotting functions if necessary
+        import matplotlib.pyplot as plt
+        
+        # gather misfit values
+        # np.digitize returns the bin number that values of x fall into
+        misfits = np.fromiter(self.misfit_values.values(),dtype="float")
+        maxmisfit = myround(misfits.max(),base=1,choice="up")
+
+        n,bins,patches = plt.hist(x=misfits,
+                                  bins=len(np.arange(0,maxmisfit,binsize)),
+                                  range=(0,maxmisfit))
     
     # def disperse(self):
     #     """data vomit all available data in the Cork object for easy viewing
