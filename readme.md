@@ -1,7 +1,16 @@
-Data directory structure (6.7.18)
+Data directory structure (21.8.18)
 
-|-**kupe [work related to tomography problem: meshing, simulations etc.]**\
-|------_adjointbuild.py_ [pyflex/pyadjoint run script to create adjoint sources]\
+|-**vizmis [misfit visualization and adjoint source creation]
+|------_adjointBuilder.py_ [pyflex/pyadjoint run script to create adjoint sources]\
+|------_corkBoard.py_ [defines Cork class to parse through PyASDF files]
+|------**viztools [waveform plotters, map makers and data visualization]
+|------------_dataDepicter.py_ [class for creating statistical plots]
+|------------_mapMaker.py_ [plot source receiver information on maps]
+|------------_windowMaker.py_ [visualize waveform data etc.]
+|------**tests [example run scripts and unit testing]
+|------------_func_test.py_ [all testing functions so far]
+|------------**test_data [example data for unit testing etc.]
+|-**kupe [work related to simulation side of tomography problem]**\
 |------_catbuild.py_ [generate tomCat for target region and time]\
 |------_comparemeshes.py_ [map and waveform plotting for mesh testing]\
 |------_eventQC.py_ [event quality control (unfinished)]\

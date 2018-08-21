@@ -12,7 +12,7 @@ from mpl_toolkits.basemap import Basemap
 from obspy.imaging.beachball import beach
 from obspy.geodetics import gps2dist_azimuth
 
-sys.path.append('../modules')
+sys.path.append('../../modules')
 from getdata import pathnames
 from getdata import get_moment_tensor
 from procmod import myround
@@ -22,9 +22,9 @@ mpl.rcParams['lines.linewidth'] = 1.25
 mpl.rcParams['lines.markersize'] = 10
 mpl.rcParams['axes.linewidth'] = 2
 
-# ================================= UTILITIES ================================= 
+# ================================= UTILITIES =================================
 def build_colormap(array):
-    """build a custom range colormap 
+    """build a custom range colormap
     """
     # build colormap for misfits
     vmax = myround(np.nanmax(array),base=1,choice='up')
@@ -34,7 +34,7 @@ def build_colormap(array):
     norm = mpl.colors.Normalize(vmin=vmin,vmax=vmax)
     cmap = cm.plasma
     colormap = cm.ScalarMappable(norm=norm,cmap=cmap)
-    
+
     return colormap
 
 # ============================ DRAWER FUNCTIONS ================================
@@ -94,7 +94,7 @@ def event_beachball(m,MT):
         print('No moment tensor information found, beachball not available')
         plt.plot()
         return False
-    
+
 
 # ============================== MAP INITIATION ================================
 def initiate_basemap(map_corners=[-50,-32.5,165,180]):
@@ -145,7 +145,7 @@ def populate_basemap(m,lats,lons,names=None):
     if len(names) != 0:
         for n_,x_,y_ in zip(names,X,Y):
             plt.annotate(n_,xy=(x_,y_),xytext=(x_,y_),zorder=6,fontsize=8.5)
-            
+
 def event_info_anno(m,srcrcvdict):
     """annotate event information into hard coded map area
     """
@@ -153,10 +153,10 @@ def event_info_anno(m,srcrcvdict):
     if srcrcvdict['backazimuth']:
         annotemplate = ("{id} / {sta}\n{date}\n{type}={mag:.2f}"
             "\nDepth(km)={depth:.2f}\nDist(km)={dist:.2f}\nBAz(deg)={baz:.2f}")
-    else:    
+    else:
         annotemplate = ("{id} / {sta}\n{date}\n"
                         "{type}={mag:.2f}\nDepth(km)={depth:.2f}")
-    
+
     plt.annotate(s=annotemplate.format(id=srcrcvdict['event_id'],
                                        sta=srcrcvdict['station'],
                                        date=srcrcvdict['date'],
@@ -194,7 +194,7 @@ def source_receiver(m,event,inv=None):
         if magni.magnitude_type == "M":
             magnitude = magni.mag
             magnitude_type = magni.magnitude_type
-        
+
     # if you want to plot a station as well
     if inv:
         station = inv[0][0].code
@@ -247,11 +247,11 @@ def plot_misfits(f,m,cork,comp="Z",add_colorbar=True):
         stations.append(sta)
         latitudes.append(coordict["latitude"])
         longitudes.append(coordict["longitude"])
-    
+
     # break out misfit measures from cork object, build a colormap
     misfits = np.fromiter(cork.misfit_values.values(),dtype="float")
     colormap = build_colormap(misfits)
-    
+
     # plot onto basemap object
     xs,ys = m(longitudes,latitudes)
     colors = []
@@ -262,9 +262,9 @@ def plot_misfits(f,m,cork,comp="Z",add_colorbar=True):
         except KeyError:
             continue
         colors.append(colormap.to_rgba(misfit))
-    
+
     m.scatter(xs,ys,marker='v',color=colors,edgecolor='k',s=150,zorder=6)
-    
+
     if add_colorbar:
         comp_dict = {"Z":"vertical","N":"north","E":"east",
                      "T":"transvserse","R":"radial"}
@@ -272,7 +272,7 @@ def plot_misfits(f,m,cork,comp="Z",add_colorbar=True):
         cbar = f.colorbar(colormap,fraction=0.046,pad=0.04)
         cbar.set_label("{} misfit".format(comp_dict[comp]),
                                     rotation=270,labelpad=17,fontsize=14.5)
-        
+
 
 # ============================== MAP GENERATION ================================
 def generate_map(event,inv,corners=[-42.5007,-36.9488,172.9998,179.5077],
@@ -302,15 +302,15 @@ def generate_map(event,inv,corners=[-42.5007,-36.9488,172.9998,179.5077],
                                                 yoffset=0.01*(m.ymax-m.ymin))
 
     return m
-    
+
 def generate_misfit_map(event_id,corners=[-42.5007,-36.9488,172.9998,179.5077],
                                                         faults=False,**kwargs):
-    """take an event id associated with a PyASDF dataset that has been filled 
+    """take an event id associated with a PyASDF dataset that has been filled
     out by the adjointBuilder and plot the misfits recorded at each station
     """
     import pyasdf
     from corkBoard import Cork
-    
+
     f = plt.figure(figsize=(10,9.4),dpi=100)
 
     # use corkBoard to interact with pyASDF dataformat
@@ -318,7 +318,7 @@ def generate_misfit_map(event_id,corners=[-42.5007,-36.9488,172.9998,179.5077],
     mycork.populate()
     mycork.get_srcrcv_information()
     mycork.collect_misfits()
-        
+
     m = initiate_basemap(map_corners=corners)
     srcrcvdict = source_receiver(m,mycork.ds.events[0],inv=None)
     event_info_anno(m,srcrcvdict)
@@ -331,11 +331,11 @@ def generate_misfit_map(event_id,corners=[-42.5007,-36.9488,172.9998,179.5077],
 
     populate_basemap(m,stationlist['LAT'],stationlist['LON'])
     plot_misfits(f,m,mycork)
-    
+
     scalelon,scalelat = 178.75,-37.2
     m.drawmapscale(scalelon,scalelat,scalelon,scalelat,100,
                                                 yoffset=0.01*(m.ymax-m.ymin))
-                                                
+
     plt.show()
 
     return m
@@ -351,7 +351,7 @@ def _test_generate_map():
     # cat = read_events(eventpath)
     # event = cat[0]
     inv = read_inventory(invpath)
-    
+
     m = generate_map_NOEVENT(inv,show=True,faults=True)
     # f,m = generate_map(event,inv,show=True)
 

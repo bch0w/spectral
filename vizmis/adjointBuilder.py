@@ -15,6 +15,7 @@ from obspy import UTCDateTime, read, Stream
 from obspy.signal.filter import envelope
 
 # internal scripts
+sys.path.append('./viztools')
 import windowMaker
 import mapMaker
 sys.path.append('./tests')
@@ -43,7 +44,7 @@ def _create_log_fid(path):
     else:
         lastlognumber = -1
     fidout = logtemplate.format(lastlognumber+1)
-    
+
     return fidout
 
 def _check_path(path):
@@ -51,7 +52,7 @@ def _check_path(path):
     """
     if not os.path.exists(path):
         os.makedirs(path)
-    
+
 
 def _find_BAz(inv,event):
     """get backazimuth based on obspy inventory and event information
@@ -77,7 +78,7 @@ def _get_station_latlon(sta):
     sta_lat = nz_bb['LAT'][bb_ind]
     sta_lon = nz_bb['LON'][bb_ind]
 
-    return sta_lat, sta_lon    
+    return sta_lat, sta_lon
 
 def breakout_stream(st):
     """get observed and synthetic parts of a stream object
@@ -96,7 +97,7 @@ def breakout_stream(st):
     syn_stream = st.select(channel="BX?")
 
     return obs_stream, syn_stream
-    
+
 def create_window_dictionary(window):
     """HDF5 doesnt play nice with nonstandard objects in dictionaries, e.g.
     nested dictionaries, UTCDateTime objects. So remake the pyflex window
@@ -127,7 +128,7 @@ def build_figure(st,inv,event,windows,staltas,adj_src,PD):
     if PD['save_plot'][0]:
         outpath = join(PD['save_plot'][1],PD['event_id'])
         _check_path(outpath)
-        
+
     if PD["plot"][0]:
         if PD["verbose"]: print("Generating waveform plot")
         f1 = plt.figure(figsize=(11.69,8.27),dpi=100)
@@ -156,12 +157,12 @@ def build_figure(st,inv,event,windows,staltas,adj_src,PD):
     # for fig in range(1,plt.gcf().number+1):
     #     pdf.savefig(fig)
     # pdf.close()
-    
+
     if PD["show"]:
         plt.show()
 
     plt.close("all")
-    
+
 def initial_data_gather(PD):
     """gather event information, observation and synthetic traces.
     preprocess all traces accordingly and return one stream object with 6 traces
@@ -275,7 +276,7 @@ def initial_data_gather(PD):
 
 def choose_config(choice,PD):
     """helper function to avoid typing out the full pyflex or pyadjoint config:
-    
+
     ++PYFLEX (Maggi et al. 2009)
     i  Standard Tuning Parameters:
     0: water level for STA/LTA (short term average/long term average)
@@ -283,14 +284,14 @@ def choose_config(choice,PD):
     2: amplitude ratio acceptance level (dlna)
     3: normalized cross correlation acceptance level
     i  Fine Tuning Parameters
-    4: c_0 = for rejection of internal minima 
+    4: c_0 = for rejection of internal minima
     5: c_1 = for rejection of short windows
     6: c_2 = for rejection of un-prominent windows
     7: c_3a = for rejection of multiple distinct arrivals
     8: c_3b = for rejection of multiple distinct arrivals
     9: c_4a = for curtailing windows w/ emergent starts and/or codas
     10:c_4b = for curtailing windows w/ emergent starts and/or codas
-    
+
     ++PYADJOINT:
     different misfit measures detailed in pyadjoint docs, multitaper approach is
     what was used in Tape et al. (2010). All inputs taken from what is specified
@@ -343,7 +344,7 @@ def choose_config(choice,PD):
             raise Exception("Pyadjoint 'adj_src_type' incorrectly specified")
 
     return cfgout
-    
+
 # ================================ RUN SCRIPTS =================================
 def run_pyflex(PD,st,inv,event):
     """use pyflex to grab windows, current config set to defaults found on docs
@@ -425,7 +426,7 @@ def run_pyflex(PD,st,inv,event):
                                                             evid=PD["event_id"],
                                                             net=PD["network"],
                                                             sta=PD["station"],
-                                                            m=PD["model"]
+                                                            m=PD["model"],
                                                             comp=comp,
                                                             i=i)
                 # auxiliary data requires a data object, even though we only
@@ -490,13 +491,13 @@ def run_pyadjoint(st,windows,PD):
                                              plot=False
                                              )
         adjoint_sources[key] = adj_src
-                
+
         if PD["dataset"]:
             if PD["verbose"]:print("Saving adj src [{}] to pyASDF".format(key))
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 adj_src.write_to_asdf(PD["dataset"],time_offset=0)
-    
+
         if PD["save_adj_src"][0]:
             _check_path(join(PD["save_adj_src"][1],PD['event_id']))
             fidout = "{evid}/adjsrc_{net}_{sta}_{comp}_{mod}".format(
@@ -537,16 +538,16 @@ def bob_the_builder():
                     "multitaper_misfit": freq. dependent phgase differences
                     "waveform_misfit": squared difference of waveforms
     :type PLOT_*: bool
-    :param PLOT_*: plot waveform (WAV), src-rcv map (MAP), active faults take 
+    :param PLOT_*: plot waveform (WAV), src-rcv map (MAP), active faults take
                    some time to plot, faster without (FAULTS_ON_MAP)
     :type SAVE_*: tuple -> (bool,str)
     :param SAVE_*: save figures (PLOT) or all data (PYASDF), if so output path
-                   adjoint sources can be saved on their own for easy input 
+                   adjoint sources can be saved on their own for easy input
                    to specfem (ADJSRC_SEPARATE)
     :type VERBOSE: bool
-    :param VERBOSE: enable print statements throughout 
+    :param VERBOSE: enable print statements throughout
     """
-    
+
     ALLSTATIONS = {"GEONET":['NZ.BFZ','NZ.BKZ','NZ.HAZ','NZ.HIZ','NZ.KNZ',
                     'NZ.MRZ','NZ.MWZ','NZ.OPRZ','NZ.PUZ','NZ.PXZ','NZ.RTZ',
                     'NZ.TLZ','NZ.TOZ','NZ.TSZ','NZ.VRZ','NZ.WAZ'],
@@ -562,7 +563,7 @@ def bob_the_builder():
     MODEL_NUMBER = 0
     # SOURCE-RECEIVER
     EVENT_IDS = ["2014p240655"]
-    STANET_CHOICE = "FATHOM"
+    STANET_CHOICE = "GEONET"
     # >> PREPROCESSING
     MINIMUM_FILTER_PERIOD = 6
     MAXIMUM_FILTER_PERIOD = 30
@@ -578,7 +579,7 @@ def bob_the_builder():
     PLOT_FAULTS_ON_MAP = True
     SHOW_PLOTS = True
     # >> SAVING
-    SAVE_PLOT = (False,pathnames()["adjtomoplots"])
+    SAVE_PLOT = (True,pathnames()["adjtomoplots"])
     SAVE_PYASDF = (True,pathnames()["adjtomodata"] + "PYASDF")
     SAVE_ADJSRC_SEPARATE = (False,pathnames()["adjtomodata"] + "ADJSRC")
     # >> MISC.
@@ -588,14 +589,14 @@ def bob_the_builder():
     # START LOGGING TO TEXTFILE
     if LOG[0]:
         sys.stdout = open(join(LOG[1],_create_log_fid(LOG[1])),"w")
-    
+
     # PARAMETER AUTO SET
     COMPONENT_LIST = ["N","E","Z"]
     if ROTATE_TO_RTZ:
         COMPONENT_LIST = ["R","T","Z"]
-    STANET_NAMES = ALLSTATIONS[STANET_CHOICE]    
+    STANET_NAMES = ALLSTATIONS[STANET_CHOICE]
     MODEL_NUMBER = "m{:0>2}".format(MODEL_NUMBER)
-    
+
     # PRINT PARAMETERS
     if VERBOSE:
         # print the parameters in std. out

@@ -7,6 +7,8 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from scipy.signal import detrend
 
+import sys
+sys.path.append('..')
 from adjointBuilder import breakout_stream
 
 mpl.rcParams['font.size'] = 12
@@ -19,7 +21,7 @@ def normalize_a_to_b(array,a=0,b=1):
     """
     array = np.array(array)
     z = ((b-a) * (array-array.min()) / (array.max()-array.min())) + a
-    
+
     return z
 
 def align_yaxis(ax1,ax2):
@@ -27,14 +29,14 @@ def align_yaxis(ax1,ax2):
     """
     ymin_a1,ymax_a1= ax1.get_ylim()
     ymin_a2,ymax_a2= ax2.get_ylim()
-    
+
     _, y1 = ax1.transData.transform((0, (ymax_a1+ymin_a1)/2))
     _, y2 = ax2.transData.transform((0, (ymax_a2+ymin_a2)/2))
     inv = ax2.transData.inverted()
     _, dy = inv.transform((0, 0)) - inv.transform((0, y1-y2))
     ax2.set_ylim(ymin_a2+dy, ymax_a2+dy)
-    
-    
+
+
 def pretty_grids(input_ax):
     """make dem grids pretty
     """
@@ -140,7 +142,7 @@ def window_maker(st,windows,staltas,adj_src,*args,**kwargs):
     UNIT_DICT = {"DISP":"displacement [m]",
                  "VEL":"velocity [m/s]",
                  "ACC":"acceleration [m/s^2]"}
-        
+
     for i,comp in enumerate(complist):
         # distribute data
         obs,syn = breakout_stream(st.select(component=comp))
@@ -157,7 +159,7 @@ def window_maker(st,windows,staltas,adj_src,*args,**kwargs):
         T1, = twaxes[i].plot(t,_stalta,'gray',alpha=0.4,zorder=4)
         T2 = twaxes[i].axhline(y=PD["stalta_wl"]-1,xmin=t[0],xmax=t[-1],
                       alpha=0.2,zorder=3,linewidth=1.5,c='k',linestyle='--')
-        
+
         # plot windows (if available) as semi-transparent boxes
         ymin,ymax = axes[i].get_ylim()
         window_anno_template = "maxCC:{mcc:.4f}\nccShift:{ccs}\ndlnA:{dln:.4f}"
@@ -177,9 +179,9 @@ def window_maker(st,windows,staltas,adj_src,*args,**kwargs):
                                                       dln=window.dlnA)
                 axes[i].annotate(s=winanno,xy=(twindow[10],ymax*0.5),
                                                         zorder=4,fontsize=7)
-            
-            
-            # plot adjoint source if available - if there are windows, then 
+
+
+            # plot adjoint source if available - if there are windows, then
             # there is also an adjoint source to plot
             # !!! real hacky way of putting sta/lta and adjoint source on the
             # !!! same axis object, normalize them both -1 to 1 and remove the
@@ -206,7 +208,7 @@ def window_maker(st,windows,staltas,adj_src,*args,**kwargs):
         labels = [l.get_label() for l in lines_for_legend]
         axes[i].legend(lines_for_legend,labels,
                        prop={"size":9},loc="upper right")
-        
+
         # final adjustments
         twaxes[i].set_yticklabels([])
         axes[i].set_ylabel(comp)
@@ -216,7 +218,7 @@ def window_maker(st,windows,staltas,adj_src,*args,**kwargs):
         align_yaxis(axes[i],twaxes[i])
 
 
-            
+
     # figure settings
     titletext = "{s} [{b0},{b1}]".format(s=PD['station'],
                                          b0=PD['bounds'][0],
