@@ -80,6 +80,34 @@ def test_build_figure():
                                                             EXAMPLE_PAR_DICT)
 
 
+def test_run_pyflex():
+    EXAMPLE_PAR_DICT = {"network":'NZ',
+                        "station":'BFZ',
+                        "code":'NZ.BFZ.*.HH?',
+                        "event_id":'2014p240655',
+                        "bounds":(12,30),
+                        "rotate":True,
+                        "units":'DISP',
+                        "pyflex_config":'UAF',
+                        "adj_src_type":'multitaper_misfit',
+                        "save_adj_src":(False, None),
+                        "comp_list":['R','T','Z'],
+                        "save_plot":(False, None),
+                        "plot":(True,False,True),
+                        "dataset":None,
+                        "verbose":True,
+                        "stalta_wl":0.18
+                        }    
+    st = read('./tests/test_data/testmseed.pickle')
+    cat = read_events('./tests/test_data/testevent.xml')
+    event = cat[0]
+    inv = read_inventory('./tests/test_data/testinv.xml')
+    
+    windows = load_n_convert('./tests/test_data/testwindows.npz')
+
+
+    adjointBuilder.run_pyflex(EXAMPLE_PAR_DICT,st,inv,event)
+
 def test_window_saving():
     """saving windows in pyasdf format as auxiliary data
     """

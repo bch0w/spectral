@@ -39,6 +39,7 @@ def pathnames():
             "ppsd":os.path.join(base,'data','PPSD',''),
             "data":os.path.join(base,'data',''),
             "kupedata":os.path.join(base,'data','KUPEDATA',''),
+            "stationxml":os.path.join(base,'data','STATIONXML',''),
             "adjtomodata":os.path.join(base,'data','ADJTOMO',''),
             "adjtomoplots":os.path.join(base,'plots','adjtomo',''),
             "xyz":os.path.join(tomo,'myMeshes','xyzTopoMoho',''),
@@ -246,11 +247,11 @@ def fdsn_download(code,event_id=False,response=False,
 
     if response:
         # check existing stationxml files
-        response_dict = {"NZ":"NZ_NI_BB_seismometers.xml",
+        response_dict = {"NZ":"north_island_broadbands.xml",
                          "YH":"YH_LOBS.xml"}
 
-        resp_path = (pathnames()['data'] +
-                                    'STATIONXML/{}'.format(response_dict[net]))
+        resp_path = (pathnames()['stationxml'] +
+                            'RESPONSE/{}'.format(response_dict[net]))
         inv_full = read_inventory(resp_path)
         inv_check = inv_full.select(station=sta)
 
@@ -721,9 +722,11 @@ def make_stationxml():
 def get_those_stations():
     """misc station getter to be copy-pasted"""
     from obspy.clients.fdsn import Client
+    from obspy import UTCDateTime
     c = Client("GEONET")
     north_island = [-42,-34,173,180]
     north_island_zoom = [-40,-37,176,178.5]
+    mapmaker_mesh = [-42.5007,-36.9488,172.9998,179.5077]
     new_zealand = [-50,-35,165,180]
     WPUK = [-40.0643,176.441]
     lat_lon = new_zealand
@@ -745,15 +748,27 @@ def get_those_stations():
                         level="station")
     inv.plot()
 
-    # NZ seismometers
+    # NZ broadband seismometers
     inv = c.get_stations(network='NZ',
-                        station='*',
-                        channel='HH*',
+                        station='???',
+                        channel='HH?',
                         minlatitude=lat_lon[0],
                         maxlatitude=lat_lon[1],
                         minlongitude=lat_lon[2],
                         maxlongitude=lat_lon[3],
-                        level="station")
+                        level="response",
+                        starttime=UTCDateTime('2000-01-01'),
+                        endtime=UTCDateTime())
+    inv += c.get_stations(network='NZ',
+                        station='???Z',
+                        channel='HH?',
+                        minlatitude=lat_lon[0],
+                        maxlatitude=lat_lon[1],
+                        minlongitude=lat_lon[2],
+                        maxlongitude=lat_lon[3],
+                        level="response",
+                        starttime=UTCDateTime('2000-01-01'),
+                        endtime=UTCDateTime())
     # HOBITSS
     c = Client("IRIS")
     inv = c.get_stations(network='YH',
@@ -772,6 +787,7 @@ def get_those_stations():
     lat_lon = new_zealand
     inv = c.get_stations(network="X2",
                         station="*",
+                        channel="?H?",
                         starttime="2009-11-06",
                         endtime="2010-04-30",
                         minlatitude=lat_lon[0],

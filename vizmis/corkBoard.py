@@ -177,4 +177,4 @@ class Cork:
     #         print("{s:^20}")
 
 if __name__ == "__main__":
-    distribute_to_corkBoard("2014p240655")
+    distribute_to_corkBoard("2014p240655_10_30")

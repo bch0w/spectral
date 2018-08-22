@@ -14,13 +14,6 @@ from os.path import join
 from obspy import UTCDateTime, read, Stream
 from obspy.signal.filter import envelope
 
-# internal scripts
-sys.path.append('./viztools')
-import windowMaker
-import mapMaker
-sys.path.append('./tests')
-from tests import func_test
-
 # module functions
 sys.path.append('../modules/')
 import getdata
@@ -28,6 +21,13 @@ import synmod
 import procmod
 import plotmod
 from getdata import pathnames
+
+# internal scripts
+sys.path.append('./viztools')
+import windowMaker
+import mapMaker
+sys.path.append('./tests')
+from tests import func_test
 
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -135,7 +135,11 @@ def build_figure(st,inv,event,windows,staltas,adj_src,PD):
         axes = windowMaker.window_maker(st,windows,staltas,adj_src,PD=PD)
         if PD['save_plot'][0]:
             if PD["verbose"]:print("Saving figure")
-            f1.savefig(join(outpath,'{sta}_wav.png'.format(sta=PD["station"])))
+            f1.savefig(join(outpath,'{sta}_{t0}_{t1}_wav.png'.format(
+                                                            sta=PD["station"],
+                                                            t0=PD["bounds"][0],
+                                                            t1=PD["bounds"][1])
+                                                            ))
 
     if PD["plot"][1]:
         if PD["verbose"]: print("Generating source receiver map")
@@ -239,7 +243,7 @@ def initial_data_gather(PD):
     if PD["verbose"]:print("Filtering at {0} to {1} seconds".format(tmin,tmax))
     st_IDG.filter('bandpass',freqmin=1/tmax,
                              freqmax=1/tmin,
-                             corners=2,
+                             corners=3,
                              zerophase=True)
 
     # save into pyasdf dataset if applicable. 'add' function auto writes to file
@@ -548,24 +552,28 @@ def bob_the_builder():
     :param VERBOSE: enable print statements throughout
     """
 
-    ALLSTATIONS = {"GEONET":['NZ.BFZ','NZ.BKZ','NZ.HAZ','NZ.HIZ','NZ.KNZ',
-                    'NZ.MRZ','NZ.MWZ','NZ.OPRZ','NZ.PUZ','NZ.PXZ','NZ.RTZ',
-                    'NZ.TLZ','NZ.TOZ','NZ.TSZ','NZ.VRZ','NZ.WAZ'],
+    ALLSTATIONS = {"GEONET":['NZ.BFZ','NZ.BHW','NZ.BKZ','NZ.HAZ','NZ.HIZ',
+                             'NZ.KHZ','NZ.KNZ','NZ.MRZ','NZ.MWZ','NZ.MXZ',
+                             'NZ.NNZ','NZ.PUZ','NZ.PWZ','NZ.PXZ','NZ.RTZ',
+                             'NZ.TLZ','NZ.TOZ','NZ.TSZ','NZ.URZ','NZ.VRZ',
+                             'NZ.WAZ','NZ.WEL','NZ.WIZ','NZ.COVZ','NZ.DUWZ',
+                             'NZ.KHEZ','NZ.MKAZ','NZ.MRWZ','NZ.NTVZ','NZ.OPRZ',
+                             'NZ.OTVZ','NZ.RATZ','NZ.TRVZ'],
                    "FATHOM":['XX.RD01','XX.RD02','XX.RD03','XX.RD04','XX.RD05',
-                    'XX.RD06','XX.RD07','XX.RD08','XX.RD09','XX.RD10',
-                    'XX.RD11','XX.RD12','XX.RD13','XX.RD14','XX.RD15',
-                    'XX.RD16','XX.RD17','XX.RD18','XX.RD19','XX.RD20',
-                    'XX.RD21','XX.RD22'],
-                    "TEST":['NZ.BKZ']
+                             'XX.RD06','XX.RD07','XX.RD08','XX.RD09','XX.RD10',
+                             'XX.RD11','XX.RD12','XX.RD13','XX.RD14','XX.RD15',
+                             'XX.RD16','XX.RD17','XX.RD18','XX.RD19','XX.RD20',
+                             'XX.RD21','XX.RD22'],
+                   "TEST":['NZ.BFZ']
                     }
     # ============================ vPARAMETER SETv =============================
     # MODEL
     MODEL_NUMBER = 0
     # SOURCE-RECEIVER
-    EVENT_IDS = ["2014p240655"]
+    EVENT_IDS = ["2016p669820"]#["2014p240655","2018p130600"]
     STANET_CHOICE = "GEONET"
     # >> PREPROCESSING
-    MINIMUM_FILTER_PERIOD = 6
+    MINIMUM_FILTER_PERIOD = 10
     MAXIMUM_FILTER_PERIOD = 30
     ROTATE_TO_RTZ = True
     UNIT_OUTPUT = "DISP"
@@ -634,7 +642,10 @@ def bob_the_builder():
         # if data should be stored, initiate pyasdf dataset, also reads
         # existing pyasdf datasets if they already exist
         if SAVE_PYASDF[0]:
-            datasetname = join(SAVE_PYASDF[1],EVENT_ID+'.h5')
+            datasetname = join(SAVE_PYASDF[1],'{e}_{t0}_{t1}.h5'.format(
+                                                     e=EVENT_ID,
+                                                     t0=MINIMUM_FILTER_PERIOD,
+                                                     t1=MAXIMUM_FILTER_PERIOD))
             DATASET = pyasdf.ASDFDataSet(datasetname,compression="gzip-3")
         else:
             DATASET = None
@@ -677,4 +688,4 @@ def bob_the_builder():
 # =================================== MAIN ====================================
 if __name__ == "__main__":
     bob_the_builder()
-    # func_test.test_build_figure()
+    # func_test.test_run_pyflex()
