@@ -220,9 +220,10 @@ def window_maker(st,windows,staltas,adj_src,*args,**kwargs):
 
 
     # figure settings
-    titletext = "{s} [{b0},{b1}]".format(s=PD['station'],
-                                         b0=PD['bounds'][0],
-                                         b1=PD['bounds'][1])
+    titletext = "{e} {s} [{b0},{b1}]".format(e=PD['event_id'],
+                                             s=PD['station'],
+                                             b0=PD['bounds'][0],
+                                             b1=PD['bounds'][1])
     axes[0].set_title(titletext)
     axes[-1].set_xlabel("time [s]")
 

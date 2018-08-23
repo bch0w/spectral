@@ -38,7 +38,7 @@ def build_colormap(array):
     return colormap
 
 # ============================ DRAWER FUNCTIONS ================================
-def trace_trench(m):
+def hikurangi_trench(m):
     """trace the hikurangi trench on a basemap object 'm'
     """
     trenchcoordspath = pathnames()['data'] + \
@@ -129,22 +129,36 @@ def initiate_basemap(map_corners=[-50,-32.5,165,180]):
     return m
 
 # ============================== MAP POPULATION ================================
-def populate_basemap(m,lats,lons,names=None):
+def populate_basemap(m,lats,lons,names=[],nets=[]):
     """fill map with latitude/longitude pairs, i.e. stations, events
     """
-    if names is None: names = []
 
     X,Y = m(lons,lats)
+    # manual set colors based on network
+    colordict = {"NZ":'k',"XX":'k',"X?":'gray'}
+    edgedict = {"NZ":'-',"XX":'--',"X?":'--'}
+    edgestyle = '-'
+    if len(nets) != 0:
+        colors,edgestyle = [],[]
+        for net in nets:
+            colors.append(colordict[net])
+            edgestyle.append(edgedict[net])
     scatter = m.scatter(X,Y,
                         marker='v',
                         color='w',
                         edgecolor='k',
+                        linestyle=edgestyle,
                         s=60,
                         zorder=5)
 
     if len(names) != 0:
         for n_,x_,y_ in zip(names,X,Y):
-            plt.annotate(n_,xy=(x_,y_),xytext=(x_,y_),zorder=6,fontsize=8.5)
+            plt.annotate(n_,xy=(x_,y_),xytext=(x_,y_),
+                         zorder=6,fontsize=7,
+                         bbox=dict(facecolor='w',
+                                   edgecolor='k',
+                                   boxstyle='round')
+                                   )
 
 def event_info_anno(m,srcrcvdict):
     """annotate event information into hard coded map area
@@ -250,6 +264,7 @@ def plot_misfits(f,m,cork,comp="Z",add_colorbar=True):
 
     # break out misfit measures from cork object, build a colormap
     misfits = np.fromiter(cork.misfit_values.values(),dtype="float")
+    misfits = np.log(misfits)
     colormap = build_colormap(misfits)
 
     # plot onto basemap object
@@ -258,7 +273,7 @@ def plot_misfits(f,m,cork,comp="Z",add_colorbar=True):
     for sta,X,Y in zip(stations,xs,ys):
         stationcode = "{s}.HH{c}".format(s=sta,c=comp)
         try:
-            misfit = cork.misfit_values[stationcode]
+            misfit = np.log(cork.misfit_values[stationcode])
         except KeyError:
             continue
         colors.append(colormap.to_rgba(misfit))
@@ -270,7 +285,7 @@ def plot_misfits(f,m,cork,comp="Z",add_colorbar=True):
                      "T":"transvserse","R":"radial"}
         colormap.set_array(misfits)
         cbar = f.colorbar(colormap,fraction=0.046,pad=0.04)
-        cbar.set_label("{} misfit".format(comp_dict[comp]),
+        cbar.set_label("ln({} misfit)".format(comp_dict[comp]),
                                     rotation=270,labelpad=17,fontsize=14.5)
 
 
@@ -290,13 +305,16 @@ def generate_map(event,inv,corners=[-42.5007,-36.9488,172.9998,179.5077],
     srcrcvdict = source_receiver(m,event,inv)
     event_info_anno(m,srcrcvdict)
     if faults:
-        trace_trench(m)
+        hikurangi_trench(m)
         onshore_offshore_faults(m)
 
-    stationfile = pathnames()['data'] + 'STATIONXML/GEONET_AND_FATHOM.npz'
+    stationfile = (pathnames()['stationxml'] + 
+                                    'COORDINATE/masterlist/masterlist.npz')    
     stationlist = np.load(stationfile)
 
-    populate_basemap(m,stationlist['LAT'],stationlist['LON'])
+    populate_basemap(m,lats=stationlist['LAT'],
+                       lons=stationlist['LON'],
+                       nets=stationlist['NET'])    
     scalelon,scalelat = 178.75,-37.2
     m.drawmapscale(scalelon,scalelat,scalelon,scalelat,100,
                                                 yoffset=0.01*(m.ymax-m.ymin))
@@ -304,33 +322,38 @@ def generate_map(event,inv,corners=[-42.5007,-36.9488,172.9998,179.5077],
     return m
 
 def generate_misfit_map(event_id,corners=[-42.5007,-36.9488,172.9998,179.5077],
-                                                        faults=False,**kwargs):
+                                                        faults=True,**kwargs):
     """take an event id associated with a PyASDF dataset that has been filled
     out by the adjointBuilder and plot the misfits recorded at each station
     """
     import pyasdf
-    from corkBoard import Cork
+    sys.path.append('..')
+    from corkBoard import Tack
 
     f = plt.figure(figsize=(10,9.4),dpi=100)
 
     # use corkBoard to interact with pyASDF dataformat
-    mycork = Cork(event_id)
-    mycork.populate()
-    mycork.get_srcrcv_information()
-    mycork.collect_misfits()
+    mytack = Cork(event_id)
+    mytack.populate()
+    mytack.get_srcrcv_information()
+    mytack.collect_misfits()
 
     m = initiate_basemap(map_corners=corners)
-    srcrcvdict = source_receiver(m,mycork.ds.events[0],inv=None)
+    srcrcvdict = source_receiver(m,mytack.ds.events[0],inv=None)
     event_info_anno(m,srcrcvdict)
     if faults:
-        trace_trench(m)
+        hikurangi_trench(m)
         onshore_offshore_faults(m)
 
-    stationfile = pathnames()['data'] + 'STATIONXML/GEONET_AND_FATHOM.npz'
+    stationfile = (pathnames()['stationxml'] + 
+                                    'COORDINATE/masterlist/masterlist.npz')
     stationlist = np.load(stationfile)
 
-    populate_basemap(m,stationlist['LAT'],stationlist['LON'])
-    plot_misfits(f,m,mycork)
+    populate_basemap(m,lats=stationlist['LAT'],
+                       lons=stationlist['LON'],
+                       nets=stationlist['NET'],
+                       names=stationlist['STA'])
+    plot_misfits(f,m,mytack)
 
     scalelon,scalelat = 178.75,-37.2
     m.drawmapscale(scalelon,scalelat,scalelon,scalelat,100,
@@ -340,22 +363,35 @@ def generate_misfit_map(event_id,corners=[-42.5007,-36.9488,172.9998,179.5077],
 
     return m
 
-def _test_generate_map():
-    """test map making functions with example data
+def generate_basemap(corners=[-42.5007,-36.9488,172.9998,179.5077],
+                                                        faults=False,**kwargs):
+    """generate the background map
     """
-    from obspy import read_events, read_inventory
+    f = plt.figure(figsize=(10,9.4),dpi=100)
 
-    # eventpath = pathnames()['data'] + "WINDOWTESTING/testevent.xml"
-    invpath = pathnames()['data'] + "WINDOWTESTING/testinv.xml"
+    m = initiate_basemap(map_corners=corners)
+    if faults:
+        hikurangi_trench(m)
+        onshore_offshore_faults(m)
 
-    # cat = read_events(eventpath)
-    # event = cat[0]
-    inv = read_inventory(invpath)
+    stationfile = (pathnames()['stationxml'] + 
+                                    'COORDINATE/masterlist/masterlist.npz')
+    stationlist = np.load(stationfile)
 
-    m = generate_map_NOEVENT(inv,show=True,faults=True)
-    # f,m = generate_map(event,inv,show=True)
+    populate_basemap(m,lats=stationlist['LAT'],
+                       lons=stationlist['LON'],
+                       names=stationlist['STA'],
+                       nets=stationlist['NET'])
+
+    scalelon,scalelat = 178.75,-37.2
+    m.drawmapscale(scalelon,scalelat,scalelon,scalelat,100,
+                                                yoffset=0.01*(m.ymax-m.ymin))
+
+    plt.show()
+
+    return m
 
 
 if __name__ == "__main__":
-    # _test_generate_map()
-    generate_misfit_map("2014p240655")
+    # generate_basemap()
+    generate_misfit_map("2018p130600_10_30")
