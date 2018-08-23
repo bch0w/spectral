@@ -23,7 +23,7 @@ import plotmod
 from getdata import pathnames
 
 # internal scripts
-sys.path.append('./viztools')
+sys.path.append('./vizuals')
 import windowMaker
 import mapMaker
 sys.path.append('./tests')
@@ -570,7 +570,7 @@ def bob_the_builder():
     # MODEL
     MODEL_NUMBER = 0
     # SOURCE-RECEIVER
-    EVENT_IDS = ["2016p669820"]#["2014p240655","2018p130600"]
+    EVENT_IDS = ["2014p240655","2018p130600"]
     STANET_CHOICE = "GEONET"
     # >> PREPROCESSING
     MINIMUM_FILTER_PERIOD = 10
@@ -582,16 +582,16 @@ def bob_the_builder():
     # >> PYADJOINT
     ADJOINT_SRC_TYPE = "multitaper_misfit"
     # >> PLOTTING
-    PLOT_WAV = True
-    PLOT_MAP = False
-    PLOT_FAULTS_ON_MAP = True
-    SHOW_PLOTS = True
+    PLOT_WAV = True 
+    PLOT_MAP = True
+    PLOT_FAULTS_ON_MAP = False
+    SHOW_PLOTS = False
     # >> SAVING
     SAVE_PLOT = (True,pathnames()["adjtomoplots"])
     SAVE_PYASDF = (True,pathnames()["adjtomodata"] + "PYASDF")
     SAVE_ADJSRC_SEPARATE = (False,pathnames()["adjtomodata"] + "ADJSRC")
     # >> MISC.
-    VERBOSE = True
+    VERBOSE = False
     LOG = (False,pathnames()["adjtomodata"] + "LOGS")
     # ============================ ^PARAMETER SET^ =============================
     # START LOGGING TO TEXTFILE

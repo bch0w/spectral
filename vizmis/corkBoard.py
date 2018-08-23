@@ -1,4 +1,4 @@
-"""adjointBuilder saves window information into pyAsdf data format. Cork class
+"""adjointBuilder saves window information into pyAsdf data format. tack class
 contains functions to parse through this data format and provide easily visible
 information on best windows, number of windows per station, etc. as well as
 printing and sorting functionalities to make it easier to interact with
@@ -10,23 +10,24 @@ import pyasdf
 import numpy as np
 sys.path.append('../modules')
 from getdata import pathnames
-sys.path.append('./viztools')
+sys.path.append('./vizuals')
 
 def distribute_to_corkBoard(event_id):
-    """initiate a Cork object with the information given its event id
+    """initiate a tack object with the information given its event id
     """
-    mycork = Cork(event_id)
-    mycork.populate()
-    mycork.misfit_histogram()
-    # import ipdb;ipdb.set_trace()
+    mytack = Tack(event_id)
+    mytack.populate()
+    mytack.cc_time_shift_histogram(binsize=0.2)
+    mytack.misfit_histogram(binsize=0.5)
+    import ipdb;ipdb.set_trace()
 
-class Cork:
+class Tack:
     """a class used to hold information related to source-receiver pairs,
     misfit windows and adjoint sources
     """
 
     def __init__(self,event_id=None):
-        """fill up the Cork with empties
+        """fill up the tack with empties
         """
         self.id = event_id
         if self.id:
@@ -40,13 +41,14 @@ class Cork:
         self.adj_srcs = None
         self.misfit_windows = None
         self.misfit_values = None
+        self.cc_time_shifts = None
 
     # def __len__(self):
 
     def __str__(self):
         """replace print() output
         """
-        template = ("corkBoard for {pat}\n"
+        template = ("tackBoard for {pat}\n"
                     "\t{nos:<4} stations\n"
                     "\t{now:<4} misfit_windows\n"
                     "\t{noa:<4} adj_srcs\n")
@@ -92,7 +94,7 @@ class Cork:
         return ds
 
     def aggregate(self):
-        """fills up an initiated cork using all available internal functions
+        """fills up an initiated tack using all available internal functions
         """
         self.populate()
         self.count_windows()
@@ -100,9 +102,13 @@ class Cork:
         self.get_srcrcv_information()
         self.collect_misfits()
 
-    def populate(self):
+    def populate(self,**kwargs):
         """fills self with all information available in pyasdf dataset
         """
+        event = kwargs.get('event_id',None)
+        if event:
+            self.id = event
+            self.fid = event + '.h5'
         ds = self._read()
         self.ds = ds
         self.stations = ds.waveforms.list()
@@ -112,7 +118,7 @@ class Cork:
 
     def count_windows(self,print=False):
         """figure out which stations contain which windows, return a dictionary
-        which lists available components. should be run within populate cork
+        which lists available components. should be run within populate tack
         """
         stations = []
         for win in self.misfit_windows:
@@ -155,21 +161,48 @@ class Cork:
                                "backazimuth":BAz}
 
         self.source_receiver_info = srcrcvdict
+    
+    def collect_cc_time_shifts(self):
+        """gather the values of time shifts from cross correlations provided
+        in the misfit windows of pyflex
+        """
+        if not self.aux:
+            self.populate()
+        cc_time_shifts = {}
+        for net in self.misfit_windows:
+            for miswin in self.aux.MisfitWindows[net]:
+                cc_time_shifts[miswin.path] = \
+                                        miswin.parameters['cc_shift_in_seconds']
+        
+        self.cc_time_shifts = cc_time_shifts
+        
+    def cc_time_shift_histogram(self,binsize=0.1):
+        """plot histograms with cross correlation time shifts
+        """
+        if not self.cc_time_shifts:
+            self.collect_cc_time_shifts()
+            
+        from dataDepicter import Depicter
+        depicter = Depicter(tack=self)
+        depicter.plot_cc_time_shift_histogram(binsize=binsize)
 
     def misfit_histogram(self,m0=None,m_a=None,binsize=0.1):
         """plot a histogram of misfits for models m0 and m_a (if available)
         default will be initial model compared to final model
         """
+        if not self.misfit_values:
+            self.collect_misfits()
+            
         from dataDepicter import Depicter
-        depicter = Depicter(cork=self)
+        depicter = Depicter(tack=self)
         depicter.plot_misfit_histogram(m0=m0,m_a=m_a,binsize=binsize)
 
 
 
     # def disperse(self):
-    #     """data vomit all available data in the Cork object for easy viewing
+    #     """data vomit all available data in the tack object for easy viewing
     #     """
-    #     print("corkBoard for {id}".format(self.path)
+    #     print("tackBoard for {id}".format(self.path)
     #     print("{s:^20}{w:^20}{m:^20}".format(
     #                                      s="STATION",w="WINDOWS",m="MISFIT"))
     #     for sta in self.stations:

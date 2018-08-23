@@ -220,7 +220,7 @@ def window_maker(st,windows,staltas,adj_src,*args,**kwargs):
 
 
     # figure settings
-    titletext = "{e} {s} [{b0},{b1}]".format(e=PD['event_id']
+    titletext = "{e} {s} [{b0},{b1}]".format(e=PD['event_id'],
                                              s=PD['station'],
                                              b0=PD['bounds'][0],
                                              b1=PD['bounds'][1])

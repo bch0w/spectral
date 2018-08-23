@@ -328,18 +328,18 @@ def generate_misfit_map(event_id,corners=[-42.5007,-36.9488,172.9998,179.5077],
     """
     import pyasdf
     sys.path.append('..')
-    from corkBoard import Cork
+    from corkBoard import Tack
 
     f = plt.figure(figsize=(10,9.4),dpi=100)
 
     # use corkBoard to interact with pyASDF dataformat
-    mycork = Cork(event_id)
-    mycork.populate()
-    mycork.get_srcrcv_information()
-    mycork.collect_misfits()
+    mytack = Cork(event_id)
+    mytack.populate()
+    mytack.get_srcrcv_information()
+    mytack.collect_misfits()
 
     m = initiate_basemap(map_corners=corners)
-    srcrcvdict = source_receiver(m,mycork.ds.events[0],inv=None)
+    srcrcvdict = source_receiver(m,mytack.ds.events[0],inv=None)
     event_info_anno(m,srcrcvdict)
     if faults:
         hikurangi_trench(m)
@@ -353,7 +353,7 @@ def generate_misfit_map(event_id,corners=[-42.5007,-36.9488,172.9998,179.5077],
                        lons=stationlist['LON'],
                        nets=stationlist['NET'],
                        names=stationlist['STA'])
-    plot_misfits(f,m,mycork)
+    plot_misfits(f,m,mytack)
 
     scalelon,scalelat = 178.75,-37.2
     m.drawmapscale(scalelon,scalelat,scalelon,scalelat,100,
