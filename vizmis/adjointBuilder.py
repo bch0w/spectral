@@ -225,6 +225,9 @@ def initial_data_gather(PD):
 
     # if GCMT solution doesn't exist, timeshift isn't possible
     if time_shift:
+        if PD["verbose"]:print("Time shift: {ts}, Half duration {hd}".format(
+                                                ts=time_shift,hd=half_duration))
+
         syntheticdata = synmod.stf_convolve(st=syntheticdata,
                                                  half_duration=half_duration,
                                                  time_shift=time_shift)
@@ -582,7 +585,7 @@ def bob_the_builder():
     # >> PYADJOINT
     ADJOINT_SRC_TYPE = "multitaper_misfit"
     # >> PLOTTING
-    PLOT_WAV = True 
+    PLOT_WAV = True
     PLOT_MAP = True
     PLOT_FAULTS_ON_MAP = False
     SHOW_PLOTS = False
