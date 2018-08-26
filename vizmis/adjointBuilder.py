@@ -602,9 +602,9 @@ def bob_the_builder():
         sys.stdout = open(join(LOG[1],_create_log_fid(LOG[1])),"w")
 
     # PARAMETER AUTO SET
-    COMPONENT_LIST = ["N","E","Z"]
+    COMPONENT_LIST = ["Z","N","E"]
     if ROTATE_TO_RTZ:
-        COMPONENT_LIST = ["R","T","Z"]
+        COMPONENT_LIST = ["Z","R","T"]
     STANET_NAMES = ALLSTATIONS[STANET_CHOICE]
     MODEL_NUMBER = "m{:0>2}".format(MODEL_NUMBER)
 
