@@ -13,7 +13,7 @@ import os
 import sys
 import glob
 import math
-sys.path.append('../modules/')
+sys.path.append('../../modules/')
 import numpy as np
 from obspy import read, Stream
 from os.path import join
@@ -173,14 +173,17 @@ def mesh_mapper_2d(mesh,show=True,save=False):
     z = data[:,2]
 
     f = plt.scatter(x,y,c=z,cmap='inferno')
+    plt.scatter(x=[225024.7252923958],y=[5300565.314050345],s=100,marker='o') #kaikoura
+    plt.scatter(x=[215226.826279],y=[5298229.940908],s=100,marker='v') #NZ.KHZ
+
     plt.ticklabel_format(style='sci',
                          axis='both',
                          scilimits=(0,0))
     plt.xlim([min(x),max(x)])
     plt.ylim([min(y),max(y)])
     plt.title(mesh)
-    cbar = plt.colorbar(format='%.0e')
-    cbar.ax.set_ylabel('elevation [m]', rotation=90)
+    # cbar = plt.colorbar(format='%.0e')
+    # cbar.ax.set_ylabel('elevation [m]', rotation=90)
 
     if save:
         figtitle = "mesh_{m}.png".format(m=mesh)
@@ -360,10 +363,12 @@ if __name__ == "__main__":
     global meshes
     meshes = {
     "ETOPO1_553_622":"topo_ETOPO1_utm60H_ismooth0_553_622_1000m_surf.xyz",
+    "SRTM30P_550":"topo_SRTM30P_utm60H_ismooth0_550_641_1000m_surf.xyz",
     "SRTM30P":"topo_SRTM30P_utm60H_ismooth0_553_622_1000m_surf.xyz",
     "SRTM30P_552":"topo_SRTM30P_utm60H_ismooth0_552_620surf.xyz",
     "SRTM15P":"topo_SRTM15P_utm60H_ismooth0_553_622_1000m_surf.xyz",
     "ETOPO1_496_566":"topo_NZ_BC_utm60H_ismooth0_496_566surf.xyz"
               }
 
-    create_composite()
+    mesh_mapper_2d('SRTM30P_550',show=True)
+    # create_composite()

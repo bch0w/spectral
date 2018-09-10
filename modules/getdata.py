@@ -32,7 +32,7 @@ def pathnames():
             "modules":os.path.join(spectral,'modules',''),
             "mseeds":os.path.join(base,'mseeds',''),
             "fathom":os.path.join(mseeds,'FATHOM',''),
-            "syns":os.path.join(mseeds,'SYNTH',''),
+            "syns":os.path.join(mseeds,'SPECFEM3D',''),
             "plots":os.path.join(base,'plots',''),
             "spectralplots":os.path.join(base,'plots','spectral',''),
             "kupeplots":os.path.join(base,'plots','kupe',''),
