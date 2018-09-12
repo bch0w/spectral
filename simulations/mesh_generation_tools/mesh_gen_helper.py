@@ -157,8 +157,8 @@ def example_call_lonlat_utm(choice=0):
 def example_call_determine_nxny():
     """example call for determine_nxny
     """
-    # kaikoura to east cape
-    LLC_lonlat = (173,-42.5)
+    # kaikoura to east cape (changed from -42.5 LLC lat 28.8.18)
+    LLC_lonlat = (170,-42.8)
     URC_lonlat = (179.5,-37)
     determine_nxny(LLC_lonlat,URC_lonlat)
     
