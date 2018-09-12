@@ -1,14 +1,10 @@
 .DS_Store
+*/.DS_Store
 .scratch
-.scriptyard
-common
 #spectral
 __pycache__/
-spectral/scriptyard
+*/__pycache_/
 #kupe
-kupe/test_perl
-kupe/tools/perl_scripts
-kupe/simulation_data/tomo_files/
-kupe/meshTest
+simulations/test_meshes/
 #tremor
 tremor/satoshi
