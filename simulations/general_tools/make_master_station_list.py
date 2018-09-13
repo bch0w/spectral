@@ -219,10 +219,9 @@ def generate_master_list():
     bannister = build_bannister_network()
     fathom = read_fathom_net()
 
-    master_inventory = Inventory(
-        networks=[geonet, hobitss, sahke, bannister, fathom], source="homemade",
-        )
-    return master_inventory
+    return Inventory(networks=[geonet, hobitss, sahke, bannister, fathom],
+                     source="homemade"
+                     )
 
 
 def output_inventory_to_specfem_format(inventory):
@@ -246,6 +245,7 @@ def output_inventory_to_specfem_format(inventory):
                                         longitude=sta.longitude)
                         )
 
+
 def output_inventory_to_numpy_array(inventory):
     """
     .npz files are much more compact and easier to read/write than stationxml's
@@ -255,6 +255,7 @@ def output_inventory_to_numpy_array(inventory):
     :return:
     """
     # to do, lol
+
 
 if __name__ == "__main__":
     master_inventory = generate_master_list()
