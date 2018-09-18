@@ -25,6 +25,8 @@ from obspy.core.inventory.util import Site
 def fetch_geonet_network():
     """
     return geonet broadband stations in an obspy network, no response
+    TO DO: manual ignore some TVZ stations to keep clutter down in that area
+
     :return:
     """
     c = Client("GEONET")
@@ -260,4 +262,3 @@ def output_inventory_to_numpy_array(inventory):
 if __name__ == "__main__":
     master_inventory = generate_master_list()
     master_inventory.write('master_inventory.xml', format='STATIONXML')
-    import ipdb; ipdb.set_trace()
