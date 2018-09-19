@@ -5,15 +5,17 @@ from obspy.clients.fdsn import Client
 network = "NZ"
 location = "*"
 channel = "B??"  # or "HHZ", "??E", "*N" etc.
+station = "????"
 output = "VEL"  # also "DISP" or "ACC"
 starttime = UTCDateTime("2016-11-22T00:19:43.00Z")
 endtime = starttime + 300
 rotate_to_radial_transverse = False
 c = Client("GEONET")
 
-# retrieve all station codes, e.g. all 4 letter strong motion stations
-station_inv = c.get_stations(network=network, station="????", location=location,
-                             channel="B??", starttime=starttime,
+# retrieve all station codes dynamically, e.g. 4 letter strong motion stations
+station_inv = c.get_stations(network=network, station=station,
+                             location=location, channel=channel,
+                             starttime=starttime,
                              endtime=endtime, level="station")
 station_list = []
 for station_ in station_inv[0]:
