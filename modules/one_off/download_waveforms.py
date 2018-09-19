@@ -1,3 +1,4 @@
+from __future__ import print_function
 from obspy import UTCDateTime
 from obspy.clients.fdsn import Client
 
