@@ -23,22 +23,24 @@ for station_ in station_inv[0]:
     station_list.append(station_.code)
 
 # OR comment out section above and manually set station codes in a list here
-# station_list = ["AUCT"]  # or ["BKZ", "PUZ", "KNZ"] etc.
+# station_list = ["ADCS"]  # or ["BKZ", "PUZ", "KNZ"] etc.
 
 
 # download data for each station separately
-for station in station_list:
+print("Downloading data for {} stations".format(len(station_list)))
+for i,station in enumerate(station_list):
     try:
-        print(station, end="...")
-        st = c.get_waveforms(network=network, station=station, location=location,
-                             channel=channel, starttime=starttime, endtime=endtime,
+        print("{}/{} {}".format(i+1, len(station_list), station), end="...")
+        st = c.get_waveforms(network=network, station=station,
+                             location=location, channel=channel,
+                             starttime=starttime, endtime=endtime,
                              attach_response=True)
         st.remove_response(output=output)
 
         # trim because get_waveforms() sometimes returns non matching lengths
         st.trim(starttime=starttime, endtime=endtime)
 
-        # check if components are in 1,2,Z, if so rotate by azimuth and inclination
+        # check if components are in 1,2,Z, if so rotate by azi. and inclin.
         # values retrieved in get_stations()
         st.sort()
         if len(st) == 3 and st[0].get_id()[-1] == "1":
