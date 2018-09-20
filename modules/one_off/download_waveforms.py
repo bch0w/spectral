@@ -1,41 +1,70 @@
+"""
+Short script to download seismic waveforms from the FDSN webservice via ObsPy.
+
+Parameters are set in script in the denoted section. Currently the script is
+written with the intent to download data from GeoNet, but ObsPy allows
+data download from any databases accessible via FDSN.
+
+For convenience, outputs are written directly into the current working directory
+Data given in 1/2 components are automatically rotated into N/E
+
+Relevant Obspy Documentation:
++ For available data formats:
+    https://docs.obspy.org/packages/autogen/obspy.core.stream.Stream.write.html
++ For information regarding FDSN clients:
+    https://docs.obspy.org/packages/autogen/obspy.clients.fdsn.client.Client.get_waveforms.html
++ For a list of available clients:
+    https://docs.obspy.org/packages/obspy.clients.fdsn.html#module-obspy.clients.fdsn
+
+
+"""
 from __future__ import print_function
 from obspy import UTCDateTime
 from obspy.clients.fdsn import Client
 
-# set parameters here
+# ======================== vv SET PARAMETERS HERE vv ===========================
 network = "NZ"
 location = "*"
 channel = "B??"  # or "HHZ", "??E", "*N" etc.
 station = "????"
-output = "VEL"  # also "DISP" or "ACC"
+output = "VEL"  # "DISP", "VEL", "ACC" or None if you want raw data
 starttime = UTCDateTime("2016-11-22T00:19:43.00Z")
 endtime = starttime + 300
 rotate_to_radial_transverse = False
+output_format = "SAC"  # also e.g. "MSEED"
 c = Client("GEONET")
 
-# retrieve all station codes dynamically, e.g. 4 letter strong motion stations
-station_inv = c.get_stations(network=network, station=station,
-                             location=location, channel=channel,
-                             starttime=starttime,
-                             endtime=endtime, level="station")
-station_list = []
-for station_ in station_inv[0]:
-    station_list.append(station_.code)
+# ------------------------- vv CHOOSE STATIONS BY vv ---------------------------
+station_select_type = 1  # or 2
+# 1) Wildcard selection: will dynamically create a list of stations based on
+#    the given parameters above.
+if station_select_type == 1:
+    station_inv = c.get_stations(network=network, station=station,
+                                 location=location, channel=channel,
+                                 starttime=starttime,
+                                 endtime=endtime, level="station")
+    station_list = []
+    for station_ in station_inv[0]:
+        station_list.append(station_.code)
 
-# OR comment out section above and manually set station codes in a list here
-# station_list = ["ADCS"]  # or ["BKZ", "PUZ", "KNZ"] etc.
+# OR
+# 2) Manual: set station codes in a list, ignores 'station' parameter above
+if station_select_type == 2:
+    station_list = ["ADCS"]  # or ["BKZ", "PUZ", "KNZ"] etc.
 
+# ======================== ^^ SET PARAMETERS HERE ^^ ===========================
 
-# download data for each station separately
-print("Downloading data for {} stations".format(len(station_list)))
-for i,station in enumerate(station_list):
+# Data download on a per-station basis begins here
+print("Downloading data for {} station(s):".format(len(station_list)))
+for i, station in enumerate(station_list):
     try:
         print("{}/{} {}".format(i+1, len(station_list), station), end="...")
         st = c.get_waveforms(network=network, station=station,
                              location=location, channel=channel,
                              starttime=starttime, endtime=endtime,
                              attach_response=True)
-        st.remove_response(output=output)
+        if output is not None:
+            st.remove_response(output=output)
 
         # trim because get_waveforms() sometimes returns non matching lengths
         st.trim(starttime=starttime, endtime=endtime)
@@ -62,7 +91,7 @@ for i,station in enumerate(station_list):
             filename = "{id}.{year}.{jday:0>3}.SAC".format(
                 id=tr.get_id(), year=tr.stats.starttime.year,
                 jday=tr.stats.starttime.julday)
-            tr.write(filename=filename, format="SAC")
+            tr.write(filename=filename, format=output_format)
         print("saved")
     except Exception as e:
         print("failed, for reason:\n{}".format(e))
