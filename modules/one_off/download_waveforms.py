@@ -13,7 +13,6 @@ Misc. Information:
 -Data given in 1/2/Z components (e.g. accelerometers) are automatically rotated
  to an E/N/Z coordinate system
 
-
 Relevant Obspy Documentation:
 + For available data formats:
     https://docs.obspy.org/packages/autogen/obspy.core.stream.Stream.write.html
@@ -21,8 +20,6 @@ Relevant Obspy Documentation:
     https://docs.obspy.org/packages/autogen/obspy.clients.fdsn.client.Client.get_waveforms.html
 + For a list of available clients:
     https://docs.obspy.org/packages/obspy.clients.fdsn.html#module-obspy.clients.fdsn
-
-
 """
 from __future__ import print_function
 from obspy import UTCDateTime
