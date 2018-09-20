@@ -5,8 +5,14 @@ Parameters are set in script in the denoted section. Currently the script is
 written with the intent to download data from GeoNet, but ObsPy allows
 data download from any databases accessible via FDSN.
 
-For convenience, outputs are written directly into the current working directory
-Data given in 1/2 components are automatically rotated into N/E
+Misc. Information:
+-For convenience, output written directly into the current working directory
+-Files are saved individually by component
+-Filenames generated follow the template:
+    network.station.location.channel.year.julianday.format
+-Data given in 1/2/Z components (e.g. accelerometers) are automatically rotated
+ to an E/N/Z coordinate system
+
 
 Relevant Obspy Documentation:
 + For available data formats:
