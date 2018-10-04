@@ -67,10 +67,18 @@ def mt_transform(mt, method):
         return None
 
 
-def get_event_and_region(event_id):
-    c = Client('GEONET')
-    cat = c.get_events(eventid=event_id)
-    event = cat[0]
+def get_event_and_region(event_or_id):
+    """
+    get region for a more complete looking CMTSOLUTION file
+    :param event_or_id:
+    :return:
+    """
+    if isinstance(event_or_id, str):
+        c = Client('GEONET')
+        cat = c.get_events(eventid=event_id)
+        event = cat[0]
+    else:
+        event = event_or_id
     origin = event.origins[0]
     fe = FlinnEngdahl()
     region = fe.get_region(longitude=origin.longitude, latitude=origin.latitude)
@@ -78,13 +86,15 @@ def get_event_and_region(event_id):
     return event, region
 
 
-def generate_CMTSOLUTION(event_id, csv_file, output_file):
+def generate_CMTSOLUTION(event_or_id, csv_file, output_file):
     """generate CMTSOLUTION file in the format of the Harvard CMT catalog
     -Moment tensor components taken from John Ristaus MT catalog
     -Event information taken from GEONET earthquake catalog
     -CMT information taken from GCMT catalog
     NOTE: template stolen from obspy
     """
+    if not isinstance(event_or_id, str):
+        event_id = event_or_id.resource_id.id.split('/')[1]
 
     # grab moment tensor information from Ristau's solutions
     MT = get_moment_tensor(event_id=event_id,csv_file=csv_file)
@@ -97,7 +107,7 @@ def generate_CMTSOLUTION(event_id, csv_file, output_file):
         mt[key] *= 1E20
     mt = mt_transform(mt, method='xyz2rtp')
 
-    event, region = get_event_and_region(event_id)
+    event, region = get_event_and_region(event_or_id)
     origin = event.origins[0]
     datetime = origin.time
     
@@ -133,7 +143,8 @@ def generate_CMTSOLUTION(event_id, csv_file, output_file):
                                longitude=origin.longitude,
                                depth=origin.depth / 1000.0, mb=0, ms=0,
                                region=region, event_name=event_id,
-                               time_shift=0, half_duration=0,
+                               time_shift=time_shift,
+                               half_duration=half_duration,
                                cmt_latitude=origin.latitude,
                                cmt_longitude=origin.longitude,
                                cmt_depth=origin.depth / 1000.0, m_rr=mt["m_rr"],
@@ -143,7 +154,7 @@ def generate_CMTSOLUTION(event_id, csv_file, output_file):
 
     # write to solution file
     filename = output_file
-    with open(filename,'w') as f:
+    with open(filename, 'w') as f:
         f.write(template)
     print(filename)
 
