@@ -17,10 +17,10 @@ from obspy import read
 import matplotlib.pyplot as plt
 
 
-A = "SRTM30P_552_620"
-B = "SRTM30P_550_641"
+A = "NEWRUN"
+B = "OLDRUN"
 
-for fid_A in glob.glob(os.path.join("./", A, "*")):
+for fid_A in glob.glob(os.path.join("./", A, "*.mseed")):
     fid_B = os.path.join(os.path.join("./", B), os.path.basename(fid_A))
     if not os.path.exists(fid_B):
         continue

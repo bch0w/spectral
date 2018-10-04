@@ -226,7 +226,8 @@ def generate_master_list():
                      )
 
 
-def output_inventory_to_specfem_format(inventory):
+def output_inventory_to_specfem_format(inventory,
+                                       filename="master_station_list.txt"):
     """
     specfem requires station information in the form
     STATION NETWORK LATITUDE LONGITUDE ELEVATION BURIAL
@@ -236,10 +237,10 @@ def output_inventory_to_specfem_format(inventory):
     that contains the correct information
     :return:
     """
-    template = ("{station:>6}{network:>6}    {latitude:.4f}"
-                "{longitude:.4f}    0.0    0.0\n"
+    template = ("{station:>6}{network:>6}    {latitude:6.4f}    "
+                "{longitude:6.4f}    0.0    0.0\n"
                 )
-    with open('master_station_list.txt','w') as f:
+    with open(filename, 'w') as f:
         for net in inv:
             for sta in net:
                 f.write(template.format(station=sta.code, network=net.code,

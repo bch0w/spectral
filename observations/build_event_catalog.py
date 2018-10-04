@@ -1,4 +1,5 @@
-"""to build up a catalog of earthquakes useable for seismic tomography
+"""
+to build up a catalog of earthquakes useable for seismic tomography
 
 potential workflow outline
 -collect all stations on the north island, as well as temporary deployments,
@@ -15,7 +16,6 @@ which events belong to which stations (excel file?)
 -run flexwin on all picks for optimum window choice?
 """
 import sys
-sys.path.append('../modules')
 import traceback
 import collections
 import pandas as pd
@@ -23,70 +23,68 @@ import numpy as np
 from obspy import UTCDateTime, read_events
 from obspy.clients.fdsn import Client
 
+
+sys.path.append('../modules')
 import getdata
 import synmod
 from getdata import pathnames
 
+
 def collect_events():
+    """
+    grab any events given a set of criteria
+    :return:
+    """
     c = Client("GEONET")
-    new_zealand = [-50,-35,165,180]
-    kaikoura_to_east_cape = [-43,-37,172,180]
-    blenheim_to_east_cape = [-41.5,-37,172,180]
-    lat_lon = kaikoura_to_east_cape
-    cat = c.get_events(starttime="2005-01-01T00:00:00",
-                        endtime=UTCDateTime(),
-                        minmagnitude=4.5,
-                        maxmagnitude=6,
-                        maxdepth=80,
-                        minlatitude=lat_lon[0],
-                        maxlatitude=lat_lon[1],
-                        minlongitude=lat_lon[2],
-                        maxlongitude=lat_lon[3],
-                        orderby="magnitude")
+    SRTM30P_550_641 = [-42.5007, -36.9488, 172.9998, 179.5077]
+    lat_lon = SRTM30P_550_641
+    cat = c.get_events(starttime="2005-01-01T00:00:00", endtime=UTCDateTime(),
+                       minmagnitude=4.5, maxmagnitude=6, maxdepth=80,
+                       minlatitude=lat_lon[0], maxlatitude=lat_lon[1],
+                       minlongitude=lat_lon[2], maxlongitude=lat_lon[3],
+                       orderby="magnitude")
     return cat
 
-def info_from_GCMT(event_id):
-    """modified from synmod.tshift_halfdur()
+
+def info_from_gcmt(event_id):
+    """
+    modified from synmod.tshift_halfdur()
     get centroid time, half duration and GCMT moment tensor solution
     """
-    GCMT = getdata.get_GCMT_solution(event_id)
-    # time
-    centroid_time = [i.time for i in GCMT.origins
-                                            if i.origin_type == "centroid"][0]
+    gcmt = getdata.get_GCMT_solution(event_id)
+    centroid_time = [i.time for i in gcmt.origins
+                     if i.origin_type == "centroid"][0]
     # magnitude
-    mwc = [i.mag for i in GCMT.magnitudes
-                                        if i.magnitude_type == "Mwc"][0]
+    mwc = [i.mag for i in gcmt.magnitudes
+           if i.magnitude_type == "Mwc"][0]
 
     # half duration
-    moment_tensor = GCMT.focal_mechanisms[0].moment_tensor
+    moment_tensor = gcmt.focal_mechanisms[0].moment_tensor
     half_duration = (moment_tensor.source_time_function['duration'])/2
 
     # GCMT moment tensor, convert to dyne*cm
-    GCMT_RTP = synmod.mt_from_event(GCMT)
-    for entry in GCMT_RTP:
-        GCMT_RTP[entry] = GCMT_RTP[entry]*1E7
+    gcmt_rtp = synmod.mt_from_event(gcmt)
+    for entry in gcmt_rtp:
+        gcmt_rtp[entry] = gcmt_rtp[entry]*1E7
 
-    return centroid_time, half_duration, GCMT_RTP, mwc
+    return centroid_time, half_duration, gcmt_rtp, mwc
 
-def info_from_RISTAU(event_id):
-    """taken from generate_CMTSOLUTION
+
+def info_from_geonet_csv(event_id):
+    """
+    taken from generate_CMTSOLUTION
     get information from Ristau's MT solution
     """
     MT = getdata.get_moment_tensor(event_id)
-    mt = [MT['Mxx'],MT['Myy'],MT['Mzz'],MT['Mxy'],MT['Mxz'],MT['Myz']]
-    mt = [_*(1E20) for _ in mt]
-    mt = synmod.mt_transform(mt,method='xyz2rtp')
-    mrr,mtt,mpp,mrt,mrp,mtp = mt
-    GEONET_MT_DICT = collections.OrderedDict({"m_rr":mrr,
-                                              "m_tt":mtt,
-                                              "m_pp":mpp,
-                                              "m_rt":mrt,
-                                              "m_rp":mrp,
-                                              "m_tp":mtp})
-
-    mw = MT['Mw']
-
-    return GEONET_MT_DICT, mw
+    mt = [MT['Mxx'], MT['Myy'], MT['Mzz'], MT['Mxy'], MT['Mxz'], MT['Myz']]
+    mt = [_ * 1E20 for _ in mt]
+    mt = synmod.mt_transform(mt, method='xyz2rtp')
+    mrr, mtt, mpp, mrt, mrp, mtp = mt
+    geonet_mt_dict = collections.OrderedDict({"m_rr": mrr, "m_tt": mtt,
+                                              "m_pp": mpp, "m_rt": mrt,
+                                              "m_rp": mrp, "m_tp": mtp}
+                                             )
+    return geonet_mt_dict, MT['Mw']
 
 def parse_catalog(cat):
     """takes an obspy catalog object and parses out all event information into
@@ -102,25 +100,19 @@ def parse_catalog(cat):
     - centroid time: from GCMT
     - half duration: from GCMT
     """
-    event_ids,dates,lats,lat_uncs,lons,lon_uncs,depths = [],[],[],[],[],[],[]
-    tshifts,centroid_times,half_durations,GCMT_RTPs,GEONET_RTPs = [],[],[],[],[]
-    mws,mwcs,delta_m = [],[],[]
+    event_ids, dates, lats, lat_uncs, lons, lon_uncs, depths = ([] for i in range(4))
+    tshifts, centroid_times, half_durations, gcmt_rtps, geonet_rtps = [],[],[],[],[]
+    mws, mwcs, delta_m = [],[],[]
     errors,exceptions = [],[]
 
     # NaN dictionaries
-    GEONET_NaN = collections.OrderedDict({"m_rr":np.nan,
-                                          "m_tt":np.nan,
-                                          "m_pp":np.nan,
-                                          "m_rt":np.nan,
-                                          "m_rp":np.nan,
-                                          "m_tp":np.nan
+    geonet_nan = collections.OrderedDict({"m_rr": np.nan, "m_tt": np.nan,
+                                          "m_pp": np.nan, "m_rt": np.nan,
+                                          "m_rp": np.nan, "m_tp": np.nan
                                           })
-    GCMT_NaN = collections.OrderedDict({"Mrr":np.nan,
-                                        "Mtt":np.nan,
-                                        "Mpp":np.nan,
-                                        "Mrt":np.nan,
-                                        "Mrp":np.nan,
-                                        "Mtp":np.nan
+    gcmt_nan = collections.OrderedDict({"Mrr": np.nan, "Mtt": np.nan,
+                                        "Mpp": np.nan, "Mrt": np.nan,
+                                        "Mrp": np.nan, "Mtp": np.nan
                                         })
 
 
@@ -146,19 +138,19 @@ def parse_catalog(cat):
         # information from GEONET (Ristau) solutions
         try:
             strike1 = False
-            GEONET_RTP, mw = info_from_RISTAU(event_id)
+            geonet_rtp, mw = info_from_geonet_csv(event_id)
         except Exception as e:
             errors.append(event_id)
             exceptions.append(e)
             print('\t> error GEONET')
-            GEONET_RTP = GEONET_NaN
+            geonet_rtp = geonet_nan
             mw = np.nan
             strike1 = True
             pass
 
         # information from GCMT solution
         try:
-            centroid_time, half_duration, GCMT_RTP, mwc = info_from_GCMT(
+            centroid_time, half_duration, gcmt_rtp, mwc = info_from_gcmt(
                                                                     event_id)
         except Exception as e:
             if strike1:
@@ -168,7 +160,7 @@ def parse_catalog(cat):
             print('\t> error GCMT')
             centroid_time = np.nan
             half_duration = np.nan
-            GCMT_RTP = GCMT_NaN
+            gcmt_rtp = gcmt_nan
             mwc = np.nan
             pass
 
@@ -193,8 +185,8 @@ def parse_catalog(cat):
         delta_m.append(abs(mw-mwc))
         tshifts.append(tshift)
 
-        GEONET_RTPs.append(GEONET_RTP)
-        GCMT_RTPs.append(GCMT_RTP)
+        geonet_rtps.append(geonet_rtp)
+        gcmt_rtp.append(gcmt_rtp)
         centroid_times.append(centroid_time)
         half_durations.append(half_duration)
 
@@ -237,7 +229,7 @@ if __name__ == "__main__":
     catpath = pathnames()['data'] + 'QUAKEML/kaikoura_to_east_cape_update.xml'
     # catpath = pathnames()['data'] + 'QUAKEML/catbuild_testcat.xml'
     cat = read_events(catpath)
-    tomCat,errorCat = parse_catalog(cat)
+    tomCat, errorCat = parse_catalog(cat)
 
     # save as pickle and csv files
     outpath = pathnames()['kupe'] + 'tomCat/{}{}'
