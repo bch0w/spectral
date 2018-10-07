@@ -66,20 +66,22 @@ def output_as_cmtsolutions(cat):
     :return:
     """
     import sys
-    sys.path.append('../simulations/general_tools')
+    sys.path.append('../../simulations/general_tools')
+    from os.path import exists
+    from importlib import reload
+    import generate_CMTSOLUTION_standalone
+    reload(generate_CMTSOLUTION_standalone)
     import generate_CMTSOLUTION_standalone as genny
 
     csv_file = ("/Users/chowbr/Documents/subduction/data/GEONET/data/"
                 "moment-tensor/GeoNet_CMT_solutions.csv")
     output_path = ("/Users/chowbr/Documents/subduction/data/KUPEDATA/" 
-                   "CMTSOLUTIONS/{}CMTSOLUTION").format(eventid)
-
-    import ipdb;ipdb.set_trace()
+                   "CMTSOLUTIONS/{}CMTSOLUTION")
 
     for event in cat:
         event_id = event.resource_id.id.split('/')[1]
         event_output = output_path.format(event_id)
-        if os.path.exists(event_output):
+        if exists(event_output):
             continue
         genny.generate_CMTSOLUTION(event_or_id=event, csv_file=csv_file,
                                    output_file=event_output)

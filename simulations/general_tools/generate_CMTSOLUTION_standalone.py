@@ -9,7 +9,9 @@ from obspy.geodetics import FlinnEngdahl
 
 
 def get_moment_tensor(event_id, csv_file):
-    """gets moment tensor as array from geonet CSV file"""
+    """
+    gets moment tensor as array from geonet CSV file
+    """
     with open(csv_file, 'r') as f:
         reader = csv.reader(f)
         for i, row in enumerate(reader):
@@ -97,9 +99,10 @@ def generate_CMTSOLUTION(event_or_id, csv_file, output_file):
         event_id = event_or_id.resource_id.id.split('/')[1]
 
     # grab moment tensor information from Ristau's solutions
-    MT = get_moment_tensor(event_id=event_id,csv_file=csv_file)
+    MT = get_moment_tensor(event_id=event_id, csv_file=csv_file)
     if not MT:
-        sys.exit('incorrect event call')
+        print("{} not found".format(event_id))
+        return
     mt = {"m_xx": MT['Mxx'], "m_yy": MT['Myy'], "m_zz": MT['Mzz'],
           "m_xy": MT['Mxy'], "m_xz": MT['Mxz'], "m_yz": MT['Myz']
           }
