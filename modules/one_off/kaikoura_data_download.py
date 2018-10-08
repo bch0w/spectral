@@ -14,50 +14,60 @@ origintime = event.preferred_origin().time
 endtime = origintime + 5000
 
 # Get GSN station information
-c = Client("IRIS")
-inv = read_inventory("./GSNLIST.xml")
-cha_code = ""
-done_list = []
-with open("source_receiver.txt", "w") as f:
-	f.write("station,distance(deg),azimuth(deg),backazimuth(deg)\n")
-	for net in inv:
-		for sta in net:
-			gcdist, az, baz = gps2dist_azimuth(
-					lat1=event.preferred_origin().latitude,
-					lon1=event.preferred_origin().longitude, lat2=sta.latitude,
-					lon2=sta.longitude
-					)
-			dist_in_deg = locations2degrees(
-					lat1=event.preferred_origin().latitude,
-					long1=event.preferred_origin().longitude, lat2=sta.latitude,
-					long2=sta.longitude
-					)
-			f.write("{sta},{dst:.2f},{az:.2f},{baz:.2f}\n".format(
-				sta="{net}.{sta}".format(net=net.code, sta=sta.code),
-				dst=dist_in_deg, az=az, baz=baz)
-				)
-			for cha in sta:
-				if "{}.{}.{}".format(net.code, sta.code, cha.code) in done_list:
-					continue
-				try:
-					st = c.get_waveforms(network=net.code, station=sta.code,
-							location="*", channel=cha.code,
-							starttime=origintime, endtime=endtime,
-							attach_response=True
-							)
-					st.remove_response(output="DISP")
-					st.trim(starttime=origintime, endtime=endtime)
-					st.write(filename="{}.SAC".format(st[0].get_id()),
-							format="SAC"
-							)
-					print("{}.{}.{} written".format(
-						net.code, sta.code, cha.code)
-						)
-					done_list.append("{}.{}.{}".format(
-						net.code, sta.code, cha.code)
-						)
-				except Exception as e:
-					print("{}.{}.{}\n{}".format(
-						net.code, sta.code, cha.code, e)
-						)
+with open("GSN_update.txt", "r") as f:
+    lines = f.readlines()
 
+c = Client("IRIS")
+with open("source_receiver.txt", "w") as f:
+    f.write("station,distance(deg),azimuth(deg),backazimuth(deg)\n")
+    for line in lines:
+        sta, net, lat, lon, _, _ = line.strip().split()
+        gcdist, az, baz = gps2dist_azimuth(
+            lat1=event.preferred_origin().latitude,
+            lon1=event.preferred_origin().longitude, lat2=float(lat),
+            lon2=float(lon)
+        )
+        dist_in_deg = locations2degrees(
+            lat1=event.preferred_origin().latitude,
+            long1=event.preferred_origin().longitude, lat2=float(lat),
+            long2=float(lon)
+        )
+        f.write("{sta},{dst:.2f},{az:.2f},{baz:.2f},".format(
+            sta="{net}.{sta}".format(net=net, sta=sta),
+            dst=dist_in_deg, az=az, baz=baz)
+        )
+        try:
+            st = c.get_waveforms(network=net, station=sta, location="*",
+                                 channel="BH?", starttime=origintime,
+                                 endtime=endtime, attach_response=True
+                                 )
+            # check if more than 3 traces in stream
+            if len(st) > 3:
+                for tr in st:
+                    print("{} {} {}".format(tr.stats.location, tr.stats.channel,
+                                            tr.stats.sampling_rate))
+                import ipdb; ipdb.set_trace()
+
+            # check if components in 1,2,Z, rotate
+            complist = []
+            for tr in st:
+                if tr.stats.channel[-1] in ["1", "2"]:
+                    inv = c.get_stations(network=st[0].stats.network,
+                                         station=st[0].stats.station,
+                                         location=st[0].stats.location,
+                                         channel="{}?".format(
+                                             tr.stats.channel[:2]),
+                                         starttime=origintime, endtime=endtime,
+                                         level="CHANNEL")
+                    st.rotate(method="->ZNE", inventory=inv)
+                    break
+
+            st.remove_response(output="DISP")
+            st.trim(starttime=origintime, endtime=endtime)
+            for tr in st:
+                tr.write(filename="{}.SAC".format(tr.get_id()), format="SAC")
+            print("{} written".format(st[0].get_id()))
+            f.write("1\n")
+        except Exception as e:
+            f.write("0\n")
+            print("{}.{}\n{}".format(net, sta, e))
