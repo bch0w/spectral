@@ -31,7 +31,7 @@ def pathnames():
             "kupe":os.path.join(spectral,'kupe',''),
             "modules":os.path.join(spectral,'modules',''),
             "mseeds":os.path.join(base,'mseeds',''),
-            "fathom":os.path.join(mseeds,'FATHOM',''),
+            "beacon":os.path.join(mseeds,'BEACON',''),
             "syns":os.path.join(mseeds,'SPECFEM3D',''),
             "plots":os.path.join(base,'plots',''),
             "spectralplots":os.path.join(base,'plots','spectral',''),
@@ -492,7 +492,7 @@ def rdf_internal(station,channel,start,end=False,response=True):
     else:
         return mseed_files, None
 
-def get_fathom(station,channel,start,end=None):
+def get_beacon(station,channel,start,end=None):
     """
     rewritten paired down version of rdf_internal.
 
@@ -528,8 +528,8 @@ def get_fathom(station,channel,start,end=None):
         end = start
 
     # filepaths direct to RDF
-    path_template = pathnames()['fathom'] + '{year}/XX/{sta}/{cha}.D/'
-    resp_filepath = pathnames()['fathom'] + 'DATALESS/XX.RDF.DATALESS'
+    path_template = pathnames()['beacon'] + '{year}/XX/{sta}/{cha}.D/'
+    resp_filepath = pathnames()['beacon'] + 'DATALESS/XX.RDF.DATALESS'
 
     mseed_files = []
     fid_template = 'XX.{sta}.10.{cha}.D.{year}.{jday:0>3}'

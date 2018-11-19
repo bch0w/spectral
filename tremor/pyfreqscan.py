@@ -422,10 +422,10 @@ def data_gather_and_process(code_set,pre_filt=None,night=False):
     # datapaths
     net,sta,loc,cha,d,year,jday = code_set.split('.')
 
-    fid_path = pathnames()['fathom'] + "{y}/XX/{s}/HH{c}.D".format(y=year,
+    fid_path = pathnames()['beacon'] + "{y}/XX/{s}/HH{c}.D".format(y=year,
                                                               s=sta,
                                                               c="{c}")
-    inv_path = pathnames()['fathom'] + "DATALESS/XX.RDF.DATALESS"
+    inv_path = pathnames()['beacon'] + "DATALESS/XX.RDF.DATALESS"
 
     # check what combination of files are available, process accordingly
     path_dict = check_save(code_set,night=night)
@@ -485,8 +485,8 @@ def stacked_process(jday,year='2017'):
     :param year: year to consider, defaults 2017
     """
     # ///////////////////// parameter set \\\\\\\\\\\\\\\\\\\\\\\
-    station_list = list(range(1,19))
-    night = True
+    station_list = [6]
+    night = False
     stop_if_tremor_num_below = 3
     stop_if_stations_above = 16#len(station_list) // 2
     global verbose
@@ -509,6 +509,7 @@ def stacked_process(jday,year='2017'):
         try:
             st_,TEORRm = data_gather_and_process(code_set,night=night)
              # hacky way to avoid overwriting the last entry w/ error
+            import ipdb;ipdb.set_trace()
             if not st_:
                 print("\t--error no stream object found")
                 continue
@@ -677,10 +678,10 @@ def analyze_spectra(signal,sampling_rate):
 
 if __name__ == "__main__":
     # already_processed()
-    stacked_process(251)
-    # for jday in range(215,365):
-    #     print('\n==============={}==============='.format(jday))
-    #     stacked_process(jday,year='2017')
+    # stacked_process(251)
+    for jday in range(248,254):
+        print('\n==============={}==============='.format(jday))
+        stacked_process(jday,year='2017')
     # for jday in range(1,150):
     #     print('\n==============={}==============='.format(jday))
     #     stacked_process(jday,year='2018')

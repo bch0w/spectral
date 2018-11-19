@@ -9,9 +9,10 @@ from matplotlib import gridspec
 from obspy import read, UTCDateTime
 
 sys.path.append("../modules")
-from getdata import pathnames, get_fathom
+from getdata import pathnames, get_beacon
 from plotmod import pretty_grids, build_color_dictionary
 from pyfreqscan import waveform_envelope
+
 
 def collect_files(date):
     """grab datafile by dates
@@ -29,6 +30,7 @@ def collect_files(date):
 
     return pickle_files, npz_files
 
+
 def process_data(fid,bounds):
     """read in data and do minor preprocessing. pickle files already have
     response removed, are preprocessed, and are trimmed to NZ local nighttime
@@ -40,11 +42,13 @@ def process_data(fid,bounds):
 
     return st, st_envelope
 
+
 def parse_npz_file(fid,choice='Rm'):
     """load in npz file and parse out by request
     """
     npz_file = np.load(fid)
     return npz_file[choice]
+
 
 def setup_plot(number_of_files,twax=True):
     """dynamically set up plots according to number of files
@@ -77,6 +81,7 @@ def setup_plot(number_of_files,twax=True):
     
     return f,axes,twaxes
 
+
 def create_x_axes(st,Rm=None):
     """create a common x axis for plotting
     """
@@ -88,6 +93,7 @@ def create_x_axes(st,Rm=None):
     x_Rm = np.linspace(start,end,len(Rm))
 
     return x_st,x_Rm
+
 
 def points_over_sigma(Rm):
     """determine which points lie over 2sigma for minute arrays
@@ -103,18 +109,19 @@ def points_over_sigma(Rm):
             Rm[i] = np.nan
 
     return Rm
-        
-def get_surface_wave_streams(stats,bounds):
+
+
+def get_surface_wave_streams(stats, bounds):
     """get all components of surface waves, radial and vertical for rayleigh and
     transverse for love wave. currently case study for M8.2 Mexico quake.
     match stats to streams already being used
     """
     from obspy import read, read_inventory, Stream
     
-    mseeds,response = get_fathom(station=stats.station,
-                                 channel="HHZ",
-                                 start=stats.starttime,
-                                 end=stats.endtime)
+    mseeds, response = get_beacon(station=stats.station,
+                                  channel="HHZ",
+                                  start=stats.starttime,
+                                  end=stats.endtime)
     st_gsw = Stream()
     for ms in mseeds:
         st_gsw += read(ms)
@@ -123,20 +130,21 @@ def get_surface_wave_streams(stats,bounds):
     
     # preprocess in the same fashion as pyfreqscan
     decimate_by = int(st_gsw[0].stats.sampling_rate//stats.sampling_rate)
-    st_gsw.trim(stats.starttime,stats.endtime)
+    st_gsw.trim(stats.starttime, stats.endtime)
     st_gsw.decimate(decimate_by)
     st_gsw.detrend("demean")
     st_gsw.detrend("linear")
     st_gsw.taper(max_percentage=0.05)
     st_gsw.attach_response(inv)
     st_gsw.remove_response(output="VEL",
-                          pre_filt=[.001,.01,50,55], # not in original code
-                          water_level=60, # not in original code
-                          plot=False)    
+                           pre_filt=[.001,.01,50,55], # not in original code
+                           water_level=60, # not in original code
+                           plot=False)
     
-    st_gsw.filter('bandpass',freqmin=bounds[0],freqmax=bounds[1])
+    st_gsw.filter('bandpass', freqmin=bounds[0], freqmax=bounds[1])
     
     return st_gsw
+
 
 def magnifytremors(date):
     """dynamically plot waveforms and envelopes depending on number of files
@@ -170,6 +178,7 @@ def magnifytremors(date):
     axes[-1].plot(x_st,st_surface[0].data,c='k')
 
     plt.show()    
+
 
 def windowtremor(date,window=60*45,rotate=False):
     """plot waveforms in small time windows for more in depth viewing
@@ -218,6 +227,7 @@ def windowtremor(date,window=60*45,rotate=False):
         plt.close()
         rmws = rmwe
 
+
 def chiapas_BAz():
     """case study of chiapas, return backazimuth values for rotating seismograms
     """
@@ -229,9 +239,6 @@ def chiapas_BAz():
     
     return BAz
 
-    
-    
-    
-    
+
 if __name__ == "__main__":
     windowtremor(date='2017-251')
