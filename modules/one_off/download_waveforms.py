@@ -62,7 +62,7 @@ def fetch_by_directory(network, station, location, channel, starttime, endtime):
     jdays = overlapping_days(starttime=starttime, endtime=endtime)
 
     if not os.path.exists(path_):
-        print("path '/geonet/seismic' does not exist")
+        print("path '{} does not exist".format(path_))
         return None
     full_path = os.path.join(path_, dir_structure, file_template)
     pathlist = []
@@ -140,7 +140,7 @@ rotate_to_radial_transverse = False
 output_format = "SAC"
 
 # FDSN Downloading
-suppress_fdsn = True
+suppress_fdsn = False
 c = Client("GEONET")
 
 # ------------------------- vv CHOOSE STATIONS BY vv ---------------------------

@@ -29,9 +29,11 @@ def lin_reg(x_in, y_in):
     return data_out
 
 
-def simple_plot():
-    files_ = glob.glob("/Users/chowbr/Documents/subduction/spectral/"
-                       "tremor/gsnz18/trimmed_pm50days/*_?_*")
+def simple_plot(detrend=False):
+    files_ = []
+    for comp in ["n", "e"]:
+        files_ += glob.glob("/seis/prj/fwi/bchow/spectral/tremor/gsnz18/cgps/"
+                           "trimmed_pm50days/PORA_{c}_*".format(c=comp))
     # files_ = glob.glob("/Users/chowbr/Documents/subduction/spectral/"
     #                    "tremor/gsnz18/trimmed_pm50days/*DNVK*")
     for fid in files_:
@@ -52,15 +54,19 @@ def simple_plot():
         pretty_grids(ax)
 
         # detrending stuff
-        data = signal.detrend(data, type="linear")
-        pre_chiapas_median = median(data[:chiapas])
-        post_chiapas_median= median(data[chiapas:])
-        plt.axhline(y=pre_chiapas_median, xmin=0, xmax=0.5, color='b',
-                    linestyle='--', zorder=5, label="pre-chiapas median")
-        plt.axhline(y=post_chiapas_median, xmin=0.5, xmax=1.0, color='b',
-                    linestyle='-.', zorder=5, label="post-chiapas median")
+        if detrend:
+            data = signal.detrend(data, type="linear")
+            detrend = "DETRENDED"
+        else:
+            detrend = ""
+        # pre_chiapas_median = median(data[:chiapas])
+        # post_chiapas_median= median(data[chiapas:])
+        # plt.axhline(y=pre_chiapas_median, xmin=0, xmax=0.5, color='b',
+        #             linestyle='--', zorder=5, label="pre-chiapas median")
+        # plt.axhline(y=post_chiapas_median, xmin=0.5, xmax=1.0, color='b',
+        #             linestyle='-.', zorder=5, label="post-chiapas median")
 
-        plt.plot(datetime, data, 'ko-')
+        plt.plot(datetime, data, 'ko-', markersize=3)
         plt.axvline(x=chiapas, ymin=0, ymax=1, color='r', linestyle='--',
                     label="Chiapas M8.2")
         plt.axvline(x=fiveeight, ymin=0, ymax=1, color='g', linestyle='--',
@@ -81,12 +87,14 @@ def simple_plot():
         plt.legend()
         plt.xlabel("Days")
         plt.ylabel("{} (mm)".format(comp))
-        plt.title("{} - displacement from intial position, DETRENDED".format(sta))
+        plt.title("{} - displacement from intial position {}".format(
+            sta, detrend))
         # plt.savefig("./figures/{s}_{c}.png".format(s=sta, c=comp))
         plt.show()
         plt.close()
 
 
-simple_plot()
+if __name__ == "__main__":
+    simple_plot()
 
 

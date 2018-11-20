@@ -22,7 +22,15 @@ def build_color_dictionary(num_of_colors,map='nipy_spectral'):
 
     return color_dictionary
 
-def pretty_grids(input_ax):
+
+def linespecs():
+    import matplotlib as mpl
+    mpl.rcParams['font.size'] = 12
+    mpl.rcParams['lines.linewidth'] = 0.5
+    mpl.rcParams['lines.markersize'] = 1.75
+    mpl.rcParams['axes.linewidth'] = 2.0
+
+def pretty_grids(input_ax, scitick=False):
     """make dem grids pretty
     """
     import matplotlib.ticker as ptick
@@ -42,9 +50,10 @@ def pretty_grids(input_ax):
                     linewidth='0.5',
                     color='k',
                     alpha=0.25)
-    input_ax.ticklabel_format(style='sci',
-                            axis='y',
-                            scilimits=(0,0))
+    if scitick:
+        input_ax.ticklabel_format(style='sci',
+                                axis='y',
+                                scilimits=(0,0))
 
 def align_yaxis(ax1,v1,ax2,v2):
     """adjust ax2 ylimit so that v2 in ax2 is aligned to v1 in ax1
