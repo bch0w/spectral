@@ -485,7 +485,7 @@ def stacked_process(jday,year='2017'):
     :param year: year to consider, defaults 2017
     """
     # ///////////////////// parameter set \\\\\\\\\\\\\\\\\\\\\\\
-    station_list = [6]
+    station_list = range(1,19,1)
     night = False
     stop_if_tremor_num_below = 3
     stop_if_stations_above = 16#len(station_list) // 2
@@ -577,6 +577,7 @@ def stacked_process(jday,year='2017'):
     x,y_N_surface,_ = filter_then_minmax(st,bounds=[1/30,1/6],
                                                 comp='N',normalize=False)
 
+    import ipdb;ipdb.set_trace()
     envelope_plots(code=code_set,x=t,N=y_N_list,E=y_E_list,
                      TEORRm_list=TEROR_list,
                      sig_list=sig_list,
@@ -678,10 +679,10 @@ def analyze_spectra(signal,sampling_rate):
 
 if __name__ == "__main__":
     # already_processed()
-    # stacked_process(251)
-    for jday in range(248,254):
-        print('\n==============={}==============='.format(jday))
-        stacked_process(jday,year='2017')
+    stacked_process(251)
+    # for jday in range(248,254):
+    #     print('\n==============={}==============='.format(jday))
+    #     stacked_process(jday,year='2017')
     # for jday in range(1,150):
     #     print('\n==============={}==============='.format(jday))
     #     stacked_process(jday,year='2018')

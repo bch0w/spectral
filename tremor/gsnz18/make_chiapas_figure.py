@@ -1,4 +1,5 @@
 import os
+import glob
 import numpy as np
 import matplotlib.pyplot as plt
 from obspy import read, read_inventory, UTCDateTime, Stream
@@ -7,49 +8,81 @@ from matplotlib import gridspec
 import sys
 sys.path.append("../../modules")
 from plotmod import pretty_grids, linespecs
+sys.path.append("..")
+from utils import create_min_max
+from obspy.signal.cross_correlation import correlate
 
 
-def read_write_around_chiapas(sta, plusminus=2):
+
+def detect_earthquakes(st,corr_criteria=0.7):
+    """try to remove earthquake from waveforms by taking correlations with
+    an exponential function. If correlation criteria met, earthquake 'detected'
+    :type de_array: numpy array
+    :param de_array: datastream representing waveform envelope
+    :type sampling_rate: float
+    :param sampling_rate: sampling rate
+    :type corr_criteria: float
+    :param corr_criteria: threshold for detecting earthquakes, defaults to 0.7
+    :rtype quakearray: np.array
+    :return quakearray: de_array containing -1's for detected earthquakes
     """
-    read in raw seismic data and response, remove response and save for later
-    """
-    pathdir = ("/Users/chowbr/Documents/subduction/mseeds/BEACON/2017/XX/"
-               "{sta}/HH{comp}.D/XX.{sta}.10.HH{comp}.D.2017.{jday}")
-    chiapas = UTCDateTime("2017-09-08T00:00:00")
-    inv = read_inventory("/Users/chowbr/Documents/subduction/mseeds/"
-                         "BEACON/DATALESS/XX.RDF.DATALESS")
-    for comp in ["N", "E"]:
-        for jday in range(chiapas.julday-plusminus, chiapas.julday+plusminus):
-            fid_in = pathdir.format(sta=sta, comp=comp, jday=jday)
-            st = read(fid_in)
-            st.attach_response(inv)
-            st.remove_response(output="VEL", water_level=60, plot=False)
-            fid_out = ("/Users/chowbr/Documents/subduction/spectral/tremor/"
-                       "gsnz18/mseed_remove_response/{fid_in}")
-            st.write(fid_out.format(
-                fid_in=os.path.basename(fid_in)), format="mseed")
+    # set exponential template
+    sampling_rate = int(st[0].stats.sampling_rate)
+    de_array = st[0].data
 
+    sampling_rate_min = sampling_rate * 60
+    sampling_rate_half_min = int(sampling_rate_min * (1/2))
+    sampling_rate_one_one_half_min = int(sampling_rate_min * (3/2))
+    x= np.linspace(0.002,6,sampling_rate_min)
+    exp_internal = -(x/2)*2
+    exp_template = np.exp(exp_internal)
+
+    # fill-value arrays if earthquake detected
+    nan_fill = np.nan*(np.ones(sampling_rate_min))
+    nan_fill_ext = np.nan*(np.ones(sampling_rate_one_one_half_min))
+
+    quakecount = 0
+    quakearray = np.array([])
+    for S0 in range(0,len(de_array),sampling_rate_min):
+        S1 = S0 + sampling_rate_min
+        tremor_snippet = de_array[S0:S1]
+        exp_correlation = correlate(a=exp_template,
+                                    b=tremor_snippet,
+                                    shift=len(x))
+
+        if exp_correlation.max() > corr_criteria:
+            quakecount +=1
+            if S0 == 0:
+                quakearray = np.append(quakearray,nan_fill)
+            else:
+                quakearray_new = quakearray[:S0-sampling_rate_half_min]
+                quakearray = np.append(quakearray_new,nan_fill_ext)
+        else:
+            quakearray = np.append(quakearray,tremor_snippet)
+
+    return quakearray
 
 def read_around_chiapas(sta, plusminus=2):
     """
     if read_write_around_chiapas() has been run, read in the preprocessed data
     """
-    # pathdir = ("/Users/chowbr/Documents/subduction/spectral/tremor/gsnz18/"
+    pathdir = ("/Users/chowbr/Documents/subduction/mseeds/CHIAPAS/"
+               "??.{sta}.10.??{comp}.D.2017.{jday}")
+    # pathdir = ("/seis/prj/fwi/bchow/spectral/tremor/gsnz18/"
     #            "mseed_remove_response/XX.{sta}.10.HH{comp}.D.2017.{jday}")
-    pathdir = ("/seis/prj/fwi/bchow/spectral/tremor/gsnz18/"
-               "mseed_remove_response/XX.{sta}.10.HH{comp}.D.2017.{jday}")
     chiapas = UTCDateTime("2017-09-08T00:00:00")
     st = Stream()
     for comp in ["N", "E"]:
         for jday in range(chiapas.julday-plusminus, chiapas.julday+plusminus):
-            fid_in = pathdir.format(sta=sta, comp=comp, jday=jday)
-            st += read(fid_in)
+            fid_in = glob.glob(pathdir.format(sta=sta, comp=comp, jday=jday))
+            if fid_in:
+                st += read(fid_in[0])
 
     return st
 
 
 def preprocess(st):
-    st.merge()
+    st.merge(fill_value=0)
     st.decimate(2)
     st.detrend("demean")
     st.detrend("linear")
@@ -59,8 +92,16 @@ def preprocess(st):
 
 
 def combine_horizontals(st):
-    st_north = st.select(component="N")
-    st_east = st.select(component="E")
+    if len(st[0]) != len(st[1]):
+        starttime = UTCDateTime("{yr}-{jday}T00:00:00".format(
+            yr=st[0].stats.starttime.year, jday=st[0].stats.starttime.julday+1)
+        )
+        endtime = UTCDateTime("{yr}-{jday}T00:00:00".format(
+            yr=st[0].stats.endtime.year, jday=st[0].stats.endtime.julday)
+        )
+        st.trim(starttime=starttime, endtime=endtime)
+    st_north = st.copy().select(component="N")
+    st_east = st.copy().select(component="E")
     st_out = st_north.copy()
     st_out.data = np.mean(st_north[0].data**2 + st_east[0].data**2)
 
@@ -75,9 +116,10 @@ def smoothed_envelope(st, window_length=10):
     sample_window = int(window_length * samprate)
     rms_data = np.sqrt(st[0].data**2)
     envelope = []
-    for i in range(0,len(rms_data)-sample_window,sample_window):
-        window_average = sum(rms_data[i:i+sample_window])/sample_window
-        envelope.append(window_average)
+    for i in range(0, len(rms_data)-sample_window, sample_window):
+        # window_average = sum(rms_data[i:i+sample_window])/sample_window
+        window_median = np.median(rms_data[i:i+sample_window])
+        envelope.append(window_median)
     envelope = np.array(envelope)
 
     return envelope
@@ -87,7 +129,7 @@ def amplitude_ratio(st, envelope=10, water_level=False, sigma_in=2):
     """
     tremor specific amplitude ratios based on frequency scanning method
     """
-    tremor_band = st.copy().filter('bandpass', freqmin=2, freqmax=5)
+    tremor_band = st.copy().filter('bandpass', freqmin=2, freqmax=8)
     quake_band = st.copy().filter('bandpass', freqmin=10, freqmax=20)
     surf_band = st.copy().filter('bandpass', freqmin=0.02, freqmax=0.1)
     if envelope:
@@ -149,15 +191,84 @@ def mark_chiapas(origintime, time_break):
     ax.axvline(mark, 0, 1)
 
 
+def filter_save():
+    for sta in ["ANWZ", "PRHZ", "RD01", "RD02", "RD03", "RD05", "RD16", "BFZ"]:
+        try:
+            st = read_around_chiapas(sta=sta, plusminus=3)
+            st = preprocess(st)
+            # 2-5 Hz data
+            st_filtered = st.copy().filter('bandpass', freqmin=2,
+                                           freqmax=8
+                                           )
+            for comp in ["N", "E"]:
+                st_out = st_filtered.select(component=comp)
+                fid_out = ("/Users/chowbr/Documents/subduction/mseeds/CHIAPAS/"
+                           "filtered_2-8hz/{}".format(st_out[0].get_id())
+                           )
+                st_out.write(fid_out, format='MSEED')
+        except Exception as e:
+            print(e)
+            continue
+
+        #     st = combine_horizontals(st)
+        #     x, y = create_min_max(st_filtered[0])
+        #     y /= y.max()
+        #     y += step
+        #     plt.plot(x,y)
+        #     step += 1
+
+
+def time_to_decimal(datetime):
+    return datetime.julday + (datetime.hour + datetime.minute/60)/24
+
+
+def plot_ratios():
+    chiapas = 251.2
+    f, ax = plt.subplots(1)
+    # for sta in ["ANWZ", "PRHZ", "RD01", "RD02", "RD05", "RD06", "RD08", "RD16"]:
+    for sta in ["PRHZ"]:
+        try:
+            st = read_around_chiapas(sta=sta, plusminus=3)
+            st = preprocess(st)
+            st = combine_horizontals(st)
+            # import ipdb;ipdb.set_trace()
+            # st[0].data = detect_earthquakes(st)
+            envelope_length = 5 * 60
+            ratio, sigma = amplitude_ratio(st, sigma_in=2,
+                                           envelope=envelope_length,
+                                           water_level=True
+                                           )
+            x = np.linspace(time_to_decimal(st[0].stats.starttime),
+                            time_to_decimal(st[0].stats.endtime),
+                            len(ratio)
+                            )
+            ratio/=ratio.max()
+            plt.plot(x, ratio, 'o-', markersize=1, label=sta)
+            plt.plot(x, values_over(ratio, sigma), 'ko', markersize=1)
+
+        except Exception as e:
+            print(e)
+            continue
+    plt.axvline(chiapas, 0, 1, c='r', zorder=2)
+    pretty_grids(ax)
+    plt.legend()
+    plt.setp(ax.get_yticklabels(), visible=False)
+
+    plt.show()
+
+
 def gridspec_plot():
     """
     """
-    st = read_around_chiapas(sta='RD06')
+    st = read_around_chiapas(sta='PRHZ', plusminus=3)
+    # import ipdb;ipdb.set_trace()
+
     st = preprocess(st)
     st = combine_horizontals(st)
-    st_surfthewave = st.copy().filter('bandpass', freqmin=1/30, freqmax=1/6)
-    envelope_length = 60
+    st_surfthewave = st.copy().filter('bandpass', freqmin=2, freqmax=5)
+    envelope_length = 60*60
     ratio, sigma = amplitude_ratio(st, sigma_in=2, envelope=envelope_length)
+    sigma = 0.0675 + 0.077
 
     # plotting start
     f = plt.figure(figsize=(11.69, 8.27), dpi=75)
@@ -189,7 +300,7 @@ def gridspec_plot():
 
 
 if __name__ == "__main__":
-    gridspec_plot()
+    plot_ratios()
 
 
 
