@@ -30,6 +30,7 @@ def linespecs():
     mpl.rcParams['lines.markersize'] = 1.75
     mpl.rcParams['axes.linewidth'] = 2.0
 
+
 def pretty_grids(input_ax, scitick=False):
     """make dem grids pretty
     """

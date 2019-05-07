@@ -23,14 +23,19 @@ mpl.rcParams['lines.linewidth'] = 1
 def get_station_names():
     """get stations in a folder
     """
-    basepath = pathnames()['syns'] + '2018p130600_ngllTest/NGLL5'
+    # basepath = pathnames()['syns'] + '2018p130600_ngllTest/NGLL5'
+    basepath = "/Users/chowbr/Documents/subduction/mseeds/SYN/testing/coarse_2018p130600_ngll/NGLL5"
+    checkpath = "/Users/chowbr/Documents/subduction/mseeds/SYN/testing/coarse_2018p130600_ngll/NGLL7"
     filename = "NZ.*.semv.mseed"
     filenames = glob.glob(os.path.join(basepath,filename))
 
     stalist = []
     for fid in filenames:
+        # existpath = os.path.exists(os.path.join(checkpath, os.path.basename(fid)))
+        # if existpath:
         stalist.append(fid.split('.')[1])
     stalist = list(set(stalist))
+
 
     return stalist
 
@@ -46,7 +51,8 @@ def root_mean_square(u,v):
 def estimate_MRP(sta):
     """the function
     """
-    basepath = pathnames()['syns'] + '2018p130600_ngllTest'
+    # basepath = pathnames()['syns'] + '2018p130600_ngllTest'
+    basepath = "/Users/chowbr/Documents/subduction/mseeds/SYN/testing/coarse_2018p130600_ngll"
     objective_filename = "NZ.{s}.{m}XZ.semv.mseed"
 
     # read in stream objects and mark
@@ -86,7 +92,7 @@ def estimate_MRP(sta):
 
     # plot steps of lowpass filters
     step = 0
-    for lowpass in np.arange(0,8,0.5):
+    for lowpass in np.arange(3,15,0.5):
         st_filter = stn.copy()
         if lowpass != 0:
             st_filter.filter('lowpass',freq=1/lowpass,corners=4)
@@ -110,7 +116,7 @@ def estimate_MRP(sta):
 
     # final plot adjustments
     plt.title('{}'.format(sta)+
-                          ' 2018p130600 Minimum resolveable period estimation\n'
+                          ' 4KM COARSE 2018p130600 Minimum resolveable period estimation\n'
                                     'NGLL5 (black) vs. NGLL7 (red) Z component')
     plt.gca().axes.get_yaxis().set_ticks([])
     plt.xlabel('Time (s)')

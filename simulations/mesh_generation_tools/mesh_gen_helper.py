@@ -115,7 +115,7 @@ def determine_nxny(LLC_lonlat,URC_lonlat):
     
     print("the region is {:.1f} km by {:.1f} km\n".format(dx_out,dy_out))
     # given grid spacing s, suggest values for NX and NY
-    for s in [0.25,0.5,0.75,1]:
+    for s in [0.25,0.5,0.75,1,4,8]:
         print("NX={}, NY={} for {}KM SPACING \n".format(
                                             int((URC_x-LLC_x)*1/s*1E-3),
                                             int((URC_y_new-LLC_y)*1/s*1E-3),s)
