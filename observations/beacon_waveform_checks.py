@@ -9,14 +9,25 @@ import matplotlib.pyplot as plt
 from obspy.clients.fdsn import Client
 from obspy import UTCDateTime, read, Stream, read_inventory
 
+import matplotlib as mpl
+mpl.rcParams['font.size'] = 12
+mpl.rcParams['lines.linewidth'] = 1.25
+mpl.rcParams['axes.linewidth'] = 2
 
-def event_information(pad_s=60*60):
+
+def event_information(i=0, pad_s=60*60):
     """
     given an earthquake origin time, produce relevant information
     :return:
     """
-    origin_time = UTCDateTime("2017-09-08T04:49:46.0")  # chiapas
+    origin_times = ["2017-09-08T04:49:46.0",  # chiapas, mw8.2
+                    "2017-09-19T18:14:48.2",  # central mexico, mw7.1
+                    "2018-01-23T09:32:00.0",  # alaska, mw7.9
+                    "2018-02-25T17:45:08.6"   # png, mw7.5
+                    ]
+    origin_time = UTCDateTime(origin_times[i])
     end_time = origin_time + pad_s
+
     return origin_time, end_time
 
 
@@ -35,18 +46,17 @@ def geonet_waveforms(station_code):
     return st
 
 
-def beacon_waveforms(number):
+def beacon_waveforms(number, path, inv_path):
     """
     get beacon station waveforms based on station number
     :param number:
     :return:
     """
-    start_time, end_time = event_information()
+    start_time, end_time = event_information(i=1)
     station_code = "XX.RD{num}.10.HH?.D.{year}.{jday}".format(
         num=number, year=start_time.year, jday=start_time.julday
     )
     net, sta, loc, cha, d, year, jday = station_code.split(".")
-    path = "/seis/prj/fwi/bchow/mseeds/BEACON/{year}/XX/{sta}/HH?.D/"
     path = path.format(year=start_time.year, sta=sta)
 
     st = Stream()
@@ -54,12 +64,12 @@ def beacon_waveforms(number):
         st += read(fid)
 
     st.trim(start_time, end_time)
-    inv = read_inventory(
-        "/seis/prj/fwi/bchow/mseeds/BEACON/DATALESS/XX.RDF.DATALESS")
+    inv = read_inventory(inv_path)
 
     st.attach_response(inv)
 
     return st
+
 
 def preprocess(st, t0, t1):
     """
@@ -103,48 +113,80 @@ def stream_information(st):
               )
 
 
-def plot_components(axes, st):
+def plot_components(axes, st, c):
     """
     plot each stream component on an axis, assuming NEZ
     :param axes:
     :param st:
     :return:
     """
+    def peak_pointer(x, y):
+        """
+        plot the peak point on the trace
+        :param ax:
+        :param tr:
+        :return:
+        """
+        peak_y = y.max()
+        peak_x = np.where(y == y.max())[0][0]
+
+        return peak_x, peak_y
+
     # assuming all time axes are the same in stream
     for i, component in enumerate(["N", "E", "Z"]):
         tr = st.select(component=component)[0]
         time_axis = np.linspace(0, tr.stats.endtime - tr.stats.starttime,
                                 tr.stats.npts
                                 )
-        axes[i].plot(time_axis, tr.data, label=tr.get_id())
-        plt.legend()
+        axes[i].plot(time_axis, tr.data, label=tr.get_id(), color=c)
+        peak_x, peak_y = peak_pointer(time_axis, tr.data)
+        axes[i].plot(
+            time_axis[peak_x], peak_y, '{}o'.format(c), markersize=4)
+
+        axes[i].grid(True)
+        axes[i].set_ylabel("{} Amplitude (m/s)".format(component))
+
+    axes[1].legend()
+    axes[2].set_xlabel("Time since origin time (sec)")
+    plt.sca(axes[0])
 
 
-def process(t0=1, t1=10):
+def process(path, inv_path, t0=1, t1=10):
     """
     main processing
     :return:
     """
-    for i in range(1,23,1):
-        st_beacon = beacon_waveforms(i)
+    for i in range(1, 23, 1):
+        st_beacon = beacon_waveforms(i, path, inv_path)
         st_beacon = preprocess(st_beacon, t0, t1)
         stream_information(st_beacon)
         if st_beacon:
             f, axes = plt.subplots(3, sharex=True)
-            plot_components(axes, st_beacon)
+            plot_components(axes, st_beacon, c="b")
 
-            for station in ["BKZ", "PXZ"]:
+            for station, color in zip(["BKZ", "PXZ"], ["r", "k"]):
                 st_geonet = geonet_waveforms("NZ.{sta}.10.HH?".format(
                     sta=station)
                 )
                 st_geonet = preprocess(st_geonet, t0, t1)
                 stream_information(st_geonet)
-                plot_components(axes, st_geonet)
+                plot_components(axes, st_geonet, c=color)
+            plt.title("{} T=[{},{}]s".format(event_information()[0], t0, t1))
             plt.show()
 
 
 if __name__ == "__main__":
-    process(t0=10)
+    pathing = "VUW"
+    if pathing == "GNS":
+        path = "/seis/prj/fwi/bchow/mseeds/BEACON/{year}/XX/{sta}/HH?.D/"
+        inv_path = "/seis/prj/fwi/bchow/mseeds/BEACON/DATALESS/XX.RDF.DATALESS"
+    elif pathing == "VUW":
+        path = "/Users/chowbr/Documents/subduction/mseeds/" \
+               "BEACON/{year}/XX/{sta}/HH?.D/"
+        inv_path = "/Users/chowbr/Documents/subduction/mseeds/" \
+                   "BEACON/DATALESS/XX.RDF.DATALESS"
+
+    process(path, inv_path, t0=10, t1=30)
 
 
 
