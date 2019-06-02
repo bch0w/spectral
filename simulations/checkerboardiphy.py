@@ -40,8 +40,45 @@ def xyz_reader(filepath):
     return lines[:4], lines[4:], parsed_header
 
 
-def determine_checkers(data_list, bounds, data_out=None, spacing_m=50000,
-                       include_depth=False):
+def trim_xyz_file(data):
+    """
+    sometime the xyz file is too large, trim it down to new dimensions
+    :param header:
+    :param data:
+    :return:
+    """
+    # hardcoded, defined by MESH_SRTM30P_139_162_4000m
+    x_bounds = [167500.0, 70800.0]
+    y_bounds = [5270000.0, 5915000.0]
+    z_bounds = [-4000000, 2100.0]
+
+    # convert data into numpy array for easier working
+    data = np.array([_.strip.split() for _ in data])
+    for i, bounds in enumerate([x_bounds, y_bounds, z_bounds]):
+        too_small = np.where(data[:, i] < bounds[0])[0]
+        too_large = np.where(data[:, i] > bounds[1])[0]
+        to_remove = np.unique(np.concatenate((too_small, too_large), 0))
+        data = np.delete(data, to_remove)
+
+    # make new header
+    new_parsed_header = {"orig_x": data[:, 0].min(), "orig_y": data[:, 1].min(),
+                         "orig_z": data[:, 2].min(), "end_x": data[:, 0].max(),
+                         "end_y": data[:, 1].max(), "end_z": data[:, 2].max(),
+                         "spacing_x": 2000., "spacing_y": 2000.,
+                         "spacing_z": 1000.,
+                         "nx": len(np.unique(data[:, 0])),
+                         "ny": len(np.unique(data[:, 1])),
+                         "nz": len(np.unique(data[:, 2])),
+                         "vp_min": data[:, 3].min(), "vp_max": data[:, 3].max(),
+                         "vs_min": data[:, 4].min(), "vs_max": data[:, 4].max(),
+                         "rho_min": data[:, 5].max(),
+                         "rho_max": data[:, 5].max(),
+                      }
+
+    return new_parsed_header, new_data
+
+
+def determine_checkers(data_list, bounds, spacing_m=50000, include_depth=False):
     """
     read files in, define bounds, return
     :type data_list: list
@@ -83,8 +120,6 @@ def determine_checkers(data_list, bounds, data_out=None, spacing_m=50000,
     # go through each data file
     ischecker = [[] for _ in range(len(data_list))]
     for i, data in enumerate(data_list):
-        if data_out:
-            f = open(data_out[i], "w")
         for line in data:
             x_bool = define_bounds(float(line.strip().split()[0]), bounds["x"])
             y_bool = define_bounds(float(line.strip().split()[1]), bounds["y"])
@@ -94,17 +129,18 @@ def determine_checkers(data_list, bounds, data_out=None, spacing_m=50000,
             if include_depth:
                 z_bool = define_bounds(
                     float(line.strip().split()[2]), bounds["z"])
-                # checker only if all 3 coordinates are true
-                ischecker[i].append(int(x_bool and y_bool and z_bool))
-                if data_out:
-                    f.write(str(int(x_bool and y_bool and z_bool)) + " " + line)
+                # checker only if all coordinates are true
+                # OR if all components are false
+                if x_bool == y_bool == z_bool:
+                    checker = 1
+                else:
+                    checker = -1
             else:
-                ischecker[i].append(int(x_bool and y_bool))
-                if data_out:
-                    f.write(str(int(x_bool and y_bool)) + " " + line)
-
-        if data_out:
-            f.close()
+                if x_bool == y_bool:
+                    checker = 1
+                else:
+                    checker = -1
+            ischecker[i].append(checker)
 
     return ischecker
 
@@ -117,15 +153,14 @@ def checkerboardiphy(data, ischeckers, perturbation=0.1):
 
     :return:
     """
-    checker_dict = {0: perturbation, 1: -1 * perturbation}
-    import ipdb;ipdb.set_trace()
-    for i, (line, check) in enumerate(zip(data, ischeckers)):
+    for i, line in enumerate(data):
         (x, y, z, vp, vs, rho, qp, qs) = line.split()
-        vp = float(vp) + float(vp) * checker_dict[check]
-        vs = float(vs) + float(vs) * checker_dict[check]
-        rho = float(rho) + float(rho) * checker_dict[check]
-        qp = float(qp) + float(qp) * checker_dict[check]
-        qs = float(qs) + float(qs) * checker_dict[check]
+        perturb = ischeckers[i] * perturbation
+        vp = float(vp) + (float(vp) * perturb)
+        vs = float(vs) + (float(vs) * perturb)
+        rho = float(rho) + (float(rho) * perturb)
+        qp = float(qp) + (float(qp) * perturb)
+        qs = float(qs) + (float(qs) * perturb)
         data[i] = (
             "{} {} {} {:.1f} {:.1f} {:.1f} {:.1f} {:.1f}\n".format(
                 x, y, z, vp, vs, rho, qp, qs)
@@ -152,7 +187,6 @@ def write_out(header, data, file_id):
 if __name__ == "__main__":
     # read in data
     path = "/Users/chowbr/Documents/subduction/data/KUPEDATA/tomo_files"
-    prem_path = "/Users/chowbr/Documents/subduction/data/PREM/PREM_1s.csv"
     name_template = "nz_north_eberhart2015_{}.xyz"
     fullpath = os.path.join(path, name_template)
 
@@ -164,20 +198,19 @@ if __name__ == "__main__":
         fullpath.format("mantle"))
     data_list = [shallow_data, crust_data, mantle_data]
 
-    # to be passed to determine_checkers
-
     # user defined paramters
     spacing_m = 50000.
     perturbation = 0.1
+
 
     # workflow
     bounds_dict = {"x": [shallow_parsed["orig_x"], shallow_parsed["end_x"]],
                    "y": [shallow_parsed["orig_y"], shallow_parsed["end_y"]],
                    "z": [mantle_parsed["orig_z"], shallow_parsed["end_z"]]
                    }
+    import ipdb;ipdb.set_trace()
     ischeckers = determine_checkers(
-        data_list, bounds_dict, data_out=None,spacing_m=spacing_m,
-        include_depth=False
+        data_list, bounds_dict, spacing_m=spacing_m, include_depth=False
     )
 
     headers = [shallow_header, crust_header, mantle_header]
