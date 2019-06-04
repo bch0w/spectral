@@ -40,42 +40,6 @@ def xyz_reader(filepath):
     return lines[:4], lines[4:], parsed_header
 
 
-def trim_xyz_file(data):
-    """
-    sometime the xyz file is too large, trim it down to new dimensions
-    :param header:
-    :param data:
-    :return:
-    """
-    # hardcoded, defined by MESH_SRTM30P_139_162_4000m
-    x_bounds = [167500.0, 70800.0]
-    y_bounds = [5270000.0, 5915000.0]
-    z_bounds = [-4000000, 2100.0]
-
-    # convert data into numpy array for easier working
-    data = np.array([_.strip.split() for _ in data])
-    for i, bounds in enumerate([x_bounds, y_bounds, z_bounds]):
-        too_small = np.where(data[:, i] < bounds[0])[0]
-        too_large = np.where(data[:, i] > bounds[1])[0]
-        to_remove = np.unique(np.concatenate((too_small, too_large), 0))
-        data = np.delete(data, to_remove)
-
-    # make new header
-    new_parsed_header = {"orig_x": data[:, 0].min(), "orig_y": data[:, 1].min(),
-                         "orig_z": data[:, 2].min(), "end_x": data[:, 0].max(),
-                         "end_y": data[:, 1].max(), "end_z": data[:, 2].max(),
-                         "spacing_x": 2000., "spacing_y": 2000.,
-                         "spacing_z": 1000.,
-                         "nx": len(np.unique(data[:, 0])),
-                         "ny": len(np.unique(data[:, 1])),
-                         "nz": len(np.unique(data[:, 2])),
-                         "vp_min": data[:, 3].min(), "vp_max": data[:, 3].max(),
-                         "vs_min": data[:, 4].min(), "vs_max": data[:, 4].max(),
-                         "rho_min": data[:, 5].max(),
-                         "rho_max": data[:, 5].max(),
-                      }
-
-    return new_parsed_header, new_data
 
 
 def determine_checkers(data_list, bounds, spacing_m=50000, include_depth=False):
