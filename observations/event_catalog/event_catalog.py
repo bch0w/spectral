@@ -36,7 +36,6 @@ def write_catalog_to_csv(cat, output_fid="./tomcat.csv"):
     :return:
     """
     import csv
-    import ipdb;ipdb.set_trace()
 
     with open(output_fid, 'w') as csvfile:
         fieldnames = ["Event ID", "Origin Time", "Magnitude", "Latitude",
@@ -57,6 +56,30 @@ def write_catalog_to_csv(cat, output_fid="./tomcat.csv"):
                              "Magnitude": magnitude, "Latitude": latitude,
                              "Longitude": longitude, "Depth": depth}
                             )
+
+
+def write_catalog_to_npz(cat, output_fid):
+    """
+    write the columns of the catalog into a .npz file for easy inspection
+    :param cat:
+    :param output_fid:
+    :return:
+    """
+    import numpy as np
+
+    otimes, magnitudes, latitudes, longitudes, depths, ids = [],[],[],[],[],[]
+    for event in cat:
+        otimes.append(event.preferred_origin().time)
+        latitudes.append(event.preferred_origin().latitude)
+        longitudes.append(event.preferred_origin().longitude)
+        depths.append(event.preferred_origin().depth)
+        magnitudes.append(event.preferred_magnitude().mag)
+        ids.append(event.resource_id.resource_id.split('/')[1])
+    dict_out = {"origintimes": otimes, "latitudes": latitudes,
+                "longitudes": longitudes, "depths": depths,
+                "magnitudes": magnitudes, "ids": ids
+                }
+    np.savez(output_fid, **dict_out)
 
 
 def output_as_cmtsolutions(cat):
@@ -91,4 +114,5 @@ if __name__ == "__main__":
     today = str(UTCDateTime().date)
     cat = fetch_events(output_fid="{}_EVENT_CATALOG.xml".format(today))
     write_catalog_to_csv(cat, output_fid="{}_EVENT_CATALOG.csv".format(today))
+    write_catalog_to_npz(cat, output_fid="{}_EVENT_CATALOG.npz".format(today))
     output_as_cmtsolutions(cat)

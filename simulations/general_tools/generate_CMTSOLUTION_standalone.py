@@ -77,7 +77,7 @@ def get_event_and_region(event_or_id):
     """
     if isinstance(event_or_id, str):
         c = Client('GEONET')
-        cat = c.get_events(eventid=event_id)
+        cat = c.get_events(eventid=event_or_id)
         event = cat[0]
     else:
         event = event_or_id
@@ -97,6 +97,8 @@ def generate_CMTSOLUTION(event_or_id, csv_file, output_file):
     """
     if not isinstance(event_or_id, str):
         event_id = event_or_id.resource_id.id.split('/')[1]
+    else:
+        event_id = event_or_id
 
     # grab moment tensor information from Ristau's solutions
     MT = get_moment_tensor(event_id=event_id, csv_file=csv_file)
@@ -164,7 +166,7 @@ def generate_CMTSOLUTION(event_or_id, csv_file, output_file):
 
 if __name__ == "__main__":
     # ======================== set parameters ==================================
-    eventid = "2018p546311"
+    eventid = "2016p355601"
     # csv_file = "path/to/GeoNet_CMT_solutions.csv"
     csv_file = "/Users/chowbr/Documents/subduction/data/GEONET/data/moment-tensor/GeoNet_CMT_solutions.csv"
     output_path = "/Users/chowbr/Documents/subduction/data/KUPEDATA/CMTSOLUTIONS/{}CMTSOLUTION".format(eventid)
