@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from obspy import read, read_inventory, UTCDateTime, Stream
 from matplotlib import gridspec
+import matplotlib as mpl
 
 import sys
 sys.path.append("../../modules")
@@ -12,7 +13,10 @@ sys.path.append("..")
 from utils import create_min_max
 from obspy.signal.cross_correlation import correlate
 
-
+mpl.rcParams['font.size'] = 15
+mpl.rcParams['lines.linewidth'] = 1.
+mpl.rcParams['lines.markersize'] = 1.75
+mpl.rcParams['axes.linewidth'] = 2.5
 
 def detect_earthquakes(st,corr_criteria=0.7):
     """try to remove earthquake from waveforms by taking correlations with
@@ -223,36 +227,49 @@ def time_to_decimal(datetime):
 
 
 def plot_ratios():
-    chiapas = 251.2
     f, ax = plt.subplots(1)
-    # for sta in ["ANWZ", "PRHZ", "RD01", "RD02", "RD05", "RD06", "RD08", "RD16"]:
-    for sta in ["PRHZ"]:
-        try:
-            st = read_around_chiapas(sta=sta, plusminus=3)
-            st = preprocess(st)
-            st = combine_horizontals(st)
+    sta = "RD02"
+    # pathdir = ("/Users/chowbr/Documents/subduction/mseeds/CHIAPAS/"
+    #            "??.{sta}.10.??{comp}.D.2017.{jday}")
+    pathdir = ("/seis/prj/fwi/bchow/mseeds/CHIAPAS/XX.{sta}.10.HH{comp}.D.2017.{jday}")
+    chiapas = UTCDateTime("2017-09-08T00:00:00")
+    quiet = UTCDateTime("2017-12-09T00:00:00")
+    for day, color in zip([chiapas, quiet],['r','k']):
+        st = Stream()
+        for comp in ["N", "E"]:
             # import ipdb;ipdb.set_trace()
-            # st[0].data = detect_earthquakes(st)
-            envelope_length = 5 * 60
-            ratio, sigma = amplitude_ratio(st, sigma_in=2,
-                                           envelope=envelope_length,
-                                           water_level=True
-                                           )
-            x = np.linspace(time_to_decimal(st[0].stats.starttime),
-                            time_to_decimal(st[0].stats.endtime),
-                            len(ratio)
-                            )
-            ratio/=ratio.max()
-            plt.plot(x, ratio, 'o-', markersize=1, label=sta)
-            plt.plot(x, values_over(ratio, sigma), 'ko', markersize=1)
+            fid_in = glob.glob(pathdir.format(sta=sta, comp=comp,
+                                              jday=day.julday))
+            if fid_in:
+                st += read(fid_in[0])
+        st = preprocess(st)
+        st = combine_horizontals(st)
+        envelope_length = 5 * 60
+        ratio, sigma = amplitude_ratio(st, sigma_in=2,
+                                       envelope=envelope_length,
+                                       water_level=True
+                                       )
+        # x = np.linspace(time_to_decimal(st[0].stats.starttime),
+        #                 time_to_decimal(st[0].stats.endtime),
+        #                 len(ratio)
+        #                 )
+        x = np.linspace(0,24,len(ratio))
+        plt.plot(x, ratio, '{}o-'.format(color), markersize=2,
+                 label="{}.{}".format(day.year, day.julday), markerfacecolor=color,
+                 markeredgewidth=1.2, linewidth=1.5)
+        plt.plot(x, values_over(ratio, sigma), 'ko', markerfacecolor='w',
+                 markersize=5, markeredgewidth=1.2)
 
-        except Exception as e:
-            print(e)
-            continue
-    plt.axvline(chiapas, 0, 1, c='r', zorder=2)
+            # except Exception as e:
+            #     print(e)
+            #     continue
+    # plt.axvline(chiapas, 0, 1, c='r', zorder=2)
     pretty_grids(ax)
     plt.legend()
-    plt.setp(ax.get_yticklabels(), visible=False)
+    plt.xlabel('Hours')
+    plt.xlim([0,24])
+    plt.ylabel('Amplitude Ratio R(t)')
+    # plt.setp(ax.get_yticklabels(), visible=False)
 
     plt.show()
 

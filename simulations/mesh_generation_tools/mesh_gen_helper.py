@@ -115,8 +115,9 @@ def determine_nxny(LLC_lonlat,URC_lonlat):
     
     print("the region is {:.1f} km by {:.1f} km\n".format(dx_out,dy_out))
     # given grid spacing s, suggest values for NX and NY
-    for s in [0.25,0.5,0.75,1]:
-        print("NX={}, NY={} for {}KM SPACING \n".format(
+    print("for comparison with write_topo_moho_nz.m output")
+    for s in [0.25,0.5,0.75,1,2.5,4,8,10]:
+        print("NX={}, NY={} for DX={}km \n".format(
                                             int((URC_x-LLC_x)*1/s*1E-3),
                                             int((URC_y_new-LLC_y)*1/s*1E-3),s)
                                             )
@@ -158,8 +159,13 @@ def example_call_determine_nxny():
     """example call for determine_nxny
     """
     # kaikoura to east cape (changed from -42.5 LLC lat 28.8.18)
-    LLC_lonlat = (170,-42.8)
-    URC_lonlat = (179.5,-37)
+    # first 1km testing mesh 
+    # LLC_lonlat = (170,-42.8)
+    # URC_lonlat = (179.5,-37)
+    
+	# new mesh, pushing boundaries to get edge away from stations
+    LLC_lonlat = (172.95,-42.65)
+    URC_lonlat = (179.5,-36.8)
     determine_nxny(LLC_lonlat,URC_lonlat)
     
 if __name__ == "__main__":

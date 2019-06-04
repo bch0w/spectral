@@ -9,7 +9,7 @@ export PATH=$PATH:$CUBITDIR/bin
 export PYTHONPATH=~/.conda/envs/mesher/bin/python:$CUBITDIR/bin:$CUBITDIR/structure
 
 # name of mesh
-FTAG=nz_SRTM15P_553_622_1000m
+FTAG=downsamp_SRTM30P
 
 MESH0_MERGE1=$1
 
@@ -61,7 +61,7 @@ then
 
 	echo "MAKING NEW MATERIALS FILE"
 	cd export
-	cp /seis/prj/fwi/bchow/tomo/generateMeshes/newZealandMeshing/make_new_materials_file.m .
+	cp /seis/prj/fwi/bchow/tomo/generate_meshes/new_zealand_meshing/make_new_materials_file.m .
 	matlab -nojvm -nodesktop -r 'try; make_new_materials_file; catch; end; quit;'
 	mv materials_file materials_file_old
 	mv materials_file_tomo materials_file
@@ -69,7 +69,7 @@ then
 
 	echo "SETTING CORRECT numaterial_velocity_file"
 	rm numaterial_velocity_file
-	cp /seis/prj/fwi/bchow/tomo/generateMeshes/newZealandMeshing/numaterial_velocity_file .
+	cp /seis/prj/fwi/bchow/tomo/generate_meshes/new_zealand_meshing/numaterial_velocity_file .
 
 	echo "FIN"
 	
