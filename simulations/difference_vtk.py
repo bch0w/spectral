@@ -108,8 +108,8 @@ def difference_vtk(model_a, model_b, path="./", reverse=1, write=None):
 if __name__ == "__main__":
     path = "/Users/chowbr/Documents/subduction/tomo/" \
            "seisflows_test/hikurangi_trial_vtk"
-    model_a = "vs_nz_trialstep1E8.vtk"
-    model_b = "vs_nz_init.vtk"
+    model_b = "vs_nz_10eventtrialstep3E5.vtk"
+    model_a = "vs_nz_init.vtk"
 
     model_out = "{}_diff_{}_{}.vtk".format(model_a.split("_")[0],
                                            model_a.split("_")[2].split(".")[0],

@@ -40,8 +40,6 @@ def xyz_reader(filepath):
     return lines[:4], lines[4:], parsed_header
 
 
-
-
 def determine_checkers(data_list, bounds, spacing_m=50000, include_depth=False):
     """
     read files in, define bounds, return
@@ -151,7 +149,8 @@ def write_out(header, data, file_id):
 if __name__ == "__main__":
     # read in data
     path = "/Users/chowbr/Documents/subduction/data/KUPEDATA/tomo_files"
-    name_template = "nz_north_eberhart2015_{}.xyz"
+    # name_template = "nz_north_eberhart2015_{}.xyz"
+    name_template = "nz_x1200_y600_eberhart2015_{}.xyz"
     fullpath = os.path.join(path, name_template)
 
     shallow_header, shallow_data, shallow_parsed = xyz_reader(
@@ -172,7 +171,6 @@ if __name__ == "__main__":
                    "y": [shallow_parsed["orig_y"], shallow_parsed["end_y"]],
                    "z": [mantle_parsed["orig_z"], shallow_parsed["end_z"]]
                    }
-    import ipdb;ipdb.set_trace()
     ischeckers = determine_checkers(
         data_list, bounds_dict, spacing_m=spacing_m, include_depth=False
     )
