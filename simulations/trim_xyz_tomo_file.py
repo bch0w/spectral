@@ -60,10 +60,12 @@ def trim_xyz_file(data, bounds):
         too_large = np.where(data[:, i] > bound[1])[0]
     
     to_remove = np.unique(np.concatenate((too_small, too_large), 0))
-    new_data = np.delete(data, to_remove, 0)
+    
+    # delete in place
+    data = np.delete(data, to_remove, 0)
     
     # make new header
-    new_parsed_header = {"orig_x": data[:, 0].min(), "orig_y": data[:, 1].min(),
+    parsed_header = {"orig_x": data[:, 0].min(), "orig_y": data[:, 1].min(),
                          "orig_z": data[:, 2].min(), "end_x": data[:, 0].max(),
                          "end_y": data[:, 1].max(), "end_z": data[:, 2].max(),
                          "spacing_x": 2000., "spacing_y": 2000.,
@@ -76,8 +78,11 @@ def trim_xyz_file(data, bounds):
                          "rho_min": data[:, 5].max(),
                          "rho_max": data[:, 5].max(),
                       }
-    
-    return new_parsed_header, new_data
+  
+    head_len = parsed_header["nx"] * parsed_header["ny"] * parsed_header["nz"] 
+    assert head_len == len(data)
+
+    return parsed_header, data
 
 
 def write_new_xyz(header, data, fidout_template):
@@ -135,6 +140,7 @@ if __name__ == "__main__":
 
     # trim xyz files based on given bounds
     for i, section in enumerate(sections):  #, crust_data, mantle_data]:
+        print("trimming section {}".format(section))
         header, data = xyz_reader(fullpath.format(section))
         new_header, new_data = trim_xyz_file(data, bounds)
         outpath_temp = outpath.format(x="{x:.0f}", y="{y:.0f}", section=section)
