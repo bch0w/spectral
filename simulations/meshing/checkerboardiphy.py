@@ -148,8 +148,8 @@ def write_out(header, data, file_id):
 
 if __name__ == "__main__":
     # read in data
-    path = "/Users/chowbr/Documents/subduction/data/KUPEDATA/tomo_files"
-    # name_template = "nz_north_eberhart2015_{}.xyz"
+    # path = "/Users/chowbr/Documents/subduction/data/KUPEDATA/tomo_files"
+    path = "/seis/prj/fwi/bchow/data/KUPEDATA/tomo_files" 
     name_template = "nz_x1200_y600_eberhart2015_{}.xyz"
     fullpath = os.path.join(path, name_template)
 
@@ -165,7 +165,6 @@ if __name__ == "__main__":
     spacing_m = 50000.
     perturbation = 0.1
 
-
     # workflow
     bounds_dict = {"x": [shallow_parsed["orig_x"], shallow_parsed["end_x"]],
                    "y": [shallow_parsed["orig_y"], shallow_parsed["end_y"]],
@@ -176,9 +175,9 @@ if __name__ == "__main__":
     )
 
     headers = [shallow_header, crust_header, mantle_header]
-    data_out = [fullpath.format("shallow_new"),
-                fullpath.format("crust_new"),
-                fullpath.format("mantle_new")
+    data_out = [fullpath.format("shallow_checker"),
+                fullpath.format("crust_checker"),
+                fullpath.format("mantle_checker")
                 ]
     for i, data in enumerate(data_list):
         new_data = checkerboardiphy(data, ischeckers[i], perturbation)
