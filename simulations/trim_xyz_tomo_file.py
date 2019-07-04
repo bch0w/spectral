@@ -76,6 +76,10 @@ def trim_xyz_file(data, bounds):
                          "rho_min": data[:, 5].max(),
                          "rho_max": data[:, 5].max(),
                       }
+
+    header_length = new_parsed_header["nx"] * new_parsed_header["ny"] * new_parsed_header["nz"]
+
+    assert len(new_data) == header_length
     
     return new_parsed_header, new_data
 

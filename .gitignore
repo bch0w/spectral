@@ -6,6 +6,7 @@ __pycache__/
 */__pycache_/
 #kupe
 simulations/test_meshes/
+simulations/pyatoa_precursor/
 #tremor
 tremor/satoshi
 tremor/gsnz18/cgps
