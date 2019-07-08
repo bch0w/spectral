@@ -21,7 +21,7 @@ def xyz_reader(xyz_fid, save=True):
     :type save: bool
     :param save: to save the read files into numpy arrays
     :rtype header: dict
-    :return header: a dictionary with relevant header information
+    :return header: a dictionary with relevant header informadtion
     :rtype data: np.ndarray
     :return data: all the data contained in the xyz file
     """
@@ -155,35 +155,11 @@ def convert_to_checkers(data, checkerboard, perturbation=0.1):
     return data_out
 
 
-def checkerboardiphy(xyz_fid, spacing_m, perturbation=0.02):
-    """
-    Amalgamation of the above functions
-
-    This is too slow, doesn't work
-
-    :type xyz_fid: str
-    :param xyz_fid: path to file to read
-    :type spacing_m: float
-    :param spacing_m: spacing in meters
-    :type perturbation: float
-    :param perturbation: perturbation to give to checkers
-    :return:
-    """
-    # Read in the data
-    header, data = xyz_reader(xyz_fid=xyz_fid, save=True)
-
-    # Create the checkerboard based on the given data
-    checkerboard = determine_checkers(data, header, spacing_m)
-
-    # Convert the data into checkerboard
-    data_out = convert_to_checkers(data, checkerboard, perturbation)
-
-    return data_out
-
-
 # def checkerboardiphy(xyz_fid, spacing_m, perturbation=0.02):
 #     """
 #     Amalgamation of the above functions
+#
+#     This is too slow, doesn't work
 #
 #     :type xyz_fid: str
 #     :param xyz_fid: path to file to read
@@ -196,48 +172,86 @@ def checkerboardiphy(xyz_fid, spacing_m, perturbation=0.02):
 #     # Read in the data
 #     header, data = xyz_reader(xyz_fid=xyz_fid, save=True)
 #
-#     data_out = np.copy(data)
-#     x, y = 1, 1
-#     # Loop through the x-axis
-#     for x_left in np.arange(header["orig_x"], header["end_x"], spacing_m):
-#         x_right = x_left + spacing_m
-#         # Create the tapered checker for the x-axis
-#         x_checker = np.arange(x_left, x_right, header["spacing_x"])
-#         x_window = signal.tukey(len(x_checker))
+#     # Create the checkerboard based on the given data
+#     checkerboard = determine_checkers(data, header, spacing_m)
 #
-#         # Loop through the y-axis
-#         for y_bot in np.arange(header["orig_y"], header["end_y"], spacing_m):
-#             y_top = y_bot + spacing_m
-#             # Create the tapered checker for the x-axis
-#             y_checker = np.arange(y_bot, y_top, header["spacing_y"])
-#             y_window = signal.tukey(len(y_checker))
-#
-#             # The sign of the overall checker
-#             checker = x * y
-#
-#             # Determine where the data falls within this checker
-#             import ipdb;ipdb.set_trace()
-#
-#             data_out[:, 0] = np.where(
-#                 (data[:, 0] > x_right) & (data[:, 0] <= x_left),
-#                 data[:, 0],
-#             )
-#
-#             checker_indices = np.where((x_right < data[:, 0]) &
-#                                        (data[:, 0] <= x_left) &
-#                                        (y_bot < data[:, 1]) &
-#                                        (data[:, 1] <= y_top)
-#                                        )
-#
-#
-#             data[checker_indices]
-#             taper_amount = taper_window[np.where(point == checker)[0][0]]
-#
-#             y *= -1
-#         x *= -1
-#
+#     # Convert the data into checkerboard
+#     data_out = convert_to_checkers(data, checkerboard, perturbation)
 #
 #     return data_out
+
+
+def checkerboardiphy(xyz_fid, spacing_m, perturbation=0.02):
+    """
+    Amalgamation of the above functions
+
+    :type xyz_fid: str
+    :param xyz_fid: path to file to read
+    :type spacing_m: float
+    :param spacing_m: spacing in meters
+    :type perturbation: float
+    :param perturbation: perturbation to give to checkers
+    :return:
+    """
+    # Read in the data
+    header, data = xyz_reader(xyz_fid=xyz_fid, save=True)
+
+    # Initialize starting values
+    checker_overlay = np.zeros(len(data))
+    x, y = 1, 1
+
+    # Loop through the x-axis, setting left and right boundaries
+    for x_left in np.arange(header["orig_x"], header["end_x"], spacing_m):
+        x_right = x_left + spacing_m
+
+        # Create the tapered checker for a given checker defined by bounds
+        x_checker = np.arange(x_left, x_right, header["spacing_x"])
+        x_window = signal.tukey(len(x_checker))
+
+        # Loop through the y-axis, setting lower and upper boundaries
+        for y_bot in np.arange(header["orig_y"], header["end_y"], spacing_m):
+            y_top = y_bot + spacing_m
+
+            # Create the tapered checker for the given checker defined by bounds
+            y_checker = np.arange(y_bot, y_top, header["spacing_y"])
+            y_window = signal.tukey(len(y_checker))
+
+            # Determine the sign of the overall checker, which is set by the
+            # alternating sign of each inner checker axis
+            checker = x * y
+
+            # Determine where the data falls within this checker's bounds
+            checker_indices = np.where(
+                (data[:, 0] >= x_left) & (data[:, 0] < x_right) &
+                (data[:, 1] >= y_bot) & (data[:, 1] < y_top)
+            )
+            # For each of the given indices, figure out the resulting overlay
+            # Which is a multiplication of the overall sign, and the combination
+            # of the x and y tapers within the checker
+            for ind in checker_indices[0]:
+                checker_overlay[ind] = checker * (
+                        x_window[np.where(x_checker == data[ind, 0])[0]] *
+                        y_window[np.where(y_checker == data[ind, 1])[0]]
+                )
+
+            # Flip the sign of the y-axis checker
+            y *= -1
+        # Flip the sign of the x-axis checker
+        x *= -1
+
+    # Apply the checker overlay
+    data_out = np.copy(data)
+    for i in range(3, np.shape(data)[1]):
+        data_out[:, i] = data_out[:, i] + (perturbation * data_out[:, i])
+
+    return checker_overlay, data_out
+
+
+def plot_overlay():
+    """
+    Quick visualizations of the checkerboard overlay to make sure things are ok
+    :return:
+    """
 
 
 if __name__ == "__main__":
@@ -245,13 +259,13 @@ if __name__ == "__main__":
     fid_template = "nz_north_eberhart2015_{}.xyz"
     for section in ["shallow", "crust", "header"]:
         fid = fid_template.format(section)
-        checkerboard_data = checkerboardiphy(xyz_fid=os.path.join(path, fid),
-                                             spacing_m=50000.,
-                                             perturbation=0.02
-                                             )
+        overlay, checkerboard = checkerboardiphy(xyz_fid=os.path.join(path, fid),
+                                                 spacing_m=50000.,
+                                                 perturbation=0.02
+                                                 )
         # save the data with a new tag
         fid_out = fid.split('.')[0] + "_checker." + fid.split('.')[1]
-        np.save(checkerboard_data, fid_out)
+        np.save(checkerboard, fid_out)
 
 
 
