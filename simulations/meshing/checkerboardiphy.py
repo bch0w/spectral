@@ -5,6 +5,10 @@ For use with Specfem3D Cartesian.
 import os
 import numpy as np
 from scipy import signal
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+
+plt.rcParams['image.cmap'] = 'seismic'
 
 
 def xyz_reader(xyz_fid, save=True):
@@ -58,132 +62,13 @@ def xyz_reader(xyz_fid, save=True):
         return header, data
 
 
-def determine_checkers(data, header, spacing_m=50000):
+def checkerboardiphy(xyz_fid, spacing_m, perturbation=0.02, taper_signal=None,
+                     plot=True):
     """
-    read files in, define bounds, return
-    :type data: np.ndarray
-    :param data: data read in using xyz_reader
-    :type header: dict
-    :param header: the header from xyz_reader
-    :type spacing_m: int
-    :param spacing_m: spacing of checkers in meters
-    :rtype checkerboard: np.array
-    :return checkerboard: the checkerboard the same size as the input data
-    """
-    def define_checkers(point, min_bound, max_bound, checker_size, grid_size):
-        """
-        1-D operation
-        Given a point along an axis, first determine whether this point exists
-        in a positive or negative checker, and then determine where along a
-        tapering inside this checker the point exists.
-
-        :type point: float
-        :param point: coordinate point to be evaluated
-        :type min_bound: float
-        :param min_bound: minimum domain boundary
-        :type max_bound: float
-        :param max_bound: maximum domain boundary
-        :type checker_size: float
-        :param checker_size: the spacing of the overall domain
-        :type grid_size: float
-        :param grid_size: the grid spacing along the given axis
-        :rtype: int
-        :return: value of the checker for the given information
-        """
-        sign = 1
-        # check if the value is between
-        for inner_bound in np.arange(min_bound, max_bound, checker_size):
-            outer_bound = inner_bound + checker_size
-            if inner_bound <= point < outer_bound:
-                # Define the extent of the checker grid
-                checker = np.arange(inner_bound, outer_bound, grid_size)
-
-                # Taper the checker (NOTE: Different signals can be used here)
-                taper_window = signal.tukey(len(checker))
-                taper_amount = taper_window[np.where(point == checker)[0][0]]
-
-                # Assign value based on the sign of the checker and tapering
-                checker_value = sign * taper_amount
-
-                return checker_value
-            # If the value is not within these bounds, switch sign and move on
-            sign *= -1
-        else:
-            # Takes the last value of the inner and outer bound
-            print("this shouldn't have happened")
-            return
-
-    # Go through each line in the file and determine the checker value
-    x_grid, y_grid, checkerboard_out = [], [], []
-    for gridpoint in data:
-        x_checker = define_checkers(point=gridpoint[0],  # this is the x value
-                                    min_bound=header["orig_x"],
-                                    max_bound=header["end_x"],
-                                    checker_size=spacing_m,
-                                    grid_size=header["spacing_x"]
-                                    )
-        y_checker = define_checkers(point=gridpoint[1],  # this is the y value
-                                    min_bound=header["orig_y"],
-                                    max_bound=header["end_y"],
-                                    checker_size=spacing_m,
-                                    grid_size=header["spacing_y"]
-                                    )
-        checkerboard_out.append(x_checker * y_checker)
-
-    return np.array(checkerboard_out)
-
-
-def convert_to_checkers(data, checkerboard, perturbation=0.1):
-    """
-    take checker boolean data and perturb base model with given perturbation
-
-    x, y, z, vp[m/s], vs[m/s], rho[kg/m**3], Qp, Qs
-
-    :return:
-    """
-    data_out = np.copy(data)
-    for i, gridpoint in enumerate(data):
-        # Set the value of the perturbation to add to the gridpoint
-        perturb = checkerboard[i] * perturbation
-        for j, value in gridpoint:
-            # Make sure we skip over the coordinates, which occupy first 3
-            if j in np.arange(0, 3):
-                continue
-            # New data is old data plus some perturbation of old data
-            data_out[i] = data_in[i] + data_in[i] * perturb
-
-    return data_out
-
-
-# def checkerboardiphy(xyz_fid, spacing_m, perturbation=0.02):
-#     """
-#     Amalgamation of the above functions
-#
-#     This is too slow, doesn't work
-#
-#     :type xyz_fid: str
-#     :param xyz_fid: path to file to read
-#     :type spacing_m: float
-#     :param spacing_m: spacing in meters
-#     :type perturbation: float
-#     :param perturbation: perturbation to give to checkers
-#     :return:
-#     """
-#     # Read in the data
-#     header, data = xyz_reader(xyz_fid=xyz_fid, save=True)
-#
-#     # Create the checkerboard based on the given data
-#     checkerboard = determine_checkers(data, header, spacing_m)
-#
-#     # Convert the data into checkerboard
-#     data_out = convert_to_checkers(data, checkerboard, perturbation)
-#
-#     return data_out
-
-
-def checkerboardiphy(xyz_fid, spacing_m, perturbation=0.02):
-    """
-    Amalgamation of the above functions
+    Read in the data from an XYZ tomography file and create a checkerboard
+    overlay which has +/- {perturbation} checkers overlain on the tomography
+    file. The checkers also include tapering so that there are no sharp
+    transitions inside the checkerboard
 
     :type xyz_fid: str
     :param xyz_fid: path to file to read
@@ -191,6 +76,10 @@ def checkerboardiphy(xyz_fid, spacing_m, perturbation=0.02):
     :param spacing_m: spacing in meters
     :type perturbation: float
     :param perturbation: perturbation to give to checkers
+    :type taper_signal: scipy.signal.function
+    :param taper_signal: scipy signal to taper checkers by
+    :type plot: bool
+    :param plot: plot the overlay for confirmation
     :return:
     """
     # Read in the data
@@ -198,23 +87,27 @@ def checkerboardiphy(xyz_fid, spacing_m, perturbation=0.02):
 
     # Initialize starting values
     checker_overlay = np.zeros(len(data))
-    x, y = 1, 1
+    x = 1
 
+    print(xyz_fid)
     # Loop through the x-axis, setting left and right boundaries
     for x_left in np.arange(header["orig_x"], header["end_x"], spacing_m):
+        y = 1
+        print("x_left: {}/{}".format(x_left, header["end_x"]))
         x_right = x_left + spacing_m
 
         # Create the tapered checker for a given checker defined by bounds
         x_checker = np.arange(x_left, x_right, header["spacing_x"])
-        x_window = signal.tukey(len(x_checker))
+        x_window = taper_signal(len(x_checker))
 
         # Loop through the y-axis, setting lower and upper boundaries
         for y_bot in np.arange(header["orig_y"], header["end_y"], spacing_m):
+            print("\ty_bot: {}/{}".format(y_bot, header["end_y"]))
             y_top = y_bot + spacing_m
 
             # Create the tapered checker for the given checker defined by bounds
             y_checker = np.arange(y_bot, y_top, header["spacing_y"])
-            y_window = signal.tukey(len(y_checker))
+            y_window = taper_signal(len(y_checker))
 
             # Determine the sign of the overall checker, which is set by the
             # alternating sign of each inner checker axis
@@ -244,28 +137,40 @@ def checkerboardiphy(xyz_fid, spacing_m, perturbation=0.02):
     for i in range(3, np.shape(data)[1]):
         data_out[:, i] = data_out[:, i] + (perturbation * data_out[:, i])
 
+    # Generate a quick plot to show a representation of the checkerboard
+    if plot is not None:
+        z_ind = np.where(data[:, 2] > 0)[0]
+        plt.scatter(x=data[z_ind, 0], y=data[z_ind, 1],
+                    c=checker_overlay[z_ind]
+                    )
+        plt.xlabel("UTM-60 EASTING (m)")
+        plt.ylabel("UTM-60 NORTHING (m)")
+        plt.title("{f}\n +/- {p}, {t} taper, {s}m spacing".format(
+            f=xyz_fid, p=perturbation, t=chosen_signal.__name__, s=spacing_m)
+        )
+        plt.savefig("{}_checker_{}km.png".format(xyz_fid, int(spacing*1E-3)))
+
     return checker_overlay, data_out
-
-
-def plot_overlay():
-    """
-    Quick visualizations of the checkerboard overlay to make sure things are ok
-    :return:
-    """
 
 
 if __name__ == "__main__":
     path = "./"
     fid_template = "nz_north_eberhart2015_{}.xyz"
-    for section in ["shallow", "crust", "header"]:
+    spacing = 80000.
+    chosen_signal = signal.hanning
+
+    for section in ["shallow", "crust", "mantle"]:
         fid = fid_template.format(section)
-        overlay, checkerboard = checkerboardiphy(xyz_fid=os.path.join(path, fid),
-                                                 spacing_m=50000.,
-                                                 perturbation=0.02
-                                                 )
+        overlay, checkerboard = checkerboardiphy(
+            xyz_fid=os.path.join(path, fid), spacing_m=spacing.,
+            perturbation=0.02, taper_signal=chosen_signal, plot=True
+        )
         # save the data with a new tag
-        fid_out = fid.split('.')[0] + "_checker." + fid.split('.')[1]
-        np.save(checkerboard, fid_out)
+        fid_out = (fid.split('.')[0] +
+                   "_checker_{}km.".format(int(spacing*1E-3)) +
+                   fid.split('.')[1]
+                   )
+        np.save(fid_out, checkerboard)
 
 
 
