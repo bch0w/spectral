@@ -63,7 +63,7 @@ def xyz_reader(xyz_fid, save=True):
 
 
 def checkerboardiphy(xyz_fid, spacing_m, perturbation=0.02, taper_signal=None,
-                     plot=True):
+                     plot_fid=None):
     """
     Read in the data from an XYZ tomography file and create a checkerboard
     overlay which has +/- {perturbation} checkers overlain on the tomography
@@ -78,8 +78,8 @@ def checkerboardiphy(xyz_fid, spacing_m, perturbation=0.02, taper_signal=None,
     :param perturbation: perturbation to give to checkers
     :type taper_signal: scipy.signal.function
     :param taper_signal: scipy signal to taper checkers by
-    :type plot: bool
-    :param plot: plot the overlay for confirmation
+    :type plot_fid: bool
+    :param plot_fid: plot the overlay for confirmation
     :return:
     """
     # Read in the data
@@ -138,7 +138,7 @@ def checkerboardiphy(xyz_fid, spacing_m, perturbation=0.02, taper_signal=None,
         data_out[:, i] = data_out[:, i] + (perturbation * data_out[:, i])
 
     # Generate a quick plot to show a representation of the checkerboard
-    if plot is not None:
+    if plot_fid is not None:
         z_ind = np.where(data[:, 2] > 0)[0]
         plt.scatter(x=data[z_ind, 0], y=data[z_ind, 1],
                     c=checker_overlay[z_ind]
@@ -146,32 +146,112 @@ def checkerboardiphy(xyz_fid, spacing_m, perturbation=0.02, taper_signal=None,
         plt.xlabel("UTM-60 EASTING (m)")
         plt.ylabel("UTM-60 NORTHING (m)")
         plt.title("{f}\n +/- {p}, {t} taper, {s}m spacing".format(
-            f=xyz_fid, p=perturbation, t=chosen_signal.__name__, s=spacing_m)
+            f=xyz_fid, p=perturbation, t=taper_signal.__name__, s=spacing_m)
         )
-        plt.savefig("{}_checker_{}km.png".format(xyz_fid, int(spacing*1E-3)))
+        plt.savefig("{}.png".format(plot_fid))
 
     return checker_overlay, data_out
 
 
-if __name__ == "__main__":
+def parse_data_to_header(data):
+    """
+    Make a new header dictionary with adjusted data
+    :param data:
+    :return:
+    """
+    x_values = np.unique(data[:, 0])
+    y_values = np.unique(data[:, 1])
+    z_values = np.unique(data[:, 2])
+    parsed_header = {
+        "orig_x": x_values.min(), "orig_y": y_values.min(),
+        "orig_z": z_values.min(), "end_x": x_values.max(),
+        "end_y": y_values.max(), "end_z": z_values.max(),
+        "spacing_x": abs(x_values[1] - x_values[0]),
+        "spacing_y": abs(y_values[1] - y_values[0]),
+        "spacing_z": abs(z_values[1] - z_values[0]),
+        "nx": len(x_values), "ny": len(y_values), "nz": len(z_values),
+        "vp_min": data[:, 3].min(), "vp_max": data[:, 3].max(),
+        "vs_min": data[:, 4].min(), "vs_max": data[:, 4].max(),
+        "rho_min": data[:, 5].max(), "rho_max": data[:, 5].max(),
+    }
+    return parsed_header
+
+
+def write_xyz(header, data, fid_out):
+    """
+    Write out a new xyz file with proper header and data
+    """
+    with open(fid_out, "w") as f:
+        # write header
+        f.write("{:.1f} {:.1f} {:.1f} {:.1f} {:.1f} {:.1f}\n".format(
+            header["orig_x"], header["orig_y"], header["orig_z"],
+            header["end_x"], header["end_y"], header["end_z"])
+        )
+        f.write("{:.1f} {:.1f} {:.1f}\n".format(
+            header["spacing_x"], header["spacing_y"], header["spacing_z"])
+                )
+        f.write("{:d} {:d} {:d}\n".format(
+            header["nx"], header["ny"], header["nz"])
+        )
+        f.write("{:.1f} {:.1f} {:.1f} {:.1f} {:.1f} {:.1f}\n".format(
+            header["vp_min"], header["vp_max"], header["vs_min"],
+            header["vs_max"], header["rho_min"], header["rho_max"])
+        )
+        # write data by line
+        for line in data:
+            x, y, z, vp, vs, rho, qp, qs = line.tolist()
+            f.write(
+             "{:.1f} {:.1f} {:.1f} {:.1f} {:.1f} {:.1f} {:.1f} {:.1f}\n".format(
+                   x, y, z, vp, vs, rho, qp, qs)
+            )
+
+
+def call_checkerboardiphy():
+    """
+    Call script for the checkerboard function
+    :return:
+    """
     path = "./"
     fid_template = "nz_north_eberhart2015_{}.xyz"
-    spacing = 80000.
+    dominant_spacing = 80000.
     chosen_signal = signal.hanning
 
-    for section in ["shallow", "crust", "mantle"]:
-        fid = fid_template.format(section)
-        overlay, checkerboard = checkerboardiphy(
-            xyz_fid=os.path.join(path, fid), spacing_m=spacing.,
-            perturbation=0.02, taper_signal=chosen_signal, plot=True
-        )
-        # save the data with a new tag
-        fid_out = (fid.split('.')[0] +
-                   "_checker_{}km.".format(int(spacing*1E-3)) +
-                   fid.split('.')[1]
-                   )
-        np.save(fid_out, checkerboard)
+    for i in range(2, 4):
+        spacing = dominant_spacing * i
 
+        for section in ["shallow", "crust", "mantle"]:
+            fid = fid_template.format(section)
+
+            # Save the outputs with a new tag
+            fid_out = (fid.split('.')[0] +
+                       "_checker_{}km.".format(int(spacing * 1E-3)) +
+                       fid.split('.')[1]
+                       )
+
+            # Only plot the shallow section
+            if section == "shallow":
+                plot_fid = fid_out
+            else:
+                plot_fid = None
+
+            # Create the checkerboard data
+            fid = fid_template.format(section)
+            overlay, checkerboard_data = checkerboardiphy(
+                xyz_fid=os.path.join(path, fid), spacing_m=spacing,
+                perturbation=0.02, taper_signal=chosen_signal, plot_fid=plot_fid
+            )
+            checkerboard_header = parse_data_to_header(checkerboard_data)
+
+            # Save the new data to a numpy array for easy i/o
+            np.save(fid_out, checkerboard_data)
+
+            # Write the new data to a new xyz file
+            write_xyz(header=checkerboard_header, data=checkerboard_data,
+                      fid_out=fid_out)
+
+
+if __name__ == "__main__":
+    call_checkerboardiphy()
 
 
 
