@@ -1,9 +1,34 @@
-import os
 import numpy as np
 from scipy.interpolate import griddata
+import matplotlib.pyplot as plt
 
 from checkerboardiphy import xyz_reader
-from pyatoa.utils.operations.source_receiver import lonlat_utm
+
+
+def lonlat_utm(lon_or_x, lat_or_y, utm_zone=60, inverse=False):
+    """convert latitude and longitude coordinates to UTM projection
+    from mesh_gen_helper.py (personal code)
+
+    :type lon_or_x: float or int
+    :param lon_or_x: longitude value in WGS84 or X in UTM-'zone' projection
+    :type lat_or_y: float or int
+    :param lat_or_y: latude value in WGS84 or Y in UTM-'zone' projection
+    :type utm_zone: int
+    :param utm_zone: UTM zone for conversion from WGS84
+    :type inverse: bool
+    :param inverse: if inverse == False, latlon => UTM, vice versa.
+    :rtype x_or_lon: float
+    :return x_or_lon: x coordinate in UTM or longitude in WGS84
+    :rtype y_or_lat: float
+    :return y_or_lat: y coordinate in UTM or latitude in WGS84
+    """
+    from pyproj import Proj
+    projstr = ("+proj=utm +zone={}, +south +ellps=WGS84 +datum=WGS84"
+               " +units=m +no_defs".format(utm_zone))
+    myProj = Proj(projstr)
+    x_or_lon, y_or_lat = myProj(lon_or_x, lat_or_y, inverse=inverse)
+
+    return x_or_lon, y_or_lat
 
 
 def convert_interp(latlon_fid, xyz_npy_fid, plot=False):
@@ -25,7 +50,7 @@ def convert_interp(latlon_fid, xyz_npy_fid, plot=False):
     # lat_min, lon_min = 172.9998, -42.5007;
     # lat_max, lon_max = 179.5077, -36.9488
     x_min, x_max = 170000., 725000.
-    y_min, y_max = 5280000., 5910000.
+    y_min, y_max = 5270000., 5910000.
 
     # For the coastline plot
     if plot:
@@ -38,7 +63,7 @@ def convert_interp(latlon_fid, xyz_npy_fid, plot=False):
                      )[0]]
 
     # Create the regular grid to be interpolated onto
-    spacing = 1000.
+    spacing = 2000.
     x_reg = np.arange(x_min, x_max, spacing)
     y_reg = np.arange(y_min, y_max, spacing)
 
@@ -88,7 +113,34 @@ def convert_interp(latlon_fid, xyz_npy_fid, plot=False):
 
     np.save('utm60_{}'.format(xyz_npy_fid), data_out)
     return data_out
-convert_interp('./matlab_convert_carl_cust_to_latlon/crust_latlon.txt', 'nz_full_eberhart2015_crust.xyz.npy')
+
+
+def fill_nans(data_with_nans, data_to_fill):
+    """
+    Combining two tomography files
+
+    :param fid_to_fill:
+    :param fid_fill_with:
+    :return:
+    """
+    # Find rows that contain NaN's
+    nan_ind = np.where(np.isnan(data_with_nans[:, 3]) == True)[0]
+    for i in nan_ind:
+        print(i)
+        to_fill_ind = np.where((data_to_fill[:, 0] == data_with_nans[i, 0]) &
+                               (data_to_fill[:, 1] == data_with_nans[i, 1]) &
+                               (data_to_fill[:, 2] == data_with_nans[i, 2])
+                               )[0]
+
+        try:
+            to_fill_ind.size()
+            data_with_nans[to_fill_ind] = data_with_nans[i]
+        except TypeError:
+            continue
+
+
+
+    pass
 
 
 def trim_xyz_file(data, bounds):
@@ -164,33 +216,11 @@ def write_new_xyz(header, data, fidout_template):
 
 
 if __name__ == "__main__":
-    # path = "/Users/chowbr/Documents/subduction/data/KUPEDATA/tomo_files"
-    # path = "/seis/prj/fwi/bchow/data/KUPEDATA/tomo_files"
-    path = "./"
-    name_template = "nz_north_eberhart2015_{}.xyz"
-    fullpath = os.path.join(path, name_template)
-   
-    # output file names
-    out_template = "nz_x{x}_y{y}_eberhart2015_{section}.xyz"
-    outpath = os.path.join(path, out_template)
-    
-    # different names of the tomo files
-    sections = ["shallow", "crust", "mantle"]
+    data_out = convert_interp('crust_latlon.txt',
+                              'nz_full_eberhart2015_crust.xyz.npy'
+                              )
+    import ipdb;ipdb.set_trace()
 
-    # hardcoded, defined by MESH_SRTM30P_139_162_4000m [min, max]
-    x_bounds = [167500.0, 708000.0]
-    y_bounds = [5270000.0, 5915000.0]
-    z_bounds = [-4000000., 2100.0]
-    bounds = [x_bounds, y_bounds, z_bounds]
-
-    # trim xyz files based on given bounds
-    for i, section in enumerate(sections):
-        print("trimming section {}".format(section))
-        header, data = xyz_reader(fullpath.format(section))
-        new_header, new_data = trim_xyz_file(data, bounds)
-        outpath_temp = outpath.format(x="{x:.0f}", y="{y:.0f}", section=section)
-        write_new_xyz(new_header, new_data, outpath_temp)
-        
 
 
 
