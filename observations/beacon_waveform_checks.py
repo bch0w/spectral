@@ -4,6 +4,7 @@ amplitudes of isntruments in the network
 """
 import os
 import glob
+import pyatoa
 import numpy as np
 import matplotlib.pyplot as plt
 from obspy.clients.fdsn import Client
@@ -13,6 +14,21 @@ import matplotlib as mpl
 mpl.rcParams['font.size'] = 12
 mpl.rcParams['lines.linewidth'] = 1.25
 mpl.rcParams['axes.linewidth'] = 2
+
+
+def change_response(inv):
+    from obspy.clients.nrl import NRL
+    nrl = NRL()
+    resp = nrl.get_response(
+        sensor_keys=['Guralp', 'CMG-40T', '60s - 50Hz', '800'],
+        datalogger_keys=['Nanometrics', 'Taurus', '40 Vpp (0.4)',
+                         'Low (default)', '1 mHz', '100'])
+    for net in inv:
+        for sta in net:
+            for cha in sta:
+                cha.response = resp
+
+    return inv
 
 
 def event_information(i=0, pad_s=60*60):
@@ -175,6 +191,123 @@ def process(path, inv_path, t0=1, t1=10):
             plt.show()
 
 
+def compare_geonet():
+    """
+    Comparing BEACON stations to GeoNet sites nearby to check waveform fits.
+    :return:
+    """
+    config = pyatoa.Config(event_id="2017p795065",
+                           paths_to_waveforms=[
+                               '/Users/chowbr/Documents/subduction/seismic'],
+                           paths_to_responses=[
+                               '/Users/chowbr/Documents/subduction/seed/RESPONSE'],
+                           startpad=200, endpad=300
+                           )
+    mgmt = pyatoa.Manager(config)
+    # NZ.BFZ
+    bfz = mgmt.gatherer.gather_observed(station_code="NZ.TSZ.*.HH?")
+    bfz_inv = mgmt.gatherer.gather_station(
+        station_code="NZ.TSZ.*.HH?")
+    bfz = preprocess(bfz, bfz_inv)
+    # NZ.BKZ
+    bkz = mgmt.gatherer.gather_observed(station_code="NZ.WAZ.*.HH?")
+    bkz_inv = mgmt.gatherer.gather_station(
+        station_code="NZ.WAZ.*.HH?")
+    bkz = preprocess(bkz, bkz_inv)
+    # NZ.PXZ
+    pxz = mgmt.gatherer.gather_observed(station_code="NZ.PXZ.*.HH?")
+    pxz_inv = mgmt.gatherer.gather_station(
+        station_code="NZ.PXZ.*.HH?")
+    pxz = preprocess(pxz, pxz_inv)
+
+    for i in range(1, 20):
+        try:
+            f, (ax1, ax2, ax3) = plt.subplots(3, sharex=True)
+            rd = mgmt.gatherer.gather_observed(
+                "XX.RD{:0>2}.*.HH?".format(i))
+            rd_inv = mgmt.gatherer.gather_station(
+                "XX.RD{:0>2}.*.HH?".format(i))
+            rd = preprocess(rd, rd_inv)
+
+            for ax, comp in zip([ax1, ax2, ax3], ["N", "E", "Z"]):
+                bfz_comp = bfz.select(component=comp)
+                bkz_comp = bkz.select(component=comp)
+                pxz_comp = pxz.select(component=comp)
+                rd_comp = rd.select(component=comp)
+
+                ax.plot(bfz_comp[0].data, 'k', label="TSZ")
+                ax.plot(bkz_comp[0].data, 'k--', label="WAZ")
+                ax.plot(pxz_comp[0].data, 'k:', label="PXZ")
+                ax.plot(rd_comp[0].data, 'r', label="RD??")
+
+                ax.set_ylabel(comp)
+                ax.set_title("RD{:0>2}".format(i))
+                plt.legend()
+            print("BFZ {bfz}\nBKZ {bkz}\nPXZ {pxz}\nRD {rd}".format(
+                bfz=bfz.max(), bkz=bkz.max(), pxz=pxz.max(),
+                rd=rd.max())
+            )
+            plt.show()
+        except Exception as e:
+            plt.close()
+            continue
+
+def test_response_files():
+    """
+    check amplitude differences in response files
+    :return:
+    """
+    from obspy.clients.nrl import NRL
+    nrl = NRL()
+    resp_a = nrl.get_response(
+        sensor_keys=['Guralp', 'CMG-40T', '60s - 50Hz', '800'],
+        datalogger_keys=['Nanometrics', 'Taurus', '40 Vpp (0.4)',
+                         'Low (default)', '1 mHz', '100'])
+    resp_b = nrl.get_response(
+        sensor_keys=['Guralp', 'CMG-40T', '60s - 50Hz', '800'],
+        datalogger_keys=['Nanometrics', 'Taurus', '40 Vpp (0.4)',
+                         'Low (default)', 'Off', '100'])
+
+    config = pyatoa.Config(event_id="2018p130600",
+                           paths_to_waveforms=[
+                               '/Users/chowbr/Documents/subduction/seismic'],
+                           paths_to_responses=[
+                               '/Users/chowbr/Documents/subduction/seed/RESPONSE'],
+                           startpad=200, endpad=300
+                           )
+    mgmt = pyatoa.Manager(config)
+    rd = mgmt.gatherer.gather_observed("XX.RD10.*.HH?")
+
+    # change response for inv a
+    inv_a = mgmt.gatherer.gather_station("XX.RD10.*.HH?")
+    for net in inv_a:
+        for sta in net:
+            for cha in sta:
+                cha.response = resp_a
+    rd_a = rd.copy()
+    rd_a = preprocess(rd_a, inv_a)
+
+    # change response for inv b
+    inv_b = mgmt.gatherer.gather_station("XX.RD10.*.HH?")
+    for net in inv_b:
+        for sta in net:
+            for cha in sta:
+                cha.response = resp_b
+    rd_b = rd.copy()
+    rd_b = preprocess(rd_b, inv_b)
+
+    # plot
+    f, (ax1, ax2, ax3) = plt.subplots(3, sharex=True)
+    for ax, comp in zip([ax1, ax2, ax3], ["N", "E", "Z"]):
+        rd_a_comp = rd_a.select(component=comp)
+        rd_b_comp = rd_b.select(component=comp)
+
+        ax.plot(rd_a_comp[0].data, 'r', label="Response A")
+        ax.plot(rd_b_comp[0].data, 'k', label="Response B")
+    plt.legend()
+    plt.show()
+
+
 if __name__ == "__main__":
     pathing = "VUW"
     if pathing == "GNS":
@@ -187,6 +320,7 @@ if __name__ == "__main__":
                    "BEACON/DATALESS/XX.RDF.DATALESS"
 
     process(path, inv_path, t0=10, t1=30)
+
 
 
 

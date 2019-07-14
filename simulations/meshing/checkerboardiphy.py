@@ -5,7 +5,6 @@ For use with Specfem3D Cartesian.
 import os
 import numpy as np
 from scipy import signal
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 plt.rcParams['image.cmap'] = 'seismic'
@@ -132,10 +131,10 @@ def checkerboardiphy(xyz_fid, spacing_m, perturbation=0.02, taper_signal=None,
         # Flip the sign of the x-axis checker
         x *= -1
 
-    # Apply the checker overlay
+    # Apply the checker overlay, only to Vp and Vs values, not to rho or Q
     data_out = np.copy(data)
-    for i in range(3, np.shape(data)[1]):
-        data_out[:, i] = data_out[:, i] + (perturbation * data_out[:, i])
+    data_out[:, 3] = data_out[:, 3] + (perturbation * data_out[:, 3])  # Vs
+    data_out[:, 4] = data_out[:, 4] + (perturbation * data_out[:, 4])  # Vp
 
     # Generate a quick plot to show a representation of the checkerboard
     if plot_fid is not None:
@@ -148,6 +147,15 @@ def checkerboardiphy(xyz_fid, spacing_m, perturbation=0.02, taper_signal=None,
         plt.title("{f}\n +/- {p}, {t} taper, {s}m spacing".format(
             f=xyz_fid, p=perturbation, t=taper_signal.__name__, s=spacing_m)
         )
+        # plot coastline
+        coastline = np.load("./nz_resf_coast_mod_utm60H_xyz.npy")
+        coastline = coastline[
+                np.where((coastline[:, 0] > header["orig_x"]) &
+                         (coastline[:, 0] < header["end_x"]) & 
+                         (coastline[:, 1] > header["orig_y"]) &
+                         (coastline[:, 1] < header["end_y"])
+                         )[0]]
+        plt.scatter(coastline[:, 0], coastline[:, 1], c='k', marker='.')
         plt.savefig("{}.png".format(plot_fid))
 
     return checker_overlay, data_out
@@ -170,7 +178,7 @@ def parse_data_to_header(data):
         "spacing_y": abs(y_values[1] - y_values[0]),
         "spacing_z": abs(z_values[1] - z_values[0]),
         "nx": len(x_values), "ny": len(y_values), "nz": len(z_values),
-        "vp_min": data[:, 3].min(), "vp_max": data[:, 3].max(),
+        "vp_min": data[:, 4].min(), "vp_max": data[:, 3].max(),
         "vs_min": data[:, 4].min(), "vs_max": data[:, 4].max(),
         "rho_min": data[:, 5].max(), "rho_max": data[:, 5].max(),
     }
@@ -213,20 +221,20 @@ def call_checkerboardiphy():
     """
     path = "./"
     fid_template = "nz_north_eberhart2015_{}.xyz"
-    dominant_spacing = 80000.
+    spacing = 80000.
     chosen_signal = signal.hanning
 
-    for i in range(2, 4):
-        spacing = dominant_spacing * i
-
+    # Create checkers with varying levels of perturbation
+    for perturbation in [0, 0.02, 0.05, 0.1]:
         for section in ["shallow", "crust", "mantle"]:
             fid = fid_template.format(section)
 
             # Save the outputs with a new tag
-            fid_out = (fid.split('.')[0] +
-                       "_checker_{}km.".format(int(spacing * 1E-3)) +
-                       fid.split('.')[1]
-                       )
+            tag = "_checker_{space}km_{win}_{prt}pct".format(
+                space=int(spacing * 1E-3), win=chosen_signal.__name__,
+                prt=int(perturbation * 1E2)
+            )
+            fid_out = (fid.split('.')[0] + tag + fid.split('.')[1])
 
             # Only plot the shallow section
             if section == "shallow":
