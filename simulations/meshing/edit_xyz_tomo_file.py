@@ -138,8 +138,6 @@ def fill_nans(data_with_nans, data_to_fill):
         except TypeError:
             continue
 
-
-
     pass
 
 
