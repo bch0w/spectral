@@ -31,7 +31,7 @@ def lonlat_utm(lon_or_x, lat_or_y, utm_zone=60, inverse=False):
     return x_or_lon, y_or_lat
 
 
-def convert_interp(latlon_fid, xyz_npy_fid, plot=False):
+def convert_interp(latlon_fid, xyz_npy_fid, spacing, plot=False):
     """
     Matlab spat out some converted lat lon coordinates but they need to be in 
     UTM60 and also need to be interpolated because sampling in Carl's
@@ -46,11 +46,12 @@ def convert_interp(latlon_fid, xyz_npy_fid, plot=False):
     data = np.load(xyz_npy_fid)
 
     # These are taken from converting my chosen map coordinates to UTM-60 and
-    # putting a small buffer around the dimensions
+    # putting a small buffer around the dimensions and making sure they are 
+    # in line with the nz_north tomography file
     # lat_min, lon_min = 172.9998, -42.5007;
     # lat_max, lon_max = 179.5077, -36.9488
     x_min, x_max = 170000., 725000.
-    y_min, y_max = 5270000., 5910000.
+    y_min, y_max = 5271000., 5910000.
 
     # For the coastline plot
     if plot:
@@ -63,10 +64,9 @@ def convert_interp(latlon_fid, xyz_npy_fid, plot=False):
                      )[0]]
 
     # Create the regular grid to be interpolated onto
-    spacing = 2000.
     x_reg = np.arange(x_min, x_max, spacing)
     y_reg = np.arange(y_min, y_max, spacing)
-
+    
     x_grid, y_grid = np.meshgrid(x_reg, y_reg)
     x_out = x_grid.flatten()
     y_out = y_grid.flatten()
@@ -123,8 +123,20 @@ def fill_nans(data_with_nans, data_to_fill):
     :param fid_fill_with:
     :return:
     """
+    # Determine the bounds of the good data, to avoid searching outside
+    x_min_dtf = data_to_fill[:,0].min()
+    x_max_dtf = data_to_fill[:,0].max()
+    y_min_dtf = data_to_fill[:,1].min()
+    y_max_dtf = data_to_fill[:,1].max()
+        
     # Find rows that contain NaN's
-    nan_ind = np.where(np.isnan(data_with_nans[:, 3]) == True)[0]
+    nan_ind = np.where((np.isnan(data_with_nans[:, 3]) == True) &
+                       (data_with_nans[:,0] > x_min_dtf) &
+                       (data_with_nans[:,0] < x_max_dtf) &
+                       (data_with_nans[:,1] > y_min_dtf) &
+                       (data_with_nans[:,1] < y_max_dtf)
+                       )[0]
+
     for i in nan_ind:
         print(i)
         to_fill_ind = np.where((data_to_fill[:, 0] == data_with_nans[i, 0]) &
@@ -214,10 +226,18 @@ def write_new_xyz(header, data, fidout_template):
 
 
 if __name__ == "__main__":
-    data_out = convert_interp('crust_latlon.txt',
-                              'nz_full_eberhart2015_crust.xyz.npy'
+    data_out = convert_interp('shallow_latlon.txt',
+                              'nz_full_eberhart2015_shallow.xyz.npy',
+                              spacing=2000.
                               )
-    import ipdb;ipdb.set_trace()
+    data_out = convert_interp('crust_latlon.txt',
+                              'nz_full_eberhart2015_crust.xyz.npy',
+                              spacing=2000.
+                              )
+    data_out = convert_interp('mantle_latlon.txt',
+                              'nz_full_eberhart2015_mantle.xyz.npy',
+                              spacing=8000.
+                              )
 
 
 

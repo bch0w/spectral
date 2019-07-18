@@ -230,7 +230,7 @@ def call_checkerboardiphy():
             fid = fid_template.format(section)
 
             # Save the outputs with a new tag
-            tag = "_checker_{space}km_{win}_{prt}pct".format(
+            tag = "_checker_{space}km_{win}_{prt}pct.".format(
                 space=int(spacing * 1E-3), win=chosen_signal.__name__,
                 prt=int(perturbation * 1E2)
             )
@@ -246,7 +246,7 @@ def call_checkerboardiphy():
             fid = fid_template.format(section)
             overlay, checkerboard_data = checkerboardiphy(
                 xyz_fid=os.path.join(path, fid), spacing_m=spacing,
-                perturbation=0.02, taper_signal=chosen_signal, plot_fid=plot_fid
+                perturbation=perturbation, taper_signal=chosen_signal, plot_fid=plot_fid
             )
             checkerboard_header = parse_data_to_header(checkerboard_data)
 
