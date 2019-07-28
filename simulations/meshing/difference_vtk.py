@@ -4,7 +4,7 @@ There is no real checking so user needs to be sure that the grid data is same!
 """
 import os
 import sys
-
+import glob
 
 def read_file(pathname):
     """
@@ -19,7 +19,7 @@ def read_file(pathname):
     """
     with open(pathname, "r") as f:
         lines = f.readlines()
-
+    
     # determine important line numbers, headers are specific to specfem3d output
     for i, line in enumerate(lines):
         if "POINTS" in line:
@@ -83,9 +83,9 @@ def difference_vtk(model_a, model_b, path="./", reverse=1, write=None):
     error_count = 1
     differences = []
     start = header_dict_a["data_line"]
-    for x, y in zip(model_a[start:-1], model_b[start:-1]):
+    for a, b in zip(model_a[start:-1], model_b[start:-1]):
         try:
-            difference = reverse * (float(x.strip()) - float(y.strip()))
+            difference = reverse * (float(a.strip()) - float(b.strip()))
             differences.append(difference)
         except ValueError:
             print("value error")
@@ -106,11 +106,13 @@ def difference_vtk(model_a, model_b, path="./", reverse=1, write=None):
 
 
 if __name__ == "__main__":
-    path = "/Users/chowbr/Documents/subduction/tomo/testing/" \
-           "seisflows/vtk_files//hikurangi_trial"
-    model_b = "vp_twoevent_0001.vtk"
-    model_a = "vp_nz_init.vtk"
-
+    # path = "/Users/chowbr/Documents/subduction/tomo/testing/" \
+    #        "seisflows/vtk_files//hikurangi_trial"
+    model_b = "vs_checkerboard_model_0002.vtk"
+    model_a = "vs_nz_init.vtk"
+    path = './'
+    # model_a = os.path.basename(glob.glob("./*2015.vtk")[0])
+    # model_b = os.path.basename(glob.glob("./*checker*.vtk")[0])
     model_out = "{}_diff_{}_{}.vtk".format(model_a.split("_")[0],
                                            model_a.split("_")[2].split(".")[0],
                                            model_b.split("_")[2].split(".")[0]

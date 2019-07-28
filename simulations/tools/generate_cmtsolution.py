@@ -167,9 +167,8 @@ def generate_CMTSOLUTION(event_or_id, csv_file, output_file):
 if __name__ == "__main__":
     # ======================== set parameters ==================================
     eventid = "2016p355601"
-    # csv_file = "path/to/GeoNet_CMT_solutions.csv"
     csv_file = "/Users/chowbr/Documents/subduction/data/GEONET/data/moment-tensor/GeoNet_CMT_solutions.csv"
-    output_path = "/Users/chowbr/Documents/subduction/data/KUPEDATA/CMTSOLUTIONS/{}CMTSOLUTION".format(eventid)
+    output_path = "/Users/chowbr/Documents/subduction/data/KUPEDATA/CMTSOLUTIONS/CMTSOLUTION_{}".format(eventid)
     # ======================== set parameters ==================================
 
     generate_CMTSOLUTION(eventid, csv_file, output_path)

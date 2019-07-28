@@ -25,15 +25,18 @@ def log(switch):
         logger_pyflex = logging.getLogger("pyflex")
         logger_pyflex.setLevel(logging.DEBUG)
 
+        logger_pyadjoint = logging.getLogger("pyadjoint")
+        logger_pyadjoint.setLevel(logging.DEBUG)
+
 
 def short_run():
     """
     Quickly run through Pyatoa framework
     :return:
     """
-    pyflex_config = "testing"
-    # folder = "eightevent_m03s00"
-    folder = "identical_waveforms"
+    pyflex_config = "default"
+    pyadjoint_branch = "dev"
+    folder = "eightevent_m03s00"
 
     config = pyatoa.Config(
         event_id="2016p275188",
@@ -45,7 +48,8 @@ def short_run():
         unit_output="DISP",
         pyflex_config=pyflex_config,
         adj_src_type="mtm_hikurangi_strict",
-        synthetics_only=True
+        synthetics_only=False,
+        window_amplitude_ratio=0.2
         )
 
     mgmt = pyatoa.Manager(config=config, empty=True)
@@ -55,7 +59,8 @@ def short_run():
         mgmt.event = ds.events[0]
         for sta in ds.waveforms.list():
             try:
-                if sta in ["NZ.KHEZ", "NZ.PUZ", "NZ.BFZ"]:
+                if True:
+                # if sta in ["NZ.BKZ"]:
                     print(sta)
                     mgmt.st_obs = ds.waveforms[sta].observed
                     mgmt.st_syn = ds.waveforms[sta].synthetic_m00
@@ -63,19 +68,18 @@ def short_run():
                     mgmt.preprocess()
                     mgmt.run_pyflex()
                     mgmt.run_pyadjoint()
-                    import ipdb;ipdb.set_trace()
                     # mgmt.plot_map(show="hold")
-                    mgmt.plot_wav(show=True,
-                                  save="./figures/{}_{}.png".format(
-                                      sta, pyflex_config),
+                    mgmt.plot_wav(show=False,
+                                  save="./figures/{}_{}_{}.png".format(
+                                      sta, pyflex_config, pyadjoint_branch),
                                   append_title=pyflex_config
                                   )
                     mgmt.reset(hard_reset=False)
             except Exception as e:
                 traceback.print_exc()
-                import ipdb;ipdb.set_trace()
+                # import ipdb;ipdb.set_trace()
                 print("error")
-                mgmt.reset("soft")
+                mgmt.reset(hard_reset=False)
                 continue
 
 

@@ -48,6 +48,6 @@ csv_file = "/Users/chowbr/Documents/subduction/data/GEONET/data/" \
            "moment-tensor/GeoNet_CMT_solutions.csv"
 
 # Four events will not have GeoNet moment tensors, leaving 26 trial events
-generate_cmtsolutions(cat, csv_file)
+catalog_to_cmtsolutions.generate_cmtsolutions(cat, csv_file)
 
 

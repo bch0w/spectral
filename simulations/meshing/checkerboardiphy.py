@@ -133,8 +133,9 @@ def checkerboardiphy(xyz_fid, spacing_m, perturbation=0.02, taper_signal=None,
 
     # Apply the checker overlay, only to Vp and Vs values, not to rho or Q
     data_out = np.copy(data)
-    data_out[:, 3] = data_out[:, 3] + (perturbation * data_out[:, 3])  # Vs
-    data_out[:, 4] = data_out[:, 4] + (perturbation * data_out[:, 4])  # Vp
+    checker_overlay *= perturbation
+    data_out[:, 3] = data_out[:, 3] + (checker_overlay * data_out[:, 3])  # Vs
+    data_out[:, 4] = data_out[:, 4] + (checker_overlay * data_out[:, 4])  # Vp
 
     # Generate a quick plot to show a representation of the checkerboard
     if plot_fid is not None:
@@ -225,7 +226,7 @@ def call_checkerboardiphy():
     chosen_signal = signal.hanning
 
     # Create checkers with varying levels of perturbation
-    for perturbation in [0, 0.02, 0.05, 0.1]:
+    for perturbation in [0.02]:#[0, 0.02, 0.05, 0.1]:
         for section in ["shallow", "crust", "mantle"]:
             fid = fid_template.format(section)
 

@@ -18,9 +18,9 @@ def fetch_events(starttime="2017-01-01T00:00:00", output_fid=None):
 
     c = Client("GEONET")
     cat = c.get_events(starttime=UTCDateTime(starttime), endtime=UTCDateTime(),
-                       minmagnitude=4.5, minlatitude=-42.5007,
-                       maxlatitude=-36.9488, minlongitude=172.9998,
-                       maxlongitude=179.5077
+                       minmagnitude=5., minlatitude=-43.,
+                       maxlatitude=-37., minlongitude=173.,
+                       maxlongitude=179.
                        )
 
     if output_fid:
