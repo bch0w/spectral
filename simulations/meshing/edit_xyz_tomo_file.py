@@ -31,6 +31,94 @@ def lonlat_utm(lon_or_x, lat_or_y, utm_zone=60, inverse=False):
     return x_or_lon, y_or_lat
 
 
+def extrapolate_outward(xyz_npy_fid, extend_x=500000, extend_y=0.):
+    """
+    Extrapolate the boundaries of
+    :param xyz_npy_fid:
+    :return:
+    """
+    # Load and distribute the data
+    xyz = np.load(xyz_npy_fid)
+    x_values = np.unique(xyz[:, 0])
+    y_values = np.unique(xyz[:, 1])
+    z_values = np.unique(xyz[:, 2])
+
+    # Set some useful values to be used during extrapolation
+    dx = x_values[1] - x_values[0]
+    dy = y_values[1] - y_values[0]
+    x_min = x_values.min()
+    x_max = x_values.max()
+    y_min = y_values.min()
+    y_max = y_values.max()
+
+    # Determine how much to extend the file, based on the original grid spacing,
+    # if the desired extension is less than one grid space, just set as grid
+    if extend_x:
+        extend_x = int(extend_x//dx) or 1
+    if extend_y:
+        extend_y = int(extend_y//dy) or 1
+
+    # Extrapolate for each depth slice
+    xyz_new = np.array([])
+    for z in z_values:
+        depth_slice = xyz[np.where(xyz[:, 2] == z)[0]]
+        # Extend the tomo file on the x-axis
+        if extend_x:
+            # Extend the tomo file on the x max side
+            depth_slice_last_column = depth_slice[
+                np.where(depth_slice[:, 0] == x_max)[0]]
+            for i in range(1, extend_x + 1):
+                depth_slice_add = depth_slice_last_column.copy()
+                depth_slice_add[:, 0] += i * dx
+                depth_slice = np.concatenate((depth_slice, depth_slice_add))
+
+            # Extend the tomo file on the x min side
+            depth_slice_first_column = depth_slice[
+                np.where(depth_slice[:, 0] == x_min)[0]]
+            for i in range(-extend_x, 0):
+                depth_slice_add = depth_slice_first_column.copy()
+                depth_slice_add[:, 0] += i * dx
+                depth_slice = np.concatenate((depth_slice, depth_slice_add))
+
+        # Do the same for the y extent
+        if extend_y:
+            # Extend the tomo file on the x max side
+            depth_slice_top_row = depth_slice[
+                np.where(depth_slice[:, 1] == y_max)[0]]
+            for i in range(1, extend_x + 1):
+                depth_slice_add = depth_slice_top_row.copy()
+                depth_slice_add[:, 0] += i * dy
+                depth_slice = np.concatenate((depth_slice, depth_slice_add))
+
+            # Extend the tomo file on the x min side
+            depth_slice_bottom_row = depth_slice[
+                np.where(depth_slice[:, 1] == y_min)[0]]
+            for i in range(-extend_x, 0):
+                depth_slice_add = depth_slice_bottom_row.copy()
+                depth_slice_add[:, 0] += i * dy
+                depth_slice = np.concatenate((depth_slice, depth_slice_add))
+
+        # Add the depth slices to the output array
+        if len(xyz_new) == 0:
+            xyz_new = depth_slice
+        else:
+            xyz_new = np.concatenate((xyz_new, depth_slice))
+
+    return xyz_new
+
+
+def plot_xyz_npy(xyz_npy_fid, depth=0):
+    """
+
+    :param xyz_npy_fid:
+    :param depth:
+    :return:
+    """
+    xyz = np.load(xyz_npy_fid)
+    xyz = xyz[np.where(xyz[:, 2] > xyz[:, 2].max())]
+
+
+
 def convert_interp(latlon_fid, xyz_npy_fid, spacing, plot=False):
     """
     Matlab spat out some converted lat lon coordinates but they need to be in 
