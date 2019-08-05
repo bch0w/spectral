@@ -95,6 +95,7 @@ def convert_interp(latlon_fid, xyz_npy_fid, spacing, plot=False):
                 plt.xlabel("Easting (m)")
                 plt.ylabel("Northing (m)")
                 plt.show()
+                plot = False
 
         # Create the ndarray by creating column vectors and mushing em together
         z_out = np.ones(len(x_grid.flatten())) * z_value
@@ -224,20 +225,37 @@ def write_new_xyz(header, data, fidout_template):
                    x, y, z, vp, vs, rho, qp, qs)
             )
 
+            
+def write_xyz_from_np(fid_in, fid_out):
+    """
+    write out a new xyz file with proper header and data
+    """
+    data = np.load(fid_in)
+    with open(fid_out, "w") as f:
+        for line in data:
+            x, y, z, vp, vs, rho, qp, qs = line.tolist()
+            f.write(
+             "{:.1f} {:.1f} {:.1f} {:.1f} {:.1f} {:.1f} {:.1f} {:.1f}\n".format(
+                   x, y, z, vp, vs, rho, qp, qs)
+            )
+
 
 if __name__ == "__main__":
-    data_out = convert_interp('shallow_latlon.txt',
-                              'nz_full_eberhart2015_shallow.xyz.npy',
-                              spacing=2000.
-                              )
-    data_out = convert_interp('crust_latlon.txt',
-                              'nz_full_eberhart2015_crust.xyz.npy',
-                              spacing=2000.
-                              )
-    data_out = convert_interp('mantle_latlon.txt',
-                              'nz_full_eberhart2015_mantle.xyz.npy',
-                              spacing=8000.
-                              )
+    data_out = convert_interp(latlon_fid='nz_full_extrapolate_crust_latlon_coordinates.txt',
+                              xyz_npy_fid='nz_full_extrapolate_eberhart2015_crust.xyz.npy',
+                              spacing=2000., plot=True)
+    # data_out = convert_interp('shallow_latlon.txt',
+    #                           'nz_full_eberhart2015_shallow.xyz.npy',
+    #                           spacing=2000.
+    #                           )
+    # data_out = convert_interp('crust_latlon.txt',
+    #                           'nz_full_eberhart2015_crust.xyz.npy',
+    #                           spacing=2000.
+    #                           )
+    # data_out = convert_interp('mantle_latlon.txt',
+    #                           'nz_full_eberhart2015_mantle.xyz.npy',
+    #                           spacing=8000.
+    #                           )
 
 
 

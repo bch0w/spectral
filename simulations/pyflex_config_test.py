@@ -31,13 +31,13 @@ def short_run():
     Quickly run through Pyatoa framework
     :return:
     """
-    pyflex_config = "testing"
-    # folder = "eightevent_m03s00"
-    folder = "identical_waveforms"
+    pyflex_config = "default"
+    folder = "chkbd_eightevent"
+    #folder = "identical_waveforms"
 
     config = pyatoa.Config(
         event_id="2016p275188",
-        model_number="m02",
+        model_number="m00",
         min_period=10,
         max_period=30,
         filter_corners=4,
@@ -45,6 +45,7 @@ def short_run():
         unit_output="DISP",
         pyflex_config=pyflex_config,
         adj_src_type="mtm_hikurangi_strict",
+        window_amplitude_ratio=0.2,
         synthetics_only=True
         )
 
@@ -55,7 +56,8 @@ def short_run():
         mgmt.event = ds.events[0]
         for sta in ds.waveforms.list():
             try:
-                if sta in ["NZ.KHEZ", "NZ.PUZ", "NZ.BFZ"]:
+                if True:
+                # if sta in ['NZ.PUZ']:#["NZ.KHEZ", "NZ.PUZ", "NZ.BFZ"]:
                     print(sta)
                     mgmt.st_obs = ds.waveforms[sta].observed
                     mgmt.st_syn = ds.waveforms[sta].synthetic_m00
@@ -63,9 +65,7 @@ def short_run():
                     mgmt.preprocess()
                     mgmt.run_pyflex()
                     mgmt.run_pyadjoint()
-                    import ipdb;ipdb.set_trace()
-                    # mgmt.plot_map(show="hold")
-                    mgmt.plot_wav(show=True,
+                    mgmt.plot_wav(show=False,
                                   save="./figures/{}_{}.png".format(
                                       sta, pyflex_config),
                                   append_title=pyflex_config
@@ -73,7 +73,6 @@ def short_run():
                     mgmt.reset(hard_reset=False)
             except Exception as e:
                 traceback.print_exc()
-                import ipdb;ipdb.set_trace()
                 print("error")
                 mgmt.reset("soft")
                 continue
