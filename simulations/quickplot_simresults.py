@@ -48,8 +48,8 @@ def process():
     if signal processing is required
     """
     base = './'
-    folder_1 = "benchmark"
-    folder_2 = "easybuild"
+    folder_1 = "87a78d_old_configure_coarse_mesh"
+    folder_2 = "easybuild_19.04_coarse_new_dt"
 
     output_1 = os.path.join(base,folder_1,'*.sem?')
     semd1 = glob.glob(output_1)
@@ -58,12 +58,12 @@ def process():
     semd2 = []
     for fid1 in semd1:
         check1 = os.path.basename(fid1)
+        check1 = check1.replace('HX', 'BX')
         output_2 = os.path.join(base, folder_2, check1)
         if os.path.exists(output_2):
             semd2.append(output_2)
         else:
             semd1.remove(fid1)
-   
     linespecs()
     for ms1, ms2 in zip(semd1, semd2):
         print(os.path.basename(ms1), os.path.basename(ms2))
@@ -86,11 +86,13 @@ def process():
         plt.plot(t1, st1[0].data, color='r', label=folder_1)
         plt.plot(t2, st2[0].data, color='k', label=folder_2)
         
-        plt.title("{} (red) vs. {} (black); 10-30s".format(folder_1, folder_2))
-        plt.xlabel("Samples")
+        plt.title("{} (red) vs.\n {} (black); 10-30s filter".format(folder_1, folder_2))
+        plt.xlabel("Time")
         plt.ylabel("Amplitude")
         pretty_grids(ax)
+        
         plt.show()
+        sys.exit()
 
 
 if __name__ == "__main__":
