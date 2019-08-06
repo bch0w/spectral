@@ -1,3 +1,4 @@
+import os
 import numpy as np
 from scipy.interpolate import griddata
 import matplotlib.pyplot as plt
@@ -23,19 +24,27 @@ def lonlat_utm(lon_or_x, lat_or_y, utm_zone=60, inverse=False):
     :return y_or_lat: y coordinate in UTM or latitude in WGS84
     """
     from pyproj import Proj
-    projstr = ("+proj=utm +zone={}, +south +ellps=WGS84 +datum=WGS84"
-               " +units=m +no_defs".format(utm_zone))
+    projstr = (f"+proj=utm +zone={utm_zone}, +south +ellps=WGS84 +datum=WGS84"
+               " +units=m +no_defs")
     myProj = Proj(projstr)
     x_or_lon, y_or_lat = myProj(lon_or_x, lat_or_y, inverse=inverse)
 
     return x_or_lon, y_or_lat
 
 
-def extrapolate_outward(xyz_npy_fid, extend_x=500000, extend_y=0.):
+def extrapolate_outward(xyz_npy_fid, extend_x=0, extend_y=500000):
     """
-    Extrapolate the boundaries of
-    :param xyz_npy_fid:
-    :return:
+    Extrapolate the boundaries of a mesh for each depth slice, and for given 
+    amounts in the x and y hat directions
+
+    :type xyz_npy_fid: str
+    :param xyz_npy_fid: numpy .npy file containing the tomo file data
+    :type extend_x: int
+    :param extend_x: distance (meters) to extend x in either direction
+    :type extend_y: int
+    :param extend_y: distance (meters) to extend y in either direction
+    :type xyz_new: np.array
+    :return: the newly extrapolated array
     """
     # Load and distribute the data
     xyz = np.load(xyz_npy_fid)
@@ -82,20 +91,20 @@ def extrapolate_outward(xyz_npy_fid, extend_x=500000, extend_y=0.):
 
         # Do the same for the y extent
         if extend_y:
-            # Extend the tomo file on the x max side
+            # Extend the tomo file on the y max side
             depth_slice_top_row = depth_slice[
                 np.where(depth_slice[:, 1] == y_max)[0]]
-            for i in range(1, extend_x + 1):
+            for i in range(1, extend_y + 1):
                 depth_slice_add = depth_slice_top_row.copy()
-                depth_slice_add[:, 0] += i * dy
+                depth_slice_add[:, 1] += i * dy
                 depth_slice = np.concatenate((depth_slice, depth_slice_add))
 
-            # Extend the tomo file on the x min side
+            # Extend the tomo file on the y min side
             depth_slice_bottom_row = depth_slice[
                 np.where(depth_slice[:, 1] == y_min)[0]]
-            for i in range(-extend_x, 0):
+            for i in range(-extend_y, 0):
                 depth_slice_add = depth_slice_bottom_row.copy()
-                depth_slice_add[:, 0] += i * dy
+                depth_slice_add[:, 1] += i * dy
                 depth_slice = np.concatenate((depth_slice, depth_slice_add))
 
         # Add the depth slices to the output array
@@ -107,32 +116,30 @@ def extrapolate_outward(xyz_npy_fid, extend_x=500000, extend_y=0.):
     return xyz_new
 
 
-def plot_xyz_npy(xyz_npy_fid, depth=0):
+def convert_interp(latlon_fid, data_fid, spacing, plot=False, tag=''):
     """
-
-    :param xyz_npy_fid:
-    :param depth:
-    :return:
-    """
-    xyz = np.load(xyz_npy_fid)
-    xyz = xyz[np.where(xyz[:, 2] > xyz[:, 2].max())]
-
-
-
-def convert_interp(latlon_fid, xyz_npy_fid, spacing, plot=False):
-    """
-    Matlab spat out some converted lat lon coordinates but they need to be in 
+    Matlab spits out some converted lat lon coordinates but they need to be in 
     UTM60 and also need to be interpolated because sampling in Carl's
     custom coordinate system is not the same as sampling in lat/lon or utm
+
+    :type latlon_fid: str
+    :param latlon_fid: the output.txt file given by matlab
+    :type data_fid: str
+    :param data_fid: path to the extrapolated data, saved as a .npy file
+    :type spacing: float
+    :param spacing: the desired grid spacing in the x and y directions
+    :type plot: bool
+    :param plot: plot a slice to check things are working
+    :type tag: str
+    :param tag: tag of the file, e.g. mantle
     """
+    # Load in the all the data and distribute
+    data = np.load(data_fid)
     latlon = np.loadtxt(latlon_fid)
     lat = latlon[:, 0]
     lon = latlon[:, 1]
     x_irreg, y_irreg = lonlat_utm(lon, lat)
     
-    # Read in the data file to replace the coordinates
-    data = np.load(xyz_npy_fid)
-
     # These are taken from converting my chosen map coordinates to UTM-60 and
     # putting a small buffer around the dimensions and making sure they are 
     # in line with the nz_north tomography file
@@ -154,7 +161,6 @@ def convert_interp(latlon_fid, xyz_npy_fid, spacing, plot=False):
     # Create the regular grid to be interpolated onto
     x_reg = np.arange(x_min, x_max, spacing)
     y_reg = np.arange(y_min, y_max, spacing)
-    
     x_grid, y_grid = np.meshgrid(x_reg, y_reg)
     x_out = x_grid.flatten()
     y_out = y_grid.flatten()
@@ -163,6 +169,7 @@ def convert_interp(latlon_fid, xyz_npy_fid, spacing, plot=False):
     list_interp = []
     data_out = None
     for z_value in np.unique(data[:, 2]):
+        print(z_value)
         data_ind = np.where(data[:, 2] == z_value)[0]
 
         # Loop over the values to be interpolated
@@ -173,13 +180,14 @@ def convert_interp(latlon_fid, xyz_npy_fid, spacing, plot=False):
                 xi=(x_grid, y_grid)
             )
             list_interp.append(interp_vals.flatten())
-
+            
+            # If plot, only plot one depth slice
             if plot:
                 plt.contourf(x_grid, y_grid, interp_vals)
                 plt.scatter(coastline[:, 0], coastline[:, 1], c='k',
                             marker='.', s=1.5
                             )
-                plt.title("{fid} {z}".format(fid=xyz_npy_fid, z=z_value))
+                plt.title(f"{tag} {z_value}")
                 plt.xlabel("Easting (m)")
                 plt.ylabel("Northing (m)")
                 plt.show()
@@ -193,61 +201,30 @@ def convert_interp(latlon_fid, xyz_npy_fid, spacing, plot=False):
         qp_out = list_interp[3].flatten()
         qs_out = list_interp[4].flatten()
 
+        # Arrange the data in the desired format
         depth_slice = np.column_stack(
             (x_out, y_out, z_out, vp_out, vs_out, rho_out, qp_out, qs_out)
         )
+        # Add the data to all the other data
         if data_out is None:
             data_out = depth_slice
         data_out = np.concatenate((data_out, depth_slice))
 
-    np.save('utm60_{}'.format(xyz_npy_fid), data_out)
     return data_out
-
-
-def fill_nans(data_with_nans, data_to_fill):
-    """
-    Combining two tomography files
-
-    :param fid_to_fill:
-    :param fid_fill_with:
-    :return:
-    """
-    # Determine the bounds of the good data, to avoid searching outside
-    x_min_dtf = data_to_fill[:,0].min()
-    x_max_dtf = data_to_fill[:,0].max()
-    y_min_dtf = data_to_fill[:,1].min()
-    y_max_dtf = data_to_fill[:,1].max()
-        
-    # Find rows that contain NaN's
-    nan_ind = np.where((np.isnan(data_with_nans[:, 3]) == True) &
-                       (data_with_nans[:,0] > x_min_dtf) &
-                       (data_with_nans[:,0] < x_max_dtf) &
-                       (data_with_nans[:,1] > y_min_dtf) &
-                       (data_with_nans[:,1] < y_max_dtf)
-                       )[0]
-
-    for i in nan_ind:
-        print(i)
-        to_fill_ind = np.where((data_to_fill[:, 0] == data_with_nans[i, 0]) &
-                               (data_to_fill[:, 1] == data_with_nans[i, 1]) &
-                               (data_to_fill[:, 2] == data_with_nans[i, 2])
-                               )[0]
-
-        try:
-            to_fill_ind.size()
-            data_with_nans[to_fill_ind] = data_with_nans[i]
-        except TypeError:
-            continue
-
-    pass
 
 
 def trim_xyz_file(data, bounds):
     """
-    sometime the xyz file is too large, trim it down to new dimensions
-    :param header:
-    :param data:
-    :return:
+    Sometime the xyz file is too large, trim it down to new dimensions
+
+    :type data: np.array
+    :param data: data to trim
+    :type bounds: list of floats
+    :param bounds: bounds to trim to
+    :rtype parsed_header: dict
+    :return parsed_header: values of the newly trimmed xyz file
+    :rtype data: np.array
+    :return data: trimmed data
     """
     # convert data into numpy array for easier working
     for i, bound in enumerate(bounds):
@@ -280,31 +257,34 @@ def trim_xyz_file(data, bounds):
     return parsed_header, data
 
 
-def write_new_xyz(header, data, fidout_template):
+def write_new_xyz(data, fidout, header=None):
     """
-    write out a new xyz file with proper header and data
-    """
-    fid = fidout_template.format(
-            x=(header["end_x"] - header["orig_x"])*1E-3,
-            y=(header["end_y"] - header["orig_y"])*1E-3,
-            )
+    Write out a new xyz file with proper header and data
 
-    with open(fid, "w") as f:
-        # write header
-        f.write("{:.1f} {:.1f} {:.1f} {:.1f} {:.1f} {:.1f}\n".format(
-            header["orig_x"], header["orig_y"], header["orig_z"],
-            header["end_x"], header["end_y"], header["end_z"])
-        )
-        f.write("{:.1f} {:.1f} {:.1f}\n".format(
-            header["spacing_x"], header["spacing_y"], header["spacing_z"])
-                )
-        f.write("{:d} {:d} {:d}\n".format(
-            header["nx"], header["ny"], header["nz"])
-        )
-        f.write("{:.1f} {:.1f} {:.1f} {:.1f} {:.1f} {:.1f}\n".format(
-            header["vp_min"], header["vp_max"], header["vs_min"], 
-            header["vs_max"], header["rho_min"], header["rho_max"])
-        )
+    :type data: np.array
+    :param data: data to write into xyz file
+    :type fidout: str
+    :param fidout: file name to save to
+    :type header: dict 
+    :param header: header information to prepend to data, if not given, no head
+    """
+    with open(fidout, "w") as f:
+        if header:
+            # write header
+            f.write("{:.1f} {:.1f} {:.1f} {:.1f} {:.1f} {:.1f}\n".format(
+                header["orig_x"], header["orig_y"], header["orig_z"],
+                header["end_x"], header["end_y"], header["end_z"])
+            )
+            f.write("{:.1f} {:.1f} {:.1f}\n".format(
+                header["spacing_x"], header["spacing_y"], header["spacing_z"])
+                    )
+            f.write("{:d} {:d} {:d}\n".format(
+                header["nx"], header["ny"], header["nz"])
+            )
+            f.write("{:.1f} {:.1f} {:.1f} {:.1f} {:.1f} {:.1f}\n".format(
+                header["vp_min"], header["vp_max"], header["vs_min"], 
+                header["vs_max"], header["rho_min"], header["rho_max"])
+            )
         # write data by line
         for line in data:
             x, y, z, vp, vs, rho, qp, qs = line.tolist()
@@ -313,39 +293,56 @@ def write_new_xyz(header, data, fidout_template):
                    x, y, z, vp, vs, rho, qp, qs)
             )
 
-            
-def write_xyz_from_np(fid_in, fid_out):
-    """
-    write out a new xyz file with proper header and data
-    """
-    data = np.load(fid_in)
-    with open(fid_out, "w") as f:
-        for line in data:
-            x, y, z, vp, vs, rho, qp, qs = line.tolist()
-            f.write(
-             "{:.1f} {:.1f} {:.1f} {:.1f} {:.1f} {:.1f} {:.1f} {:.1f}\n".format(
-                   x, y, z, vp, vs, rho, qp, qs)
-            )
 
+def plot_slice(array, slice_index=0):
+    """
+    Simple slice plot just to check, I was tired of rewriting this all the time
+
+    :type array: np.array
+    :param array: array to plot
+    :type slice_index: int
+    :param slice_index: of the given unique slices, which one?
+    """
+    depth_slice = array[np.where(array[:,2] == np.unique(
+                                                    array[:,2])[slice_index])
+                        ]
+    plt.scatter(depth_slice[:,0], depth_slice[:,1], c=depth_slice[:,3])
+    plt.show()
 
 if __name__ == "__main__":
-    data_out = convert_interp(latlon_fid='nz_full_extrapolate_crust_latlon_coordinates.txt',
-                              xyz_npy_fid='nz_full_extrapolate_eberhart2015_crust.xyz.npy',
-                              spacing=2000., plot=True)
-    # data_out = convert_interp('shallow_latlon.txt',
-    #                           'nz_full_eberhart2015_shallow.xyz.npy',
-    #                           spacing=2000.
-    #                           )
-    # data_out = convert_interp('crust_latlon.txt',
-    #                           'nz_full_eberhart2015_crust.xyz.npy',
-    #                           spacing=2000.
-    #                           )
-    # data_out = convert_interp('mantle_latlon.txt',
-    #                           'nz_full_eberhart2015_mantle.xyz.npy',
-    #                           spacing=8000.
-    #                           )
+    tag = "shallow"
 
+    if tag == "mantle":
+        spacing = 8000.
+    else:
+        spacing = 2000.
 
+    extrapo_fidout =  f'./nz_full_extrapolate_{tag}.xyz.npy'
+    if not os.path.exists(extrapo_fidout): 
+        # Extrapolate the nz_full file so that when it's rotated, no nans
+        xyz_extrapolated = extrapolate_outward(
+                xyz_npy_fid=f'./nz_full_eberhart2015_{tag}.xyz.npy'
+                )
+        
+        # Save the new extrapolated file
+        np.save(extrapo_fidout, xyz_extrapolated)
+        
+        # Plot a slice just for visual confirmation
+        plot_slice(xyz_extrapolated)
+
+        # Write the new data to be opened by matlab
+        write_new_xyz(data=xyz_extrapolated, 
+                      fidout=f'./nz_full_extrapolate_{tag}_noheader.xyz')
+        
+    # In between these two steps, matlab needs to be run
+    else:
+        # Convert coordinates from lat lon and interpolate along a regular grid
+        data_out = convert_interp(latlon_fid=f'{tag}_latlon.txt',
+                                  data_fid=extrapo_fidout, spacing=spacing, 
+                                  plot=True)
+       
+        # Save the new xyz file
+        np.save(f'./nz_full_utm60_extrapolate_{tag}.xyz.npy', data_out)
 
 
 
