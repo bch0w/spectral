@@ -76,7 +76,9 @@ def difference_vtk(model_a, model_b, path="./", reverse=1, write=None):
 
     # check that the files have the same characteristics before parsing
     for key in header_dict_a.keys():
-        if header_dict_a[key] != header_dict_b[key]:
+        if key == "scalars":
+            continue
+        elif header_dict_a[key] != header_dict_b[key]:
             sys.exit("{} not equal".format(key))
 
     # parse through models together and separate by len of line, skip header
@@ -108,8 +110,8 @@ def difference_vtk(model_a, model_b, path="./", reverse=1, write=None):
 if __name__ == "__main__":
     # path = "/Users/chowbr/Documents/subduction/tomo/testing/" \
     #        "seisflows/vtk_files//hikurangi_trial"
-    model_b = "vs_chkbd_eight_event_model_init.vtk"
-    model_a = "vs_chkbd_eight_event_model_0008.vtk"
+    model_b = "vs_model_0001.vtk"
+    model_a = "vs_model_init.vtk"
     path = './'
     # model_a = os.path.basename(glob.glob("./*2015.vtk")[0])
     # model_b = os.path.basename(glob.glob("./*checker*.vtk")[0])

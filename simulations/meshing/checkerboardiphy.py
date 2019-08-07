@@ -29,10 +29,16 @@ def xyz_reader(xyz_fid, save=True):
     :return data: all the data contained in the xyz file
     """
     if os.path.exists(xyz_fid + ".npy") and os.path.exists(xyz_fid + ".npz"):
+        print("numpy data and header exist")
         header = np.load(xyz_fid + ".npz")
         data = np.load(xyz_fid + ".npy")
-        return header, data
+    elif os.path.exists(xyz_fid + ".npy"):
+        print("numpy data exists, parsing header")
+        data = np.load(xyz_fid + ".npy")
+        header = parse_data_to_header(data)
+        np.savez(xyz_fid, **header)  # save header in .npz
     else:
+        print("no numpy files exist, reading xyz file")
         with open(xyz_fid) as f:
             lines = f.readlines()
 
@@ -58,7 +64,7 @@ def xyz_reader(xyz_fid, save=True):
                 np.save(xyz_fid, data)  # save data in .npy
                 np.savez(xyz_fid, **header)  # save header in .npz
 
-        return header, data
+    return header, data
 
 
 def checkerboardiphy(xyz_fid, spacing_m, perturbation=0.02, taper_signal=None,
@@ -221,12 +227,12 @@ def call_checkerboardiphy():
     :return:
     """
     path = "./"
-    fid_template = "nz_north_eberhart2015_{}.xyz"
+    fid_template = "nz_utm60_2km_170000x_5271000y_eberhart2015_{}.xyz"
     spacing = 80000.
     chosen_signal = signal.hanning
 
     # Create checkers with varying levels of perturbation
-    for perturbation in [0.02]:#[0, 0.02, 0.05, 0.1]:
+    for perturbation in [0.1]:#[0, 0.02, 0.05, 0.1]:
         for section in ["shallow", "crust", "mantle"]:
             fid = fid_template.format(section)
 
@@ -247,7 +253,8 @@ def call_checkerboardiphy():
             fid = fid_template.format(section)
             overlay, checkerboard_data = checkerboardiphy(
                 xyz_fid=os.path.join(path, fid), spacing_m=spacing,
-                perturbation=perturbation, taper_signal=chosen_signal, plot_fid=plot_fid
+                perturbation=perturbation, taper_signal=chosen_signal, 
+                plot_fid=plot_fid
             )
             checkerboard_header = parse_data_to_header(checkerboard_data)
 
