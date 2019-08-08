@@ -227,7 +227,7 @@ def call_checkerboardiphy():
     :return:
     """
     path = "./"
-    fid_template = "nz_utm60_2km_170000x_5271000y_eberhart2015_{}.xyz"
+    fid_template = "nz_utm60_2km_170000x_5271000y_eberhart15_{}.xyz"
     spacing = 80000.
     chosen_signal = signal.hanning
 
