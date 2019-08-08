@@ -3,8 +3,6 @@ import numpy as np
 from scipy.interpolate import griddata
 import matplotlib.pyplot as plt
 
-from checkerboardiphy import xyz_reader
-
 
 def lonlat_utm(lon_or_x, lat_or_y, utm_zone=60, inverse=False):
     """convert latitude and longitude coordinates to UTM projection
