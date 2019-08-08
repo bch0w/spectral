@@ -163,6 +163,7 @@ def checkerboardiphy(xyz_fid, spacing_m, perturbation=0.02, taper_signal=None,
                          (coastline[:, 1] < header["end_y"])
                          )[0]]
         plt.scatter(coastline[:, 0], coastline[:, 1], c='k', marker='.')
+        plt.show()
         plt.savefig("{}.png".format(plot_fid))
 
     return checker_overlay, data_out
@@ -227,7 +228,7 @@ def call_checkerboardiphy():
     :return:
     """
     path = "./"
-    fid_template = "nz_utm60_2km_170000x_5271000y_eberhart2015_{}.xyz"
+    fid_template = "nz_utm60_2km_1700x_5271y_eberhart15_{}.xyz"
     spacing = 80000.
     chosen_signal = signal.hanning
 
@@ -237,9 +238,8 @@ def call_checkerboardiphy():
             fid = fid_template.format(section)
 
             # Save the outputs with a new tag
-            tag = "_checker_{space}km_{win}_{prt}pct.".format(
-                space=int(spacing * 1E-3), win=chosen_signal.__name__,
-                prt=int(perturbation * 1E2)
+            tag = "_checker_{space}km_{prt}pct.".format(
+                space=int(spacing * 1E-3),  prt=int(perturbation * 1E2)
             )
             fid_out = (fid.split('.')[0] + tag + fid.split('.')[1])
 
