@@ -211,6 +211,30 @@ def convert_interp(latlon_fid, data_fid, spacing, plot=False, tag=''):
     return data_out
 
 
+def parse_data_to_header(data):
+    """
+    Parse data to header to write into .xyz file
+    """
+    parsed_header = {"orig_x": data[:, 0].min(), "orig_y": data[:, 1].min(),
+                     "orig_z": data[:, 2].min(), "end_x": data[:, 0].max(),
+                     "end_y": data[:, 1].max(), "end_z": data[:, 2].max(),
+                     "spacing_x": 2000., "spacing_y": 2000.,
+                     "spacing_z": 1000.,
+                     "nx": len(np.unique(data[:, 0])),
+                     "ny": len(np.unique(data[:, 1])),
+                     "nz": len(np.unique(data[:, 2])),
+                     "vp_min": data[:, 3].min(), "vp_max": data[:, 3].max(),
+                     "vs_min": data[:, 4].min(), "vs_max": data[:, 4].max(),
+                     "rho_min": data[:, 5].max(),
+                     "rho_max": data[:, 5].max(),
+                     }
+
+    head_len = parsed_header["nx"] * parsed_header["ny"] * parsed_header["nz"] 
+    assert head_len == len(data)
+
+    return parsed_header
+
+
 def trim_xyz_file(data, bounds):
     """
     Sometime the xyz file is too large, trim it down to new dimensions
@@ -235,24 +259,9 @@ def trim_xyz_file(data, bounds):
     data = np.delete(data, to_remove, 0)
     
     # make new header
-    parsed_header = {"orig_x": data[:, 0].min(), "orig_y": data[:, 1].min(),
-                     "orig_z": data[:, 2].min(), "end_x": data[:, 0].max(),
-                     "end_y": data[:, 1].max(), "end_z": data[:, 2].max(),
-                     "spacing_x": 2000., "spacing_y": 2000.,
-                     "spacing_z": 1000.,
-                     "nx": len(np.unique(data[:, 0])),
-                     "ny": len(np.unique(data[:, 1])),
-                     "nz": len(np.unique(data[:, 2])),
-                     "vp_min": data[:, 3].min(), "vp_max": data[:, 3].max(),
-                     "vs_min": data[:, 4].min(), "vs_max": data[:, 4].max(),
-                     "rho_min": data[:, 5].max(),
-                     "rho_max": data[:, 5].max(),
-                     }
+    header = parse_data_to_header(data)
 
-    head_len = parsed_header["nx"] * parsed_header["ny"] * parsed_header["nz"] 
-    assert head_len == len(data)
-
-    return parsed_header, data
+    return header, data
 
 
 def write_new_xyz(data, fidout, write_header=False):
@@ -269,20 +278,8 @@ def write_new_xyz(data, fidout, write_header=False):
     with open(fidout, "w") as f:
         if write_header:
             # write header
-            header = {"orig_x": data[:, 0].min(), "orig_y": data[:, 1].min(),
-                      "orig_z": data[:, 2].min(), "end_x": data[:, 0].max(),
-                      "end_y": data[:, 1].max(), "end_z": data[:, 2].max(),
-                      "spacing_x": 2000., "spacing_y": 2000.,
-                      "spacing_z": 1000.,
-                      "nx": len(np.unique(data[:, 0])),
-                      "ny": len(np.unique(data[:, 1])),
-                      "nz": len(np.unique(data[:, 2])),
-                      "vp_min": data[:, 3].min(), "vp_max": data[:, 3].max(),
-                      "vs_min": data[:, 4].min(), "vs_max": data[:, 4].max(),
-                      "rho_min": data[:, 5].max(),
-                      "rho_max": data[:, 5].max(),
-                      }
-
+            header = parse_data_to_header(data)
+            
             f.write("{:.1f} {:.1f} {:.1f} {:.1f} {:.1f} {:.1f}\n".format(
             header["orig_x"], header["orig_y"], header["orig_z"],
             header["end_x"], header["end_y"], header["end_z"])
