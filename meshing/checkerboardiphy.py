@@ -222,19 +222,19 @@ def write_xyz(header, data, fid_out):
             )
 
 
-def call_checkerboardiphy():
+def call_checkerboardiphy(fid_template, spacing):
     """
     Call script for the checkerboard function
     :return:
     """
     path = "./"
-    fid_template = "nz_utm60_2km_1700x_5271y_eberhart15_{}.xyz"
-    spacing = 80000.
     chosen_signal = signal.hanning
 
     # Create checkers with varying levels of perturbation
     for perturbation in [0.1]:#[0, 0.02, 0.05, 0.1]:
+        print(f"perturbation = {perturbation}")
         for section in ["shallow", "crust", "mantle"]:
+            print(f"section = {section}")
             fid = fid_template.format(section)
 
             # Save the outputs with a new tag
@@ -250,11 +250,10 @@ def call_checkerboardiphy():
                 plot_fid = None
 
             # Create the checkerboard data
-            fid = fid_template.format(section)
             overlay, checkerboard_data = checkerboardiphy(
                 xyz_fid=os.path.join(path, fid), spacing_m=spacing,
                 perturbation=perturbation, taper_signal=chosen_signal, 
-                plot_fid=plot_fid
+                plot_fid=None
             )
             checkerboard_header = parse_data_to_header(checkerboard_data)
 
@@ -267,7 +266,10 @@ def call_checkerboardiphy():
 
 
 if __name__ == "__main__":
-    call_checkerboardiphy()
+    call_checkerboardiphy(
+            fid_template = "nz_north_eberhart2015_{}.xyz",
+            spacing = 80000.
+            )
 
 
 
