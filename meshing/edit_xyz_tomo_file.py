@@ -318,6 +318,7 @@ def plot_slice(array, slice_index=0):
     plt.scatter(depth_slice[:,0], depth_slice[:,1], c=depth_slice[:,3])
     plt.show()
 
+
 if __name__ == "__main__":
     tag = "shallow"
 
