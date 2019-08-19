@@ -67,6 +67,23 @@ def parse_by_component(dir_a, dir_b):
             semd_a.remove(fid_a)
 
 
+def peak_amplitudes(tr, t, ax, c):
+    """
+    Plot the location of the peak amplitudes and their time difference
+    :param st_a:
+    :param st_b:
+    :param ax:
+    :return:
+    """
+    peak_amp = tr.data.max()
+    time_peak = t[np.where(tr.data == tr.data.max())[0]]
+
+    ax.axvline(x=time_peak, ymin=0, ymax=1, c=c, linestyle="--")
+    # ax.annotate(s=f"{peak_amp:.2E}", xy=(time_peak, peak_amp), fontsize=4)
+
+    return time_peak, peak_amp
+
+
 def process(dir_a, dir_b, min_period=10., max_period=30.,
             show=True, save=False):
     """
@@ -134,7 +151,16 @@ def process(dir_a, dir_b, min_period=10., max_period=30.,
             pretty_grids(ax, scitick=True)
             ax.plot(t_a, st_a[i].data, color='r', label=st_a[i].get_id())
             ax.plot(t_b, st_b[i].data, color='k', label=st_b[i].get_id())
-            ax.legend()
+
+            # Plot the peak amplitude differences, and time differences
+            time_peak_a, peak_a = peak_amplitudes(st_a[i], t_a, ax, c='r')
+            time_peak_b, peak_b = peak_amplitudes(st_b[i], t_b, ax, c='k')
+            ax.annotate(s="delta_amp={:.2E}\ndelta_t={:.1f}s".format(
+                float(peak_a - peak_b), float(time_peak_a - time_peak_b)),
+                xy=(t_a[0], -1 * st_a[i].data.max()/2), fontsize=8,
+                bbox=dict(fc="w", boxstyle="round")
+            )
+
             # Set the title up top
             if i == 0:
                 plt.title("{a} (red)\n{b} (black)\n {t0}-{t1}s filter".format(
@@ -150,6 +176,8 @@ def process(dir_a, dir_b, min_period=10., max_period=30.,
             # Remove tick labels from all but the last plot
             if i != len(st_a) - 1:
                 plt.setp(ax.get_xticklabels(), visible=False)
+            # Set legend regardless
+            ax.legend()
 
         if save:
             fid_out = "./{}.png".format(st_a[i].get_id())
