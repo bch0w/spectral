@@ -189,8 +189,12 @@ def process(dir_a, dir_b, min_period=10., max_period=30.,
 if __name__ == "__main__":
     try:
         base = './'
-        dir_a = os.path.join(base, "OUTPUT_FILES_nz_north_coarse_sem_intmesh")
-        dir_b = os.path.join(base, "OUTPUT_FILES_srtm30p_139_162_4km_nz_north")
-        process(dir_a, dir_b, 10, 30, show=False, save=True)
+        dir_a = input("dir_a")
+        dir_b = input("dir_b")
+        dir_a = os.path.join(base, dir_a)
+        dir_b = os.path.join(base, dir_b)
+        # dir_a = os.path.join(base, "OUTPUT_FILES_nz_north_coarse_sem_intmesh")
+        # dir_b = os.path.join(base, "OUTPUT_FILES_srtm30p_139_162_4km_nz_north")
+        process(dir_a, dir_b, 10, 30, show=True, save=False)
     except KeyboardInterrupt():
         sys.exit()
