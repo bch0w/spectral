@@ -108,19 +108,24 @@ def difference_vtk(model_a, model_b, path="./", reverse=1, write=None):
 
 
 if __name__ == "__main__":
-    # path = "/Users/chowbr/Documents/subduction/tomo/testing/" \
-    #        "seisflows/vtk_files//hikurangi_trial"
-    model_b = "vs_model_0001.vtk"
+    # Either set the names of the vtk files manually
+    base = './'
     model_a = "vs_model_init.vtk"
-    path = './'
-    # model_a = os.path.basename(glob.glob("./*2015.vtk")[0])
-    # model_b = os.path.basename(glob.glob("./*checker*.vtk")[0])
+    model_b = "vs_model_0001.vtk"
+    
+    # Or have them be automatically picked if in a folder
+    dynamic_pick = glob.glob(os.path.join(base, '*.vtk'))
+    if not os.path.exists(model_a) and (len(dynamic_pick) == 2):
+        model_a = os.path.basename(dynamic_pick[0])
+        model_b = os.path.basename(dynamic_pick[1])
+
+    # Specfiy the output modle name based on the input model names
     model_out = "{}_diff_{}_{}.vtk".format(model_a.split("_")[0],
                                            model_a.split("_")[2].split(".")[0],
                                            model_b.split("_")[2].split(".")[0]
                                            )
 
-    differences = difference_vtk(model_a, model_b, path, write=model_out)
+    differences = difference_vtk(model_a, model_b, base, write=model_out)
 
 
 
