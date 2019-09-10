@@ -208,7 +208,7 @@ def plot_cat(cat, evnts, tag=""):
 
     cat.plot(projection='local', resolution='l', continent_fill_color='w',
              water_fill_color='w', color='date',
-             outfile="./{}_{}".format(evnts['name'], tag), title=title
+             outfile="./{}{}".format(evnts['name'], tag), title=title
              )
 
 
@@ -285,14 +285,16 @@ def beta_trial(csv_file, desired_length):
     new_cat = check_moment_tensor(csv_file, original_cat)
     print("catalog has {} events".format(len(new_cat)))
 
-    # Remove grouped events
-    sep_km = 30.
-    new_cat = remove_groupings(new_cat, sep_km=sep_km)
-    print("catalog has {} events".format(len(new_cat)))
+    # Remove grouped events 
+    # sep_km = 30.  # this will give 30 events with good spatial variation
+    sep_km = 80.  # this will give 10 events with good spatial variation
 
-    plot_cat(new_cat, evnts)
+    new_cat_no_groups = remove_groupings(new_cat, sep_km=sep_km)
+    print("catalog has {} events".format(len(new_cat_no_groups)))
 
-    return new_cat, evnts["name"]
+    plot_cat(new_cat_no_groups, evnts)
+    
+    return new_cat_no_groups, evnts["name"]
 
 
 if __name__ == "__main__":
@@ -300,13 +302,13 @@ if __name__ == "__main__":
     csv_file = ("/Users/chowbr/Documents/subduction/data/GEONET/data/" 
                 "moment-tensor/GeoNet_CMT_solutions.csv")
 
-    desired_catalog_length = 30
+    desired_catalog_length = 8
 
     # Get the catalog and its name, based on the functions
     cat, cat_name = beta_trial(csv_file, desired_catalog_length)
 
     # Write to an XML file
-    cat.write("{cat_name}.xml", format="QUAKEML")
+    cat.write(f"{cat_name}.xml", format="QUAKEML")
 
     # Write the catalog to CMTSOLUTION files required by Specfem3D,
     catalog_to_cmtsolutions.generate_cmtsolutions(cat, csv_file)
