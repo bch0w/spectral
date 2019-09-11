@@ -6,6 +6,7 @@ import sys
 import csv
 from obspy.clients.fdsn import Client
 from obspy.geodetics import FlinnEngdahl
+from obspy.imaging.beachball import beachball
 
 
 def get_moment_tensor(event_id, csv_file):
@@ -88,7 +89,20 @@ def get_event_and_region(event):
     return event, region
 
 
-def generate_cmtsolutions(catalog, csv_file, pathout="./"):
+def make_beachball(mt, outfile="./beachball.png"):
+    """
+    This is a convenient time to plot beachballs for use in plotting
+    """
+    width = 2.6E4
+    facecolor = "r"
+
+    beach_input = [mt['m_rr'], mt['m_tt'], mt['m_pp'], 
+                   mt['m_rt'], mt['m_rp'], mt['m_tp']]
+
+    b = beachball(beach_input, facecolor="r", outfile=outfile)
+    
+
+def generate_cmtsolutions(catalog, csv_file, make_bball=False, pathout="./"):
     """
     Generate CMTSOLUTION file in the format of the Harvard CMT catalog
     -Moment tensor components taken from John Ristaus MT catalog
@@ -132,6 +146,10 @@ def generate_cmtsolutions(catalog, csv_file, pathout="./"):
         for key in mt:
             mt[key] *= 1E20
         mt = mt_transform(mt, method='xyz2rtp')
+        
+        # make beachballs
+        if make_bball:
+            make_beachball(mt, outfile=f"{event_id}_beachball.png")
 
         # Get some auxiliary information
         event, region = get_event_and_region(event)

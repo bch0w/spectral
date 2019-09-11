@@ -311,6 +311,7 @@ if __name__ == "__main__":
     cat.write(f"{cat_name}.xml", format="QUAKEML")
 
     # Write the catalog to CMTSOLUTION files required by Specfem3D,
-    catalog_to_cmtsolutions.generate_cmtsolutions(cat, csv_file)
+    catalog_to_cmtsolutions.generate_cmtsolutions(cat, csv_file, 
+                                                  make_bball=True)
 
 
