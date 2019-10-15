@@ -69,7 +69,7 @@ def short_run():
                     mgmt.run_pyflex()
                     mgmt.run_pyadjoint()
                     # mgmt.plot_map(show="hold")
-                    mgmt.plot_wav(show=False,
+                    mgmt.plot_wav(show=True,
                                   save="./figures/{}_{}_{}.png".format(
                                       sta, pyflex_config, pyadjoint_branch),
                                   append_title=pyflex_config
@@ -77,7 +77,7 @@ def short_run():
                     mgmt.reset(hard_reset=False)
             except Exception as e:
                 traceback.print_exc()
-                # import ipdb;ipdb.set_trace()
+                import ipdb;ipdb.set_trace()
                 print("error")
                 mgmt.reset(hard_reset=False)
                 continue
