@@ -45,16 +45,16 @@ def poissons_ratio(vp, vs):
     """
     return 0.5 * (vp ** 2 - (2 * vs ** 2)) / ((vp ** 2) - (vs ** 2))
 
+if __name__ == "__main__":
+    path_to_xyz = "./xyz"
+    path_to_vel = "./model_0009"
 
-path_to_xyz = "./xyz"
-path_to_vel = "./model_0009"
+    # Read in Vp values
+    vp = read_slices(path_to_vel, "vp")
+    vs = read_slices(path_to_vel, "vs")
+    # x = read_slices(path_to_xyz, "x")
+    # y = read_slices(path_to_xyz, "y")
+    # z = read_slices(path_to_xyz, "z")
 
-# Read in Vp values
-vp = read_slices(path_to_vel, "vp")
-vs = read_slices(path_to_vel, "vs")
-# x = read_slices(path_to_xyz, "x")
-# y = read_slices(path_to_xyz, "y")
-# z = read_slices(path_to_xyz, "z")
-
-poissons = poissons_ratio(vp, vs)
+    poissons = poissons_ratio(vp, vs)
 
