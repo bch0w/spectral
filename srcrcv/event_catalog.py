@@ -4,6 +4,7 @@ The catalog used for initial testing purposes for Pyatoa + Seisflows
 """
 import csv
 import numpy as np
+import matplotlib.pyplot as plt
 from obspy import UTCDateTime, Catalog
 from obspy.clients.fdsn import Client
 from obspy.geodetics import gps2dist_azimuth
@@ -211,6 +212,8 @@ def plot_cat(cat, evnts, tag=""):
              outfile="./{}{}".format(evnts['name'], tag), title=title
              )
 
+    plt.close()
+
 
 def alpha_trial():
     """
@@ -297,15 +300,65 @@ def beta_trial(csv_file, desired_length):
     return new_cat_no_groups, evnts["name"]
 
 
+def charlie_trial(csv_file, desired_length):
+    """
+    I forgot to depth constrain the beta trial...
+    :return:
+    """
+    evnts = {
+        "name": "charlie_trial",
+        "starttime": UTCDateTime("2010-01-01T00:00:00"),
+        "endtime": UTCDateTime(),
+        "minmagnitude": 4.75,
+        "maxmagnitude": 6.,
+        "minlatitude": -42.5,  # LLC
+        "minlongitude": 173.5,  # LLC
+        "maxlatitude": -37.25,  # URC
+        "maxlongitude": 178.5,  # URC
+        "maxdepth": 60.,
+         }
+
+    # Create the catalog and plot the raw event catalog
+    c = Client("GEONET")
+    original_cat = c.get_events(starttime=evnts['starttime'],
+                                endtime=evnts['endtime'],
+                                minmagnitude=evnts['minmagnitude'],
+                                maxmagnitude=evnts['maxmagnitude'],
+                                minlatitude=evnts['minlatitude'],
+                                minlongitude=evnts['minlongitude'],
+                                maxlatitude=evnts['maxlatitude'],
+                                maxlongitude=evnts['maxlongitude'],
+                                maxdepth=evnts['maxdepth']
+                                )
+    print("catalog has {} events".format(len(original_cat)))
+
+    # Remove if no GeoNet moment tensors
+    new_cat = check_moment_tensor(csv_file, original_cat)
+    print("catalog has {} events".format(len(new_cat)))
+
+    # Remove grouped events 
+    sep_km = 20.  # this will give 30 events with good spatial variation
+    # sep_km = 80.  # this will give 10 events with good spatial variation
+
+    new_cat_no_groups = remove_groupings(new_cat, sep_km=sep_km)
+    print("catalog has {} events".format(len(new_cat_no_groups)))
+
+    plot_cat(new_cat_no_groups, evnts)
+    
+    return new_cat_no_groups, evnts["name"]
+
+
 if __name__ == "__main__":
     # Use GeoNet moment tensors
-    csv_file = ("/Users/chowbr/Documents/subduction/data/GEONET/data/" 
-                "moment-tensor/GeoNet_CMT_solutions.csv")
+    # csv_file = ("/Users/chowbr/Documents/subduction/data/GEONET/data/" 
+    #             "moment-tensor/GeoNet_CMT_solutions.csv")
+    csv_file = ("/Users/Chow/Documents/academic/vuw_seismo/data/geonet/data/"
+                "moment-tensor/GeoNet_CMT_solutions.csv") 
 
-    desired_catalog_length = 8
+    desired_catalog_length = 30
 
     # Get the catalog and its name, based on the functions
-    cat, cat_name = beta_trial(csv_file, desired_catalog_length)
+    cat, cat_name = charlie_trial(csv_file, desired_catalog_length)
 
     # Write to an XML file
     cat.write(f"{cat_name}.xml", format="QUAKEML")
