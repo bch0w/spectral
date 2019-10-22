@@ -50,7 +50,7 @@ def daily_did(fid):
         f.write("\n")
                
 if __name__ == "__main__":
-    txtfile = "/Users/chowbr/Documents/subduction/spectral/recreation/daily_dids.txt"
+    txtfile = "/Users/chowbr/Documents/subduction/spectral/recreation/dailydids.txt"
     daily_did(fid=txtfile)
 
 
