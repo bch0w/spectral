@@ -337,8 +337,8 @@ def charlie_trial(csv_file, desired_length):
     print("catalog has {} events".format(len(new_cat)))
 
     # Remove grouped events 
-    sep_km = 20.  # this will give 30 events with good spatial variation
-    # sep_km = 80.  # this will give 10 events with good spatial variation
+    # sep_km = 20.  # this will give 30 events with good spatial variation
+    sep_km = 60.  # this will give 10 events with good spatial variation
 
     new_cat_no_groups = remove_groupings(new_cat, sep_km=sep_km)
     print("catalog has {} events".format(len(new_cat_no_groups)))
@@ -352,10 +352,12 @@ if __name__ == "__main__":
     # Use GeoNet moment tensors
     # csv_file = ("/Users/chowbr/Documents/subduction/data/GEONET/data/" 
     #             "moment-tensor/GeoNet_CMT_solutions.csv")
-    csv_file = ("/Users/Chow/Documents/academic/vuw_seismo/data/geonet/data/"
-                "moment-tensor/GeoNet_CMT_solutions.csv") 
+    # csv_file = ("/Users/Chow/Documents/academic/vuw_seismo/data/geonet/data/"
+    #             "moment-tensor/GeoNet_CMT_solutions.csv") 
+    csv_file = ("/seis/prj/fwi/bchow/data/geonet/data/moment-tensor/"
+                "GeoNet_CMT_solutions.csv")
 
-    desired_catalog_length = 30
+    desired_catalog_length = 10
 
     # Get the catalog and its name, based on the functions
     cat, cat_name = charlie_trial(csv_file, desired_catalog_length)
