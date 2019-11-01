@@ -168,3 +168,8 @@ TODO: corsica writeup
 TODO: old mesh poissons ratio 
 TODO: beacon teleseismics 
 
+OUT : 2019-11-01 14:56:03.998774
+DONE: beacon waveform checks 
+DONE: data availability plots 
+DONE: cc_old_mesh runs 
+
