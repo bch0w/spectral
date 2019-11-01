@@ -8,11 +8,13 @@ import pyatoa
 import numpy as np
 import matplotlib.pyplot as plt
 from obspy.clients.fdsn import Client
+from obspy.signal.cross_correlation import xcorr_3c
 from obspy import UTCDateTime, read, Stream, read_inventory
+from pyatoa.utils.tools.process import trimstreams
 
 import matplotlib as mpl
 mpl.rcParams['font.size'] = 12
-mpl.rcParams['lines.linewidth'] = 1.25
+mpl.rcParams['lines.linewidth'] = 1.
 mpl.rcParams['axes.linewidth'] = 2
 
 
@@ -31,7 +33,7 @@ def change_response(inv):
     return inv
 
 
-def event_information(i=0, pad_s=60*60):
+def event_information(i=0, end=60*60, pad=50):
     """
     given an earthquake origin time, produce relevant information
     :return:
@@ -41,20 +43,20 @@ def event_information(i=0, pad_s=60*60):
                     "2018-01-23T09:32:00.0",  # alaska, mw7.9
                     "2018-02-25T17:45:08.6"   # png, mw7.5
                     ]
-    origin_time = UTCDateTime(origin_times[i])
-    end_time = origin_time + pad_s
+    origin_time = UTCDateTime(origin_times[i]) - pad
+    end_time = origin_time + end + pad
 
     return origin_time, end_time
 
 
-def geonet_waveforms(station_code):
+def geonet_waveforms(station_code, event, pad):
     """
     get waveforms from geonet for comparison against BEACON
     :return: 
     """
     net, sta, loc, cha = station_code.split('.')
     c = Client("GEONET")
-    start_time, end_time = event_information()
+    start_time, end_time = event_information(i=event, pad=pad)
     st = c.get_waveforms(network=net, station=sta, location=loc, channel=cha,
                          starttime=start_time, endtime=end_time,
                          attach_response=True
@@ -62,15 +64,18 @@ def geonet_waveforms(station_code):
     return st
 
 
-def beacon_waveforms(number, path, inv_path):
+def beacon_waveforms(station, event, pad, **kwargs):
     """
     get beacon station waveforms based on station number
     :param number:
     :return:
     """
-    start_time, end_time = event_information(i=1)
+    path = kwargs.get("path", None)
+    inv_path = kwargs.get("inv_path", None)
+
+    start_time, end_time = event_information(i=event, pad=pad)
     station_code = "XX.RD{num}.10.HH?.D.{year}.{jday}".format(
-        num=number, year=start_time.year, jday=start_time.julday
+        num=station, year=start_time.year, jday=start_time.julday
     )
     net, sta, loc, cha, d, year, jday = station_code.split(".")
     path = path.format(year=start_time.year, sta=sta)
@@ -93,6 +98,7 @@ def preprocess(st, t0, t1):
     :param st:
     :return:
     """
+    st.decimate(factor=4)
     st.remove_response(output="VEL", water_level=60,
                        pre_filt=[0.001, 0.005, 45, 50]
                        )
@@ -109,27 +115,7 @@ def preprocess(st, t0, t1):
     return st
 
 
-def stream_information(st):
-    """
-    print out relevant stream information
-    :param st:
-    :return:
-    """
-    for tr in st:
-        timing = np.where(tr.data == tr.max())[0][0] / tr.stats.sampling_rate
-        print("Channel Code: {id}\n"
-              "Starttime: {st}\n"
-              "Endtime: {en}\n"
-              "Max Amplitude: {amp}\n"
-              "Timing of Max: {tim} s\n".format(id=tr.get_id(),
-                                                st=tr.stats.starttime,
-                                                en=tr.stats.endtime,
-                                                amp=tr.max(),
-                                                tim=timing)
-              )
-
-
-def plot_components(axes, st, c):
+def plot_components(axes, st, time_shift=0, color='k'):
     """
     plot each stream component on an axis, assuming NEZ
     :param axes:
@@ -151,13 +137,15 @@ def plot_components(axes, st, c):
     # assuming all time axes are the same in stream
     for i, component in enumerate(["N", "E", "Z"]):
         tr = st.select(component=component)[0]
-        time_axis = np.linspace(0, tr.stats.endtime - tr.stats.starttime,
-                                tr.stats.npts
-                                )
-        axes[i].plot(time_axis, tr.data, label=tr.get_id(), color=c)
+        time_axis = np.linspace(
+            0 + time_shift,
+            tr.stats.endtime - tr.stats.starttime + time_shift,
+            tr.stats.npts
+        )
+        axes[i].plot(time_axis, tr.data, label=tr.get_id(), color=color)
         peak_x, peak_y = peak_pointer(time_axis, tr.data)
-        axes[i].plot(
-            time_axis[peak_x], peak_y, '{}o'.format(c), markersize=4)
+        axes[i].plot(time_axis[peak_x], peak_y, '{}'.format(color),
+                     markersize=4)
 
         axes[i].grid(True)
         axes[i].set_ylabel("{} Amplitude (m/s)".format(component))
@@ -167,90 +155,79 @@ def plot_components(axes, st, c):
     plt.sca(axes[0])
 
 
-def process(path, inv_path, t0=1, t1=10):
+def process(t0=1, t1=10, normalize=True, shift_s=0, pad=50, **kwargs):
     """
     main processing
     :return:
     """
-    for i in range(1, 23, 1):
-        st_beacon = beacon_waveforms(i, path, inv_path)
-        st_beacon = preprocess(st_beacon, t0, t1)
-        stream_information(st_beacon)
-        if st_beacon:
-            f, axes = plt.subplots(3, sharex=True)
-            plot_components(axes, st_beacon, c="b")
+    for event in range(2, 4, 1):
+        starttime, endtime = event_information(i=event, pad=0)
+        # get the GeoNet data first
+        geonet = []
+        max_values = {"E": [], "N": [], "Z": []}
+        for station in ["BKZ", "PXZ", "TSZ"]:
+            st_a = geonet_waveforms(
+                station_code="NZ.{sta}.10.HH?".format(sta=station),
+                event=event, pad=pad
+            )
+            st_a = preprocess(st_a, t0, t1)
 
-            for station, color in zip(["BKZ", "PXZ"], ["r", "k"]):
-                st_geonet = geonet_waveforms("NZ.{sta}.10.HH?".format(
-                    sta=station)
-                )
-                st_geonet = preprocess(st_geonet, t0, t1)
-                stream_information(st_geonet)
-                plot_components(axes, st_geonet, c=color)
+            # Get the max values of each geonet station
+            for comp in max_values.keys():
+                tr = st_a.select(component=comp)[0]
+                max_values[comp].append(tr.data.max())
+
+            geonet.append(st_a)
+
+        # get the Beacon data for each station
+        for i in range(1, 23, 1):
+            st_b = beacon_waveforms(station=i, event=event, pad=pad, **kwargs)
+            # If there is no data, continue
+            if not st_b:
+                print(f"No data for RD{i:0>2}")
+                continue
+
+            st_b = preprocess(st_b, t0, t1)
+
+            # normalize the beacon waveforms by the geonet waveforms
+            if normalize:
+                for comp in max_values.keys():
+                    data_ = st_b.select(component=comp)[0].data
+                    data_max = data_.max()
+                    data_ /= data_max
+                    data_ *= max(max_values[comp])
+                    print("{} {:.2E}, max: {:.2E}".format(
+                        st_b.select(component=comp)[0].get_id(), data_max,
+                        max(max_values[comp]))
+                    )
+                    st_b.select(component=comp)[0].data = data_
+
+            # plot the beacon station
+            f, axes = plt.subplots(3, sharex=True)
+            plot_components(axes, st_b, color="k")
+
+            # cross correlate and shift against the main stream so phases match
+            for st_, color in zip(geonet, ["r", "b", "orange"]):
+                if shift_s:
+                    st_main = geonet[0].copy()
+                    st_main.trim(starttime, endtime)
+                    st_.trim(starttime, endtime)
+
+                    shift, value = xcorr_3c(st_main, st_, shift_len=int(
+                        st_[0].stats.sampling_rate * shift_s)
+                                  )
+                    print("{} shift: {}s value: {:.2f}".format(
+                        st_[0].get_id(), shift / st_[0].stats.sampling_rate,
+                        value)
+                          )
+                    time_shift = shift/st_[0].stats.sampling_rate
+                else:
+                    time_shift = 0
+                plot_components(axes, st_, time_shift=time_shift, color=color)
+
             plt.title("{} T=[{},{}]s".format(event_information()[0], t0, t1))
             plt.show()
 
-
-def compare_geonet():
-    """
-    Comparing BEACON stations to GeoNet sites nearby to check waveform fits.
-    :return:
-    """
-    config = pyatoa.Config(event_id="2017p795065",
-                           paths_to_waveforms=[
-                               '/Users/chowbr/Documents/subduction/seismic'],
-                           paths_to_responses=[
-                               '/Users/chowbr/Documents/subduction/seed/RESPONSE'],
-                           startpad=200, endpad=300
-                           )
-    mgmt = pyatoa.Manager(config)
-    # NZ.BFZ
-    bfz = mgmt.gatherer.gather_observed(station_code="NZ.TSZ.*.HH?")
-    bfz_inv = mgmt.gatherer.gather_station(
-        station_code="NZ.TSZ.*.HH?")
-    bfz = preprocess(bfz, bfz_inv)
-    # NZ.BKZ
-    bkz = mgmt.gatherer.gather_observed(station_code="NZ.WAZ.*.HH?")
-    bkz_inv = mgmt.gatherer.gather_station(
-        station_code="NZ.WAZ.*.HH?")
-    bkz = preprocess(bkz, bkz_inv)
-    # NZ.PXZ
-    pxz = mgmt.gatherer.gather_observed(station_code="NZ.PXZ.*.HH?")
-    pxz_inv = mgmt.gatherer.gather_station(
-        station_code="NZ.PXZ.*.HH?")
-    pxz = preprocess(pxz, pxz_inv)
-
-    for i in range(1, 20):
-        try:
-            f, (ax1, ax2, ax3) = plt.subplots(3, sharex=True)
-            rd = mgmt.gatherer.gather_observed(
-                "XX.RD{:0>2}.*.HH?".format(i))
-            rd_inv = mgmt.gatherer.gather_station(
-                "XX.RD{:0>2}.*.HH?".format(i))
-            rd = preprocess(rd, rd_inv)
-
-            for ax, comp in zip([ax1, ax2, ax3], ["N", "E", "Z"]):
-                bfz_comp = bfz.select(component=comp)
-                bkz_comp = bkz.select(component=comp)
-                pxz_comp = pxz.select(component=comp)
-                rd_comp = rd.select(component=comp)
-
-                ax.plot(bfz_comp[0].data, 'k', label="TSZ")
-                ax.plot(bkz_comp[0].data, 'k--', label="WAZ")
-                ax.plot(pxz_comp[0].data, 'k:', label="PXZ")
-                ax.plot(rd_comp[0].data, 'r', label="RD??")
-
-                ax.set_ylabel(comp)
-                ax.set_title("RD{:0>2}".format(i))
-                plt.legend()
-            print("BFZ {bfz}\nBKZ {bkz}\nPXZ {pxz}\nRD {rd}".format(
-                bfz=bfz.max(), bkz=bkz.max(), pxz=pxz.max(),
-                rd=rd.max())
-            )
-            plt.show()
-        except Exception as e:
-            plt.close()
-            continue
 
 def test_response_files():
     """
@@ -268,13 +245,13 @@ def test_response_files():
         datalogger_keys=['Nanometrics', 'Taurus', '40 Vpp (0.4)',
                          'Low (default)', 'Off', '100'])
 
-    config = pyatoa.Config(event_id="2018p130600",
-                           paths_to_waveforms=[
-                               '/Users/chowbr/Documents/subduction/seismic'],
-                           paths_to_responses=[
-                               '/Users/chowbr/Documents/subduction/seed/RESPONSE'],
-                           startpad=200, endpad=300
-                           )
+    config = pyatoa.Config(
+        event_id="2018p130600",
+        cfgpaths={
+            "waveforms": '/Users/chowbr/Documents/subduction/seismic',
+            "responses": '/Users/chowbr/Documents/subduction/seed/RESPONSE'},
+        startpad=200, endpad=300
+    )
     mgmt = pyatoa.Manager(config)
     rd = mgmt.gatherer.gather_observed("XX.RD10.*.HH?")
 
@@ -310,16 +287,17 @@ def test_response_files():
 
 if __name__ == "__main__":
     pathing = "VUW"
+
     if pathing == "GNS":
         path = "/seis/prj/fwi/bchow/mseeds/BEACON/{year}/XX/{sta}/HH?.D/"
         inv_path = "/seis/prj/fwi/bchow/mseeds/BEACON/DATALESS/XX.RDF.DATALESS"
     elif pathing == "VUW":
-        path = "/Users/chowbr/Documents/subduction/mseeds/" \
+        path = "/Users/chowbr/Documents/subduction/waves/mseeds/" \
                "BEACON/{year}/XX/{sta}/HH?.D/"
-        inv_path = "/Users/chowbr/Documents/subduction/mseeds/" \
-                   "BEACON/DATALESS/XX.RDF.DATALESS"
+        inv_path = "/Users/chowbr/Documents/subduction/waves/mseeds/BEACON/"\
+                   "DATALESS/BEACON_RESPONSE_FILES"
 
-    process(path, inv_path, t0=10, t1=30)
+    process(path=path, inv_path=inv_path, t0=10, t1=14)
 
 
 

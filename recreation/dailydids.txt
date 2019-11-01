@@ -83,3 +83,88 @@ TODO: email yoshi update on work
 TODO: continue pyflex tuning  
 TODO: with new pyflex tuning and new meshfem mesh, run a 10 event test inversion 
 
+OUT : 2019-10-23 17:27:35.912278
+DONE: mtm vs cc kernel creation and quantification 
+DONE: sent email to yoshi 
+DONE: looked at kernel for 2015 event at depth 
+DONE: edited untitled paper 1 
+
+IN  : 2019-10-24 11:04:44.740889
+WORK: GNS
+TODO: prep yoshi and john meeting 
+TODO: run inversion with meshfem mesh and mtm misfit and hikurangi windowing 
+
+OUT : 2019-10-24 19:19:02.650183
+DONE: looked at smoothing of trelis mesh 
+DONE: refactored devel version of Specfem 
+DONE: ran a trial 2 event 1 iteration inversion of new meshfem mesh 
+DONE: started CC vs MTM tests on meshfem mesh 
+DONE: met with yoshi 
+
+IN  : 2019-10-25 09:40:31.943607
+WORK: VUW
+TODO: meet with john 
+TODO: look at cc vs mtm single iteration failures 
+TODO: send message to specfem issue 
+TODO: continue pyatoa refactoring 
+TODO: keep looking at stf convolution 
+
+OUT : 2019-10-25 16:58:44.075308
+DONE: met with John and discussed next steps for paper 
+DONE: continued with mtm vs cc testing, iterations 2-5 running for mtm vs cc 
+DONE: continuted refactoring pyatoa, cleaned up the interface with pyflex and pyadjoint 
+
+IN  : 2019-10-28 10:26:20.016627
+WORK: HOME
+TODO: look at cc vs mtm results 
+TODO: convolution work 
+TODO: pyatoa refactoring 
+
+OUT : 2019-10-28 12:20:50.620941
+DONE: looked at vtk and output optim results of cc vs mtm 
+
+IN  : 2019-10-29 10:46:18.223915
+WORK: VUW
+TODO: start working on figure placeholders 
+TODO: continue looking at mtm vs cc and now vs both 
+TODO: continue refactoring pyatoa, test example 
+
+OUT : 2019-10-29 18:25:54.886437
+DONE: looked at mtm vs cc vs both, created some figures 
+DONE: cleared out lots of data on maui for inodes quota 
+DONE: ran a real data 'until_adjoint' and visualized the kernels 
+DONE: came up with a cool way of plotting 3d sections 
+DONE: did some refactoring on pyatoa and seisflows 
+DONE: created some placeholder figures for untitled paper 1 
+
+IN  : 2019-10-30 10:02:33.757100
+WORK: VUW
+TODO: coding expenses 
+TODO: seisflows output models and gradients as npy fix up 
+TODO: finish pyatoa refactoring 
+TODO: write 
+
+OUT : 2019-10-30 17:30:18.995706
+DONE: continued with pyatoa refactoring, changing visual folder and removing the need for subprocess in the combine images 
+DONE: started working on misfit map for entire models rather than single events 
+DONE: continued 'both' workflow in seisflows 
+
+IN  : 2019-10-31 10:36:20.776249
+WORK: GNS
+TODO: prep yoshi meeting 
+TODO: run old mesh meshfem to poissons ratio error 
+TODO: continue with misfit figure 
+
+OUT : 2019-10-31 14:47:55.273899
+DONE: worked on misfit map 
+DONE: looked at mtm vs cc vs both results 
+DONE: started old mesh run searching for poisson 
+DONE: met w/ yoshi 1h15m 
+
+IN  : 2019-11-01 09:57:04.048896
+WORK: VUW
+TODO: code expenses 
+TODO: corsica writeup 
+TODO: old mesh poissons ratio 
+TODO: beacon teleseismics 
+
