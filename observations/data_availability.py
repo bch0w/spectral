@@ -5,9 +5,11 @@ availability of mseed files
 import os
 import glob
 import numpy as np
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+mpl.rcParams['font.size'] = 12
 
 def myround(x, base=5, choice='near'):
     """
@@ -64,8 +66,7 @@ for year in years:
                         latest = jday
                     station_full_year[jday] += 1
 
-            netstaname = "{}.{}".format(os.path.basename(network),
-                                        os.path.basename(station))
+            netstaname = "{}".format(os.path.basename(station))
             netstas.append(netstaname)
             if filled_years is None:
                 filled_years = station_full_year
@@ -78,8 +79,10 @@ for year in years:
         fig, ax = plt.subplots(figsize=(20,10)) 
         im = ax.imshow(filled_years, extent=(earliest, latest, len(netstas), 0),
                        aspect="auto", cmap="Oranges")
-        ax.set_title("{} BEACON DATA AVAILABILITY".format(
-                                                        os.path.basename(year)))
+        year_ = os.path.basename(year)
+        ax.set_title(f"{year_} BEACON DATA AVAILABILITY")
+        ax.set_xlabel(f"Julian Day ({year_})")
+        ax.set_ylabel("Station Code")
 
         # colorbar
         divider = make_axes_locatable(ax)
@@ -91,13 +94,13 @@ for year in years:
         ax.grid(True, which='major', linestyle='-', c="k", linewidth=1.25)
         ax.grid(True, which='minor', linestyle='-', c="k", linewidth=0.5, 
                 alpha=0.5)
-        ax.set_xticks(np.arange(myround(earliest, 10, 'near'), latest, 10))
-        ax.set_xticks(np.arange(myround(earliest, 10, 'near'), latest, 1), 
+        ax.set_xticks(np.arange(myround(earliest, 5, 'near'), latest, 5))
+        ax.set_xticks(np.arange(myround(earliest, 5, 'near'), latest, 1), 
                       minor=True)
         ax.set_yticks(np.arange(len(netstas)))
         ax.set_yticklabels(netstas)
-        plt.setp(ax.get_xticklabels(), rotation=45)
-        plt.setp(ax.get_yticklabels(), rotation=45)
+        plt.setp(ax.get_xticklabels(), rotation=45, fontsize=13)
+        plt.setp(ax.get_yticklabels(), rotation=45, fontsize=13)
 
         plt.show()
         # plt.savefig("data_{}.png".format(os.path.basename(year)))
