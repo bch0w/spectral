@@ -173,3 +173,17 @@ DONE: beacon waveform checks
 DONE: data availability plots 
 DONE: cc_old_mesh runs 
 
+IN  : 2019-11-04 09:41:24.984762
+WORK: VUW
+TODO: annotated heat maps 
+TODO: beacon waveforms 
+TODO: set up 30 event cc, mtm trials 
+TODO: trelis mesh to failure? 
+TODO: finish figure scaffold 
+
+OUT : 2019-11-04 15:44:53.787445
+DONE: started running trelis mesh to find poisson but no misfits? 
+DONE: worked on figures for paper 
+DONE: finished beacon heatmap data plot 
+DONE: started 30event mtm vs cc run 
+

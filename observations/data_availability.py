@@ -86,9 +86,11 @@ for year in years:
 
         # colorbar
         divider = make_axes_locatable(ax)
-        cax = divider.append_axes('right', size='5%', pad=0.05)
-        fig.colorbar(im, cax=cax, orientation='vertical', values=[0,1,2,3],
-                     ticks=[0,1,2,3])
+        cax = divider.append_axes('right', size='2.5%', pad=0.05)
+        cbar = fig.colorbar(im, cax=cax, orientation='vertical', 
+                            values=[0,1,2,3], ticks=[0,1,2,3])
+        cbar.set_label('number of available channels', rotation=90, 
+                       labelpad=-15)
         
         # grid
         ax.grid(True, which='major', linestyle='-', c="k", linewidth=1.25)
