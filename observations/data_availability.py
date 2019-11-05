@@ -9,7 +9,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-mpl.rcParams['font.size'] = 12
+mpl.rcParams['font.size'] = 10
 
 def myround(x, base=5, choice='near'):
     """
@@ -101,7 +101,7 @@ for year in years:
                       minor=True)
         ax.set_yticks(np.arange(len(netstas)))
         ax.set_yticklabels(netstas)
-        plt.setp(ax.get_xticklabels(), rotation=45, fontsize=13)
+        plt.setp(ax.get_xticklabels(), rotation=45, fontsize=11)
         plt.setp(ax.get_yticklabels(), rotation=45, fontsize=13)
 
         plt.show()
