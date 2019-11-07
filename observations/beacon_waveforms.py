@@ -225,10 +225,11 @@ def plot_data(geonet, st_b, title='', normalize=True, show=True, save=False):
 
     starttime = st_b[0].stats.starttime
     plt.title(title)
+    year = starttime.year
 
     if save:
         plt.savefig(
-            f"{starttime.year}_{starttime.month:0>2}_{st_b[0].get_id()}.png",
+            f"{starttime.year}_{starttime.julday:0>3}_{st_b[0].get_id()}.png",
             dpi=100
         )
     if show:
@@ -295,19 +296,20 @@ if __name__ == "__main__":
                     ]
     for event in origin_times[1:]:
         start, end = event_information(start=event[0], start_pad=0,
-                                       end_pad=60*60)
+                                       end_pad=60*5)
         print(start)
-        if not os.path.exists(f"./{event[1]}.json"):
-            amp_dict = process(start, end, path=path, inv_path=inv_path,
-                               plot=True, t0=10, t1=30, save=True, show=False)
+        # if not os.path.exists(f"./{event[1]}.json"):
+        amp_dict = process(start, end, path=path, inv_path=inv_path,
+                           plot=True, t0=10, t1=30, save=True, show=False)
+        continue
 
-            with open(f"{event[1]}.json", "w") as f:
-                json.dump(amp_dict, f, indent=4)
+        #     with open(f"{event[1]}.json", "w") as f:
+        #         json.dump(amp_dict, f, indent=4)
 
-        else:
-            amp_dict = json.load(open(f"{event[1]}.json"))
+        # else:
+        #     amp_dict = json.load(open(f"{event[1]}.json"))
 
-        analyze_amp_dict(amp_dict)
+        # analyze_amp_dict(amp_dict)
 
 
 
