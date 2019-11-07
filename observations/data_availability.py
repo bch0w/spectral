@@ -157,9 +157,11 @@ def check_availability(origintime, path="./",  return_time=False):
         
 
 if __name__ == "__main__":
-    for origintime in ["2017-09-08T04:49:46.0",  # chiapas, mw8.2
-                       "2017-09-19T18:14:48.2",  # central mexico, mw7.1
-                       "2018-01-23T09:32:00.0",  # alaska, mw7.9
-                       "2018-02-25T17:45:08.6"   # png, mw7.5
-                       ]:
-        check_availability(origintime, return_time=False)
+   #  for origintime in ["2019-04-23T16:37:10.0",  # 2019p304574 M4.79
+   #                     "2017-09-08T04:49:46.0",  # chiapas, mw8.2
+   #                     "2017-09-19T18:14:48.2",  # central mexico, mw7.1
+   #                     "2018-01-23T09:32:00.0",  # alaska, mw7.9
+   #                     "2018-02-25T17:45:08.6"   # png, mw7.5
+   #                     ]:
+   #      check_availability(origintime, return_time=False)
+   check_availability('2018-02-18T07:43:48', return_time=False)
