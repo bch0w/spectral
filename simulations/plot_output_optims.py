@@ -38,4 +38,4 @@ for fid in fids:
     plt.ylabel('Pyatoa Misfits')
     plt.grid(True)
 
-plt.show()
+plt.savefig('30event_mtmcc.png')

@@ -187,3 +187,35 @@ DONE: worked on figures for paper
 DONE: finished beacon heatmap data plot 
 DONE: started 30event mtm vs cc run 
 
+IN  : 2019-11-05 08:59:40.545724
+WORK: GNS
+TODO: check 30 event mtm vs cc and continue run 
+TODO: transfer mseeds to maui, data availability plot 
+TODO: continue with paper figures and writing 
+TODO: figure out why the trelis mesh stuff isnt working 
+
+OUT : 2019-11-05 16:05:27.795123
+DONE: 30 event mtm vs cc on 2-5 iterations 
+DONE: 10event with trelis running 
+DONE: converted seisflows parameters to yaml 
+DONE: started seisflows3 endeavor 
+DONE: started domain map for untitled paper 
+DONE: converted beacon data to 2019 
+
+IN  : 2019-11-06 09:08:48.954587
+WORK: HOME
+TODO: beacon waveforms 
+TODO: figures for paper 
+TODO: write  
+TODO: 30event mtm vs cc 
+
+OUT : 2019-11-06 16:09:28.874625
+DONE: beacon waveform checks 
+DONE: wrote part of methods section 
+DONE: data availability script 
+
+IN  : 2019-11-07 10:09:46.795842
+WORK: GNS
+TODO: beacon waveform checks, figures for meeting 
+TODO: write 
+
