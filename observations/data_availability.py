@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from obspy import read, UTCDateTime
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-mpl.rcParams['font.size'] = 12
+mpl.rcParams['font.size'] = 10
 
 def myround(x, base=5, choice='near'):
     """

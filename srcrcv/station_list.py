@@ -22,6 +22,7 @@ from obspy.core.inventory.station import Station
 from obspy.core.inventory.channel import Channel
 from obspy.core.inventory.util import Site
 
+from pyatoa.utils.tools.srcrcv import merge_inventories
 
 def geonet_north_island(level="station"):
     """
@@ -39,13 +40,23 @@ def geonet_north_island(level="station"):
 
     starttime = UTCDateTime('2000-01-01')
 
-    # GeoNet Broadband instruments
+    # GeoNet Broadband instruments with standard station code Z
     inv_geonet = c.get_stations(network='NZ', station='*Z', channel='HH?',
                                 minlatitude=lat_min, maxlatitude=lat_max,
                                 minlongitude=lon_min, maxlongitude=lon_max,
                                 level=level, starttime=starttime,
                                 endtime=UTCDateTime()
                                 )
+    # Stations with unique names
+    for station in ["WEL", "BHW", "HD61", "HD62", "HD63", "HD64", "HD65"]:
+        inv_hold = c.get_stations(network='NZ', station=station, 
+                                  channel='HH?', minlatitude=lat_min, 
+                                  maxlatitude=lat_max, minlongitude=lon_min, 
+                                  maxlongitude=lon_max, level=level, 
+                                  starttime=starttime, endtime=UTCDateTime()
+                                  )
+        inv_geonet = merge_inventories(inv_geonet, inv_hold)
+    import ipdb;ipdb.set_trace()
 
     return inv_geonet[0]
 
@@ -376,7 +387,7 @@ def beacon(network_code="XX", level="station", comp_list=["N", "E", "Z"]):
         if level == "channel":
             channels = []
             for comp in comp_list:
-                cha = Channel(code=f"HH{comp}", location_code="",
+                cha = Channel(code=f"HH{comp}", location_code="                     ",
                               start_date=start_date, end_date=end_date,
                               latitude=latitude, longitude=longitude,
                               elevation=default_elevation, depth=default_depth,
@@ -415,16 +426,13 @@ def generate_master_list():
     :return:
     """
     level = "channel"
-    geonet_inv = geonet_north_island(level=level)
-    # hobitss_inv = hobitss(level=level)
-    sahke_inv = sahke(level=level)
-    bannister_inv = bannister(level=level)
-    beacon_inv = beacon(level=level)
+    networks = [geonet_north_island(level=level),
+                # hobitss(level=level),
+                sahke(level=level),
+                bannister(level=level),
+                beacon(level=level)]
 
-    return Inventory(networks=[geonet_inv, hobitss_inv, sahke_inv,
-                               bannister_inv, beacon_inv],
-                     source="PYATOA"
-                     )
+    return Inventory(networks=networks, source="PYATOA")
 
 
 def export_specfem(inv, filename="master_station_list.txt"):
