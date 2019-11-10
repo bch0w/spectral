@@ -2,6 +2,7 @@
 The catalog used for initial testing purposes for Pyatoa + Seisflows
 26.7.19
 """
+import os
 import csv
 import numpy as np
 import matplotlib.pyplot as plt
@@ -350,12 +351,15 @@ def charlie_trial(csv_file, desired_length):
 
 if __name__ == "__main__":
     # Use GeoNet moment tensors
-    # csv_file = ("/Users/chowbr/Documents/subduction/data/GEONET/data/" 
-    #             "moment-tensor/GeoNet_CMT_solutions.csv")
-    # csv_file = ("/Users/Chow/Documents/academic/vuw_seismo/data/geonet/data/"
-    #             "moment-tensor/GeoNet_CMT_solutions.csv") 
-    csv_file = ("/seis/prj/fwi/bchow/data/geonet/data/moment-tensor/"
-                "GeoNet_CMT_solutions.csv")
+    geonet_path = "GEONET/data/moment-tensor/GeoNet_CMT_solutions.csv"
+    for path_to in ["/Users/chowbr/Documents/subduction/data",
+                    "/Users/Chow/Documents/academic/vuw_seismo/data",
+                    "/seis/prj/fwi/bchow/data"]:
+        if os.path.exists(os.path.join(path_to, geonet_path)):
+            csv_file = os.path.join(path_to, geonet_path)
+            break
+    else:
+        print("No GeoNet .csv file found")
 
     desired_catalog_length = 10
 
