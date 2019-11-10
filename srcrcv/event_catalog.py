@@ -18,7 +18,15 @@ import catalog_to_cmtsolutions
 def cut_cat(cat, indices=[], method="remove"):
     """
     Obspy's catalog object has no delete, so here it is!
-    :return:
+
+    :type cat: obspy.Catalog
+    :param cat: catalog object to cut down
+    :type indices: list of ints
+    :param indices: indices of the catalog to remove
+    :type method: str
+    :param method: "remove" to delete 'indices' from 'cat', "keep" to retain
+    :rtype: obspy.Catalog
+    :return: new catalog object cut from old one
     """
     new_cat = Catalog()
     if method == "remove":
@@ -30,28 +38,21 @@ def cut_cat(cat, indices=[], method="remove"):
     return new_cat
 
 
-def mesh_domain(cat, lat_min, lon_min, lat_max, lon_max, distance_km=50.):
-    """
-    Keep events away from the mesh boundaries to avoid spurious reflections
-
-    :param cat:
-    :param lat_min:
-    :param lon_min:
-    :param lat_max:
-    :return:
-    """
-    raise NotImplementedError
-
-
 def remove_groupings(cat, sep_km=30.):
     """
-    Loop through a catalog and premove spatially grouped events
-    :param cat:
-    :return:
+    Loop through a catalog and premove spatially grouped events by comparing
+    inter-event distances and removing any events that are below some
+    separation threshold
+
+    :type cat: obspy.Catalog
+    :param cat: catalog to remove grouped events from
+    :type sep_km: float
+    :param sep_km: desired separation distance between events in km
+    :rtype: obspy.Catalog
+    :return: new catalog with grouped events removed
     """
     indices_remove = []
 
-    # Stop when the number of events to remove hits a desired length
     for i, event in enumerate(cat):
         lat = event.preferred_origin().latitude
         lon = event.preferred_origin().longitude
@@ -88,18 +89,30 @@ def remove_groupings(cat, sep_km=30.):
 
 def spatially_vary(cat, desired_length=None):
     """
-    Loop through a catalog and pick the event that is the furthest away from
-    the current event. This way we ensure that our catalog is spatially varied.
+    Create a new catalog by picking the next event that is the furthest away 
+    from the current event. This way we ensure that our catalog is spatially
+    varied and contains all edge events rather than choosing nearest neighbor
+    groupings
 
     NOTE:
     This doesn't really do what I want it to because it still retains grouped
     events after 2 iterations (going back and forth between the two map corners
     for example). What I really want it to do is pick the next event that is the
-    furthest away from ALL events in the catalog, but that would take a lot of
-    checking.
+    furthest away from ALL events in the current catalog, but that would take a 
+    lot more checking.
 
-    :param cat:
-    :param desired_length:
+    How I might go about that: 
+        -Create a list of distances of the picked event from all events in base
+         catalog, sort min to max
+        -Create a list of distances of the picked event from all events in the
+         new catalog, sort min to max
+        -Find the largest shared index between these two lists, corresponding to
+         an event with the largest distance from
+
+    :type cat: obspy.Catalog
+    :param cat: catalog to spatially vary
+    :type desired_length: int
+    :param desired_length: desired length of new catalog
     :return:
     """
     if desired_length:
@@ -164,7 +177,15 @@ def spatially_vary(cat, desired_length=None):
 def check_moment_tensor(geonet_csv_file, cat):
     """
     Check if the catalog has a moment tensor defined by GeoNet
-    :return:
+    Performed based on event ids that are common to both catalogs
+
+    :type geonet_csv_file: str
+    :param geonet_csv_file: path to the GeoNet csv file downloaded from
+        https://github.com/GeoNet/data
+    :type cat: obspy.Catalog
+    :param cat: catalog object to check event ids from
+    :rtype: obspy.Catalog
+    :return: new catalog that only contains events with moment tensors
     """
     # Get all the available event ids in the csv file
     event_ids = []
@@ -190,10 +211,13 @@ def check_moment_tensor(geonet_csv_file, cat):
 def plot_cat(cat, evnts, tag=""):
     """
     Plot the catalog with a custom title based on the
-    :param cat:
-    :param evnts:
-    :param tag:
-    :return:
+
+    :type cat: obspy.Catalog
+    :param cat: catalog to plot
+    :type evnts: dictionary
+    :param evnts: parameter dictionary from function event_trials()
+    :type tag: str
+    :param tag: tag for saving the plot name
     """
     # Plot the catalog
     evnts['starttime'].precision = 1
@@ -213,112 +237,46 @@ def plot_cat(cat, evnts, tag=""):
              outfile="./{}{}".format(evnts['name'], tag), title=title
              )
 
-    plt.close()
+    plt.close('all')
 
 
-def alpha_trial():
+def event_trials(choice, csv_file, desired_length):
     """
-    Alpha trial gives 26 events. Used for initial checkerboard testing in
-    late August, early September, 2019.
-    2012 starttime to avoid the event ID name change from GeoNet
-    Top corner picked to avoid Te Araroa sequence
-    Bottom corner chosen to avoid numerous Kaikoura aftershocks
+    For a given set of trial parameters, retrieve an event catalog and then
+    slim it down with various check parameters; make sure events are not too 
+    closely grouped, and that they contain moment tensor information from GeoNet
+    Plot the final catalog, make beachballs for plotting purposes, return
+    an .xml catalog
+
+    :type choice: str
+    :param choice: choice of parameter trial
+    :type csv_file: str
+    :param csv_file: path to GeoNet csv file with moment tensor information
+    :type desired_length: int
+    :param desired_length: desired length of catalog, event removal will try to 
     :return:
     """
-    evnts = {
-        "name": "alpha_trial",
-        "starttime": UTCDateTime("2012-01-01T00:00:00"),
-        "endtime": UTCDateTime("2019-01-01T00:00"),
-        "minmagnitude": 5.,
-        "maxmagnitude": 6.,
-        "minlatitude": -41.5,  # LLC
-        "minlongitude": 173.,  # LLC
-        "maxlatitude": -37.3,  # URC
-        "maxlongitude": 179.,  # URC
-         }
-
-    # Create the catalog and plot the raw event catalog
-    c = Client("GEONET")
-    cat = c.get_events(starttime=evnts['starttime'], endtime=evnts['endtime'],
-                       minmagnitude=evnts['minmagnitude'],
-                       maxmagnitude=evnts['maxmagnitude'],
-                       minlatitude=evnts['minlatitude'],
-                       minlongitude=evnts['minlongitude'],
-                       maxlatitude=evnts['maxlatitude'],
-                       maxlongitude=evnts['maxlongitude']
-                       )
-
-    plot_cat(cat, evnts, tag="_raw_{}".format(len(cat)))
-
-    return cat, evnts["name"]
-
-
-def beta_trial(csv_file, desired_length):
-    """
-    An attempt to get more events than the alpha_trial, and to spatially
-    distribute them by removing grouped events. 30km separation at group removal
-    stage gives 30 events
-    :return:
-    """
-    evnts = {
-        "name": "beta_trial",
-        "starttime": UTCDateTime("2012-01-01T00:00:00"),
-        "endtime": UTCDateTime("2019-01-01T00:00"),
-        "minmagnitude": 4.75,
-        "maxmagnitude": 6.,
-        "minlatitude": -42.5,  # LLC
-        "minlongitude": 173.5,  # LLC
-        "maxlatitude": -37.25,  # URC
-        "maxlongitude": 178.5,  # URC
-         }
-
-    # Create the catalog and plot the raw event catalog
-    c = Client("GEONET")
-    original_cat = c.get_events(starttime=evnts['starttime'],
-                                endtime=evnts['endtime'],
-                                minmagnitude=evnts['minmagnitude'],
-                                maxmagnitude=evnts['maxmagnitude'],
-                                minlatitude=evnts['minlatitude'],
-                                minlongitude=evnts['minlongitude'],
-                                maxlatitude=evnts['maxlatitude'],
-                                maxlongitude=evnts['maxlongitude']
-                                )
-    print("catalog has {} events".format(len(original_cat)))
-
-    # Remove if no GeoNet moment tensors
-    new_cat = check_moment_tensor(csv_file, original_cat)
-    print("catalog has {} events".format(len(new_cat)))
-
-    # Remove grouped events 
-    # sep_km = 30.  # this will give 30 events with good spatial variation
-    sep_km = 80.  # this will give 10 events with good spatial variation
-
-    new_cat_no_groups = remove_groupings(new_cat, sep_km=sep_km)
-    print("catalog has {} events".format(len(new_cat_no_groups)))
-
-    plot_cat(new_cat_no_groups, evnts)
-    
-    return new_cat_no_groups, evnts["name"]
-
-
-def charlie_trial(csv_file, desired_length):
-    """
-    I forgot to depth constrain the beta trial...
-    :return:
-    """
-    evnts = {
-        "name": "charlie_trial",
+    trials = {"charlie_trial": {
         "starttime": UTCDateTime("2010-01-01T00:00:00"),
-        "endtime": UTCDateTime(),
+        "endtime": UTCDateTime("2019-11-01T00:00:00"),
         "minmagnitude": 4.75,
         "maxmagnitude": 6.,
         "minlatitude": -42.5,  # LLC
         "minlongitude": 173.5,  # LLC
         "maxlatitude": -37.25,  # URC
         "maxlongitude": 178.5,  # URC
-        "maxdepth": 60.,
-         }
+        "maxdepth": 60.
+        },
+        "delta_trial":{}         
+        }
+    evnts = trials[choice]
 
+    # Change directory so that all outputs are saved into a new folder
+    event_dir = os.path.join(os.getcwd(), choice)
+    if not os.path.exists(event_dir):
+        os.makedirs(event_dir)
+    os.chdir(event_dir)
+    
     # Create the catalog and plot the raw event catalog
     c = Client("GEONET")
     original_cat = c.get_events(starttime=evnts['starttime'],
@@ -338,15 +296,35 @@ def charlie_trial(csv_file, desired_length):
     print("catalog has {} events".format(len(new_cat)))
 
     # Remove grouped events 
-    # sep_km = 20.  # this will give 30 events with good spatial variation
-    sep_km = 60.  # this will give 10 events with good spatial variation
-
-    new_cat_no_groups = remove_groupings(new_cat, sep_km=sep_km)
+    sep_km = 20.  # this will give 30 events with good spatial variation
+    sep_steps = 5  # step lengths to try new separation distances
+    
+    if len(new_cat) < desired_catalog_length:
+        print("Initial catalog is smaller than desired length,"
+              "consider adjusting search parameters.")
+        new_cat_no_groups = new_cat
+    else:
+        new_cat_no_groups = remove_groupings(new_cat, sep_km=sep_km)
+        # Try separation distances until new catalog has desired length
+        while True:
+            if sep_km <= sep_steps:
+                print("Event separation too small, exiting search")
+                break
+            elif len(new_cat_no_groups) ==  desired_catalog_length:
+                break
+            elif len(new_cat_no_groups) < desired_catalog_length: 
+                sep_km -= sep_step
+                print(f"Decreasing step length to {sep_km}km")
+            elif len(new_cat_no_groups) > desired_catalog_length:
+                sep_km += sep_step
+                print(f"Increasing step length to {sep_km}km")
+            new_cat_no_groups = remove_gropings(new_cat, sep_km=sek_km)
+    
     print("catalog has {} events".format(len(new_cat_no_groups)))
 
     plot_cat(new_cat_no_groups, evnts)
     
-    return new_cat_no_groups, evnts["name"]
+    return new_cat_no_groups
 
 
 if __name__ == "__main__":
@@ -361,10 +339,12 @@ if __name__ == "__main__":
     else:
         print("No GeoNet .csv file found")
 
-    desired_catalog_length = 10
+    # USER PARAMETERS
+    cat_name = "charlie_trial"
+    desired_catalog_length = 30
 
     # Get the catalog and its name, based on the functions
-    cat, cat_name = charlie_trial(csv_file, desired_catalog_length)
+    cat = event_trials(cat_name, csv_file, desired_catalog_length)
 
     # Write to an XML file
     cat.write(f"{cat_name}.xml", format="QUAKEML")
