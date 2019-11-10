@@ -8,7 +8,7 @@ from obspy import read_inventory, read_events
 from pyatoa.utils.visuals.mapping import standalone_map
 
 
-def plot_stations(m, inv):
+def plot_inv(m, inv):
     """
     plot stations from an obspy inventory object
     """
@@ -41,21 +41,43 @@ def plot_stations(m, inv):
               linestyle='-', linewidth=1.25, cmap='viridis', 
               zorder=zorder)
 
+def plot_stations(m, stations_fid):
+    """
+    plot stations from a Specfem STATION file
+    """
+    # place changeable variables up high for quick change
+    markersize = 100
+    zorder = 100
+
+    station_info = np.loadtxt(stations_fid, usecols=(0,1,2,3), dtype=str)
+    x, y = [], []
+    for station in station_info:
+        sta, net, lat, lon = station
+        name = f"{net}.{sta}"
+        xy = m(float(lon), float(lat))
+        x.append(xy[0])
+        y.append(xy[1])
+
+    m.scatter(x, y, marker=11, s=markersize, edgecolor='k', c='k',
+              linestyle='-', linewidth=1.25, cmap='viridis', 
+              zorder=zorder)
+
 
 def domain_map():
     """
     main
     """
     # Parameters
-    inv = read_inventory("./master_inventory.xml")
-    # cat = read_events("./master_cat.xml")
+    # inv = read_inventory("./master_inventory.xml")
+    cat = read_events("./charlie_trial.xml")
+    stations_fid = "./TRIALS_STATIONS_78"
 
     map_corners={'lat_min': -42.5007, 'lat_max': -36.9488,
                  'lon_min': 172.9998, 'lon_max': 179.5077}
 
     # workflow
     f, m = standalone_map(map_corners, show="hold")
-    plot_stations(m, inv)
+    plot_stations(m, stations_fid)
 
     plt.show()
 
