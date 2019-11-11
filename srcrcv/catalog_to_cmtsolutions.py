@@ -1,5 +1,6 @@
 """
 Standalone function to generate CMTSOLUTION files from an obspy catalog
+Only usable for the New Zealand problem, hardcoding for GeoNet moment tensors
 """
 import os
 import sys

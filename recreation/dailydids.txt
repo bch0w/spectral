@@ -219,3 +219,30 @@ WORK: GNS
 TODO: beacon waveform checks, figures for meeting 
 TODO: write 
 
+OUT : 2019-11-07 19:17:29.276610
+DONE: beacon waveform checks 
+DONE: clear outline on paper 
+DONE: met with yoshi 
+
+IN  : 2019-11-10 09:32:44.658715
+WORK: HOME
+TODO: rerun old poisson error folder with updated version of specfem 
+TODO: finish running mtm, start running both 
+TODO: real data inversion 
+
+OUT : 2019-11-10 13:47:10.003039
+DONE: cleansf script written 
+DONE: set up 10event mimic 1603deb run folder 
+DONE: cleaned up some maui directories 
+
+IN  : 2019-11-11 07:14:24.766203
+WORK: HOME
+TODO: start making paper figures 
+
+OUT : 2019-11-11 08:32:33.262856
+DONE: started working on domain map 
+
+IN  : 2019-11-11 09:25:37.507296
+WORK: VUW
+TODO: paper figure 
+

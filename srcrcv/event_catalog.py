@@ -9,10 +9,12 @@ import matplotlib.pyplot as plt
 from obspy import UTCDateTime, Catalog
 from obspy.clients.fdsn import Client
 from obspy.geodetics import gps2dist_azimuth
+from pyatoa.utils.tools.srcrcv import generate_focal_mechanism
+from pyatoa.utils.gather.grab_auxiliaries import grab_geonet_moment_tensor
 
 import sys
-sys.path.append(".")
-import catalog_to_cmtsolutions
+sys.path.append('./')
+import cataog_to_cmtsolutions
 
 
 def cut_cat(cat, indices=[], method="remove"):
@@ -208,6 +210,30 @@ def check_moment_tensor(geonet_csv_file, cat):
     return cut_cat(cat, indices_remove, method="remove")
 
 
+def append_mt(cat, csv_file):
+    """
+    Append GeoNet moment tensor information to the events in catalog
+    Assumes that all the events have moment tensor information, meaning 
+    check_moment_tensor() should be run prior to this
+
+    :type cat: obspy.Catalog
+    :param cat: catalog of events to add moment tensor information to
+    :type csv_file: str
+    :param csv_file: csv_file containing moment tensor information
+    """
+    cat_out = Catalog()
+    events = []
+    for event in cat:
+        mtlist = grab_geonet_moment_tensor(event.resource_id.id.split('/')[1],
+                                           fid=csv_file)
+        event_out, _ = generate_focal_mechanism(mtlist=mtlist, event=event)
+        events.append(event_out)
+
+    cat_out.extend(events)
+
+    return cat_out
+
+
 def plot_cat(cat, evnts, tag=""):
     """
     Plot the catalog with a custom title based on the
@@ -257,18 +283,19 @@ def event_trials(choice, csv_file, desired_length):
     :return:
     """
     trials = {"charlie_trial": {
-        "starttime": UTCDateTime("2010-01-01T00:00:00"),
-        "endtime": UTCDateTime("2019-11-01T00:00:00"),
-        "minmagnitude": 4.75,
-        "maxmagnitude": 6.,
-        "minlatitude": -42.5,  # LLC
-        "minlongitude": 173.5,  # LLC
-        "maxlatitude": -37.25,  # URC
-        "maxlongitude": 178.5,  # URC
-        "maxdepth": 60.
-        },
-        "delta_trial":{}         
-        }
+                "name": "charlie_trial",
+                "starttime": UTCDateTime("2010-01-01T00:00:00"),
+                "endtime": UTCDateTime("2019-11-01T00:00:00"),
+                "minmagnitude": 4.75,
+                "maxmagnitude": 6.,
+                "minlatitude": -42.5,  # LLC
+                "minlongitude": 173.5,  # LLC
+                "maxlatitude": -37.25,  # URC
+                "maxlongitude": 178.5,  # URC
+                "maxdepth": 60.
+                },
+                "delta_trial":{}         
+               }
     evnts = trials[choice]
 
     # Change directory so that all outputs are saved into a new folder
@@ -296,8 +323,7 @@ def event_trials(choice, csv_file, desired_length):
     print("catalog has {} events".format(len(new_cat)))
 
     # Remove grouped events 
-    sep_km = 20.  # this will give 30 events with good spatial variation
-    sep_steps = 5  # step lengths to try new separation distances
+    sep_km = 17.  # this will give 30 events with good spatial variation
     
     if len(new_cat) < desired_catalog_length:
         print("Initial catalog is smaller than desired length,"
@@ -307,24 +333,26 @@ def event_trials(choice, csv_file, desired_length):
         new_cat_no_groups = remove_groupings(new_cat, sep_km=sep_km)
         # Try separation distances until new catalog has desired length
         while True:
-            if sep_km <= sep_steps:
-                print("Event separation too small, exiting search")
+            if len(new_cat_no_groups) ==  desired_catalog_length:
                 break
-            elif len(new_cat_no_groups) ==  desired_catalog_length:
-                break
-            elif len(new_cat_no_groups) < desired_catalog_length: 
-                sep_km -= sep_step
-                print(f"Decreasing step length to {sep_km}km")
-            elif len(new_cat_no_groups) > desired_catalog_length:
-                sep_km += sep_step
-                print(f"Increasing step length to {sep_km}km")
-            new_cat_no_groups = remove_gropings(new_cat, sep_km=sek_km)
+            else:
+                print(f"{len(new_cat_no_groups)} events; " 
+                      f"desired: {desired_catalog_length}; "
+                      f"current separation: {sep_km}")
+                sep_km = input("new separation distance?: ")
+                if sep_km:
+                    sep_km =float(sep_km)
+
+            new_cat_no_groups = remove_groupings(new_cat, sep_km=sep_km)
     
     print("catalog has {} events".format(len(new_cat_no_groups)))
 
-    plot_cat(new_cat_no_groups, evnts)
+    # add moment tensor information to all events
+    cat_out = append_mt(new_cat_no_groups, csv_file)
+
+    plot_cat(cat_out, evnts)
     
-    return new_cat_no_groups
+    return cat_out
 
 
 if __name__ == "__main__":
