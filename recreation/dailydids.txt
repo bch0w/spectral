@@ -246,3 +246,14 @@ IN  : 2019-11-11 09:25:37.507296
 WORK: VUW
 TODO: paper figure 
 
+OUT : 2019-11-11 20:56:57.380348
+DONE: source receiver map 
+DONE: started 5 event poissons run 
+DONE: tried to resume mtm 30 event run 
+
+IN  : 2019-11-12 08:37:36.232265
+WORK: VUW
+TODO: continue paper figures 
+TODO: check 30event and 10event poisson 
+TODO: set up realdata 
+
