@@ -257,3 +257,12 @@ TODO: continue paper figures
 TODO: check 30event and 10event poisson 
 TODO: set up realdata 
 
+OUT : 2019-11-12 17:48:39.915844
+DONE: made more figures 
+
+IN  : 2019-11-13 09:57:14.554568
+WORK: VUW
+TODO: more paper figures 
+TODO: more maui runs 
+TODO: more more 
+
