@@ -60,7 +60,6 @@ def beacon_waveforms(station_name, start, end, **kwargs):
     net, sta, loc, cha, d, year, jday = code.split(".")
 
     path = path.format(year=start.year, sta=sta)
-
     st = Stream()
     for fid in glob.glob(os.path.join(path, code)):
         st += read(fid)
@@ -142,72 +141,13 @@ def plot_components(axes, st_in, anno='', time_shift=0, color='k', zorder=10,
         axes[i].set_ylabel(f"{component}")
         axes[i].set_xlim([time_axis[0], time_axis[-1]])
 
-    axes[1].legend(prop={'size': 6})
+    axes[1].legend(prop={'loc': 'upper left', 'size': 6})
     axes[2].set_xlabel("Time since origin time (sec)")
     plt.sca(axes[0])
 
 
-def process(starttime, endtime, t0, t1, plot=False, show=True, save=False,
-            normalize=True, **kwargs):
-    """
-    main processing
-    :return:
-    """
-    # get the GeoNet data first
-    geonet = []
-    comp_dict = ["N", "E", "Z"]
-    amplitude_dict = {}
-
-    for station in ["BKZ", "PXZ", "TSZ"]:
-        amplitude_dict[station] = {}
-
-        st_a = geonet_waveforms(station_code=f"NZ.{station}.10.HH?",
-                                start=starttime, end=endtime)
-        st_a = preprocess(st_a, t0, t1)
-
-        # Get the max values of each geonet station
-        for comp in comp_dict:
-            tr = st_a.select(component=comp)[0]
-            time_ = np.where(tr.data == tr.data.max())[0][0]
-            time_ /=  tr.stats.sampling_rate
-            amplitude_dict[station][comp] = {"amp": tr.data.max(),
-                                             "time": time_}
-
-        geonet.append(st_a)
-
-    # get the Beacon data for each station
-    for i in range(1, 23, 1):
-        station = f"RD{i:0>2}"
-        st_b = beacon_waveforms(station_name=station, start=starttime,
-                                end=endtime, **kwargs)
-        # If there is no data, continue
-        if not st_b:
-            print(f"\tNo data for {station}")
-            continue
-        else:
-            print(f"\t{station}")
-
-        amplitude_dict[station] = {}
-        st_b = preprocess(st_b, t0, t1)
-
-        for comp in comp_dict:
-            tr = st_b.select(component=comp)[0]
-            time_ = np.where(tr.data == tr.data.max())[0][0]
-            time_ /= tr.stats.sampling_rate
-            amplitude_dict[station][comp] = {"amp": tr.data.max(),
-                                             "time": time_}
-        # Plot the data if necessary
-        if plot:
-            title = (f"{starttime} T=[{t0}, {t1}]s\n"
-                     f"{st_b.select(component=comp)[0].get_id()}"
-                     )
-            plot_data(geonet=geonet, st_b=st_b, title=title, show=show,
-                      save=save, normalize=normalize)
-
-    return amplitude_dict
-
-
-def plot_data(geonet, st_b, title='', normalize=True, show=True, save=False):
+def plot_data(geonet_list, st_beacon, title='', normalize=True, show=True, 
+              save=''):
     """
     plot the station data
 
@@ -217,99 +157,155 @@ def plot_data(geonet, st_b, title='', normalize=True, show=True, save=False):
     """
     # plot the beacon station
     f, axes = plt.subplots(3, sharex=True)
-    plot_components(axes, st_b, color="k", zorder=30, normalize=normalize)
+    plot_components(axes, st_beacon, color="k", zorder=30, normalize=normalize)
 
     # plot geonet stations
-    for color, st_a in zip(["r", "b", "g"], geonet):
+    for color, st_a in zip(["r", "b", "g"], geonet_list):
         plot_components(axes, st_a, color=color, zorder=20, normalize=normalize)
 
-    starttime = st_b[0].stats.starttime
+    starttime = st_beacon[0].stats.starttime
     plt.title(title)
     year = starttime.year
 
     if save:
-        plt.savefig(
-            f"{starttime.year}_{starttime.julday:0>3}_{st_b[0].get_id()}.png",
-            dpi=100
-        )
+        plt.savefig(save, dpi=100)
     if show:
         plt.show()
 
     plt.close()
 
 
-def analyze_amp_dict(amp_dict, fid):
+def process(starttime, endtime, t0, t1, t_width=4, plot=False, 
+            show=True, save=False, normalize=True, **kwargs):
     """
-    parse through the amplitude dictionary and get amplitude ratios
-
-    :param amp_dict:
+    main processing
     :return:
     """
-    with open(fid, "w") as f:
-        alreadydone = []
-        for sta in amp_dict.keys():
-            # Only use geonet stations as baseline comparisons
-            if "RD" not in sta:
-                continue
-            # loop through stations to compare, ignore station weve done
-            for sta_compare in amp_dict.keys():
-                if (sta == sta_compare) or ("RD" in sta_compare):
-                    continue
+    comps = ["N", "E", "Z"]
 
-                combined = sorted(sta + sta_compare)
-                jumble = ''.join(combined)
-                if jumble in alreadydone:
-                    continue
-                else:
-                    alreadydone.append(''.join(combined))
+    # Beacon data for each station
+    beacon = []
+    for i in range(1, 2, 1):
+        station = f"RD{i:0>2}"
+        st_b = beacon_waveforms(station_name=station, start=starttime,
+                                end=endtime, **kwargs)
+        # If there is no data, continue
+        if not st_b:
+            print(f"\tNo data for {station}")
+            continue
+        else:
+            print(f"\t{station}")
+        beacon.append(st_b)
+    if not beacon:
+        return
 
-                print(f"{sta}/{sta_compare} - ", end=' ')
-                f.write(f"{sta}/{sta_compare}\t")
-                for comp in amp_dict[sta].keys():
-                    ratio = (amp_dict[sta][comp]['amp'] /
-                             amp_dict[sta_compare][comp]['amp']
-                             )
-                    print(f"{comp}: {ratio:.2E},", end=' ')
-                    f.write(f"{comp}: {ratio:.2E}\t")
-                print('')
-                f.write("\n")
-            print('\n')
-            f.write("\n")
+    # Get GeoNet data for chosen stations
+    geonet = []
+    for station in ["BKZ", "PXZ", "TSZ"]:
+        st_a = geonet_waveforms(station_code=f"NZ.{station}.10.HH?",
+                                start=starttime, end=endtime)
+        geonet.append(st_a)
+        print(f"\t{station}")
+
+    # Preprocess for frequency bands with some width
+    for t in range(t0, t1, 1):
+        print(f"{t}s")
+        if t_width:
+            t_min = t0 - t_width / 2
+            t_max = t0 + t_width / 2
+        else:
+            t_min = t0
+            t_max = t1
+
+        # Filter geonet data
+        geonet_filtered = []
+        for st_g in geonet:
+            geonet_filtered.append(preprocess(st_g, t_min, t_max))
+        
+        # Filter beacon data, compare to geonet data
+        beacon_filtered = []
+        for st_b in beacon:
+            st_bf = preprocess(st_b, t_min, t_max)
+            bf_netsta = ".".join(st_bf[0].get_id().split('.')[:2])
+            print(f"\t{bf_netsta}")
+            for st_gf in geonet_filtered:
+                gf_netsta = ".".join(st_gf[0].get_id().split('.')[:2])
+                print(f"\t\t{gf_netsta}", end=" ")
+                for comp in comps:
+                    print(f"{comp}:", end=" ")
+                    # Max amplitude and time for beacon station
+                    tr_bf = st_bf.select(component=comp)[0]
+                    amp_max_bf = tr_bf.data.max()
+                    time_max_bf = np.where(tr_bf.data == amp_max_bf)[0][0]
+                    
+                    # Max amplitude and time for geonet station
+                    tr_gf = st_gf.select(component=comp)[0]
+                    amp_max_gf = tr_gf.data.max()
+                    time_max_gf = np.where(tr_gf.data == amp_max_gf)[0][0]
+
+                    # Get amplitude ratio, time difference. Amplitude ratio with
+                    # beacon on denom cause we want a scale factor
+                    time_diff = time_max_gf - time_max_bf
+                    amp_ratio = amp_max_gf / amp_max_bf
+                    print(f"A:{amp_ratio:.2E}/T:{time_diff:.2f}s", end=" ")
+                print("")
+            
+            # Plot the data if necessary
+            if plot:
+                fid_out = (f"./figures/{starttime.year}_{starttime.julday:0>3}_"
+                           f"{bf_netsta}_{t_min}_{t_max}.png")
+                title = (f"{starttime} T=[{t_min}, {t_max}]s\n{bf_netsta}")
+                plot_data(geonet_list=geonet_filtered, st_beacon=st_bf, 
+                          title=title, show=show, save=fid_out,
+                          normalize=normalize)
+        if not t_width:
+            return    
 
 
-if __name__ == "__main__":
-    # GNS
-    path = "/seis/prj/fwi/bchow/data/mseeds/BEACON/{year}/XX/{sta}/HH?.D/"
-    inv_path = "/seis/prj/fwi/bchow/data/mseeds/BEACON/DATALESS/beacon.xml"
+def pathing():
+    """
+    Return the correct paths
+    """
+    path = "/scale_wlg_persistent/filesets/project/nesi00263/bchow/seismic/" \
+           "mseeds/{year}/XX/{sta}/HH?.D/"
+    inv_path = "./beacon.xml"
     if not os.path.exists(inv_path):
-        # VUW
-        path = "/Users/chowbr/Documents/subduction/seismic/mseeds/" \
-               "BEACON/{year}/XX/{sta}/HH?.D/"
-        inv_path = "/Users/chowbr/Documents/subduction/seismic/mseeds/BEACON/"\
-                   "DATALESS/beacon.xml"
+        # GNS
+        path = "/seis/prj/fwi/bchow/data/mseeds/BEACON/{year}/XX/{sta}/HH?.D/"
+        inv_path = "/seis/prj/fwi/bchow/data/mseeds/BEACON/DATALESS/beacon.xml"
+        if not os.path.exists(inv_path):
+            # VUW
+            path = "/Users/chowbr/Documents/subduction/seismic/mseeds/" \
+                   "BEACON/{year}/XX/{sta}/HH?.D/"
+            inv_path = "/Users/chowbr/Documents/subduction/seismic/mseeds/" \
+                       "BEACON/DATALESS/beacon.xml"
 
+    return path, inv_path
+
+    
+if __name__ == "__main__":
+    path, inv_path = pathing()
+
+    # Hand selected earthquakes that produced teleseismics captured by Beacon
     origin_times = [("2018-02-18T07:43:48.0", "2018p130600"),  # 2018p130600 M5.15
                     ("2017-09-08T04:49:46.0", "chiapas"),  # chiapas, mw8.2
                     ("2018-01-23T09:32:00.0", "alaska"),  # alaska, mw7.9
                     ("2018-02-25T17:45:08.6", "png"),   # png, mw7.5
                     ("2017-09-19T18:14:48.2", "mexico"),  # central mexico, mw7.1
                     ]
+
+    # Define the period range for filtering
+    t0, t1 = 10, 30
+    t_width = None
     for event in origin_times[1:]:
         start, end = event_information(start=event[0], start_pad=0,
-                                       end_pad=60*5)
-        print(start)
-        # if not os.path.exists(f"./{event[1]}.json"):
-        amp_dict = process(start, end, path=path, inv_path=inv_path,
-                           plot=True, t0=10, t1=30, save=True, show=False)
-        continue
+                                       end_pad=60*100)
+        print(f"{event[1]}: {event[0]}")
+        # Filter by small bandwithds to look at frequency dependence
+        process(start, end, path=path, inv_path=inv_path,
+                plot=True, t0=t0, t1=t1, t_width=t_width, 
+                save=True, show=False)
 
-        #     with open(f"{event[1]}.json", "w") as f:
-        #         json.dump(amp_dict, f, indent=4)
-
-        # else:
-        #     amp_dict = json.load(open(f"{event[1]}.json"))
-
-        # analyze_amp_dict(amp_dict)
 
 
 
