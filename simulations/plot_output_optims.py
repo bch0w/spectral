@@ -3,10 +3,10 @@ import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-mpl.rcParams['font.size'] = 12
-mpl.rcParams['lines.linewidth'] = 1.6
-mpl.rcParams['lines.markersize'] = 5
-mpl.rcParams['axes.linewidth'] = 2
+mpl.rcParams['font.size'] = 14
+mpl.rcParams['lines.linewidth'] = 2.
+mpl.rcParams['lines.markersize'] = 6
+mpl.rcParams['axes.linewidth'] = 3
 
 
 def plot_by_itr():
@@ -25,13 +25,22 @@ def plot_by_itr():
         
         # Plot iteration and misfits
         itrs = np.linspace(1, len(itr_misfits), len(itr_misfits))
-        plt.plot(itrs, itr_misfits, 'o-', label=os.path.basename(fid), 
-                 zorder=10)
+
+        if "cc" in fid:
+            label = "traveltime cc"
+            color = "mediumpurple"
+        elif "mtm" in fid: 
+            label = "multitaper misfit"
+            color = "darkorange"
+        elif "both" in fid:
+            label = "both"
+            color = "mediumturquoise"
+        plt.plot(itrs, itr_misfits, 'o-', label=label, zorder=10, c=color)
         plt.legend()
-        plt.title('Optimization convergence; 30event 79rec')
+        plt.title('Checkerboard Convergence')
         plt.xlabel('Iteration')
-        plt.ylabel('Pyatoa Misfits')
-        plt.grid(True)
+        plt.ylabel('Misfit')
+        plt.grid(True, alpha=0.5, linestyle="--", linewidth=1.0)
 
     plt.savefig('30event_mtmcc_itr.png')
     plt.close("all")
@@ -69,17 +78,23 @@ def plot_by_step():
                 print(line)
                 print("invalid line length encountered in output.optim")
         
-        plt.plot(steps, misfits, 'o-', label=os.path.basename(fid), zorder=10)
+        if "cc" in fid:
+            label = "traveltime cc"
+        elif "mtm" in fid: 
+            label = "multitaper misfit"
+        elif "both" in fid:
+            label = "both"
+        plt.plot(steps, misfits, 'o-', label=label, zorder=10)
         plt.legend()
-        plt.title('Optimization convergence; 30events 79rec')
+        plt.title('Optimization convergence')
         plt.xlabel('Step lengths')
-        plt.ylabel('Pyatoa Misfits')
-        plt.grid(True)
+        plt.ylabel('Misfit')
+        plt.grid(True, alpha=0.5, linestyle="--", linewidth=1.0)
 
     plt.savefig('30event_mtmcc_step.png')
     plt.close("all")
 
 
 if __name__ == "__main__":
-    plot_by_step()
+    # plot_by_step()
     plot_by_itr()
