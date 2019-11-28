@@ -10,7 +10,9 @@ import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 
 from obspy import UTCDateTime, Stream
-from pyatoa.utils.operations.conversions import ascii_to_mseed
+from obspy.signal.cross_correlation import correlate, xcorr_max
+from pyatoa.utils.tools.io import ascii_to_mseed
+# from pyatoa.utils.operations.conversions import ascii_to_mseed
 
 
 def linespecs():
@@ -67,7 +69,7 @@ def parse_by_component(dir_a, dir_b):
             semd_a.remove(fid_a)
 
 
-def peak_amplitudes(tr, t, ax, c):
+def peak_amplitudes(tr, t, ax, c, plot=False):
     """
     Plot the location of the peak amplitudes and their time difference
     :param st_a:
@@ -78,13 +80,14 @@ def peak_amplitudes(tr, t, ax, c):
     peak_amp = tr.data.max()
     time_peak = t[np.where(tr.data == tr.data.max())[0]]
 
-    ax.axvline(x=time_peak, ymin=0, ymax=1, c=c, linestyle="--")
-    # ax.annotate(s=f"{peak_amp:.2E}", xy=(time_peak, peak_amp), fontsize=4)
+    if plot:
+        ax.axvline(x=time_peak, ymin=0, ymax=1, c=c, linestyle="--")
 
     return time_peak, peak_amp
 
 
-def process(dir_a, dir_b, min_period=10., max_period=30.,
+def process(dir_a, dir_b, min_period=10., max_period=30., peak_amplitude=False,
+            cross_correlate=True, color_a="darkorange", color_b="mediumblue",
             show=True, save=False):
     """
     Read and process the data
@@ -108,13 +111,14 @@ def process(dir_a, dir_b, min_period=10., max_period=30.,
     # Loop through all of the specfem files and read them in
     throwaway_time = UTCDateTime('2000-01-01T00:00:00')
     for sta in unique_stations:
-        print(sta)
+        print(sta, end=" ")
         tag_template = f"{net}.{sta}.???.{ext}"
         stations_a = glob.glob(os.path.join(dir_a, tag_template))
         stations_b = glob.glob(os.path.join(dir_b, tag_template))
 
         # Make sure that there are files found
-        if not len(stations_a) == len(stations_b):
+        if not (len(stations_a) == len(stations_b)):
+            print("skipped")
             continue
 
         # Make sure the loop finds the correct components
@@ -127,7 +131,11 @@ def process(dir_a, dir_b, min_period=10., max_period=30.,
         for i in range(len(stations_a)):
             st_a += ascii_to_mseed(stations_a[i], throwaway_time)
             st_b += ascii_to_mseed(stations_b[i], throwaway_time)
-
+        
+        if not st_a or not st_b: 
+            print("skipped")
+            continue
+        
         # Create common time axes
         t_a = np.linspace(st_a[0].stats.time_offset,
                           st_a[0].stats.endtime - st_a[0].stats.starttime,
@@ -149,52 +157,75 @@ def process(dir_a, dir_b, min_period=10., max_period=30.,
         for i in range(len(st_a)):
             ax = plt.subplot(gs[i])
             pretty_grids(ax, scitick=True)
-            ax.plot(t_a, st_a[i].data, color='r', label=st_a[i].get_id())
-            ax.plot(t_b, st_b[i].data, color='k', label=st_b[i].get_id())
+            anno = ""
 
             # Plot the peak amplitude differences, and time differences
-            time_peak_a, peak_a = peak_amplitudes(st_a[i], t_a, ax, c='r')
-            time_peak_b, peak_b = peak_amplitudes(st_b[i], t_b, ax, c='k')
-            ax.annotate(s="delta_amp={:.2E}\ndelta_t={:.1f}s".format(
-                float(peak_a - peak_b), float(time_peak_a - time_peak_b)),
-                xy=(t_a[0], -1 * st_a[i].data.max()/2), fontsize=8,
-                bbox=dict(fc="w", boxstyle="round")
-            )
+            time_peak_a, peak_a = peak_amplitudes(st_a[i], t_a, ax, c=color_a,
+                                                  plot=peak_amplitude)
+            time_peak_b, peak_b = peak_amplitudes(st_b[i], t_b, ax, c=color_b,
+                                                  plot=peak_amplitude)
+            if peak_amplitude:
+                anno = "delta_amp={:.2E}\ndelta_t={:.1f}s\n".format(
+                    float(peak_a - peak_b), float(time_peak_a - time_peak_b))
 
-            # Set the title up top
+            # Cross correlate the two traces and annotate the cc information
+            if cross_correlate:
+                common_sr = min([st_a[i].stats.sampling_rate, 
+                                 st_b[i].stats.sampling_rate])
+                tr_a = st_a[i].copy()
+                tr_b = st_b[i].copy()
+                for tr in [tr_a, tr_b]:
+                    tr.resample(common_sr) 
+                
+                cc = correlate(tr_a.data, tr_b.data, shift=int(common_sr * 50), 
+                               domain="freq")
+
+                f_shift, value = xcorr_max(cc)
+                t_shift = f_shift / common_sr
+                anno += f"cc={value:.2f}\ntshift={t_shift:.2f}s"
+              
+            ax.annotate(s=anno, 
+                        xy=(t_a[int(len(t_a)/2)], -1 * st_a[i].data.max()/2), 
+                        fontsize=8, 
+                        bbox=dict(fc="w", boxstyle="round", alpha=0.5))
+                
+            # Plot the two traces
+            ax.plot(t_a, st_a[i].data, color=color_a)
+            ax.plot(t_b, st_b[i].data, color=color_b)
+
+            # Set the title with important information
             if i == 0:
-                plt.title("{a} (red)\n{b} (black)\n {t0}-{t1}s filter".format(
-                    a=os.path.basename(dir_a), b=os.path.basename(dir_b),
-                    t0=min_period, t1=max_period)
-                )
+                plt.title(f"2018p130600 {st_a[i].get_id()}\n"
+                          f"{os.path.basename(dir_a)} ({color_a}) / "
+                          f"{os.path.basename(dir_b)} ({color_b})\n"
+                          f"{min_period} - {max_period}s")
             # Put the ylabel on the middle plot
             if i == len(st_a) // 2:
-                plt.ylabel("amplitude")
+                plt.ylabel(f"amplitude [m]\n{st_a[i].get_id().split('.')[-1]}")
+            else:
+                plt.ylabel(f"{st_a[i].get_id().split('.')[-1]}")
             # Put the xlabel on the bottom plot
             if i == len(st_a) - 1:
                 plt.xlabel("time [s]")
             # Remove tick labels from all but the last plot
             if i != len(st_a) - 1:
                 plt.setp(ax.get_xticklabels(), visible=False)
-            # Set legend regardless
-            ax.legend()
 
         if save:
-            fid_out = "./{}.png".format(st_a[i].get_id())
+            fid_out = "./figures/{}.png".format(st_a[i].get_id())
             plt.savefig(fid_out, figsize=(11.69, 8.27), dpi=100)
         if show:
             plt.show()
+        
+        print("")
 
 
 if __name__ == "__main__":
-    try:
-        base = './'
-        dir_a = input("dir_a")
-        dir_b = input("dir_b")
-        dir_a = os.path.join(base, dir_a)
-        dir_b = os.path.join(base, dir_b)
-        # dir_a = os.path.join(base, "OUTPUT_FILES_nz_north_coarse_sem_intmesh")
-        # dir_b = os.path.join(base, "OUTPUT_FILES_srtm30p_139_162_4km_nz_north")
-        process(dir_a, dir_b, 10, 30, show=True, save=False)
-    except KeyboardInterrupt():
-        sys.exit()
+    base = './'
+    dir_a = os.path.join(base, "eberhart2015")
+    dir_b = os.path.join(base, "eberhart2019")
+    if not os.path.exists(os.path.join(base, "figures")):
+        os.makedirs(os.path.join(base, "figures"))
+
+    process(dir_a, dir_b, 10, 30, peak_amplitude=False, 
+            cross_correlate=True, show=False, save=True)
