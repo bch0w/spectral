@@ -6,7 +6,7 @@ import os
 import pyatoa
 import pyasdf
 
-choice = "southern"
+choice = ""
 
 if choice == "inland":
     event_id = "2016p275188"
@@ -32,6 +32,9 @@ elif choice == "volcano":
 elif choice == "southern":
     event_id = "3620927"
     sta_list = ["NNZ", "MRZ", "KHZ"]
+else:
+    event_id = "2019p754447"
+    sta_list = ["MRZ"]
 
 config = pyatoa.Config(
     event_id=event_id,
@@ -39,7 +42,7 @@ config = pyatoa.Config(
     min_period=10,
     max_period=30,
     filter_corners=4,
-    component_list=["Z"],
+    # component_list=["Z"],
     rotate_to_rtz=False,
     unit_output="DISP",
     pyflex_map="hikurangi",
@@ -54,12 +57,12 @@ for sta in sta_list:
     station = f"NZ.{sta}.??.HH?"
     mgmt = pyatoa.Manager(config=config, ds=ds)
     mgmt.populate(station_code=station, model=config.model_number)
-    mgmt.st_obs = mgmt.st_obs.select(component="Z")
+    # mgmt.st_obs = mgmt.st_obs.select(component="Z")
     mgmt.preprocess()
     mgmt.run_pyflex()
     mgmt.run_pyadjoint()
 
-    mgmt.plot_wav(show=True, figsize=(10,4), length_sec=180, fontsize=14,
+    mgmt.plot_wav(show=False, save="clean2.png", figsize=(10,4), length_sec=180, fontsize=14,
                   axes_linewidth=4, linewidth=2.5, window_anno_fontsize=0, 
                   window_anno_height=0.4, window_anno_rotation=0, 
                   window_anno_fontcolor="k", window_anno_fontweight="roman", 

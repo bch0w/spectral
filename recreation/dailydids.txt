@@ -325,3 +325,28 @@ TODO: synthetic kernels
 TODO: obs 30 inversion models 
 TODO: misfit map 
 
+OUT : 2019-11-19 20:20:45.355565
+DONE: finished presi 
+DONE: model update waveforms 
+DONE: kernel figures 
+DONE: obs figures 
+DONE: 30 event real data inversion going 
+
+IN  : 2019-11-20 10:01:40.333696
+WORK: HOME
+TODO: progress report 
+TODO: beacon waveforms 
+TODO: realdata inversion 
+TODO: practice talk 
+
+IN  : 2019-11-21 08:32:58.168012
+WORK: HOME
+TODO: fix up presentation 
+TODO: beacon waveforms 
+TODO: practice talk 
+
+IN  : 2019-11-28 10:34:59.541136
+WORK: HOME
+TODO: prep for AGU presi 
+TODO: respond to carl about tomo files 
+
