@@ -266,3 +266,87 @@ TODO: more paper figures
 TODO: more maui runs 
 TODO: more more 
 
+OUT : 2019-11-13 18:21:13.782535
+DONE: waveform paper figure 
+DONE: more poisson testing, havent found em 
+DONE: both run for checkerboard test 
+DONE: started 30event realdata 
+
+IN  : 2019-11-14 09:07:22.939760
+WORK: HOME
+TODO: prep yoshi meeting 
+TODO: check why jobs failed maui, keep going, make cc mtm both plots 
+TODO: cotninue geosciences presi 
+TODO: continue making figures 
+
+OUT : 2019-11-14 12:38:43.514266
+DONE: real data run going 
+DONE: mtm run going 
+DONE: updated figures in presi 
+
+IN  : 2019-11-14 13:30:06.342939
+WORK: GNS
+TODO: prep meeting with yoshi  
+
+OUT : 2019-11-14 16:30:40.929576
+DONE: met with yoshi and set up roadmap for geosciences 
+
+IN  : 2019-11-15 10:33:04.258719
+WORK: HOME
+TODO: 30 event inversion with WEL 
+TODO: mtm cc both results 
+TODO: beacon waveforms 
+
+OUT : 2019-11-15 13:02:24.572124
+DONE: started beacon waveform checks 
+
+IN  : 2019-11-15 15:52:46.366528
+WORK: HOME
+TODO: beacon waveforms and get try get pyatoa working with beacon 
+
+IN  : 2019-11-18 08:37:06.735454
+WORK: HOME
+TODO: kernel figures 
+TODO: beacon amplitudes 
+TODO: progress report 
+TODO: mtm cc both plots 
+
+OUT : 2019-11-18 20:54:28.239367
+DONE: new type of kernel figures using thresholds 
+DONE: running 30 obs inversion multiple updates 
+DONE: misfit map with specific src rcv paths 
+DONE: ran obs and syn onetime inversions for kernel stuff 
+DONE: looked at beacon waveforms but stopped 
+
+IN  : 2019-11-19 09:31:26.370548
+WORK: VUW
+TODO: model update waveforms 
+TODO: synthetic kernels 
+TODO: obs 30 inversion models 
+TODO: misfit map 
+
+OUT : 2019-11-19 20:20:45.355565
+DONE: finished presi 
+DONE: model update waveforms 
+DONE: kernel figures 
+DONE: obs figures 
+DONE: 30 event real data inversion going 
+
+IN  : 2019-11-20 10:01:40.333696
+WORK: HOME
+TODO: progress report 
+TODO: beacon waveforms 
+TODO: realdata inversion 
+TODO: practice talk 
+
+IN  : 2019-11-21 08:32:58.168012
+WORK: HOME
+TODO: fix up presentation 
+TODO: beacon waveforms 
+TODO: practice talk 
+
+IN  : 2019-11-28 10:34:59.541136
+WORK: HOME
+TODO: prep for AGU presi 
+TODO: respond to carl about tomo files 
+

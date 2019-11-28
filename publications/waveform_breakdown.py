@@ -63,7 +63,8 @@ for sta in sta_list:
     mgmt.run_pyflex()
     mgmt.run_pyadjoint()
 
-    mgmt.plot_wav(show=False, save="syn_2019p754446_MRZ.png", length_sec=180, fontsize=14,
+    mgmt.plot_wav(show=False, save="clean2.png", figsize=(10,4), length_sec=180, 
+                  fontsize=14`,
                   axes_linewidth=4, linewidth=2.5, window_anno_fontsize=0, 
                   window_anno_height=0.4, window_anno_rotation=0, 
                   window_anno_fontcolor="k", window_anno_fontweight="roman", 
