@@ -14,7 +14,7 @@ from pyatoa.utils.gather.grab_auxiliaries import grab_geonet_moment_tensor
 
 import sys
 sys.path.append('./')
-import cataog_to_cmtsolutions
+import catalog_to_cmtsolutions
 
 
 def cut_cat(cat, indices=[], method="remove"):
@@ -266,7 +266,7 @@ def plot_cat(cat, evnts, tag=""):
     plt.close('all')
 
 
-def event_trials(choice, csv_file, desired_length):
+def event_trials(choice, csv_file, desired_length, sep_km=None):
     """
     For a given set of trial parameters, retrieve an event catalog and then
     slim it down with various check parameters; make sure events are not too 
@@ -294,8 +294,18 @@ def event_trials(choice, csv_file, desired_length):
                 "maxlongitude": 178.5,  # URC
                 "maxdepth": 60.
                 },
-                "delta_trial":{}         
-               }
+                "fullscale":{
+                 "name": "fullscale",
+                 "starttime": UTCDateTime("2000-01-01T00:00:00"),
+                 "endtime": UTCDateTime("2019-11-01T00:00:00"),
+                 "minmagnitude": 4.75,
+                 "maxmagnitude": 6.,
+                 "minlatitude": -42.5,  # LLC
+                 "minlongitude": 173.5,  # LLC
+                 "maxlatitude": -37.25,  # URC
+                 "maxlongitude": 178.5,  # URC
+                 "maxdepth": 60.
+               }}
     evnts = trials[choice]
 
     # Change directory so that all outputs are saved into a new folder
@@ -322,14 +332,11 @@ def event_trials(choice, csv_file, desired_length):
     new_cat = check_moment_tensor(csv_file, original_cat)
     print("catalog has {} events".format(len(new_cat)))
 
-    # Remove grouped events 
-    sep_km = 17.  # this will give 30 events with good spatial variation
-    
-    if len(new_cat) < desired_catalog_length:
+    if len(new_cat) < desired_catalog_length and sep_km is not None:
         print("Initial catalog is smaller than desired length,"
               "consider adjusting search parameters.")
         new_cat_no_groups = new_cat
-    else:
+    elif sep_km is not None:
         new_cat_no_groups = remove_groupings(new_cat, sep_km=sep_km)
         # Try separation distances until new catalog has desired length
         while True:
@@ -344,6 +351,8 @@ def event_trials(choice, csv_file, desired_length):
                     sep_km =float(sep_km)
 
             new_cat_no_groups = remove_groupings(new_cat, sep_km=sep_km)
+    else:
+        new_cat_no_groups = new_cat
     
     print("catalog has {} events".format(len(new_cat_no_groups)))
 
@@ -368,8 +377,8 @@ if __name__ == "__main__":
         print("No GeoNet .csv file found")
 
     # USER PARAMETERS
-    cat_name = "charlie_trial"
-    desired_catalog_length = 30
+    cat_name = "fullscale"
+    desired_catalog_length = None
 
     # Get the catalog and its name, based on the functions
     cat = event_trials(cat_name, csv_file, desired_catalog_length)
