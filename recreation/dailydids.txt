@@ -350,3 +350,59 @@ WORK: HOME
 TODO: prep for AGU presi 
 TODO: respond to carl about tomo files 
 
+OUT : 2019-11-28 18:03:25.661667
+DONE: tried to test carls new tomo files 
+DONE: started working on agu presi 
+
+IN  : 2019-11-29 08:03:52.295127
+WORK: HOME
+TODO: agu presentation 
+TODO: prep for john meeting 
+TODO: corsica writeup? 
+
+OUT : 2019-11-29 16:21:41.307625
+DONE: met with john discussed progress and goals 
+DONE: worked on AGU presie 
+DONE: new misfits plotting script 
+
+IN  : 2019-12-02 09:42:23.393339
+WORK: VUW
+TODO: finish agu presentation 
+TODO: start writing paper 
+
+OUT : 2019-12-02 16:25:16.587929
+DONE: made misfit statistics plots 
+DONE: working on agu presi 
+
+IN  : 2019-12-03 08:59:56.857532
+WORK: HOME
+TODO: finish misfit histograms 
+TODO: find other plots to make ala tape et al 
+TODO: check results of new tomography file 
+
+OUT : 2019-12-03 17:43:01.186407
+DONE: looked at eberhart19 velocity model 
+DONE: finished statistics plots 
+DONE: met with yoshi to prep for AGU 
+
+IN  : 2019-12-04 11:29:02.083292
+WORK: VUW
+TODO: finish agu presi and work on things that yoshi mentioned 
+
+OUT : 2019-12-04 22:18:07.591863
+DONE: almost finished to do list for presentation 
+DONE: showed model 9 checkerboard at 3 slices 
+DONE: added events and stations to synthetic results 
+DONE: added dearthquake metrics for perspectives 
+DONE: highlighted max changes for real data 
+DONE: added contours to misfit map 
+DONE: and other random little things 
+DONE: still need to get the 2 second waveforms 
+
+IN  : 2019-12-05 10:33:32.244498
+WORK: VUW
+TODO: finish agu presi 
+TODO: if time look at attenuation and email Carl 
+TODO: 2 second waveforms 
+TODO: beacon data 
+

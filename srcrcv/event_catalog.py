@@ -298,7 +298,7 @@ def event_trials(choice, csv_file, desired_length, sep_km=None):
                  "name": "fullscale",
                  "starttime": UTCDateTime("2000-01-01T00:00:00"),
                  "endtime": UTCDateTime("2019-11-01T00:00:00"),
-                 "minmagnitude": 4.75,
+                 "minmagnitude": 4.5,
                  "maxmagnitude": 6.,
                  "minlatitude": -42.5,  # LLC
                  "minlongitude": 173.5,  # LLC
@@ -331,7 +331,8 @@ def event_trials(choice, csv_file, desired_length, sep_km=None):
     # Remove if no GeoNet moment tensors
     new_cat = check_moment_tensor(csv_file, original_cat)
     print("catalog has {} events".format(len(new_cat)))
-
+    
+    import ipdb;ipdb.set_trace()
     if len(new_cat) < desired_catalog_length and sep_km is not None:
         print("Initial catalog is smaller than desired length,"
               "consider adjusting search parameters.")
