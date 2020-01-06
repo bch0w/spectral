@@ -80,25 +80,25 @@ if __name__ == "__main__":
     # ==========================  SET PARAMETERS BELOW =========================
 
     # Station
-    stations_file = "path/to/stations_gsn.txt"  # path to station list
+    stations_file = "./stations_gsn.txt"  # path to station list
     channel = "BH*"  # channels to gather, e.g. "BHZ", "*", "?H?", wildcards ok
 
     # Event
     id_or_time = "id"  # Picks between two lists below, options: 'id' or 'time'
     event_ids = ["200902170330A", "201712080209A"]  # Pick between GCMT event id
     origin_times = []  # OR origin times e.g. "2009-02-17T03:30:58.6"
-    seismogram_length_seconds = 3 * 60 * 60  # length of seismo after origin
+    seismogram_length_seconds = 60 * 60  # length of seismo after origin
 
     # Processing
     process = True  # can skip all processing if you just want raw seismograms
     remove_response = True  # if you want to remove the instrument response
     min_period = 10  # Bandpass filter, if None, no filter applied
-    max_period = 30
+    max_period = 1000
 
     # Output
     output_directory = "./"  # directory to save waveform data to
-    output_format = "MSEED"  # also 'SAC', 'SEGY', 'SU' etc., see ObsPy for more
-    save_raw_seismograms = True  # if process == True, also save raw seismo
+    output_format = "SAC"  # also 'SAC', 'SEGY', 'SU' etc., see ObsPy for more
+    save_raw_seismograms = False  # if process == True, also save raw seismo
     
     # ==========================  SET PARAMETERS ABOVE =========================
 
@@ -163,7 +163,7 @@ if __name__ == "__main__":
 
                     # Save the data based on the User-defined file format
                     for tr in st:
-                        st.write(fid_out + "_{cha}_proc.{fmt}".format(
+                        tr.write(fid_out + "_{cha}_proc.{fmt}".format(
                                  cha=tr.stats.channel, 
                                  fmt=output_format.lower()), 
                                  format=output_format)
