@@ -8,6 +8,7 @@ import os
 import numpy as np
 from obspy import UTCDateTime, read_events
 from obspy.clients.fdsn import Client
+from obspy.geodetics import gps2dist_azimuth
 
 
 def query_gcmt(event_id, return_idx=0):
@@ -68,6 +69,7 @@ def query_gcmt(event_id, return_idx=0):
     if bool(cat_filt):
         if len(cat_filt) == 1:
             return cat_filt
+            import ipdb;ipdb.set_trace()
         else:
             print("multiple events, returning index {}".format(return_idx))
             return cat_filt[return_idx]
@@ -92,12 +94,12 @@ if __name__ == "__main__":
     # Processing
     process = True  # can skip all processing if you just want raw seismograms
     remove_response = True  # if you want to remove the instrument response
-    min_period = 10  # Bandpass filter, if None, no filter applied
-    max_period = 1000
+    min_period = 10  # None for highpass. Bandpass if max_period also set
+    max_period = None # None for lowpass. Bandpass if min_period also set
 
     # Output
     output_directory = "./"  # directory to save waveform data to
-    output_format = "SAC"  # also 'SAC', 'SEGY', 'SU' etc., see ObsPy for more
+    output_format = "SAC"  # 'MSEED', 'SAC', 'SEGY', 'SU' etc., see ObsPy 
     save_raw_seismograms = False  # if process == True, also save raw seismo
     
     # ==========================  SET PARAMETERS ABOVE =========================
@@ -105,14 +107,23 @@ if __name__ == "__main__":
     failed = 0
     c = Client("IRIS")
     # If event id's chosen, query GCMT to get starttimes
+    events, event_distances = [], []
     if id_or_time == "id":
         origin_times = []
         for eid in event_ids:
             event = query_gcmt(eid)
+            events.append(event)
+            event_distances.append(eid + "_dists.txt")
             origin_times.append(event.preferred_origin().time)
 
+    if event_distances:
+        for edid in event_distances:
+            if not os.path.exists(edid):
+                with open(edid, 'w') as f:
+                    f.write("NET,STA,DIST(km),DIST(deg),AZ(deg),BAz(deg)\n")
+
     # Use starttimes to define events
-    for starttime in origin_times:
+    for i, starttime in enumerate(origin_times):
         starttime = UTCDateTime(starttime)
         endtime = starttime + seismogram_length_seconds 
         print(starttime)
@@ -122,6 +133,23 @@ if __name__ == "__main__":
             network = station_list[1]
             station = station_list[0]
 
+            # Try calculate the azimuth and distance
+            if event_distances:
+                dist_m, az, baz = gps2dist_azimuth(
+                                    lat1=events[i].preferred_origin().latitude,
+                                    lon1=events[i].preferred_origin().longitude,
+                                    lat2=float(station_list[2]),
+                                    lon2=float(station_list[3])
+                                    )
+                dist_deg = (dist_m * 1E-3) / 111.11
+                with open(event_distances[i], "a") as f:
+                    f.write(
+                     "{net},{sta},{dst_km:.2e},{dst_deg:.2f},{az:.2f},{baz:6.2f}\n".format(
+                                                     net=network, sta=station,
+                                                     dst_km = dist_m * 1E-3,
+                                                     dst_deg=dist_deg, az=az, 
+                                                     baz=baz)
+                                                     )
             # Set the filename for saving the waveforms
             fid_out = os.path.join(output_directory, "{time}_{net}_{sta}".format(
                                    net=network, sta=station, 
@@ -139,10 +167,11 @@ if __name__ == "__main__":
                 # Write the raw data
                 if save_raw_seismograms:
                     for tr in st:
-                        st.write(fid_out + "_{cha}_raw.{fmt}".format(
-                                 cha=tr.stats.channel, 
-                                 fmt=output_format.lower()), 
-                                 format=output_format)
+
+                        fid_out_raw = fid_out + "_{cha}_raw.{fmt}".format(
+                                                     cha=tr.stats.channel, 
+                                                     fmt=output_format.lower())
+                        tr.write(fid_out_raw, format=output_format)
                 if process:
                     # Remove response
                     if remove_response:
@@ -154,19 +183,25 @@ if __name__ == "__main__":
                     st.taper(max_percentage = 0.05)  # taper the ends 
 
                     # Filter the data 
-                    if min_period:
+                    if min_period and max_period:
                         st.filter("bandpass", freqmin=1/max_period, 
                                   freqmax=1/min_period)
+                    elif min_period and not max_period:
+                        st.filter("lowpass",  freq=1/min_period)
+                    elif max_period and not min_period:
+                        st.filter("highpass", freq=1/max_period)
+
                     st.detrend("linear")  # detrend and taper again to remove
                     st.detrend("demean")  # introduced spurious signals
                     st.taper(max_percentage = 0.05)
 
                     # Save the data based on the User-defined file format
                     for tr in st:
-                        tr.write(fid_out + "_{cha}_proc.{fmt}".format(
-                                 cha=tr.stats.channel, 
-                                 fmt=output_format.lower()), 
-                                 format=output_format)
+
+                        fid_out_proc = fid_out + "_{cha}_proc.{fmt}".format(
+                                                     cha=tr.stats.channel,
+                                                     fmt=output_format.lower())
+                        tr.write(fid_out_proc, format=output_format)
                 print("gathered")
             except Exception as e:
                 failed += 1
