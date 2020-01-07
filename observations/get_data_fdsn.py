@@ -62,19 +62,19 @@ def query_gcmt(event_id, return_idx=0):
             return event
    
     # If event id query failed, try to filter the catalog by origintime +/-100s    
-    cat_filt = cat.filter("time > {}".format(str(origintime - 100)),
-                          "time < {}".format(str(origintime + 100))
-                          )
+    cat_filt = cat.filter(f"time > {str(origintime - 100)}",
+                          f"time < {str(origintime + 100)}")
+
     # The filter returns Catalogs, filter based on length
     if bool(cat_filt):
         if len(cat_filt) == 1:
             return cat_filt
             import ipdb;ipdb.set_trace()
         else:
-            print("multiple events, returning index {}".format(return_idx))
+            print(f"multiple events, returning index {return_idx}")
             return cat_filt[return_idx]
     else:
-        print("No events found for event id {}".format(event_id))
+        print(f"No events found for event id {event_id}")
         return
 
 
@@ -96,6 +96,7 @@ if __name__ == "__main__":
     remove_response = True  # if you want to remove the instrument response
     min_period = 10  # None for highpass. Bandpass if max_period also set
     max_period = None # None for lowpass. Bandpass if min_period also set
+    rotate_to_zne = True  # if components are 1/2/Z, rotate to N/E/Z
 
     # Output
     output_directory = "./"  # directory to save waveform data to
@@ -116,12 +117,6 @@ if __name__ == "__main__":
             event_distances.append(eid + "_dists.txt")
             origin_times.append(event.preferred_origin().time)
 
-    if event_distances:
-        for edid in event_distances:
-            if not os.path.exists(edid):
-                with open(edid, 'w') as f:
-                    f.write("NET,STA,DIST(km),DIST(deg),AZ(deg),BAz(deg)\n")
-
     # Use starttimes to define events
     for i, starttime in enumerate(origin_times):
         starttime = UTCDateTime(starttime)
@@ -133,28 +128,29 @@ if __name__ == "__main__":
             network = station_list[1]
             station = station_list[0]
 
-            # Try calculate the azimuth and distance
+            # Try calculate the azimuth and distance, write to text file
             if event_distances:
+                # Calculate distances based on source and receiver
                 dist_m, az, baz = gps2dist_azimuth(
-                                    lat1=events[i].preferred_origin().latitude,
-                                    lon1=events[i].preferred_origin().longitude,
-                                    lat2=float(station_list[2]),
-                                    lon2=float(station_list[3])
-                                    )
-                dist_deg = (dist_m * 1E-3) / 111.11
+                                lat1=events[i].preferred_origin().latitude,
+                                lon1=events[i].preferred_origin().longitude,
+                                lat2=float(station_list[2]),
+                                lon2=float(station_list[3])
+                                )
+                # Create file if it hasn't already been
+                is_header = True
+                if not os.path.exists(event_distances[i]):
+                    is_header = False
                 with open(event_distances[i], "a") as f:
-                    f.write(
-                     "{net},{sta},{dst_km:.2e},{dst_deg:.2f},{az:.2f},{baz:6.2f}\n".format(
-                                                     net=network, sta=station,
-                                                     dst_km = dist_m * 1E-3,
-                                                     dst_deg=dist_deg, az=az, 
-                                                     baz=baz)
-                                                     )
+                    if not is_header: 
+                        f.write("NET,STA,DIST(km),DIST(deg),AZ(deg),BAz(deg)\n")
+                    f.write(f"{network},{station},{dist_m*1E-3:.2e},"
+                            f"{(dist_m*1E-3)/111.11:.2f},{az:.2f},{baz:6.2f}\n")
+                            
+                                                     
             # Set the filename for saving the waveforms
-            fid_out = os.path.join(output_directory, "{time}_{net}_{sta}".format(
-                                   net=network, sta=station, 
-                                   time=str(starttime).split('T')[0])
-                                   )
+            fid_out = os.path.join(output_directory, 
+                                   f"{str(starttime).split('T')[0]}")
 
             # Get the waveform data from FDSN
             print(network, station, end="... ")
@@ -163,15 +159,28 @@ if __name__ == "__main__":
                                      location="*", channel=channel, 
                                      starttime=starttime, endtime=endtime,
                                      attach_response=remove_response)
+                # Rotate to ZNE
+                if rotate_to_zne:
+                    # Rotate only if components are in Z/1/2
+                    for tr in st:
+                        if tr.get_id()[-1] in ['1', '2']:
+                            inv = c.get_stations(network=network, 
+                                                 station=station,
+                                                 location="*", channel=channel,
+                                                 starttime=starttime, 
+                                                 endtime=endtime,
+                                                 level="channel")
+                            st.rotate(method="->ZNE", inventory=inv)
+                            break
 
-                # Write the raw data
+                # Write the raw data if requested
                 if save_raw_seismograms:
                     for tr in st:
-
-                        fid_out_raw = fid_out + "_{cha}_raw.{fmt}".format(
-                                                     cha=tr.stats.channel, 
-                                                     fmt=output_format.lower())
+                        fid_out_raw = (f"{fid_out}_"
+                                       f"{tr.get_id().replace('.', '_')}_raw."
+                                       f"{output_format.lower()}")
                         tr.write(fid_out_raw, format=output_format)
+                # Apply preprocessing if requested
                 if process:
                     # Remove response
                     if remove_response:
@@ -182,7 +191,7 @@ if __name__ == "__main__":
                     st.detrend("demean")  # demean to set data to 0
                     st.taper(max_percentage = 0.05)  # taper the ends 
 
-                    # Filter the data 
+                    # Filter the data based on min, max periods 
                     if min_period and max_period:
                         st.filter("bandpass", freqmin=1/max_period, 
                                   freqmax=1/min_period)
@@ -197,10 +206,9 @@ if __name__ == "__main__":
 
                     # Save the data based on the User-defined file format
                     for tr in st:
-
-                        fid_out_proc = fid_out + "_{cha}_proc.{fmt}".format(
-                                                     cha=tr.stats.channel,
-                                                     fmt=output_format.lower())
+                        fid_out_proc = (f"{fid_out}_"
+                                        f"{tr.get_id().replace('.', '_')}_proc."
+                                        f"{output_format.lower()}")
                         tr.write(fid_out_proc, format=output_format)
                 print("gathered")
             except Exception as e:
