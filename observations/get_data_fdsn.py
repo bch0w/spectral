@@ -5,6 +5,7 @@ Data will be saved per channel. Simple preprocessing available
 This requires ObsPy (obspy.org) and Python3
 """
 import os
+import traceback
 import numpy as np
 from obspy import UTCDateTime, read_events
 from obspy.clients.fdsn import Client
@@ -84,6 +85,7 @@ if __name__ == "__main__":
     # Station
     stations_file = "./stations_gsn.txt"  # path to station list
     channel = "BH*"  # channels to gather, e.g. "BHZ", "*", "?H?", wildcards ok
+    location = "*"
 
     # Event
     id_or_time = "id"  # Picks between two lists below, options: 'id' or 'time'
@@ -97,6 +99,7 @@ if __name__ == "__main__":
     min_period = 10  # None for highpass. Bandpass if max_period also set
     max_period = None # None for lowpass. Bandpass if min_period also set
     rotate_to_zne = True  # if components are 1/2/Z, rotate to N/E/Z
+    rotate_to_rtz = True  # rotate ZNE to RTZ, retaining both
 
     # Output
     output_directory = "./"  # directory to save waveform data to
@@ -156,17 +159,19 @@ if __name__ == "__main__":
             print(network, station, end="... ")
             try:
                 st = c.get_waveforms(network=network, station=station, 
-                                     location="*", channel=channel, 
+                                     location=location, channel=channel, 
                                      starttime=starttime, endtime=endtime,
                                      attach_response=remove_response)
                 # Rotate to ZNE
                 if rotate_to_zne:
                     # Rotate only if components are in Z/1/2
+                    inv = None
                     for tr in st:
                         if tr.get_id()[-1] in ['1', '2']:
                             inv = c.get_stations(network=network, 
                                                  station=station,
-                                                 location="*", channel=channel,
+                                                 location=location, 
+                                                 channel=channel,
                                                  starttime=starttime, 
                                                  endtime=endtime,
                                                  level="channel")
@@ -180,6 +185,7 @@ if __name__ == "__main__":
                                        f"{tr.get_id().replace('.', '_')}_raw."
                                        f"{output_format.lower()}")
                         tr.write(fid_out_raw, format=output_format)
+
                 # Apply preprocessing if requested
                 if process:
                     # Remove response
@@ -210,11 +216,23 @@ if __name__ == "__main__":
                                         f"{tr.get_id().replace('.', '_')}_proc."
                                         f"{output_format.lower()}")
                         tr.write(fid_out_proc, format=output_format)
+                    # Rotate data to RTZ and save
+                    if rotate_to_rtz and baz:
+                        st.rotate('NE->RT', back_azimuth=baz)
+                        for tr in st:
+                            # Don't double save Z
+                            if tr.get_id()[-1] == 'Z':
+                                continue
+                            fid_out_proc = (
+                                    f"{fid_out}_"
+                                    f"{tr.get_id().replace('.', '_')}_proc."
+                                    f"{output_format.lower()}")
+                            tr.write(fid_out_proc, format=output_format)
                 print("gathered")
             except Exception as e:
                 failed += 1
                 print("failed")
-                print(e)
+                traceback.print_exc()
                 continue
 
 
