@@ -406,3 +406,27 @@ TODO: if time look at attenuation and email Carl
 TODO: 2 second waveforms 
 TODO: beacon data 
 
+OUT : 2019-12-05 16:09:09.145157
+DONE: fine tuned agu presi with all the comments from yoshi 
+DONE: organized agu accomodations etc 
+
+IN  : 2019-12-17 09:12:29.056074
+WORK: HOME
+TODO: update pyatoa 
+
+OUT : 2019-12-17 12:12:51.572218
+DONE: overhauled config object pyatoa 
+
+IN  : 2020-01-06 10:00:10.716753
+WORK: HOME
+TODO: get back into the swing of things, big picture day 
+
+OUT : 2020-01-06 16:24:18.423083
+DONE: wrote some of first paper 
+DONE: worked on pyatoa seisflows yaml file 
+DONE: met with yoshi 
+
+IN  : 2020-01-07 08:25:03.607126
+WORK: GNS
+TODO: qc donnas mode 
+
