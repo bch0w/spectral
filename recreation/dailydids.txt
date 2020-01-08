@@ -430,3 +430,22 @@ IN  : 2020-01-07 08:25:03.607126
 WORK: GNS
 TODO: qc donnas mode 
 
+OUT : 2020-01-08 00:12:02.732954
+DONE: started rewriting carls scripts to convert donnas model 
+
+IN  : 2020-01-08 09:56:57.996022
+WORK: HOME
+TODO: quality check Donnas model from Carl 
+TODO: write 1 hour paper 
+TODO: beacon station correction 
+
+OUT : 2020-01-08 16:23:07.098037
+DONE: wrote email to Carl about eberhart19 model 
+DONE: wrote some paper 
+DONE: looked at beacon waveforms 
+
+IN  : 2020-01-09 09:20:05.794408
+WORK: VUW
+TODO: continue looking at beacon data 
+TODO: write 
+
