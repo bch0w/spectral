@@ -203,7 +203,6 @@ def process(starttime, endtime, t0, t1, t_width=4, plot=False,
     :return:
     """
     from pyatoa.utils.tools.process import trimstreams
-    from pyatoa.utils.processing.preprocess import trimstreams
 
     comps = ["N", "E", "Z"]
 
@@ -444,7 +443,7 @@ def plot_by_beacon(sta_b="XX.RD01", event='', path_to_jsons="./",
 
  
 if __name__ == "__main__":
-    process_events = False
+    process_events = True
     path, inv_path = pathing()
 
     # Hand selected earthquakes that produced teleseismics captured by Beacon
@@ -458,7 +457,7 @@ if __name__ == "__main__":
     # processing saved into jsons so it should only be run once 
     if process_events:
         for event in origin_times:
-            t0, t1 = 6, 30
+            t0, t1 = 1, 6
             t_width = 4
             start, end = event_information(start=event[0], start_pad=0,
                                            end_pad=60*100)
