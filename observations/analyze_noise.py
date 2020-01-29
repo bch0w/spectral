@@ -6,7 +6,7 @@ import glob
 import numpy as np
 from scipy import signal
 from obspy.clients.fdsn import Client
-from obspy import read, read_inventory, UTCDateTime
+from obspy import read, read_inventory, UTCDateTime, Stream
 from obspy.clients.fdsn.header import FDSNException
 
 import matplotlib.pyplot as plt
@@ -77,9 +77,8 @@ def beacon_waveforms(station_name, start, end, **kwargs):
     path = (f"/scale_wlg_persistent/filesets/project/nesi00263/bchow/seismic/" \
             f"mseeds/{year}/XX/{sta}/{cha}.D/")
     inv_path = os.path.expanduser(os.path.join("~", "primer", "auxiliary", 
-                                               "seed", "RESPONSE", "beacon.xml")
+                                               "stationxml", "beacon.xml")
                                   )
-
     fid = os.path.join(path, code)
     if os.path.exists(fid):
         st_beacon = read(fid)
@@ -94,7 +93,6 @@ def beacon_waveforms(station_name, start, end, **kwargs):
     inv = read_inventory(inv_path)
 
     # Will only attach the relevant response
-        import ipdb;ipdb.set_trace() 
     st_beacon.attach_response(inv)
 
     return st_beacon
@@ -153,6 +151,7 @@ def plot_periodogram(st, freqmin=None, show=True, save=""):
     assert(len(colors) > len(st))
 
     ybounds = []
+    bins = []
     for i, tr in enumerate(st):
         print(f"\tperiodogram {tr.get_id()}")
         f, Pxx = signal.periodogram(tr.data, tr.stats.sampling_rate)
@@ -167,10 +166,12 @@ def plot_periodogram(st, freqmin=None, show=True, save=""):
             bin_y.append(mean_val)
             bin_x.append(np.mean([freq_low, freq_high])) 
 
+        # Plot the mean line through
         plt.plot(bin_x, bin_y, marker='o', markeredgecolor='w', 
                  color=compcol[i], zorder=100, alpha=1/(i+1))
+        bins.append(bin_y)
     
-        # plot a mean line through
+        # Retrieve min and max values for bounds
         ybounds.append(Pxx[np.where(f > freqmin)].min())
         ybounds.append(Pxx[np.where(f > freqmin)].max())
 
@@ -192,7 +193,11 @@ def plot_periodogram(st, freqmin=None, show=True, save=""):
     start = st[0].stats.starttime
     end = st[0].stats.endtime
 
-    
+    # Tell user amplitude ratios
+    print("amplitude ratios")
+    for i in range(len(bin_x)):
+        print(f"{bin_x[i]}: {bins[1][i] / bins[0][i]:.2f}")   
+ 
     plt.title(f"Periodogram Comparisons "
               f"{freqmin} to {st[0].stats.sampling_rate} Hz\n"
               f"{start.year}.{start.julday:0>3} - {end.year}.{end.julday:0>3}\n"
@@ -208,44 +213,55 @@ if __name__ == "__main__":
     # User Defined Parameters
     min_freq = 1/100
     sampling_rate = 2
-    choice = "chiapas"
+    choice = "noise"
     
-    for i in range(1, 20):
-        geonet = "NZ.BFZ.10.HHZ"
-        beacon = f"XX.RD{i:0>2}.10.HHZ"
-        if choice == "noise":
-            start = UTCDateTime("2018-054T00:00:00")
-            end = start + (24 * 60 * 60) - 1
-        elif choice == "alaska":
-            start = UTCDateTime("2018-01-23T09:32:00")
-            end = start + (3 * 60 * 60)
-        elif choice == "chiapas":
-            start = UTCDateTime("2017-09-08T04:49:46.0")
-            end = start + (3 * 60 * 60)
-        
-        # Stream B 
+    if choice == "noise":
+        start = UTCDateTime("2018-054T00:00:00")
+        end = start + (24 * 60 * 60) - 1
+    elif choice == "alaska":
+        start = UTCDateTime("2018-01-23T09:32:00")
+        end = start + (3 * 60 * 60)
+    elif choice == "chiapas":
+        start = UTCDateTime("2017-09-08T04:49:46.0")
+        end = start + (3 * 60 * 60)
+   
+    # Define Beacon stations
+    geonet = ["NZ.BFZ.10.HHZ", "NZ.PXZ.10.HHZ", "NZ.TSZ.10.HHZ"]
+    beacon = "XX.RD{:0>2}.10.HHZ"
+ 
+    # Stream B 
+    st_b = Stream()
+    for i in range(1, 23):
         try:
-            st_b = beacon_waveforms(beacon, start, end)
+            st_b_ = beacon_waveforms(beacon.format(i), start, end)
         except FileNotFoundError:
             print("No data")
             continue
         except DataGapError:
             print("Non continuous data")
             continue
-        st_b = preprocess(st_b, min_freq, None, sampling_rate)
+        st_b_ = preprocess(st_b_, min_freq, None, sampling_rate)
+        st_b += st_b_
 
-        # Stream A
-        st_a, inv_a = geonet_waveforms(geonet, start, end)
-        st_a = preprocess(st_a, min_freq, inv_a, sampling_rate)
-       
-        # Plot
-        fid_out = os.path.join(
-                    ".", "figures",
-                    f"{geonet.split('.')[1]}.{beacon.split('.')[1]}."
-                    f"{start.year}.{start.julday:0>3}"
-                    "_{}.png"
-                    )  
+    # Stream A
+    st_a = Stream()
+    for gn in geonet:
+        st_a_, inv_a_ = geonet_waveforms(gn, start, end)
+        st_a_ = preprocess(st_a_, min_freq, inv_a_, sampling_rate)
+        st_a += st_a_
 
-        plot_periodogram(st_a + st_b, min_freq, show=False, 
-                         save=fid_out.format("periodogram"))
-        plot_waveforms(st_a + st_b, show=False, save=fid_out.format("waveform"))
+    st_a.filter('bandpass', freqmin=1/30, freqmax=1/10)
+    st_b.filter('bandpass', freqmin=1/30, freqmax=1/10)
+    import ipdb;ipdb.set_trace()
+   
+    # Plot
+    fid_out = os.path.join(
+                ".", "figures",
+                f"{geonet.split('.')[1]}.{beacon.split('.')[1]}."
+                f"{start.year}.{start.julday:0>3}"
+                "_{}.png"
+                )  
+
+    plot_periodogram(st_a + st_b, min_freq, show=False, 
+                     save=fid_out.format("periodogram"))
+    plot_waveforms(st_a + st_b, show=False, save=fid_out.format("waveform"))
