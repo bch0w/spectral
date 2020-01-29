@@ -6,7 +6,7 @@ import os
 import pyatoa
 import pyasdf
 
-choice = ""
+choice = "southern"
 
 if choice == "inland":
     event_id = "2016p275188"
@@ -31,7 +31,7 @@ elif choice == "volcano":
     sta_list = ["TLZ"] # , "TOZ", "MKAZ"]
 elif choice == "southern":
     event_id = "3620927"
-    sta_list = ["NNZ", "MRZ", "KHZ"]
+    sta_list = ["KHZ"]  # "NNZ", "MRZ"]
 else:
     event_id = "2019p754447"
     sta_list = ["MRZ"]
@@ -39,11 +39,11 @@ else:
 config = pyatoa.Config(
     event_id=event_id,
     model_number="m00",
-    min_period=10,
+    min_period=6,
     max_period=30,
     filter_corners=4,
-    # component_list=["Z"],
-    synthetics_only=True,
+    component_list=["Z"],
+    synthetics_only=False,
     rotate_to_rtz=False,
     unit_output="DISP",
     pyflex_map="hikurangi",
@@ -58,17 +58,19 @@ for sta in sta_list:
     station = f"NZ.{sta}.??.HH?"
     mgmt = pyatoa.Manager(config=config, ds=ds)
     mgmt.populate(station_code=station, model=config.model_number)
-    # mgmt.st_obs = mgmt.st_obs.select(component="Z")
+    if len(config.component_list) == 1:
+        mgmt.st_obs = mgmt.st_obs.select(component=config.component_list[0])
     mgmt.preprocess()
-    mgmt.run_pyflex()
-    mgmt.run_pyadjoint()
+    mgmt.config.unit_output = "none"
+    # mgmt.run_pyflex()
+    # mgmt.run_pyadjoint()
 
-    mgmt.plot_wav(show=False, save="clean2.png", figsize=(10,4), length_sec=180, 
-                  fontsize=14`,
+    mgmt.plot_wav(show=False, save="KHZ_6-30.png", figsize=(10,4), length_sec=180, 
+                  fontsize=14,
                   axes_linewidth=4, linewidth=2.5, window_anno_fontsize=0, 
                   window_anno_height=0.4, window_anno_rotation=0, 
                   window_anno_fontcolor="k", window_anno_fontweight="roman", 
                   plot_waterlevel=False, plot_window_anno=False, 
                   plot_windows=True, plot_adjsrc=True, plot_stalta=True,
-                  legend=True)
+                  legend=False)
 

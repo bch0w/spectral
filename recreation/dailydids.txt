@@ -350,3 +350,102 @@ WORK: HOME
 TODO: prep for AGU presi 
 TODO: respond to carl about tomo files 
 
+OUT : 2019-11-28 18:03:25.661667
+DONE: tried to test carls new tomo files 
+DONE: started working on agu presi 
+
+IN  : 2019-11-29 08:03:52.295127
+WORK: HOME
+TODO: agu presentation 
+TODO: prep for john meeting 
+TODO: corsica writeup? 
+
+OUT : 2019-11-29 16:21:41.307625
+DONE: met with john discussed progress and goals 
+DONE: worked on AGU presie 
+DONE: new misfits plotting script 
+
+IN  : 2019-12-02 09:42:23.393339
+WORK: VUW
+TODO: finish agu presentation 
+TODO: start writing paper 
+
+OUT : 2019-12-02 16:25:16.587929
+DONE: made misfit statistics plots 
+DONE: working on agu presi 
+
+IN  : 2019-12-03 08:59:56.857532
+WORK: HOME
+TODO: finish misfit histograms 
+TODO: find other plots to make ala tape et al 
+TODO: check results of new tomography file 
+
+OUT : 2019-12-03 17:43:01.186407
+DONE: looked at eberhart19 velocity model 
+DONE: finished statistics plots 
+DONE: met with yoshi to prep for AGU 
+
+IN  : 2019-12-04 11:29:02.083292
+WORK: VUW
+TODO: finish agu presi and work on things that yoshi mentioned 
+
+OUT : 2019-12-04 22:18:07.591863
+DONE: almost finished to do list for presentation 
+DONE: showed model 9 checkerboard at 3 slices 
+DONE: added events and stations to synthetic results 
+DONE: added dearthquake metrics for perspectives 
+DONE: highlighted max changes for real data 
+DONE: added contours to misfit map 
+DONE: and other random little things 
+DONE: still need to get the 2 second waveforms 
+
+IN  : 2019-12-05 10:33:32.244498
+WORK: VUW
+TODO: finish agu presi 
+TODO: if time look at attenuation and email Carl 
+TODO: 2 second waveforms 
+TODO: beacon data 
+
+OUT : 2019-12-05 16:09:09.145157
+DONE: fine tuned agu presi with all the comments from yoshi 
+DONE: organized agu accomodations etc 
+
+IN  : 2019-12-17 09:12:29.056074
+WORK: HOME
+TODO: update pyatoa 
+
+OUT : 2019-12-17 12:12:51.572218
+DONE: overhauled config object pyatoa 
+
+IN  : 2020-01-06 10:00:10.716753
+WORK: HOME
+TODO: get back into the swing of things, big picture day 
+
+OUT : 2020-01-06 16:24:18.423083
+DONE: wrote some of first paper 
+DONE: worked on pyatoa seisflows yaml file 
+DONE: met with yoshi 
+
+IN  : 2020-01-07 08:25:03.607126
+WORK: GNS
+TODO: qc donnas mode 
+
+OUT : 2020-01-08 00:12:02.732954
+DONE: started rewriting carls scripts to convert donnas model 
+
+IN  : 2020-01-08 09:56:57.996022
+WORK: HOME
+TODO: quality check Donnas model from Carl 
+TODO: write 1 hour paper 
+TODO: beacon station correction 
+
+OUT : 2020-01-08 16:23:07.098037
+DONE: wrote email to Carl about eberhart19 model 
+DONE: wrote some paper 
+DONE: looked at beacon waveforms 
+
+IN  : 2020-01-09 09:20:05.794408
+WORK: VUW
+TODO: continue looking at beacon data 
+TODO: write 
+
