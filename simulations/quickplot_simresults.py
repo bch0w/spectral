@@ -11,8 +11,7 @@ import matplotlib.pyplot as plt
 
 from obspy import UTCDateTime, Stream
 from obspy.signal.cross_correlation import correlate, xcorr_max
-from pyatoa.utils.tools.io import ascii_to_mseed
-# from pyatoa.utils.operations.conversions import ascii_to_mseed
+from pyatoa.utils.tools.io import read_ascii
 
 
 def linespecs():
@@ -102,7 +101,7 @@ def process(dir_a, dir_b, min_period=10., max_period=30., peak_amplitude=False,
         stations.append(os.path.basename(semd).split('.')[1])
 
     # Set the tag template for glob to search for stations
-    net, _, comp, ext = os.path.basename(semd).split('.')
+    _, _, _, ext = os.path.basename(semd).split('.')
 
     # Remove duplicate stations for search
     stations_fids = np.array([fids, stations])
@@ -112,7 +111,7 @@ def process(dir_a, dir_b, min_period=10., max_period=30., peak_amplitude=False,
     throwaway_time = UTCDateTime('2000-01-01T00:00:00')
     for sta in unique_stations:
         print(sta, end=" ")
-        tag_template = f"{net}.{sta}.???.{ext}"
+        tag_template = f"??.{sta}.???.{ext}"
         stations_a = glob.glob(os.path.join(dir_a, tag_template))
         stations_b = glob.glob(os.path.join(dir_b, tag_template))
 
@@ -129,8 +128,8 @@ def process(dir_a, dir_b, min_period=10., max_period=30., peak_amplitude=False,
         st_a = Stream()
         st_b = Stream()
         for i in range(len(stations_a)):
-            st_a += ascii_to_mseed(stations_a[i], throwaway_time)
-            st_b += ascii_to_mseed(stations_b[i], throwaway_time)
+            st_a += read_ascii(stations_a[i], throwaway_time)
+            st_b += read_ascii(stations_b[i], throwaway_time)
         
         if not st_a or not st_b: 
             print("skipped")
@@ -192,6 +191,7 @@ def process(dir_a, dir_b, min_period=10., max_period=30., peak_amplitude=False,
             # Plot the two traces
             ax.plot(t_a, st_a[i].data, color=color_a)
             ax.plot(t_b, st_b[i].data, color=color_b)
+            plt.xlim([0, 100])
 
             # Set the title with important information
             if i == 0:
@@ -227,5 +227,5 @@ if __name__ == "__main__":
     if not os.path.exists(os.path.join(base, "figures")):
         os.makedirs(os.path.join(base, "figures"))
 
-    process(dir_a, dir_b, 10, 30, peak_amplitude=False, 
+    process(dir_a, dir_b, 2, 30, peak_amplitude=False, 
             cross_correlate=True, show=False, save=True)
