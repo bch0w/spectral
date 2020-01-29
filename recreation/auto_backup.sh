@@ -21,14 +21,16 @@ printf "y\n${login}\n${pword}\ny" | /opt/cisco/anyconnect/bin/vpn -s connect vpn
 
 # Rsync the necessary files based on hardcoded directory structure
 echo "rsyncing"
-LAP_SUB="/Users/Chow/Documents/academic/vuw_seismo"
+LAP_SUB="/Users/Chow/Documents/academic/vuw"
 VUW_SUB="/Users/chowbr/Documents/subduction"
 SSH="chowbr@C02SX063GG7D.staff.vuw.ac.nz"
 
 # rsync both ways so both computers are the same
-for DIR in data oficial
+for DIR in oficial
 do
-	rsync -e ssh -avzp ${LAP_SUB}/${DIR} ${SSH}:${VUW_SUB}
+	# Laptop -> iMac
+	# rsync -e ssh -avzp ${LAP_SUB}/${DIR} ${SSH}:${VUW_SUB}
+	# iMac -> Laptop
 	rsync -e ssh -avzp ${SSH}:${VUW_SUB}/${DIR} ${LAP_SUB}
 done
 

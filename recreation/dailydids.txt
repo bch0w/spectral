@@ -449,3 +449,156 @@ WORK: VUW
 TODO: continue looking at beacon data 
 TODO: write 
 
+OUT : 2020-01-09 15:41:56.696701
+DONE: looked at attenuation for specfem and emailed with carl, yoshi 
+DONE: worked on yaml file for seisflows/pyatoa 
+
+IN  : 2020-01-10 08:41:50.905725
+WORK: GNS
+TODO: donnas model qc 
+TODO: beacon waveforms 
+TODO: write 
+
+OUT : 2020-01-10 16:47:02.981007
+DONE: qc'd ebht19 model, found some weird artefacts in the attenuation 
+DONE: started updating seisflows to work with parameters.yaml 
+DONE: updated pyatoa to work better with seisflows and its parameters.yaml 
+
+IN  : 2020-01-13 09:08:35.350936
+WORK: HOME
+TODO: write for 1 hour 
+
+OUT : 2020-01-13 10:32:03.961233
+DONE: wrote 1 hour for pyatoa 
+
+IN  : 2020-01-13 10:32:12.756775
+WORK: VUW
+TODO: pyatoa + seisflows 
+TODO: github issue for attenuation 
+TODO: qc donnas model 
+
+OUT : 2020-01-13 17:09:06.794746
+DONE: succesful trial run with new specfem + pyatoa combination 
+DONE: looked at reading .bin files with python again. I dont think this will work, too muddled up in the code 
+DONE: looked at the attenuation patch in Ebht19, determined it comes from negligible bulk attenuation due to the definition of vp, vs qp and qs  
+
+IN  : 2020-01-14 10:06:29.667114
+WORK: HOME
+TODO: write 
+TODO: look at tomo files 
+TODO: beacon waveforms 
+
+IN  : 2020-01-15 10:02:50.468466
+WORK: HOME
+TODO: beacon waveforms 
+TODO: write 
+TODO: look at donnas model paths through mantle wedge 
+
+OUT : 2020-01-15 11:45:18.235825
+DONE: wrote 
+
+IN  : 2020-01-16 09:53:55.962213
+WORK: GNS
+TODO: write 
+TODO: beacon waveforms 
+TODO: prep yoshi meeting 
+
+OUT : 2020-01-16 16:00:24.335570
+DONE: wrote a bit 
+DONE: organized papers on mendeley 
+DONE: worked on checkerboard in z direction 
+DONE: beacon map for emily 
+
+IN  : 2020-01-17 09:41:58.779177
+WORK: VUW
+TODO: send carl email about velocity model 
+TODO: checkerboard with vertical checkers 
+TODO: beacon with noise 
+
+OUT : 2020-01-17 16:25:46.865942
+DONE: wrote email to calr about new velocity model 
+DONE: finished depth checkerboardiphy but something went wrong? 
+DONE: looked at noise and event periodograms for beacon 
+
+IN  : 2020-01-20 09:46:49.119426
+WORK: VUW
+TODO: writing 
+TODO: update seisflows 
+
+OUT : 2020-01-20 16:47:06.991533
+DONE: wrote 
+DONE: updated seisflows to py3 with docstrings 
+
+IN  : 2020-01-21 09:56:21.565764
+WORK: VUW
+TODO: write 
+TODO: test seisflows saving capabilities 
+TODO: return emails  
+TODO: beacon 
+
+OUT : 2020-01-21 15:03:46.446024
+DONE: wrote paper 
+DONE: updated seisflows  
+DONE: emailed carl about attenuation 
+
+IN  : 2020-01-22 09:42:02.334670
+WORK: VUW
+TODO: write 
+TODO: seisflows 
+TODO: test seisflows saving 
+TODO: beacon 
+TODO: dani, andrei 
+TODO: beacon 
+
+OUT : 2020-01-22 20:14:35.618431
+DONE: looked a bit at noise for beacon waveforms 
+DONE: wrote email to dani 
+DONE: worked heavily on py3 seisflows, and wrote pyaflowa to interact with seisflows 
+
+IN  : 2020-01-23 09:20:08.956966
+WORK: HOME
+TODO: noise 
+
+OUT : 2020-01-23 16:08:46.134070
+DONE: noise analysis beacon 
+DONE: bannister data first looks and sort on maui 
+DONE: sort sahke data 
+DONE: met with yoshi 
+
+IN  : 2020-01-24 10:36:12.111096
+WORK: VUW
+TODO: respond attenuation email carl, yoshi 
+TODO: finish seisflows pyaflowa 
+
+OUT : 2020-01-24 20:10:59.008881
+DONE: attenuation email carl 
+DONE: seisflows3 
+
+IN  : 2020-01-27 10:50:28.775569
+WORK: VUW
+TODO: finish seisflows3 
+TODO: respond carl and try new velocity model 
+TODO: beacon/bannister data 
+
+OUT : 2020-01-27 18:12:22.174239
+DONE: sorted new vel model from carl but need to check 
+DONE: bug fixing new pyatoa/seisflows 
+
+IN  : 2020-01-28 09:50:03.512840
+WORK: HOME
+TODO: beacon 
+TODO: bannister 
+TODO: write 
+TODO: seisflows 
+
+OUT : 2020-01-28 19:02:33.219856
+DONE: finished seisflows! 
+DONE: looked at beacon noise 
+
+IN  : 2020-01-29 07:57:04.737133
+WORK: HOME
+TODO: run trial seisflows 
+TODO: check new carl mesh 
+TODO: recap donna carl email chain 
+TODO: beacon/bannister data 
+

@@ -1,3 +1,4 @@
+import os
 import datetime
 
 def daily_did(fid):
@@ -52,7 +53,7 @@ def daily_did(fid):
 if __name__ == "__main__":
     txtfile = "/Users/chowbr/Documents/subduction/spectral/recreation/dailydids.txt"
     if not os.path.exists(txtfile):
-        txtfile = "/Users/Chow/Documents/academic/vuw_seismo/spectral/recreation/dailydids.txt"
+        txtfile = "/Users/Chow/Documents/academic/vuw/spectral/recreation/dailydids.txt"
     daily_did(fid=txtfile)
 
 
