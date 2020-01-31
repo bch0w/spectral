@@ -10,7 +10,9 @@ import matplotlib.pyplot as plt
 from obspy import read, UTCDateTime
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+
 mpl.rcParams['font.size'] = 10
+
 
 def myround(x, base=5, choice='near'):
     """
@@ -34,12 +36,15 @@ def myround(x, base=5, choice='near'):
 
     return roundout
 
-def plot_availability(path="./"):
+def plot_availability(path="./", cat=None):
     """
     Plot data availability in a bar chart by year for easy visual identification
 
     :type path: str
     :param path: path to data in seed structure
+    :type cat: obspy.Catalog
+    :param cat: If a catalog object is given, event dates will be highlighted
+        for easy event identification
     """
     years = glob.glob(os.path.join(path, "????"))
     years.sort()
@@ -76,40 +81,52 @@ def plot_availability(path="./"):
                 else:
                     filled_years = np.vstack([filled_years, station_full_year])
 
-            # reduce data to the available bound
-            filled_years = filled_years[:, earliest:latest]
+        # reduce data to the available bound
+        filled_years = filled_years[:, earliest:latest]
 
-            fig, ax = plt.subplots(figsize=(20,10)) 
-            im = ax.imshow(filled_years, 
-                           extent=(earliest, latest, len(netstas), 0),
-                           aspect="auto", cmap="Oranges")
-            year_ = os.path.basename(year)
-            ax.set_title(f"{year_} BEACON DATA AVAILABILITY")
-            ax.set_xlabel(f"Julian Day ({year_})")
-            ax.set_ylabel("Station Code")
+        fig, ax = plt.subplots(figsize=(20,10)) 
+        im = ax.imshow(filled_years, 
+                       extent=(earliest, latest, len(netstas), 0),
+                       aspect="auto", cmap="Oranges")
+        year_ = os.path.basename(year)
+        ax.set_title(f"{year_} STATION DATA AVAILABILITY")
+        ax.set_xlabel(f"Julian Day ({year_})")
+        ax.set_ylabel("Station Code")
 
-            # colorbar
-            divider = make_axes_locatable(ax)
-            cax = divider.append_axes('right', size='2.5%', pad=0.05)
-            cbar = fig.colorbar(im, cax=cax, orientation='vertical', 
-                                values=[0,1,2,3], ticks=[0,1,2,3])
-            cbar.set_label('number of available channels', rotation=90, 
-                           labelpad=-15)
-            
-            # grid
-            ax.grid(True, which='major', linestyle='-', c="k", linewidth=1.25)
-            ax.grid(True, which='minor', linestyle='-', c="k", linewidth=0.5, 
-                    alpha=0.5)
-            ax.set_xticks(np.arange(myround(earliest, 5, 'near'), latest, 5))
-            ax.set_xticks(np.arange(myround(earliest, 5, 'near'), latest, 1), 
-                          minor=True)
-            ax.set_yticks(np.arange(len(netstas)))
-            ax.set_yticklabels(netstas)
-            plt.setp(ax.get_xticklabels(), rotation=45, fontsize=13)
-            plt.setp(ax.get_yticklabels(), rotation=45, fontsize=13)
+        # colorbar
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes('right', size='2.5%', pad=0.05)
+        cbar = fig.colorbar(im, cax=cax, orientation='vertical', 
+                            values=[0,1,2,3], ticks=[0,1,2,3])
+        cbar.set_label('number of available channels', rotation=90, 
+                       labelpad=-15)
+        
+        # grid
+        ax.grid(True, which='major', linestyle='-', c="k", linewidth=1.25)
+        ax.grid(True, which='minor', linestyle='-', c="k", linewidth=0.5, 
+                alpha=0.5)
+        ax.set_xticks(np.arange(myround(earliest, 5, 'near'), latest, 5))
+        ax.set_xticks(np.arange(myround(earliest, 5, 'near'), latest, 1), 
+                      minor=True)
+        ax.set_yticks(np.arange(len(netstas)))
+        ax.set_yticklabels(netstas)
+        plt.setp(ax.get_xticklabels(), rotation=45, fontsize=13)
+        plt.setp(ax.get_yticklabels(), rotation=45, fontsize=13)
 
-            # plt.show()
-            plt.savefig(f"data_{os.path.basename(year)}.png")
+        
+        # plot catalog
+        if cat:
+            plot_catalog(ax, cat)
+
+        plt.savefig(f"data_{os.path.basename(year)}.png")
+
+
+def plot_catalog(ax, cat):
+    """
+    Plot event dates in a catalog as vertical lines
+    """
+    for event in cat:
+        import ipbd; ipdb.set_trace()
 
 
 def check_availability(origintime, path="./",  return_time=False):
@@ -157,6 +174,9 @@ def check_availability(origintime, path="./",  return_time=False):
         
 
 if __name__ == "__main__":
+    cat = read_events("./fullscale_w_mt.xml")
+    plot_availability("./", cat=cat)
+
    #  for origintime in ["2019-04-23T16:37:10.0",  # 2019p304574 M4.79
    #                     "2017-09-08T04:49:46.0",  # chiapas, mw8.2
    #                     "2017-09-19T18:14:48.2",  # central mexico, mw7.1

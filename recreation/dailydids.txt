@@ -602,3 +602,24 @@ TODO: check new carl mesh
 TODO: recap donna carl email chain 
 TODO: beacon/bannister data 
 
+OUT : 2020-01-29 18:58:52.814159
+DONE: seisflows succfessful trial runs 
+DONE: working on beacon data 
+
+IN  : 2020-01-30 07:00:46.556526
+WORK: GNS
+TODO: look at new simulation results 
+TODO: beacon waveforms 
+TODO: prep yoshi meet 
+
+OUT : 2020-01-30 15:20:26.551221
+DONE: more inversions 
+DONE: beacon waveforms 
+DONE: met with yoshi 
+
+IN  : 2020-01-31 10:20:44.965200
+WORK: VUW
+TODO: include temporary data in inversion 
+TODO: run checkerboard inversion, real data inversion 
+TODO: beacon amplitude factor 
+
