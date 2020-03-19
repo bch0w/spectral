@@ -1,6 +1,41 @@
 import os
 import datetime
 
+def check_last_entry(fid):
+    """
+    see if the last entry is IN or OUT, if IN create new entry
+    """
+    with open(fid, "r") as f:
+        lines = f.readlines()
+        # read file from the end, backwards
+        for line in reversed(lines):
+            if "IN" in line:
+                # Get the last time in entry    
+                time_in = ":".join(line.split(":")[1:]).strip()
+                time_in = datetime.datetime.strptime(time_in,
+                                                     "%Y-%m-%d %I:%M:%S.%f")
+                break
+            elif "IN" in line:
+                return
+
+    # Will only be accessed if last entry was IN
+    print(f"No matching OUT entry for last IN entry...")
+    with open(fid, "a") as f:
+        # Query the time left
+        time_delta = input(f"time out in minutes after {time_in}?: ")
+        time_out = time_in + datetime.timedelta(minutes=int(time_delta))
+        f.write(f"{'OUT':<4}: {time_out}\n")
+        while True:
+            done = input("accomplished that day?: ")
+            if not done:
+                check = input("is that all? ([y]/n): ")
+                if check != "n":
+                    break
+            f.write(f"DONE: {done} \n")
+        f.write("\n")
+    print("\n")
+
+
 def daily_did(fid):
     """
     create a journal entry for what to do today
@@ -10,6 +45,8 @@ def daily_did(fid):
     if in_or_out not in ["in", "out"]:
         return
     in_or_out = in_or_out.upper()
+    if in_or_out == "IN":
+        check_last_entry(fid=fid)
 
     with open(fid, "a") as f:
         # Write the time in or out
@@ -51,9 +88,9 @@ def daily_did(fid):
         f.write("\n")
                
 if __name__ == "__main__":
-    txtfile = "/Users/chowbr/Documents/subduction/spectral/recreation/dailydids.txt"
+    txtfile = "./dailydids.txt"
     if not os.path.exists(txtfile):
-        txtfile = "/Users/Chow/Documents/academic/vuw/spectral/recreation/dailydids.txt"
+        raise FileNotFoundError(f"No such file {txtfile}")
     daily_did(fid=txtfile)
 
 
