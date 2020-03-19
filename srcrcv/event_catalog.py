@@ -367,9 +367,9 @@ def event_trials(choice, csv_file, desired_length, sep_km=None):
 
 if __name__ == "__main__":
     # Use GeoNet moment tensors
-    geonet_path = "GEONET/data/moment-tensor/GeoNet_CMT_solutions.csv"
+    geonet_path = "geonet/data/moment-tensor/GeoNet_CMT_solutions.csv"
     for path_to in ["/Users/chowbr/Documents/subduction/data",
-                    "/Users/Chow/Documents/academic/vuw_seismo/data",
+                    "/Users/Chow/Documents/academic/vuw/data",
                     "/seis/prj/fwi/bchow/data"]:
         if os.path.exists(os.path.join(path_to, geonet_path)):
             csv_file = os.path.join(path_to, geonet_path)
@@ -388,7 +388,7 @@ if __name__ == "__main__":
     cat.write(f"{cat_name}.xml", format="QUAKEML")
 
     # Write the catalog to CMTSOLUTION files required by Specfem3D,
-    catalog_to_cmtsolutions.generate_cmtsolutions(cat, csv_file, 
-                                                  make_bball=True)
+    # catalog_to_cmtsolutions.generate_cmtsolutions(cat, csv_file, 
+    #                                               make_bball=True)
 
 
