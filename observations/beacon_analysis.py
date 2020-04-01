@@ -3,6 +3,7 @@ Look at the amplitude levels for given stations
 """
 import os
 import glob
+import pprint
 import numpy as np
 from scipy import signal
 from obspy.clients.fdsn import Client
@@ -10,6 +11,7 @@ from obspy import read, read_inventory, UTCDateTime, Stream
 from obspy.clients.fdsn.header import FDSNException
 
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 
 
 class DataGapError(Exception):
@@ -99,7 +101,7 @@ def beacon_waveforms(station_name, start, end):
     return st_beacon
 
 
-def preprocess(st_in, freqmin, inv=None, sampling_rate=None):
+def preprocess(st_in, freqmin, inv=None, sampling_rate=None, response=True):
     """
     Process a stream to retrieve noise information
     """
@@ -114,7 +116,8 @@ def preprocess(st_in, freqmin, inv=None, sampling_rate=None):
         st.resample(sampling_rate)
     st.detrend("demean")
     st.taper(max_percentage=0.05)
-    st.remove_response(output="VEL", inventory=inv)
+    if response:
+        st.remove_response(output="DISP", inventory=inv)
     st.filter("highpass", freq=freqmin)
     st.detrend("demean")
     st.taper(max_percentage=0.05)
@@ -122,27 +125,39 @@ def preprocess(st_in, freqmin, inv=None, sampling_rate=None):
     return st
 
 
-def amplitude_ratios(st_beacon, st_geonet, t_min, t_max, t_width=4 ):
+def amplitude_ratios(st_beacon, st_geonet, t_min, t_max, t_width=4):
     """
     Filter streams for narrow bandpasses and compare amplitude values
     """
     amp_dict = {}
+    central_t = []
     for period_min in range(t_min, t_max + 1, 1):
         st_b = st_beacon.copy()
         st_g = st_geonet.copy()
         period_max = period_min + t_width
-        central_freq = (period_max + period_min) / 2
+        central_t.append((period_max + period_min) / 2)
 
         # Filter for this narrow bandpass
         st_b.filter("bandpass", freqmin=1 / period_max, freqmax=1 / period_min)
         st_g.filter("bandpass", freqmin=1 / period_max, freqmax=1 / period_min)
 
         # Compare a few values
+        rms_values, max_values = [], []
         for tr in (st_g + st_b):
-            amp_dict[tr.get_id()][str(central_freq)] = {
-                "max": tr.data.max(), "mean": tr.data.mean(),
-                "rms": np.sqrt(np.mean(tr.data ** 2))
-            }
+            if tr.get_id() not in amp_dict.keys():
+                amp_dict[tr.get_id()] = {"max":[], "mean":[], "rms":[]}
+            amp_dict[tr.get_id()]["max"].append(tr.data.max())
+            amp_dict[tr.get_id()]["mean"].append(tr.data.mean())
+            amp_dict[tr.get_id()]["rms"].append(np.sqrt(np.mean(tr.data ** 2)))
+  
+
+    # Turn the lists into numpy arrays
+    for key1, item1 in amp_dict.items():
+        for key2, item2 in item1.items():
+            item1[key2] = np.array(item2)
+    
+    amp_dict["periods"] = np.array(central_t) 
+
     return amp_dict
 
 
@@ -152,7 +167,7 @@ def plot_waveforms(st, show=True, save=""):
     """
     colors = ["k", "r"]
     for i, tr in enumerate(st):
-        plt.plot(tr.times(), tr.data / tr.data.max(), c=colors[i],
+        plt.plot(tr.times(), tr.data, c=colors[i],
                  label=tr.get_id(), alpha=1 / (i + 1))
     plt.xlabel("Time (s)")
     plt.ylabel("Velocity (m/s)")
@@ -235,21 +250,103 @@ def plot_periodogram(st, freqmin=None, show=True, save=""):
     plt.close()
 
 
-if __name__ == "__main__":
-    # User Defined Parameters
-    min_freq = 1 / 100
-    sampling_rate = 2
-    choice = "noise"
+def plot_amplitude_ratio(st_a, st_b, amp_dict, show=True, save=True, 
+                         direct=False, **kwargs):
+    """
+    Plot the ratio of ampltiudes
+    """
+    choice = kwargs.get("choice", "")    
+    style = kwargs.get("style", "")
 
+    def plot_attributes():
+        plt.xlabel("Period (s)")    
+        plt.legend(loc="center", ncol=4, fontsize="x-small", framealpha=0.25)
+        plt.yscale("log")
+        plt.grid()
+
+    # Set the colorbar
+    vmax = len(st_a + st_b)
+    norm = mpl.colors.Normalize(vmin=1, vmax=vmax)
+    cmap = mpl.cm.get_cmap("tab20b")
+
+    # Plot direct amplitdues for given style, e.g. rms
+    if direct:
+        for i, tr in enumerate(st_a + st_b):
+            # Overwrite for NZ statinos, ensure consistent coloring
+            if "NZ" in tr.get_id():
+                color = "k"
+                linestyle= '--'
+            else:
+                y = int(tr.get_id().split('.')[1][2:])
+                color = cmap(norm(y))
+                linestyle='-'
+                
+            plt.plot(amp_dict["periods"], amp_dict[tr.get_id()][style], 
+                     label=tr.get_id(), c=color, linestyle=linestyle)
+        plt.title(f"Amplitudes {choice} {style}\n"
+                  f"{tr.stats.starttime} - {tr.stats.endtime}")
+        plt.ylabel("RMS Displacement (m)")
+        plot_attributes()
+        if save:
+            plt.savefig(f"./figures/"
+                        f"amplitudes_{choice}_{style}.png")
+        if show:
+            plt.show()   
+    else: 
+        geonet = []
+        for tr in st_a:
+            geonet.append(tr.get_id())
+
+        for g in range(len(geonet)):
+            baseline = amp_dict[geonet[g]][style]
+            for i, tr in enumerate(st_a + st_b):
+                ratio = baseline / amp_dict[tr.get_id()][style]
+                #  Check the marker types based on the ratio
+                if ratio.mean() <= 50:
+                    linestyle = 'x--'
+                else:
+                    linestyle = 'o-'
+                # Ensure consistent coloring
+                if "NZ" in tr.get_id():
+                    y = vmax
+                else:
+                    y = int(tr.get_id().split('.')[1][2:])
+                plt.plot(amp_dict["periods"], ratio, linestyle,  markersize=3, 
+                         label=tr.get_id(), c=cmap(norm(i)))
+            plt.title(f"Amplitude {style} w.r.t {geonet[g]}\n"
+                      f"{tr.stats.starttime} - {tr.stats.endtime}")
+            plt.ylabel("RMS Amplitude Ratios")
+            plot_attributes()
+            if save:
+                plt.savefig(f"./figures/"
+                            f"ratios_{geonet[g]}_{choice}_{style}.png")
+            if show:
+                plt.show()   
+
+
+def gather_data(choice, min_freq=1/100, sampling_rate=2, response=True): 
+    """
+    Wrapping the data gathering step into a function
+    """
     # Choose time frame
+    end = None
     if choice == "noise":
-        start = UTCDateTime("2018-054T00:00:00")
+        start = UTCDateTime("2018-055T00:00:00")
         end = start + (24 * 60 * 60) - 1
     elif choice == "alaska":
         start = UTCDateTime("2018-01-23T09:32:00")
-        end = start + (3 * 60 * 60)
     elif choice == "chiapas":
         start = UTCDateTime("2017-09-08T04:49:46.0")
+    elif choice == "png":
+        start = UTCDateTime("2018-02-25T17:45:08.6")
+    elif choice == "mexico":
+        start = UTCDateTime("2017-09-19T18:14:48.2")
+    elif choice == "local":
+        start = UTCDateTime("2018-02-18T07:38:00")
+        end = start + (10 * 60)
+    
+    # Standard end time for teleseismics
+    if not end:
         end = start + (3 * 60 * 60)
 
     # Define full station names
@@ -267,24 +364,62 @@ if __name__ == "__main__":
         except DataGapError:
             print("Non continuous data")
             continue
-        st_b_ = preprocess(st_b_, min_freq, None, sampling_rate)
+        st_b_ = preprocess(st_b_, min_freq, None, sampling_rate, response)
         st_b += st_b_
 
     # Stream A
     st_a = Stream()
     for gn in geonet:
         st_a_, inv_a_ = geonet_waveforms(gn, start, end)
-        st_a_ = preprocess(st_a_, min_freq, inv_a_, sampling_rate)
+        st_a_ = preprocess(st_a_, min_freq, inv_a_, sampling_rate, response)
         st_a += st_a_
 
-    import ipdb; ipdb.set_trace()
+    amp_dict = amplitude_ratios(st_a, st_b, t_min=1, t_max=60)
 
-    # Create plots
-    fid_out = os.path.join(".", "figures",
-                           f"{geonet.split('.')[1]}.{beacon.split('.')[1]}."
-                           f"{start.year}.{start.julday:0>3}"
-                           "_{}.png"
-    )
-    plot_periodogram(st_a + st_b, min_freq, show=False,
-                     save=fid_out.format("periodogram"))
+    return st_a, st_b, amp_dict
+
+
+if __name__ == "__main__":
+    choices = ["alaska", "chiapas", "png", "mexico"]
+    teleseismics = ["alaska", "mexico", "chiapas", "png"]
+    amp_dicts = []
+    for choice in choices:
+        st_a, st_b, amp_dict = gather_data(choice, response=True)
+        amp_dicts.append(amp_dict) 
+        # plot_amplitude_ratio(st_a, st_b, amp_dict, style="rms", choice=choice,
+        #                      show=True, save=True, direct=False)
+
+    # for key in amp_dicts[0].keys():
+    #     if key == "periods":
+    #         continue
+    #     i = 0
+    #     ratios = np.zeros(len(amp_dicts[0]["periods"]))
+    #     for event in amp_dicts:
+    #         try:
+    #             station = event[key]['rms']
+    #             baseline = event["NZ.BFZ.10.HHZ"]['rms']
+    #             ratio = baseline / station
+    #             ratios += (baseline / station)
+    #             i += 1 
+    #         except KeyError:
+    #              continue
+    #     threesec = np.where(amp_dicts[0]["periods"] == 3.)[0]
+    #     sixsec = np.where(amp_dicts[0]["periods"] == 6.)[0]
+    #     tensec = np.where(amp_dicts[0]["periods"] == 10.)[0]
+    #     
+    #     print(f"{key}: 3s={ratios[threesec] / i}, 6s={ratios[sixsec] / i}, "
+    #           f"10s={ratios[tensec] / i}")
+    #     # plt.plot(amp_dicts[0]["periods"], ratios / i)
+    #     # plt.show()
+
+    # import ipdb;ipdb.set_trace();
+
+    # # Create plots
+    # fid_out = os.path.join("figures",
+    #                        f"{geonet.split('.')[1]}.{beacon.split('.')[1]}."
+    #                        f"{start.year}.{start.julday:0>3}"
+    #                        "_{}.png"
+    # )
+    # plot_periodogram(st_a + st_b, min_freq, show=False,
+    #                  save=fid_out.format("periodogram"))
     plot_waveforms(st_a + st_b, show=False, save=fid_out.format("waveform"))

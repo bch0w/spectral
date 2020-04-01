@@ -69,7 +69,7 @@ def estimate_mrp(st_a, st_b, t_min=3, t_max=15, step_count=1.1, resample=False,
         if lowpass != 0:
             st_a_filt.filter('lowpass', freq=1/lowpass, corners=4)
             st_b_filt.filter('lowpass', freq=1/lowpass, corners=4)
-
+        
         # normalize all traces, and put them on a step so all plots together
         for st in [st_a_filt, st_b_filt]: 
             for tr in st:
@@ -84,7 +84,7 @@ def estimate_mrp(st_a, st_b, t_min=3, t_max=15, step_count=1.1, resample=False,
                 st_a_filt.resample(sr_b)
             elif sr_a < sr_b:
                 st_b_filt.resample(sr_a)
-        
+       
         # assume that there is only one trace in the stream
         plt.plot(st_a_filt[0].times(), st_a_filt[0].data, 'k')
         plt.plot(st_b_filt[0].times(), st_b_filt[0].data, 'r')
