@@ -1,13 +1,13 @@
 """
 A good way to show what days have data for a given network based on
 availability of mseed files
-"""
+/"""
 import os
 import glob
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from obspy import read, UTCDateTime
+from obspy import read, UTCDateTime, read_events
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
@@ -60,7 +60,7 @@ def plot_availability(path="./", cat=None):
             for station in stations:
                 channels = glob.glob(os.path.join(station, '*'))
                 channels.sort()
-                station_full_year = np.zeros(366)
+                station_full_year = np.zeros(367)
                 for channel in channels:
                     fileids = glob.glob(os.path.join(channel, "*"))
                     fileids.sort()
@@ -116,17 +116,42 @@ def plot_availability(path="./", cat=None):
         
         # plot catalog
         if cat:
-            plot_catalog(ax, cat)
-
+            plot_catalog(ax, cat, int(os.path.basename(year)))
+        # plt.show()
         plt.savefig(f"data_{os.path.basename(year)}.png")
 
 
-def plot_catalog(ax, cat):
+def plot_catalog(ax, cat, year):
     """
     Plot event dates in a catalog as vertical lines
+        
+    :type ax: matplotlib.axis
+    :param ax: axis to plot to
+    :type cat: obspy.Catalog
+    :param cat: catalog to check
+    :type year: int 
+    :param year: year to check
     """
+    days = []
     for event in cat:
-        import ipbd; ipdb.set_trace()
+        event_time = event.preferred_origin().time
+
+        # Make sure the event falls into the time frame of the data
+        startday, endday = ax.get_xbound()
+        checkday = (event_time.julday > startday and event_time.julday < endday)
+        
+        if event_time.year == year and checkday:
+            days.append(event_time.julday)
+
+            # Set the y bound incase multiple events on the same day
+            ymin, ymax = ax.get_ybound()
+            y_text = (ymax - ymin) / (days.count(event_time.julday) + 1)
+
+            ax.axvline(x=event_time.julday, ymin=0, ymax=1, color="gold")
+            ax.text(x=event_time.julday, 
+                    y=(ax.get_ybound()[1] - ax.get_ybound()[0]) / 2,
+                    s=event.resource_id.id.split('/')[1], 
+                    color="aqua", rotation=90)
 
 
 def check_availability(origintime, path="./",  return_time=False):
@@ -175,13 +200,5 @@ def check_availability(origintime, path="./",  return_time=False):
 
 if __name__ == "__main__":
     cat = read_events("./fullscale_w_mt.xml")
-    plot_availability("./", cat=cat)
+    plot_availability("../", cat=cat)
 
-   #  for origintime in ["2019-04-23T16:37:10.0",  # 2019p304574 M4.79
-   #                     "2017-09-08T04:49:46.0",  # chiapas, mw8.2
-   #                     "2017-09-19T18:14:48.2",  # central mexico, mw7.1
-   #                     "2018-01-23T09:32:00.0",  # alaska, mw7.9
-   #                     "2018-02-25T17:45:08.6"   # png, mw7.5
-   #                     ]:
-   #      check_availability(origintime, return_time=False)
-   check_availability('2018-02-18T07:43:48', return_time=False)
