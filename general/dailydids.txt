@@ -623,3 +623,294 @@ TODO: include temporary data in inversion
 TODO: run checkerboard inversion, real data inversion 
 TODO: beacon amplitude factor 
 
+IN  : 2020-02-03 09:22:50.157448
+WORK: VUW
+TODO: run a few inversions 
+TODO: write 
+TODO: email yoshi regarding john meeting 
+
+OUT : 2020-02-03 18:47:00.925296
+DONE: cleaned up old work maui 
+DONE: finished checkerboard 10 event to 5 iterations 
+DONE: wrote some 
+DONE: rearranged some functions in pyatao/pyaflowa 
+DONE: listened to some of the talks during serpentinisation meeting 
+
+IN  : 2020-02-04 09:53:00.922013
+WORK: VUW
+TODO: checkerboard 30 event 
+TODO: 8fwd 
+TODO: write 
+
+OUT : 2020-02-04 16:41:52.607338
+DONE: seisflowa working again, started 30event cc chkbd 
+DONE: wrote a bit, restructuring document to deemphasize the workflow 
+
+IN  : 2020-02-05 09:13:59.913546
+WORK: HOME
+TODO: checkerboard to 10 iter 
+TODO: write 
+
+OUT : 2020-02-05 18:02:40.720644
+DONE: todo and changelogs on pyatoa and seisflows 
+DONE: rewrote methods sections of paper, reorganized and remphasized the main points of the methodologies section 
+
+IN  : 2020-02-07 09:38:39.079039
+WORK: VUW
+TODO: analyze checkerboard results 
+TODO: beacon amplitudes on 8fwd, and bannister and sahke? 
+TODO: write 
+TODO: prep meeting john yoshi 
+
+IN  : 2020-02-10 09:58:18.717441
+WORK: VUW
+TODO: forward and checkerboard check results 
+TODO: make figures 
+
+OUT : 2020-02-10 19:24:14.397784
+DONE:  
+DONE: inspector class for pyatoa 
+DONE: misfit plots for inspector 
+
+IN  : 2020-02-11 08:30:36.109499
+WORK: HOME
+TODO: come up with some misfit plots to show yoshi 
+TODO: finalize all figures you can paper 
+TODO: write 
+
+OUT : 2020-02-11 19:57:28.128960
+DONE: inspector class 
+DONE: making figures for paper 
+
+IN  : 2020-02-12 09:43:09.655753
+WORK: VUW
+TODO: finish workflow diagram and other paper figures 
+TODO: analyze checkerboard results 
+TODO: analyze 330fwd results 
+
+OUT : 2020-02-12 20:59:11.226441
+DONE: finished 330fwd and inspected results 
+DONE: cleaned up inspector plots 
+DONE: started working on mayavi vtk plotting 
+
+IN  : 2020-02-13 08:32:22.070504
+WORK: HOME
+TODO: shut up and write 
+TODO: rerun 30 event for 330 fwd 
+TODO: rerun chkbd 
+
+OUT : 2020-02-13 17:12:16.268309
+DONE: inspector plots 
+DONE: wrote more 
+DONE: reran 30mtm first iter 
+DONE: redid 300fwd 
+DONE: met with yoshi 
+
+IN  : 2020-02-17 13:56:11.601611
+WORK: HOME
+TODO: nice figures 
+
+IN  : 2020-02-18 09:10:02.078231
+WORK: HOME
+TODO: first draft by the end of today 
+
+OUT : 2020-02-18 21:42:36.299375
+DONE: model visualization  
+DONE: 8 hires siulations and misfit figure 
+DONE: checkerboard model figures 
+
+IN  : 2020-02-20 08:11:45.679516
+WORK: GNS
+TODO: write 
+TODO: beacon amplitudes 
+
+OUT : 2020-02-20 16:33:02.092555
+DONE: finished writing up to discussion 
+DONE: met with yoshi, restructured paper 
+DONE: met with jonathan, pascal's student 
+
+IN  : 2020-02-21 09:57:16.220286
+WORK: VUW
+TODO: look at fsrg proposal 
+TODO: look at nsf proposal 
+TODO: restructure paper 
+TODO: edit figures 
+
+OUT : 2020-02-21 18:59:19.778512
+DONE: restructured paper 
+DONE: fsrg application 
+DONE: editing figures 
+DONE: 30event inversion 11+ 
+
+IN  : 2020-02-24 09:49:57.871749
+WORK: VUW
+TODO: look at updated 30fwd model 
+TODO: finish first draft and email to john 
+TODO: look at FSRG application and email to john 
+
+OUT : 2020-02-24 20:26:57.106483
+DONE: new figures and text up to synthetic inversions on paper 
+DONE: looked at 30event inversion results and emailed yoshi 
+
+IN  : 2020-02-25 10:40:29.188984
+WORK: VUW
+TODO: finish writing and send draft 
+
+IN  : 2020-02-26 09:31:23.720457
+WORK: VUW
+TODO: finish that fucking paper god damnit 
+
+OUT : 2020-02-26 19:12:57.167714
+DONE: finished results sections, started work on discussions, wrote abstract, started going through and revising 
+
+IN  : 2020-02-27 10:01:08.707545
+WORK: VUW
+TODO: finish paper 
+TODO: prep yoshi meeting 
+
+IN  : 2020-02-28 09:11:34.069681
+WORK: VUW
+TODO: make edits from yesterdays yoshi meeting 
+TODO: start new pyatoa run with 5km vertical smoothign 
+
+OUT : 2020-02-28 18:00:28.694518
+DONE: ended up helping a bunch of people, didnt really get any work done 
+
+IN  : 2020-03-02 09:28:38.195995
+WORK: VUW
+TODO: paper to yoshi 
+TODO: beacon amplitudes 
+TODO: real data inversion? 
+
+OUT : 2020-03-02 19:04:24.202957
+DONE: sent in fsrg 
+DONE: started obs run with 20x6km smoothin 
+DONE: making figures 
+
+IN  : 2020-03-03 09:05:06.838641
+WORK: VUW
+TODO: finish figures, finish discussion, send to yoshi 
+
+OUT : 2020-03-03 20:42:00.347240
+DONE: wrote discussions, started proofing draft 
+DONE: ran mtm with new parameters 
+
+IN  : 2020-03-04 08:31:16.431578
+WORK: VUW
+TODO: paper, tutoring 
+
+OUT : 2020-03-04 17:51:00.510482
+DONE: course tutoring 
+DONE: pdf to yoshi 
+DONE: mayavi stuff 
+
+IN  : 2020-03-05 09:06:10.539078
+WORK: GNS
+TODO: mtm new run 
+TODO: pascals talk 
+TODO: email to carl, ryan 
+TODO: new model for yoshi meet 
+
+OUT : 2020-03-03 15:09:19.926830
+OUT : 2020-03-05 16:39:33.133531
+DONE: looked at mtm results 
+DONE: met with yoshi on paper, things to do 
+DONE: emailed ryan carl 
+DONE: dove into pyadjoint mtm error 
+
+IN  : 2020-03-06 09:28:56.251247
+WORK: VUW
+TODO: email ryan, carl 
+TODO: mtm jackknife stuff 
+TODO: paper 
+
+OUT : 2020-03-06 17:16:15.299545
+DONE: addressed paper 
+DONE: github issue seisflows 
+DONE: looked at pyadjoint 
+DONE: started new chkbd cc 
+DONE: started new extra layer fwd 
+
+IN  : 2020-03-09 10:08:13.092233
+WORK: VUW
+TODO: rerun mtm and cc inversion first trial check results 
+TODO: finish paper edits send to yoshi 
+
+OUT : 2020-03-09 19:38:19.137745
+DONE: looked at meshing again, found a problem in my meshing practice 
+DONE: made a superhires mesh for depth visualizations 
+DONE: ran 30cc and 30mtm hopefully last time 
+
+IN  : 2020-03-10 09:37:27.948092
+WORK: VUW
+TODO: finish that fucking paper and send it 
+
+OUT : 2020-03-10 17:08:30.817365
+DONE: finalized cc vs mt figures 
+
+IN  : 2020-03-11 09:15:53.041189
+WORK: GNS
+TODO: god damnit finish that paper 
+TODO: new mesh 
+
+OUT : 2020-03-11 15:31:27.085258
+DONE: new mesh, finish paper, yoshi meet 
+
+IN  : 2020-03-12 08:40:15.276845
+WORK: VUW
+TODO: paper to yoshi 
+TODO: new mesh 
+
+OUT : 2020-03-12 18:14:18.275365
+DONE:  
+DONE: finished paper sent to yoshi 
+
+OUT : 2020-03-13 15:45:27.925534
+DONE: finished meshing scripts, made new mesh, testing 
+
+IN  : 2020-03-16 09:45:18.956063
+WORK: VUW
+TODO: paper comments and draft to carl, ryan 
+TODO: check new mesh results and run for inversion 
+
+OUT : 2020-03-16 16:24:48.456892
+DONE: addressed paper suggestiosn from yoshi 
+
+IN  : 2020-03-17 09:09:30.830945
+WORK: HOME
+TODO: new mesh results and new mesh full inversion 
+TODO: start updating seisflows and pyatoa 
+
+OUT : 2020-03-17 17:40:47.910040
+DONE: started updating pyatoa and sf3 
+DONE: verified 3second mesh 
+DONE: trying to make a 10sec mesh but failing 
+
+IN  : 2020-03-18 08:28:06.948200
+WORK: HOME
+TODO: 10second mesh 
+TODO: new inversion 
+TODO: how to locate poissons ratio error 
+
+OUT : 2020-03-18 17:19:58.444527
+DONE: converted paper to gji format 
+DONE: created 6second mesh after much huffing and puffing 
+DONE: testined mrp 6second mesh 
+DONE: started 30event with new 6second mes 
+
+IN  : 2020-03-19 09:40:38.689671
+WORK: VUW
+TODO: check inversion results new mesh 
+TODO: push to 6 seconds? 
+TODO: keep updating sf3 and pyatoa 
+
+OUT : 2020-03-19 17:06:35.694980
+DONE: checked off almost all to do list items for pyatoa 
+DONE: started working on model plotters 
+DONE: turned in extra forms for employment 
+
+IN  : 2020-03-20 08:09:54.282069
+WORK: VUW
+TODO: check inversion results 
+TODO: vtk plotting pyatoa 
+

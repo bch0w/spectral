@@ -24,6 +24,7 @@ from obspy.core.inventory.util import Site
 
 from pyatoa.utils.tools.srcrcv import merge_inventories
 
+
 def geonet_north_island(level="station"):
     """
     Return geonet broadband stations in an obspy network
@@ -47,6 +48,14 @@ def geonet_north_island(level="station"):
                                 level=level, starttime=starttime,
                                 endtime=UTCDateTime()
                                 )
+
+    inv_hold = c.get_stations(network='NZ', station='*Z', channel='BH?',
+                                minlatitude=lat_min, maxlatitude=lat_max,
+                                minlongitude=lon_min, maxlongitude=lon_max,
+                                level=level, starttime=starttime,
+                                endtime=UTCDateTime()
+                                )
+    inv_geonet = merge_inventories(inv_geonet, inv_hold)
     # Stations with unique names
     for station in ["WEL", "BHW", "HD61", "HD62", "HD63", "HD64", "HD65"]:
         inv_hold = c.get_stations(network='NZ', station=station, 
@@ -56,7 +65,6 @@ def geonet_north_island(level="station"):
                                   starttime=starttime, endtime=UTCDateTime()
                                   )
         inv_geonet = merge_inventories(inv_geonet, inv_hold)
-    import ipdb;ipdb.set_trace()
 
     return inv_geonet[0]
 
@@ -155,7 +163,7 @@ def sahke(network_code="X2", level="station", comp_list=["N", "E", "Z"]):
     return network
 
 
-def bannister(network_code="X1", level="station", comp_list=["N", "E", "Z"]):
+def bannister(network_code="ZX", level="station", comp_list=["N", "E", "Z"]):
     """
     Stephen Bannister deployed a broadband network in the northern north island.
     Data was provided via personal communication, this list of station locations
@@ -164,7 +172,7 @@ def bannister(network_code="X1", level="station", comp_list=["N", "E", "Z"]):
     :return:
     """
     # station, lat, lon, depth, start, end
-    station_info = np.array([
+    station_info_zx = np.array([
         ['GA01', -39.0331, 177.8549, 33.000, 2011305, 9999001],
         ['GA02', -38.7793, 177.8695, 220.000, 2011305, 9999001],
         ['GA03', -38.6059, 177.9959, 46.000, 2011305, 9999001],
@@ -175,57 +183,66 @@ def bannister(network_code="X1", level="station", comp_list=["N", "E", "Z"]):
         ['GA08', -38.8312, 177.7095, 358.000, 2012001, 9999001],
         ['GA09', -38.5194, 177.9363, 107.000, 2013152, 9999001],
         ['GA10', -38.9087, 177.4627, 57.000, 2013152, 9999001],
-        ['GA11', -38.4932, 177.6711, 224.000, 2014060, 9999001],
-        # ['HD01', -38.4802, 175.9473, 470.000, 2009244, 2010091],
+        # ['GA11', -38.4932, 177.6711, 224.000, 2014060, 9999001],
+        ])
+
+    station_info_z8 = np.array([
+        ['HD01', -38.4802, 175.9473, 470.000, 2009244, 2010091],
         ['HD02', -38.6275, 175.9196, 600.000, 2009244, 2012306],
-        # ['HD03', -38.5497, 176.0564, 630.000, 2009244, 2010091],
-        # ['HD04', -38.4930, 176.2204, 440.000, 2009244, 9999001],
-        # ['HD05', -38.4663, 176.2627, 445.000, 2009244, 2011091],
-        # ['HD06', -38.3932, 176.0619, 280.000, 2009244, 2011091],
-        # ['HD07', -38.3214, 176.1626, 480.000, 2009244, 2010091],
-        # ['HD08', -38.6300, 176.3063, 520.000, 2009244, 2011091],
-        # ['HD09', -38.6675, 176.1798, 450.000, 2010001, 2010305],
+        ['HD03', -38.5497, 176.0564, 630.000, 2009244, 2010091],
+        ['HD04', -38.4930, 176.2204, 440.000, 2009244, 9999001],
+        ['HD05', -38.4663, 176.2627, 445.000, 2009244, 2011091],
+        ['HD06', -38.3932, 176.0619, 280.000, 2009244, 2011091],
+        ['HD07', -38.3214, 176.1626, 480.000, 2009244, 2010091],
+        ['HD08', -38.6300, 176.3063, 520.000, 2009244, 2011091],
+        ['HD09', -38.6675, 176.1798, 450.000, 2010001, 2010305],
         ['HD10', -38.5482, 176.3669, 390.000, 2010001, 2011091],
-        # ['HD11', -38.6320, 176.2606, 320.000, 2010091, 2011305],
-        # ['HD12', -38.3711, 176.1570, 360.000, 2010091, 2011091],
-        # ['HD13', -38.4546, 176.3458, 340.000, 2010091, 2011091],
-        # ['HD14', -38.4594, 176.1714, 340.000, 2010091, 2010305],
-        # ['HD15', -38.4872, 176.0043, 660.000, 2010091, 2011091],
-        # ['HD16', -38.4408, 175.9444, 420.000, 2010091, 2011091],
-        # ['HD17', -38.5483, 175.0556, 600.000, 2010091, 2011091],
-        # ['HD18', -38.5283, 176.4573, 375.000, 2010305, 2011091],
+        ['HD11', -38.6320, 176.2606, 320.000, 2010091, 2011305],
+        ['HD12', -38.3711, 176.1570, 360.000, 2010091, 2011091],
+        ['HD13', -38.4546, 176.3458, 340.000, 2010091, 2011091],
+        ['HD14', -38.4594, 176.1714, 340.000, 2010091, 2010305],
+        ['HD15', -38.4872, 176.0043, 660.000, 2010091, 2011091],
+        ['HD16', -38.4408, 175.9444, 420.000, 2010091, 2011091],
+        ['HD17', -38.5483, 175.0556, 600.000, 2010091, 2011091],
+        ['HD18', -38.5283, 176.4573, 375.000, 2010305, 2011091],
         ['HD19', -38.3762, 176.3696, 325.000, 2010305, 2011091],
-        # ['HD20', -38.5842, 176.1467, 430.000, 2010305, 2011091],
-        # ['HD21', -38.5052, 176.0877, 515.000, 2010305, 2011091],
-        # ['HD22', -38.5666, 176.1907, 385.000, 2010305, 2011001],
-        # ['HD23', -38.6253, 175.9533, 520.000, 2010305, 2011091],
-        # ['HD24', -38.5671, 176.0895, 560.000, 2010305, 2011091],
-        # ['HD25', -38.5855, 176.2945, 305.000, 2010305, 2011091],
-        # ['HD26', -38.5696, 175.9547, 610.000, 2010305, 2011091],
-        # ['HD27', -38.4324, 176.2374, 530.000, 2010305, 2011091],
-        # ['HD28', -38.4424, 176.1580, 380.000, 2010305, 2011091],
-        # ['HD29', -38.4012, 176.1991, 460.000, 2010305, 2011091],
-        # ['HD30', -38.5291, 175.9377, 480.000, 2010305, 2011091],
-        # ['HD31', -38.3019, 176.3053, 525.000, 2010305, 2011091],
-        # ['HD32', -38.7035, 176.1434, 558.000, 2010335, 2011091],
-        # ['HD33', -38.5031, 176.2634, 305.000, 2011001, 2011091],
-        # ['HD34', -38.4764, 176.0497, 515.000, 2011032, 2011091],
-        # ['HD35', -38.5331, 176.0008, 500.000, 2011032, 2011060],
+        ['HD20', -38.5842, 176.1467, 430.000, 2010305, 2011091],
+        ['HD21', -38.5052, 176.0877, 515.000, 2010305, 2011091],
+        ['HD22', -38.5666, 176.1907, 385.000, 2010305, 2011001],
+        ['HD23', -38.6253, 175.9533, 520.000, 2010305, 2011091],
+        ['HD24', -38.5671, 176.0895, 560.000, 2010305, 2011091],
+        ['HD25', -38.5855, 176.2945, 305.000, 2010305, 2011091],
+        ['HD26', -38.5696, 175.9547, 610.000, 2010305, 2011091],
+        ['HD27', -38.4324, 176.2374, 530.000, 2010305, 2011091],
+        ['HD28', -38.4424, 176.1580, 380.000, 2010305, 2011091],
+        ['HD29', -38.4012, 176.1991, 460.000, 2010305, 2011091],
+        ['HD30', -38.5291, 175.9377, 480.000, 2010305, 2011091],
+        ['HD31', -38.3019, 176.3053, 525.000, 2010305, 2011091],
+        ['HD32', -38.7035, 176.1434, 558.000, 2010335, 2011091],
+        ['HD33', -38.5031, 176.2634, 305.000, 2011001, 2011091],
+        ['HD34', -38.4764, 176.0497, 515.000, 2011032, 2011091],
+        ['HD35', -38.5331, 176.0008, 500.000, 2011032, 2011060],
         ['HD36', -38.4912, 176.1677, 340.000, 2011032, 2011091],
-        # ['HD37', -38.4177, 176.1366, 355.000, 2011032, 2011091],
-        # ['HD38', -38.5190, 176.2041, 325.000, 2011032, 2011091],
-        # ['HD39', -38.4868, 176.3221, 295.000, 2011032, 2011091],
+        ['HD37', -38.4177, 176.1366, 355.000, 2011032, 2011091],
+        ['HD38', -38.5190, 176.2041, 325.000, 2011032, 2011091],
+        ['HD39', -38.4868, 176.3221, 295.000, 2011032, 2011091],
         # ['HD50', -38.3396, 176.2687, 361.000, 2015305, 9999001],
         # ['HD51', -38.2435, 176.2483, 380.000, 2015305, 9999001],
         # ['HD53', -38.2659, 176.4812, 362.000, 2015335, 9999001],
         # ['HD54', -38.2815, 176.3781, 480.000, 2015335, 9999001],
         # ['HD55', -38.2815, 176.5605, 469.000, 2015335, 9999001],
-        ['HD56', -38.3184, 176.5538, 439.000, 2015335, 9999001],
-        ['HD57', -38.1872, 176.3714, 520.000, 2015335, 9999001],
+        # ['HD56', -38.3184, 176.5538, 439.000, 2015335, 9999001],
+        # ['HD57', -38.1872, 176.3714, 520.000, 2015335, 9999001],
         # ['HD58', -38.3019, 176.3053, 492.000, 2015335, 9999001],
         # ['HD59', -38.2815, 176.3781, 440.000, 2015335, 9999001],
-        ['HD60', -38.2863, 176.1992, 389.000, 2016061, 9999001]
+        # ['HD60', -38.2863, 176.1992, 389.000, 2016061, 9999001]
     ])
+
+    # Pick which network to be exported
+    if network_code == "ZX":
+        station_info = station_info_zx
+    elif network_code == "Z8":
+        station_info = station_info_z8
 
     # Elevations are not known
     default_elevation = 0.0
@@ -239,7 +256,11 @@ def bannister(network_code="X1", level="station", comp_list=["N", "E", "Z"]):
                    np.unique(station_info[:, 5])[:-1]]
 
     min_starttime = min(unique_starts)
-    max_endtime = max(unique_ends)
+    # If no actual endtimes, manual set the endtime
+    try:
+        max_endtime = max(unique_ends)
+    except ValueError:
+        max_endtime = UTCDateTime("2015-01-01")
 
     # Add stations to objects. Some endtimes are not specified
     stations = []
@@ -261,7 +282,7 @@ def bannister(network_code="X1", level="station", comp_list=["N", "E", "Z"]):
         if level == "channel":
             channels = []
             for comp in comp_list:
-                cha = Channel(code=f"HH{comp}", location_code="",
+                cha = Channel(code=f"HH{comp}", location_code="10",
                               start_date=start_date, end_date=end_date,
                               latitude=latitude, longitude=longitude,
                               elevation=default_elevation, depth=depth,
@@ -297,52 +318,52 @@ def beacon(network_code="XX", level="station", comp_list=["N", "E", "Z"]):
 
     :return:
     """
-    # Station name, Abbreviation, Code, Lat, Lon, Start, End
+    # Station name, Abbreviation, Code, Lat, Lon, Start, End, Instrument type
     station_info = np.array([
         ['Pori Rd', 'PORI', 'RD01', '-40.55475083', '175.9710354',
-         '2017-07-19', '2019-04-04'],
+         '2017-07-19', '2019-04-04', '60s'],
         ['Angora Rd', 'ANGR', 'RD02', '-40.45974293', '176.4750588',
-         '2017-07-19', '2019-04-04'],
+         '2017-07-19', '2019-04-04', '60s'],
         ['Te Uri Rd', 'TURI', 'RD03', '-40.2656269', '176.3828498',
-         '2017-07-20', '2019-04-04'],
+         '2017-07-20', '2019-04-04', '30s'],
         ['Porangahau', 'PORA', 'RD04', '-40.2667317', '176.6344719',
-         '2017-07-20', '2019-04-04'],
+         '2017-07-20', '2019-04-04', '60s'],
         ['Manuhara Rd', 'MNHR', 'RD05', '-40.4689786', '176.2231874',
-         '2017-07-20', '2019-04-05'],
+         '2017-07-20', '2019-04-05', '30s'],
         ['Dannevirke', 'DNVK', 'RD06', '-40.2971794', '176.1663731',
-         '2017-07-24', '2019-04-02'],
+         '2017-07-24', '2019-04-02', '30s'],
         ['Waipawa', 'WPAW', 'RD07', '-39.9017124', '176.5370861',
-         '2017-07-24', '2019-04-02'],
+         '2017-07-24', '2019-04-02', '60s'],
         ['Raukawa', 'RAKW', 'RD08', '-39.7460611', '176.6205577',
-         '2017-07-24', '2019-04-02'],
+         '2017-07-24', '2019-04-02', '30s'],
         ['McNeill Hill', 'MCNL', 'RD09', '-39.4447675', '176.6974385',
-         '2017-07-25', '2019-04-03'],
+         '2017-07-25', '2019-04-03', '60s'],
         ['Cape Kidnappers', 'CPKN', 'RD10', '-39.64661592', '177.0765055',
-         '2017-07-25', '2018-03-13'],
+         '2017-07-25', '2018-03-13', '30s'],
         ['Kahuranaki', 'KAHU', 'RD11', '-39.78731589', '176.8624521',
-         '2017-07-25', '2018-03-13'],
+         '2017-07-25', '2018-03-13', '30s'],
         ['Kaweka Forest', 'KWKA', 'RD12', '-39.425214', '176.4228',
-         '2017-07-26', '2019-05-03'],
+         '2017-07-26', '2019-05-03', '30s'],
         ['Kereru', 'KERE', 'RD13', '-39.643259', '176.3768865',
-         '2017-07-26', '2019-04-03'],
+         '2017-07-26', '2019-04-03', '60s'],
         ['Pukenui', 'PNUI', 'RD14', '-39.9129963', '176.2001869',
-         '2017-07-26', '2018-09-08'],
+         '2017-07-26', '2018-09-08', '60s'],
         ['Waipukarau', 'WPUK', 'RD15', '-40.0627107', '176.4391311',
-         '2017-07-27', '2019-04-02'],
+         '2017-07-27', '2019-04-02', '60s'],
         ['Omakere', 'OROA', 'RD16', '-40.105341', '176.6804449',
-         '2017-07-27', '2019-04-04'],
+         '2017-07-27', '2019-04-04', '30s'],
         ['Te Apiti Rd', 'TEAC', 'RD17', '-39.90868978', '176.9561896',
-         '2017-09-25', '2018-03-14'],
+         '2017-09-25', '2018-03-14', '30s'],
         ['River Rd', 'RANC', 'RD18', '-39.929775', '176.7039773',
-         '2017-09-25', '2019-04-03'],
+         '2017-09-25', '2019-04-03', '30s'],
         ['Matapiro Rd', 'MATT', 'RD19', '-39.5796128', '176.6449024',
-         '2018-03-14', '2018-06-25'],
+         '2018-03-14', '2018-06-25', '30s'],
         ['Kahuranaki', 'KAHU2', 'RD20', '-39.79385769', '176.8758813',
-         '2018-03-13', '2018-09-03'],
+         '2018-03-13', '2018-09-03', '30s'],
         ['Te Apiti Rd', 'TEAC2', 'RD21', '-39.913152', '176.946881',
-         '2018-03-14', '2019-04-03'],
+         '2018-03-14', '2019-04-03', '30s'],
         ['Castlepoint', 'CAPT', 'RD22', '-40.910278', '176.199167',
-         '2018-07-20', '2019-05-05']
+         '2018-07-20', '2019-05-05', '60s']
     ])
 
     # For setting the network timing
@@ -365,11 +386,16 @@ def beacon(network_code="XX", level="station", comp_list=["N", "E", "Z"]):
     # and datalogger type
     if level == "channel":
         nrl = NRL()
-        response = nrl.get_response(
-            sensor_keys=['Guralp', 'CMG-40T', '60s - 50Hz', '800'],
-            datalogger_keys=['Nanometrics', 'Taurus', '40 Vpp (0.4)',
-                             'Low (default)', '1 mHz', '100']
-        )
+        responses = {
+            "30s": nrl.get_response(
+                sensor_keys=['Guralp', 'CMG-40T', '30s - 100Hz', '800'],
+                datalogger_keys=['Nanometrics', 'Taurus', '40 Vpp (0.4)',
+                                 'Low (default)', '1 mHz', '100']),
+            "60s": nrl.get_response(
+                sensor_keys=['Guralp', 'CMG-40T', '60s - 50Hz', '800'],
+                datalogger_keys=['Nanometrics', 'Taurus', '40 Vpp (0.4)',
+                                 'Low (default)', '1 mHz', '100'])
+        }
 
     # Add stations to objects
     stations = []
@@ -387,14 +413,14 @@ def beacon(network_code="XX", level="station", comp_list=["N", "E", "Z"]):
         if level == "channel":
             channels = []
             for comp in comp_list:
-                cha = Channel(code=f"HH{comp}", location_code="                     ",
+                cha = Channel(code=f"HH{comp}", location_code="10",
                               start_date=start_date, end_date=end_date,
                               latitude=latitude, longitude=longitude,
                               elevation=default_elevation, depth=default_depth,
                               azimuth=0.0, dip=-90.0, sample_rate=100
                               )
                 # Attach the response
-                cha.response = response
+                cha.response = responses[stalist[7]]
                 channels.append(cha)
         else:
             channels = None
@@ -419,18 +445,19 @@ def beacon(network_code="XX", level="station", comp_list=["N", "E", "Z"]):
     return network
 
 
-def generate_master_list():
+def generate_master_list(level="channel"):
     """
     Call all functions in this script to create a master list of station data
 
     :return:
     """
-    level = "channel"
-    networks = [geonet_north_island(level=level),
+    networks = [# geonet_north_island(level=level),
                 # hobitss(level=level),
-                sahke(level=level),
-                bannister(level=level),
-                beacon(level=level)]
+                # sahke(level=level),
+                # bannister(network_code="ZX", level=level),
+                # bannister(network_code="Z8", level=level),
+                beacon(level=level)
+                ]
 
     return Inventory(networks=networks, source="PYATOA")
 
@@ -465,7 +492,8 @@ def export_pyatoa(inv):
     Pyatoa requires a "seed" convention directory structure containing
     individual RESPONSE xml files. Create that here based on Obspy inventory
 
-    :param inventory:
+    :type inv: obspy.core.inventory.Inventory
+    :param inv: inventory object to export
     :return:
     """
     path = "./seed/RESPONSE"
@@ -505,11 +533,12 @@ def export_pyatoa(inv):
 
 
 if __name__ == "__main__":
-    master_inventory = generate_master_list()
-    master_inventory.plot(projection='local', resolution='l',
-                          continent_fill_color='w', water_fill_color='w',
-                          label=True, color_per_network=True,
-                          outfile="./master_inventory.png"
-                          )
-    master_inventory.write('./master_inventory.xml', format='STATIONXML')
-    export_pyatoa(master_inventory)
+    master_inventory = generate_master_list(level="channel")
+    # master_inventory.plot(projection='local', resolution='l',
+    #                       continent_fill_color='w', water_fill_color='w',
+    #                       label=True, color_per_network=True,
+    #                       outfile="./master_inventory.png"
+    #                       )
+    master_inventory.write('./beacon_response_files.xml', format='STATIONXML')
+    # export_specfem(master_inventory)
+    # export_pyatoa(master_inventory)
