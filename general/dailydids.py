@@ -15,7 +15,7 @@ def check_last_entry(fid):
                 time_in = datetime.datetime.strptime(time_in,
                                                      "%Y-%m-%d %I:%M:%S.%f")
                 break
-            elif "IN" in line:
+            elif "OUT" in line:
                 return
 
     # Will only be accessed if last entry was IN
@@ -88,7 +88,7 @@ def daily_did(fid):
         f.write("\n")
                
 if __name__ == "__main__":
-    txtfile = "./dailydids.txt"
+    txtfile = "/Users/Chow/Documents/academic/vuw/spectral/general/dailydids.txt"
     if not os.path.exists(txtfile):
         raise FileNotFoundError(f"No such file {txtfile}")
     daily_did(fid=txtfile)
