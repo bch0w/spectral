@@ -1005,3 +1005,157 @@ TODO: finish read through and send to co-authors
 TODO: finish paper adjustments 
 TODO: vtk plotter 
 
+OUT : 2020-04-02 18:42:46.708996
+DONE: finished paper corrections, sent to co-authors 
+
+IN  : 2020-04-06 09:26:04.195418
+WORK: HOME
+TODO: address yoshi paper comments, prepare for submission 
+TODO: fix figures from johns comments 
+
+OUT : 2020-04-06 16:49:35.100618
+DONE: finished paper figure revisions and yoshis comments 
+DONE: met with yoshi, 20 min to go over paper 
+
+IN  : 2020-04-07 09:40:36.180932
+WORK: HOME
+TODO: submit paper 
+TODO: start working on new inversion capabilities 
+
+OUT : 2020-04-07 16:36:05.994592
+DONE: finished last edits on paper 
+DONE: submitted to GJI 
+
+IN  : 2020-04-08 09:42:18.738573
+WORK: HOME
+TODO: newinversion 
+
+OUT : 2020-04-08 16:02:53.057284
+DONE: fluffed around mostly 
+DONE: made a flowchart for seisflows 
+DONE: getting new pyatoa and seisflows working 
+
+IN  : 2020-04-09 11:20:42.507456
+WORK: HOME
+TODO: start new inversion, try making a new mesh for 10-30s?  
+TODO: new smoothing lenght 
+TODO: kennys mesh? 
+
+OUT : 2020-04-09 17:20:42.507456
+DONE: model vis scripts 
+DONE: new mesh 
+DONE: pyatoa and seisflows working maui 
+
+IN  : 2020-04-10 09:19:50.428541
+WORK: HOME
+TODO: kennys mesh 
+TODO: new inversion 
+
+OUT : 2020-04-10 13:56:05.014783
+DONE: finished model vis scripts 
+DONE: slow running first iteration new inversion new mes 
+DONE: looked at kennys mesh problem 
+
+IN  : 2020-04-12 10:44:24.783551
+WORK: HOME
+TODO: get inversion running 
+
+OUT : 2020-04-12 11:03:53.901838
+DONE: inversion running to end 
+
+OUT : 2020-04-12 16:49:23.808211
+DONE: inversion working? i hope, looked at results of iter1, looks good, running 2 to 4 
+
+IN  : 2020-04-13 11:35:32.476574
+WORK: HOME
+TODO: evaluate inversion, change parameters, continue 
+
+OUT : 2020-04-13 13:35:32.476574
+DONE: inversion hit unknown error 
+
+IN  : 2020-04-14 09:42:07.701506
+WORK: HOME
+TODO: inversion 
+TODO: meet with yoshi 
+TODO: kg mesh 
+
+OUT : 2020-04-14 16:16:12.800856
+DONE: ran manual inversion but still same problem 
+DONE: met with yoshi talked about inversion 
+DONE: realized that  seisflows has steplenmax parameter, which I can set. it was set to default of 50%, ive changed it to 10% 
+
+IN  : 2020-04-15 10:02:39.284317
+WORK: HOME
+TODO: kennys mesh 
+TODO: continue inversion 
+
+OUT : 2020-04-15 16:40:07.710233
+DONE: kennys mesh, zoomed with kenny 
+DONE: 30beta inversion, realize error in make vtk script 
+DONE: running 30beta 2-3 
+
+IN  : 2020-04-16 10:08:52.780639
+WORK: HOME
+TODO: respond johns email 
+TODO: continue inversion 
+TODO: look at temp data 
+
+OUT : 2020-04-16 16:07:26.523588
+DONE: 30beta stop at 3, started 30charlie with new parameters as extension of 30beta 
+DONE: responded john 
+DONE: looking at beacon data again 
+
+IN  : 2020-04-17 10:03:02.780021
+WORK: HOME
+TODO: figure out why inversion stalled 
+TODO: get that shit goinngggggg 
+TODO: beacon data 
+
+OUT : 2020-04-17 17:39:19.240797
+DONE: fixed inspector class, fix windowing is broken, trying to fix 
+
+IN  : 2020-04-19 17:37:44.988519
+WORK: HOME
+TODO: try to fix window fixing and get an inversion running overnight 
+
+OUT : 2020-04-19 19:30:17.243174
+DONE: fixed that windowing thing hopefully 
+
+IN  : 2020-04-20 09:26:05.556998
+WORK: HOME
+TODO: inversion stuff 
+
+OUT : 2020-04-20 17:57:24.544481
+DONE: prepped and met with yoshi 
+DONE: inversion with fixed windowing working 
+DONE: looking at scaling beacon waveforms 
+
+IN  : 2020-04-21 10:10:47.396948
+WORK: HOME
+TODO: inversion and beacon 
+
+OUT : 2020-04-21 15:10:02.452650
+DONE: nothing 
+
+IN  : 2020-04-22 10:20:01.793734
+WORK: HOME
+TODO: inversion aannddd beacon 
+
+OUT : 2020-04-22 16:20:01.793734
+DONE: ran inversion 30delta but stopped 
+DONE: ran simulations for all events captured on beacon 
+
+IN  : 2020-04-23 11:05:11.901628
+WORK: HOME
+TODO: check inversion results 
+TODO: look at bannister data finish beacon data scaling 
+
+OUT : 2020-04-23 16:49:44.456940
+DONE: looked at inversion results 
+DONE: beacon data, and bannister data 
+DONE: started making sahke dataless 
+
+IN  : 2020-04-24 09:44:56.317051
+WORK: HOME
+TODO: start a larger scale test inversion, 50 events? with temp data 
+

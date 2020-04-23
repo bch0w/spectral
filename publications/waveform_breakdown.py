@@ -37,16 +37,18 @@ picks = {"2014p952799": ["NZ.PXZ",   # forearc
                      "NZ.VRZ",]
          }
 
-# For paper1
+# For paper1 misfit gallery
 picks = {"2014p952799": ["NZ.PXZ"],
          "2019p738432": ["NZ.WIZ"],
          "2017p012082": ["NZ.KHEZ"],
          "2018p130600": ["NZ.TOZ"]}
 
-# picks = {"2019p738432": ["NZ.WIZ"]}  # MWZ also good
-for min_period in [2, 10]:
+# For paper1 misfit quant
+# picks = {"2016p275188": ["NZ.BKZ"]}
+
+for min_period in [2,10]:
     for event_id in picks:
-        fid = os.path.join("./hiresdata", f"{event_id}.h5")
+        fid = os.path.join("./lowresdata", f"{event_id}.h5")
         assert(os.path.exists(fid)), fid
 
         config = pyatoa.Config(
@@ -66,7 +68,7 @@ for min_period in [2, 10]:
         
         # Figure size based on which components were looking at
         if len(config.component_list) == 1:
-            figsize = (10, 4)
+            figsize = (10, 4.5)
         else:
             figsize = (10, 7)
 
@@ -83,27 +85,57 @@ for min_period in [2, 10]:
                 mgmt.window(fix_windows=False)
                 mgmt.measure()
 
-                mgmt.plot(show=False, 
-                          save=(f"{config.event_id}_{sta}_"
-                                f"{int(config.min_period)}-"
-                                f"{int(config.max_period)}.png"), 
-                          figsize=figsize, 
-                          dpi=200, 
-                          length_sec=200, 
-                          fontsize=20,
-                          axes_linewidth=3, 
-                          linewidth=3., 
-                          window_anno_fontsize=16, 
-                          window_anno_height=0.0,
-                          window_anno_rotation=0, 
-                          window_color="dimgrey",
-                          window_anno_fontcolor="k", 
-                          window_anno_fontweight="roman", 
-                          plot_waterlevel=False, 
-                          plot_window_anno=True, 
-                          plot_windows=True, 
-                          plot_adjsrc=False, 
-                          plot_stalta=False,
-                          plot_arrivals=False,
-                          legend=False)
+                # This is for the misfit quantification
+                # To get this exact figure, you need to remove the misfit
+                # from the adjoint source label
+                if False:
+                    mgmt.plot(show=False, 
+                              save=(f"{config.event_id}_{sta}_"
+                                    f"{int(config.min_period)}-"
+                                    f"{int(config.max_period)}.png"), 
+                              figsize=(12,5), 
+                              dpi=200, 
+                              length_sec=150, 
+                              fontsize=19,
+                              axes_linewidth=3, 
+                              linewidth=3., 
+                              window_anno_fontsize=16, 
+                              window_anno_height=0.5,
+                              window_anno_rotation=0, 
+                              window_color="darkorange",
+                              window_anno_fontcolor="k", 
+                              window_anno_fontweight="roman", 
+                              plot_waterlevel=False, 
+                              plot_window_anno=True, 
+                              plot_windows=True, 
+                              plot_adjsrc=True, 
+                              plot_stalta=True,
+                              plot_arrivals=False,
+                              legend=True)
+
+                # This is for the waveform gallery
+                else:
+                    mgmt.plot(show=False, 
+                              save=(f"{config.event_id}_{sta}_"
+                                    f"{int(config.min_period)}-"
+                                    f"{int(config.max_period)}.png"), 
+                              figsize=figsize, 
+                              dpi=200, 
+                              length_sec=200, 
+                              fontsize=27.5,
+                              axes_linewidth=4, 
+                              linewidth=4., 
+                              window_anno_fontsize=30, 
+                              window_anno_height=0.0,
+                              window_anno_rotation=0, 
+                              window_color="dimgrey",
+                              window_anno_fontcolor="k", 
+                              window_anno_fontweight="roman", 
+                              plot_waterlevel=False, 
+                              plot_window_anno=True, 
+                              plot_windows=True, 
+                              plot_adjsrc=False, 
+                              plot_stalta=False,
+                              plot_arrivals=False,
+                              legend=False)
 

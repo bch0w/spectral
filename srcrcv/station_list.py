@@ -88,7 +88,17 @@ def sahke(network_code="X2", level="station", comp_list=["N", "E", "Z"]):
     build a network object from the available information that was collected
     via personal communication at VUW
 
-    NO RESPONSE CREATED
+    I'm not sure if the CMG's are 30s or 60s instruments
+
+    Notes from GNS SAHKE Report:
+
+    Instruments and dataloggers:
+    CMG3ESP: T004, LTN6
+    CMG40T: LE4, T007, T010, T014, T016, T018, T020
+    Dataloggers: Reftek-130s 
+
+    Notes:
+    3-2-2010: LE4 sampling rate changed from 40Hz to 100Hz
 
     :rtype: obspy.core.inventory.network.Network
     """
@@ -120,6 +130,21 @@ def sahke(network_code="X2", level="station", comp_list=["N", "E", "Z"]):
     default_depth = 0.0
     default_site = Site(name="SAHKE")
 
+    # Create response information
+    if level == "channel":
+        nrl = NRL()
+        responses = {
+            "cmg30t": nrl.get_response(
+                sensor_keys=['Guralp', 'CMG-40T', '30s - 100Hz', '800'],
+                datalogger_keys=['REF TEK', 'RT 130S & 130-SMHR', ,'1', '100']),
+            "cmg30t_40s": nrl.get_response(
+                sensor_keys=['Guralp', 'CMG-40T', '30s - 100Hz', '800'],
+                datalogger_keys=['REF TEK', 'RT 130S & 130-SMHR', ,'1', '40']),
+            "cmg3esp": nrl.get_response(
+                sensor_keys=['Guralp', 'CMG-3ESP', '30s - 50Hz', '1500'],
+                datalogger_keys=['REF TEK', 'RT 130S & 130-SMHR', ,'1', '40']),
+        }
+
     # Add stations to Station objects
     stations = []
     for stalist in station_info:
@@ -140,6 +165,7 @@ def sahke(network_code="X2", level="station", comp_list=["N", "E", "Z"]):
                               elevation=default_elevation, depth=default_depth,
                               azimuth=0.0, dip=-90.0, sample_rate=100
                               )
+                cha.response = responses
                 channels.append(cha)
         else:
             channels = None
