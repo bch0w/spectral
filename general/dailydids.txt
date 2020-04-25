@@ -1159,3 +1159,11 @@ IN  : 2020-04-24 09:44:56.317051
 WORK: HOME
 TODO: start a larger scale test inversion, 50 events? with temp data 
 
+OUT : 2020-04-24 13:57:48.287794
+DONE: sahke data dataless 
+DONE: beacon testing responses 
+
+IN  : 2020-04-26 10:54:03.693870
+WORK: HOME
+TODO: inversions with new data 
+

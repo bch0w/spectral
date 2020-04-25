@@ -22,13 +22,15 @@ from obspy.core.inventory.station import Station
 from obspy.core.inventory.channel import Channel
 from obspy.core.inventory.util import Site
 
-from pyatoa.utils.tools.srcrcv import merge_inventories
+from pyatoa.utils.srcrcv import merge_inventories
 
 
 def geonet_north_island(level="station"):
     """
     Return geonet broadband stations in an obspy network
 
+    :type level: str
+    :param level: level to propogate network creation
     :rtype: obspy.core.inventory.network.Network
     """
     c = Client("GEONET")
@@ -39,27 +41,27 @@ def geonet_north_island(level="station"):
     lon_min = 173
     lon_max = 179.4
 
-    starttime = UTCDateTime('2000-01-01')
+    starttime = UTCDateTime("2000-01-01")
 
     # GeoNet Broadband instruments with standard station code Z
-    inv_geonet = c.get_stations(network='NZ', station='*Z', channel='HH?',
+    inv_geonet = c.get_stations(network="NZ", station="*Z", channel="HH?",
                                 minlatitude=lat_min, maxlatitude=lat_max,
                                 minlongitude=lon_min, maxlongitude=lon_max,
                                 level=level, starttime=starttime,
                                 endtime=UTCDateTime()
                                 )
 
-    inv_hold = c.get_stations(network='NZ', station='*Z', channel='BH?',
-                                minlatitude=lat_min, maxlatitude=lat_max,
-                                minlongitude=lon_min, maxlongitude=lon_max,
-                                level=level, starttime=starttime,
-                                endtime=UTCDateTime()
-                                )
+    inv_hold = c.get_stations(network="NZ", station="*Z", channel="BH?",
+                              minlatitude=lat_min, maxlatitude=lat_max,
+                              minlongitude=lon_min, maxlongitude=lon_max,
+                              level=level, starttime=starttime,
+                              endtime=UTCDateTime()
+                              )
     inv_geonet = merge_inventories(inv_geonet, inv_hold)
-    # Stations with unique names
-    for station in ["WEL", "BHW", "HD61", "HD62", "HD63", "HD64", "HD65"]:
-        inv_hold = c.get_stations(network='NZ', station=station, 
-                                  channel='HH?', minlatitude=lat_min, 
+    # Stations with unique names (Wellington and Baring Head)
+    for station in ["WEL", "BHW"]:
+        inv_hold = c.get_stations(network="NZ", station=station, 
+                                  channel="HH?", minlatitude=lat_min, 
                                   maxlatitude=lat_max, minlongitude=lon_min, 
                                   maxlongitude=lon_max, level=level, 
                                   starttime=starttime, endtime=UTCDateTime()
@@ -73,6 +75,8 @@ def hobitss(level="station"):
     """
     Return hobitss broadband OBS sensors (trillium compacts)
 
+    :type level: str
+    :param level: level to propogate network creation
     :rtype: obspy.core.inventory.network.Network
     """
     c = Client("IRIS")
@@ -86,33 +90,57 @@ def sahke(network_code="X2", level="station", comp_list=["N", "E", "Z"]):
     """
     SAHKE transect broadband stations aren't fetchable through fdsn webservies,
     build a network object from the available information that was collected
-    via personal communication at VUW
+    through the SAHKE final report provided by Martha Savage.
 
-    I'm not sure if the CMG's are 30s or 60s instruments
+    I'm not sure if the CMG's are 30s or 60s instruments or how much that 
+    actually matters
 
     Notes from GNS SAHKE Report:
 
-    Instruments and dataloggers:
-    CMG3ESP: T004, LTN6
-    CMG40T: LE4, T007, T010, T014, T016, T018, T020
-    Dataloggers: Reftek-130s 
+        Instruments and dataloggers:
+        CMG3ESP: T004, LTN6
+        CMG40T: LE4, T007, T010, T014, T016, T018, T020
+        Dataloggers: Reftek-130s 
 
-    Notes:
-    3-2-2010: LE4 sampling rate changed from 40Hz to 100Hz
+        3-2-2010 (2010-061): LE4 sampling rate changed from 40Hz to 100Hz
+        This isn't relevant for the data that I have...
 
+    NRL variations:
+        3ESP:
+            Natural Period: "100 s - 50 Hz", "120 s - 50 Hz", "30 s - 50 Hz", 
+                            "60 s - 50 Hz"
+            Sensitivity: "1500", "2000", "20000"
+        40T:
+            Natural Period: "100s - 50Hz", "10s - 100Hz", "1s - 100Hz",
+                            "20s - 50Hz", "2s - 100Hz", "30s - 100Hz",
+                            "30s - 50 Hz", "40s - 100Hz", "5s - 100Hz",
+                            "60s - 100Hz", "60s - 50Hz"
+            Sensitivity:   "1600", "2000", "20000", "800"
+        RT130S:
+            Gain: "1", "32"
+
+
+
+    :type network_code: str
+    :param network_code: chosen two value code used for the network
+    :type level: str
+    :param level: level to propogate network creation
+    :type comp_list: list of str
+    :param comp_list: components to create channels for
     :rtype: obspy.core.inventory.network.Network
+    :return: obspy Network object with information propogated to chosen level
     """
-    # station, start, stop, lat, lon
+    # station, start, stop, lat, lon, instr type
     station_info = np.array([
-        ["LE4", "2010-136", "2010-331", -41.3579, 175.6919],
-        ["LTN6", "2010-193", "2010-349", -41.1033, 175.3238],
-        ["T004", "2010-088", "2010-255", -41.3403, 175.6688],
-        ["T007", "2010-041", "2010-123", -41.3041, 175.6513],
-        ["T010", "2010-135", "2010-348", -41.2520, 175.5825],
-        ["T014", "2010-034", "2010-350", -41.2075, 175.5063],
-        ["T016", "2010-088", "2010-322", -41.1893, 175.4737],
-        ["T018", "2010-055", "2010-349", -41.1715, 175.3850],
-        ["T020", "2010-089", "2010-261", -41.1251, 175.3497]
+        ["LE4",  "2010-136", "2010-331", -41.3579, 175.6919, "40t"],
+        ["LTN6", "2010-193", "2010-349", -41.1033, 175.3238, "3esp"],
+        ["T004", "2010-088", "2010-255", -41.3403, 175.6688, "3esp"],
+        ["T007", "2010-041", "2010-123", -41.3041, 175.6513, "40t"],
+        ["T010", "2010-135", "2010-348", -41.2520, 175.5825, "40t"],
+        ["T014", "2010-034", "2010-350", -41.2075, 175.5063, "40t"],
+        ["T016", "2010-088", "2010-322", -41.1893, 175.4737, "40t"],
+        ["T018", "2010-055", "2010-349", -41.1715, 175.3850, "40t"],
+        ["T020", "2010-089", "2010-261", -41.1251, 175.3497, "40t"]
     ])
 
     # For setting the network timing
@@ -134,15 +162,12 @@ def sahke(network_code="X2", level="station", comp_list=["N", "E", "Z"]):
     if level == "channel":
         nrl = NRL()
         responses = {
-            "cmg30t": nrl.get_response(
-                sensor_keys=['Guralp', 'CMG-40T', '30s - 100Hz', '800'],
-                datalogger_keys=['REF TEK', 'RT 130S & 130-SMHR', ,'1', '100']),
-            "cmg30t_40s": nrl.get_response(
-                sensor_keys=['Guralp', 'CMG-40T', '30s - 100Hz', '800'],
-                datalogger_keys=['REF TEK', 'RT 130S & 130-SMHR', ,'1', '40']),
-            "cmg3esp": nrl.get_response(
-                sensor_keys=['Guralp', 'CMG-3ESP', '30s - 50Hz', '1500'],
-                datalogger_keys=['REF TEK', 'RT 130S & 130-SMHR', ,'1', '40']),
+            "40t": nrl.get_response(
+                sensor_keys=["Guralp", "CMG-40T", "60s - 50Hz", "2000"],
+                datalogger_keys=["REF TEK", "RT 130S & 130-SMHR", "1", "100"]),
+            "3esp": nrl.get_response(
+                sensor_keys=["Guralp", "CMG-3ESP", "60 s - 50 Hz", "2000"],
+                datalogger_keys=["REF TEK", "RT 130S & 130-SMHR", "1", "100"]),
         }
 
     # Add stations to Station objects
@@ -165,7 +190,7 @@ def sahke(network_code="X2", level="station", comp_list=["N", "E", "Z"]):
                               elevation=default_elevation, depth=default_depth,
                               azimuth=0.0, dip=-90.0, sample_rate=100
                               )
-                cha.response = responses
+                cha.response = responses[stalist[-1]]
                 channels.append(cha)
         else:
             channels = None
@@ -174,15 +199,14 @@ def sahke(network_code="X2", level="station", comp_list=["N", "E", "Z"]):
         station = Station(code=code, start_date=start_date, end_date=end_date,
                           latitude=latitude, longitude=longitude,
                           elevation=default_elevation, site=default_site,
-                          creation_date=UTCDateTime(),channels=channels
+                          creation_date=UTCDateTime(), channels=channels
                           )
 
         stations.append(station)
 
     # Build the network and place a description
     network = Network(code=network_code, start_date=min_starttime,
-                      end_date=max_endtime,
-                      description="SAHKE2 Broadband Transect",
+                      end_date=max_endtime, description="SAHKE BBTRANSECT",
                       stations=stations
                       )
 
@@ -195,7 +219,16 @@ def bannister(network_code="ZX", level="station", comp_list=["N", "E", "Z"]):
     Data was provided via personal communication, this list of station locations
     was generated based on Stephen's email exchange with Yoshi.
 
-    :return:
+    Most stations werent provided with an end date
+
+    :type network_code: str
+    :param network_code: chosen two value code used for the network
+    :type level: str
+    :param level: level to propogate network creation
+    :type comp_list: list of str
+    :param comp_list: components to create channels for
+    :rtype: obspy.core.inventory.network.Network
+    :return: obspy Network object with information propogated to chosen level
     """
     # station, lat, lon, depth, start, end
     station_info_zx = np.array([
@@ -252,6 +285,7 @@ def bannister(network_code="ZX", level="station", comp_list=["N", "E", "Z"]):
         ['HD37', -38.4177, 176.1366, 355.000, 2011032, 2011091],
         ['HD38', -38.5190, 176.2041, 325.000, 2011032, 2011091],
         ['HD39', -38.4868, 176.3221, 295.000, 2011032, 2011091],
+        # We don't have any data for these stations
         # ['HD50', -38.3396, 176.2687, 361.000, 2015305, 9999001],
         # ['HD51', -38.2435, 176.2483, 380.000, 2015305, 9999001],
         # ['HD53', -38.2659, 176.4812, 362.000, 2015335, 9999001],
@@ -342,54 +376,61 @@ def beacon(network_code="XX", level="station", comp_list=["N", "E", "Z"]):
     Station information taken from the Site and Sensor field deployment notes
     kept on a shared Google Drive with Yoshi, Jonathan and myself.
 
-    :return:
+    :type network_code: str
+    :param network_code: chosen two value code used for the network
+    :type level: str
+    :param level: level to propogate network creation
+    :type comp_list: list of str
+    :param comp_list: components to create channels for
+    :rtype: obspy.core.inventory.network.Network
+    :return: obspy Network object with information propogated to chosen level
     """
     # Station name, Abbreviation, Code, Lat, Lon, Start, End, Instrument type
     station_info = np.array([
-        ['Pori Rd', 'PORI', 'RD01', '-40.55475083', '175.9710354',
-         '2017-07-19', '2019-04-04', '60s'],
-        ['Angora Rd', 'ANGR', 'RD02', '-40.45974293', '176.4750588',
-         '2017-07-19', '2019-04-04', '60s'],
-        ['Te Uri Rd', 'TURI', 'RD03', '-40.2656269', '176.3828498',
-         '2017-07-20', '2019-04-04', '30s'],
-        ['Porangahau', 'PORA', 'RD04', '-40.2667317', '176.6344719',
-         '2017-07-20', '2019-04-04', '60s'],
-        ['Manuhara Rd', 'MNHR', 'RD05', '-40.4689786', '176.2231874',
-         '2017-07-20', '2019-04-05', '30s'],
-        ['Dannevirke', 'DNVK', 'RD06', '-40.2971794', '176.1663731',
-         '2017-07-24', '2019-04-02', '30s'],
-        ['Waipawa', 'WPAW', 'RD07', '-39.9017124', '176.5370861',
-         '2017-07-24', '2019-04-02', '60s'],
-        ['Raukawa', 'RAKW', 'RD08', '-39.7460611', '176.6205577',
-         '2017-07-24', '2019-04-02', '30s'],
-        ['McNeill Hill', 'MCNL', 'RD09', '-39.4447675', '176.6974385',
-         '2017-07-25', '2019-04-03', '60s'],
-        ['Cape Kidnappers', 'CPKN', 'RD10', '-39.64661592', '177.0765055',
-         '2017-07-25', '2018-03-13', '30s'],
-        ['Kahuranaki', 'KAHU', 'RD11', '-39.78731589', '176.8624521',
-         '2017-07-25', '2018-03-13', '30s'],
-        ['Kaweka Forest', 'KWKA', 'RD12', '-39.425214', '176.4228',
-         '2017-07-26', '2019-05-03', '30s'],
-        ['Kereru', 'KERE', 'RD13', '-39.643259', '176.3768865',
-         '2017-07-26', '2019-04-03', '60s'],
-        ['Pukenui', 'PNUI', 'RD14', '-39.9129963', '176.2001869',
-         '2017-07-26', '2018-09-08', '60s'],
-        ['Waipukarau', 'WPUK', 'RD15', '-40.0627107', '176.4391311',
-         '2017-07-27', '2019-04-02', '60s'],
-        ['Omakere', 'OROA', 'RD16', '-40.105341', '176.6804449',
-         '2017-07-27', '2019-04-04', '30s'],
-        ['Te Apiti Rd', 'TEAC', 'RD17', '-39.90868978', '176.9561896',
-         '2017-09-25', '2018-03-14', '30s'],
-        ['River Rd', 'RANC', 'RD18', '-39.929775', '176.7039773',
-         '2017-09-25', '2019-04-03', '30s'],
-        ['Matapiro Rd', 'MATT', 'RD19', '-39.5796128', '176.6449024',
-         '2018-03-14', '2018-06-25', '30s'],
-        ['Kahuranaki', 'KAHU2', 'RD20', '-39.79385769', '176.8758813',
-         '2018-03-13', '2018-09-03', '30s'],
-        ['Te Apiti Rd', 'TEAC2', 'RD21', '-39.913152', '176.946881',
-         '2018-03-14', '2019-04-03', '30s'],
-        ['Castlepoint', 'CAPT', 'RD22', '-40.910278', '176.199167',
-         '2018-07-20', '2019-05-05', '60s']
+        ["Pori Rd", "PORI", "RD01", "-40.55475083", "175.9710354",
+         "2017-07-19", "2019-04-04", "60s"],
+        ["Angora Rd", "ANGR", "RD02", "-40.45974293", "176.4750588",
+         "2017-07-19", "2019-04-04", "60s"],
+        ["Te Uri Rd", "TURI", "RD03", "-40.2656269", "176.3828498",
+         "2017-07-20", "2019-04-04", "30s"],
+        ["Porangahau", "PORA", "RD04", "-40.2667317", "176.6344719",
+         "2017-07-20", "2019-04-04", "60s"],
+        ["Manuhara Rd", "MNHR", "RD05", "-40.4689786", "176.2231874",
+         "2017-07-20", "2019-04-05", "30s"],
+        ["Dannevirke", "DNVK", "RD06", "-40.2971794", "176.1663731",
+         "2017-07-24", "2019-04-02", "30s"],
+        ["Waipawa", "WPAW", "RD07", "-39.9017124", "176.5370861",
+         "2017-07-24", "2019-04-02", "60s"],
+        ["Raukawa", "RAKW", "RD08", "-39.7460611", "176.6205577",
+         "2017-07-24", "2019-04-02", "30s"],
+        ["McNeill Hill", "MCNL", "RD09", "-39.4447675", "176.6974385",
+         "2017-07-25", "2019-04-03", "60s"],
+        ["Cape Kidnappers", "CPKN", "RD10", "-39.64661592", "177.0765055",
+         "2017-07-25", "2018-03-13", "30s"],
+        ["Kahuranaki", "KAHU", "RD11", "-39.78731589", "176.8624521",
+         "2017-07-25", "2018-03-13", "30s"],
+        ["Kaweka Forest", "KWKA", "RD12", "-39.425214", "176.4228",
+         "2017-07-26", "2019-05-03", "30s"],
+        ["Kereru", "KERE", "RD13", "-39.643259", "176.3768865",
+         "2017-07-26", "2019-04-03", "60s"],
+        ["Pukenui", "PNUI", "RD14", "-39.9129963", "176.2001869",
+         "2017-07-26", "2018-09-08", "60s"],
+        ["Waipukarau", "WPUK", "RD15", "-40.0627107", "176.4391311",
+         "2017-07-27", "2019-04-02", "60s"],
+        ["Omakere", "OROA", "RD16", "-40.105341", "176.6804449",
+         "2017-07-27", "2019-04-04", "30s"],
+        ["Te Apiti Rd", "TEAC", "RD17", "-39.90868978", "176.9561896",
+         "2017-09-25", "2018-03-14", "30s"],
+        ["River Rd", "RANC", "RD18", "-39.929775", "176.7039773",
+         "2017-09-25", "2019-04-03", "30s"],
+        ["Matapiro Rd", "MATT", "RD19", "-39.5796128", "176.6449024",
+         "2018-03-14", "2018-06-25", "30s"],
+        ["Kahuranaki", "KAHU2", "RD20", "-39.79385769", "176.8758813",
+         "2018-03-13", "2018-09-03", "30s"],
+        ["Te Apiti Rd", "TEAC2", "RD21", "-39.913152", "176.946881",
+         "2018-03-14", "2019-04-03", "30s"],
+        ["Castlepoint", "CAPT", "RD22", "-40.910278", "176.199167",
+         "2018-07-20", "2019-05-05", "60s"]
     ])
 
     # For setting the network timing
@@ -414,13 +455,15 @@ def beacon(network_code="XX", level="station", comp_list=["N", "E", "Z"]):
         nrl = NRL()
         responses = {
             "30s": nrl.get_response(
-                sensor_keys=['Guralp', 'CMG-40T', '30s - 100Hz', '800'],
-                datalogger_keys=['Nanometrics', 'Taurus', '40 Vpp (0.4)',
-                                 'Low (default)', '1 mHz', '100']),
+                sensor_keys=["Guralp", "CMG-40T", "30s - 100Hz", "800"],
+                datalogger_keys=["Nanometrics", "Taurus", "40 Vpp (0.4)",
+                                 "Low (default)", "1 mHz", "100"]
+            ),
             "60s": nrl.get_response(
-                sensor_keys=['Guralp', 'CMG-40T', '60s - 50Hz', '800'],
-                datalogger_keys=['Nanometrics', 'Taurus', '40 Vpp (0.4)',
-                                 'Low (default)', '1 mHz', '100'])
+                sensor_keys=["Guralp", "CMG-40T", "60s - 50Hz", "800"],
+                datalogger_keys=["Nanometrics", "Taurus", "40 Vpp (0.4)",
+                                 "Low (default)", "1 mHz", "100"]
+            )
         }
 
     # Add stations to objects
@@ -455,9 +498,9 @@ def beacon(network_code="XX", level="station", comp_list=["N", "E", "Z"]):
         site = Site(name=nickname, description=name)
 
         # Create the station object
-        station = Station(code=code, latitude=latitude,
-                          longitude=longitude, elevation=default_elevation,
-                          start_date=start_date, end_date=end_date, site=site,
+        station = Station(code=code, latitude=latitude, longitude=longitude,
+                          elevation=default_elevation, start_date=start_date,
+                          end_date=end_date, site=site,
                           creation_date=UTCDateTime(), channels=channels
                           )
         stations.append(station)
@@ -469,23 +512,6 @@ def beacon(network_code="XX", level="station", comp_list=["N", "E", "Z"]):
                       stations=stations
                       )
     return network
-
-
-def generate_master_list(level="channel"):
-    """
-    Call all functions in this script to create a master list of station data
-
-    :return:
-    """
-    networks = [# geonet_north_island(level=level),
-                # hobitss(level=level),
-                # sahke(level=level),
-                # bannister(network_code="ZX", level=level),
-                # bannister(network_code="Z8", level=level),
-                beacon(level=level)
-                ]
-
-    return Inventory(networks=networks, source="PYATOA")
 
 
 def export_specfem(inv, filename="master_station_list.txt"):
@@ -559,12 +585,33 @@ def export_pyatoa(inv):
 
 
 if __name__ == "__main__":
-    master_inventory = generate_master_list(level="channel")
-    # master_inventory.plot(projection='local', resolution='l',
-    #                       continent_fill_color='w', water_fill_color='w',
-    #                       label=True, color_per_network=True,
-    #                       outfile="./master_inventory.png"
-    #                       )
-    master_inventory.write('./beacon_response_files.xml', format='STATIONXML')
-    # export_specfem(master_inventory)
-    # export_pyatoa(master_inventory)
+    # Parameters
+    level = "channel"  # channel, station
+    write_to = "sahke.xml"
+    export_to_specfem = False
+    export_to_pyatoa = True
+    plot = False
+
+    # Create the Inventory
+    master_inventory = Inventory(
+        networks=[
+            # geonet_north_island(level=level),
+            # hobitss(level=level),
+            sahke(level=level),
+            # bannister(network_code="ZX", level=level),
+            # bannister(network_code="Z8", level=level),
+            # beacon(level=level)
+        ], source="PYATOA")
+    # Export to various output formats
+    if write_to:
+        master_inventory.write(write_to, format="STATIONXML")
+    if export_to_specfem:
+        export_specfem(master_inventory)
+    if export_to_pyatoa:
+        export_pyatoa(master_inventory)
+    if plot:
+        master_inventory.plot(projection="local", resolution="l",
+                              continent_fill_color="w", water_fill_color="w",
+                              label=True, color_per_network=True,
+                              outfile="./master_inventory.png"
+                              )
