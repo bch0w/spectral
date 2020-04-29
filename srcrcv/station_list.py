@@ -587,9 +587,9 @@ def export_pyatoa(inv):
 if __name__ == "__main__":
     # Parameters
     level = "channel"  # channel, station
-    write_to = "sahke.xml"
+    write_to = "beacon.xml"
     export_to_specfem = False
-    export_to_pyatoa = True
+    export_to_pyatoa = False
     plot = False
 
     # Create the Inventory
@@ -597,10 +597,10 @@ if __name__ == "__main__":
         networks=[
             # geonet_north_island(level=level),
             # hobitss(level=level),
-            sahke(level=level),
+            # sahke(level=level),
             # bannister(network_code="ZX", level=level),
             # bannister(network_code="Z8", level=level),
-            # beacon(level=level)
+            beacon(level=level)
         ], source="PYATOA")
     # Export to various output formats
     if write_to:

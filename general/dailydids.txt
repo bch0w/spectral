@@ -1193,3 +1193,13 @@ WORK: HOME
 TODO: beacon teleseismic waveforms polarity reversal 
 TODO: set up new inversion 
 
+OUT : 2020-04-29 17:02:37.714151
+DONE: meh 
+DONE: checked beacon teleseismic waveforms 
+DONE: set up styx60 inversino 
+
+IN  : 2020-04-30 09:30:15.661805
+WORK: HOME
+TODO: continue looking at beacon teleseiss 
+TODO: finish inspector to pandas 
+
