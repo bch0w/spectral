@@ -539,7 +539,7 @@ def export_specfem(inv, filename="master_station_list.txt"):
                         )
 
 
-def export_pyatoa(inv):
+def export_seed_fmt(inv):
     """
     Pyatoa requires a "seed" convention directory structure containing
     individual RESPONSE xml files. Create that here based on Obspy inventory
@@ -589,7 +589,7 @@ if __name__ == "__main__":
     level = "channel"  # channel, station
     write_to = "beacon.xml"
     export_to_specfem = False
-    export_to_pyatoa = False
+    export_to_seed_fmt = True
     plot = False
 
     # Create the Inventory
@@ -607,8 +607,8 @@ if __name__ == "__main__":
         master_inventory.write(write_to, format="STATIONXML")
     if export_to_specfem:
         export_specfem(master_inventory)
-    if export_to_pyatoa:
-        export_pyatoa(master_inventory)
+    if export_to_seed_fmt:
+        export_seed_fmt(master_inventory)
     if plot:
         master_inventory.plot(projection="local", resolution="l",
                               continent_fill_color="w", water_fill_color="w",
