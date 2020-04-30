@@ -455,7 +455,7 @@ def beacon(network_code="XX", level="station", comp_list=["N", "E", "Z"]):
         nrl = NRL()
         responses = {
             "30s": nrl.get_response(
-                sensor_keys=["Guralp", "CMG-40T", "30s - 100Hz", "800"],
+                sensor_keys=["Guralp", "CMG-40T", "30s - 50 Hz", "800"],
                 datalogger_keys=["Nanometrics", "Taurus", "40 Vpp (0.4)",
                                  "Low (default)", "1 mHz", "100"]
             ),
