@@ -376,6 +376,8 @@ def beacon(network_code="XX", level="station", comp_list=["N", "E", "Z"]):
     Station information taken from the Site and Sensor field deployment notes
     kept on a shared Google Drive with Yoshi, Jonathan and myself.
 
+    Updated 1.5.2020
+
     :type network_code: str
     :param network_code: chosen two value code used for the network
     :type level: str
@@ -402,13 +404,13 @@ def beacon(network_code="XX", level="station", comp_list=["N", "E", "Z"]):
         ["Waipawa", "WPAW", "RD07", "-39.9017124", "176.5370861",
          "2017-07-24", "2019-04-02", "60s"],
         ["Raukawa", "RAKW", "RD08", "-39.7460611", "176.6205577",
-         "2017-07-24", "2019-04-02", "30s"],
+         "2017-07-24", "2019-04-02", "60s"],
         ["McNeill Hill", "MCNL", "RD09", "-39.4447675", "176.6974385",
          "2017-07-25", "2019-04-03", "60s"],
         ["Cape Kidnappers", "CPKN", "RD10", "-39.64661592", "177.0765055",
-         "2017-07-25", "2018-03-13", "30s"],
+         "2017-07-25", "2018-03-13", "60s"],
         ["Kahuranaki", "KAHU", "RD11", "-39.78731589", "176.8624521",
-         "2017-07-25", "2018-03-13", "30s"],
+         "2017-07-25", "2018-03-13", "60s"],
         ["Kaweka Forest", "KWKA", "RD12", "-39.425214", "176.4228",
          "2017-07-26", "2019-05-03", "30s"],
         ["Kereru", "KERE", "RD13", "-39.643259", "176.3768865",
@@ -418,19 +420,19 @@ def beacon(network_code="XX", level="station", comp_list=["N", "E", "Z"]):
         ["Waipukarau", "WPUK", "RD15", "-40.0627107", "176.4391311",
          "2017-07-27", "2019-04-02", "60s"],
         ["Omakere", "OROA", "RD16", "-40.105341", "176.6804449",
-         "2017-07-27", "2019-04-04", "30s"],
+         "2017-07-27", "2019-04-04", "60s"],
         ["Te Apiti Rd", "TEAC", "RD17", "-39.90868978", "176.9561896",
-         "2017-09-25", "2018-03-14", "30s"],
+         "2017-09-25", "2018-03-14", "30s"],  # no sensor number, no instr type
         ["River Rd", "RANC", "RD18", "-39.929775", "176.7039773",
          "2017-09-25", "2019-04-03", "30s"],
         ["Matapiro Rd", "MATT", "RD19", "-39.5796128", "176.6449024",
-         "2018-03-14", "2018-06-25", "30s"],
+         "2018-03-14", "2018-06-25", "30s"],  # same instr. as RD10
         ["Kahuranaki", "KAHU2", "RD20", "-39.79385769", "176.8758813",
-         "2018-03-13", "2018-09-03", "30s"],
+         "2018-03-13", "2018-09-03", "30s"],  # same instr. as RD11
         ["Te Apiti Rd", "TEAC2", "RD21", "-39.913152", "176.946881",
-         "2018-03-14", "2019-04-03", "30s"],
+         "2018-03-14", "2019-04-03", "30s"],  # same instr. as RD17
         ["Castlepoint", "CAPT", "RD22", "-40.910278", "176.199167",
-         "2018-07-20", "2019-05-05", "60s"]
+         "2018-07-20", "2019-05-05", "60s"],  # unknown sensor number
     ])
 
     # For setting the network timing
@@ -456,13 +458,13 @@ def beacon(network_code="XX", level="station", comp_list=["N", "E", "Z"]):
         responses = {
             "30s": nrl.get_response(
                 sensor_keys=["Guralp", "CMG-40T", "30s - 50 Hz", "800"],
-                datalogger_keys=["Nanometrics", "Taurus", "40 Vpp (0.4)",
-                                 "Low (default)", "1 mHz", "100"]
+                datalogger_keys=["Nanometrics", "Taurus", "16 Vpp (1)",
+                                 "Low (default)", "Off", "100"]
             ),
             "60s": nrl.get_response(
                 sensor_keys=["Guralp", "CMG-40T", "60s - 50Hz", "800"],
-                datalogger_keys=["Nanometrics", "Taurus", "40 Vpp (0.4)",
-                                 "Low (default)", "1 mHz", "100"]
+                datalogger_keys=["Nanometrics", "Taurus", "16 Vpp (1)",
+                                 "Low (default)", "Off", "100"]
             )
         }
 
@@ -589,7 +591,7 @@ if __name__ == "__main__":
     level = "channel"  # channel, station
     write_to = "beacon.xml"
     export_to_specfem = False
-    export_to_seed_fmt = True
+    export_to_seed_fmt = False
     plot = False
 
     # Create the Inventory
