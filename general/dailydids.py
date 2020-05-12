@@ -88,7 +88,7 @@ def daily_did(fid):
         f.write("\n")
                
 if __name__ == "__main__":
-    txtfile = "/Users/Chow/Documents/academic/vuw/spectral/general/dailydids.txt"
+    txtfile = "/Users/Chow/Documents/academic/vuw/packages/spectral/general/dailydids.txt"
     if not os.path.exists(txtfile):
         raise FileNotFoundError(f"No such file {txtfile}")
     daily_did(fid=txtfile)

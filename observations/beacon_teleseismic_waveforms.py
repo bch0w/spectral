@@ -201,7 +201,7 @@ def gather_data(choice, min_freq=1/100, sampling_rate=2, response=True,
 
     # Stream B for Beacon
     st_b = Stream()
-    for i in range(1, 23):
+    for i in []:
     # for i in [1, 2, 4, 5, 6, 7, 8, 9, 13, 14, 15, 18]:
         try:
             st_b_ = beacon_waveforms(beacon.format(i), start, end)

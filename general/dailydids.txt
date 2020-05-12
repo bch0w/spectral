@@ -1203,3 +1203,71 @@ WORK: HOME
 TODO: continue looking at beacon teleseiss 
 TODO: finish inspector to pandas 
 
+OUT : 2020-04-30 15:46:37.931728
+DONE: beacon station conversing with emily on response information, i might be wrong? 
+
+IN  : 2020-05-01 10:30:54.133721
+WORK: HOME
+TODO: beacon new response files? 
+
+OUT : 2020-05-01 16:06:37.613719
+DONE: banging my head over beacon 
+
+IN  : 2020-05-04 09:29:03.031613
+WORK: HOME
+TODO: beacon hammer it down! 
+
+OUT : 2020-05-04 16:59:03.031613
+DONE: beacon stuff 
+DONE: met with yoshi 
+
+IN  : 2020-05-05 09:55:18.631158
+WORK: HOME
+TODO: beacon teleseismics 
+TODO: continue with pandas in inspector 
+
+OUT : 2020-05-05 15:56:19.884363
+DONE: beacon realizing now that shits fucked 
+DONE: integrating pandas into pyatoa 
+
+IN  : 2020-05-06 09:59:29.576533
+WORK: HOME
+TODO: pandas 
+TODO: inversion 
+
+OUT : 2020-05-06 16:09:39.842079
+DONE: pandas fully integrated into inspector, tackle gadget next 
+
+IN  : 2020-05-07 10:02:10.785029
+WORK: HOME
+TODO: styx60  
+TODO: inspector gadget 
+
+OUT : 2020-05-07 16:35:27.932476
+DONE: finished overhauling inspector gadget with pandas 
+
+IN  : 2020-05-08 09:47:04.753876
+WORK: HOME
+TODO: inversion! 
+
+OUT : 2020-05-08 14:47:04.753876
+DONE: updated form of pyatoa running with seisflows 
+DONE: code cleaning pyatoa 
+
+IN  : 2020-05-09 11:11:59.231650
+WORK: HOME
+TODO: start an inversion running 
+TODO: pyatoa preprocess class in seisflows? 
+
+OUT : 2020-05-09 14:02:49.458291
+DONE: restructured pyaflowa, started trial inversion 
+
+OUT : 2020-05-11 14:13:05.123651
+DONE: fixed bug in inspector 
+DONE: got styx60 running 
+DONE: met with yoshi 
+
+IN  : 2020-05-13 08:11:13.144433
+WORK: HOME
+TODO: get inversion runnin 
+
