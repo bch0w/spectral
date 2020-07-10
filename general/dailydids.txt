@@ -1271,3 +1271,334 @@ IN  : 2020-05-13 08:11:13.144433
 WORK: HOME
 TODO: get inversion runnin 
 
+OUT : 2020-05-13 17:34:41.028850
+DONE: fixed gatherer class pyatoa 
+DONE: looked at beacon waveforms a bit more 
+DONE: standardized sahke data and fixed some dataless bits 
+DONE: styx60 kinda going 
+
+IN  : 2020-05-14 09:04:54.211503
+WORK: HOME
+TODO: inversion inversion inversion 
+
+OUT : 2020-05-14 16:05:43.121826
+DONE: jobs queue stuck, writing tests for pyatoa 
+
+IN  : 2020-05-15 08:51:13.871490
+WORK: HOME
+TODO: inversion for yoshi? 
+TODO: pytest 
+
+OUT : 2020-05-15 17:05:31.607143
+DONE: more pytest 
+DONE: rewriting more parts of pyatoa 
+DONE: made some slides for yoshi 
+
+OUT : 2020-05-18 17:07:31.665974
+DONE: looked at styx60 inversion results 
+DONE: prepped yoshi meet 
+DONE: met with yoshi 
+DONE: worked on waveform improvement figures 
+
+IN  : 2020-05-19 09:30:54.490910
+WORK: HOME
+TODO: set up new styx60 trials 
+TODO: ls 
+TODO: continue looking at styx60 results 
+TODO: CDP 
+TODO: summarize reviewer comments 
+
+OUT : 2020-05-19 17:10:49.154901
+DONE: styx60b12 running 
+DONE: did my CDP 
+DONE: pyflex src code editing 
+DONE: styx60 analysis 
+
+IN  : 2020-05-20 09:06:25.864549
+WORK: HOME
+TODO: check results of styx60b12 
+TODO: finish manager plotter with rejected windows 
+TODO: come up with polished results from styx60 
+TODO: respond johno, ryan, pasan 
+
+OUT : 2020-05-20 17:03:15.010987
+DONE: worked on reformatting manager plotter, added ability to plot reject windows 
+DONE: responded to backlogged emails 
+DONE: reformatted waveform improvement figure 
+DONE: looking at inspector plots 
+
+IN  : 2020-05-21 09:17:01.062644
+WORK: HOME
+TODO: continue with styx60 analysis 
+TODO: respond email yoshi 
+TODO: reviewer comments paper 
+
+OUT : 2020-05-21 17:17:01.062644
+DONE: making stats plots for inspector 
+DONE: blah blah 
+
+IN  : 2020-05-22 08:43:46.530134
+WORK: HOME
+TODO: reviewer comments 
+
+OUT : 2020-05-22 15:10:46.064664
+DONE:  
+DONE: wrote up responses to reviewer comments on paper 
+
+IN  : 2020-05-25 08:12:27.924905
+WORK: HOME
+TODO: styx60 results and run new?  
+TODO: prep john/yoshi meeting 
+
+OUT : 2020-05-26 16:48:47.008932
+DONE: ristau 1d model 
+DONE: horizontal components for paper 
+DONE: paper responses 
+
+IN  : 2020-05-27 07:29:06.631159
+WORK: HOME
+TODO: 1d velocity model 
+TODO: paper responses 
+TODO: horizontal components 
+
+OUT : 2020-05-27 13:18:31.769040
+DONE: preprocessing woes 
+DONE: cleaning up plotting 
+DONE: ni1d results 
+
+IN  : 2020-05-27 17:46:19.662785
+WORK: HOME
+TODO: pyaflowa unit tests 
+
+OUT : 2020-05-27 18:54:03.488884
+DONE: started pyaflowa test 
+
+IN  : 2020-05-28 08:52:37.038835
+WORK: HOME
+TODO: testing pyaflowa 
+TODO: run 1d synthetics 
+TODO: draft responses for paper 
+
+OUT : 2020-05-28 15:43:30.488021
+DONE: testing pyaflowa 
+DONE: nz1d test run 
+DONE: restructuring seisflows  
+
+OUT : 2020-05-29 08:42:20.195460
+IN  : 2020-05-29 08:42:26.529536
+WORK: HOME
+TODO: set up new sf3 
+TODO: nz1d full run 
+TODO: horizontal components and draft responses 
+
+OUT : 2020-05-29 15:22:26.529536
+
+IN  : 2020-06-01 10:12:42.236570
+WORK: HOME
+TODO: nz1d simulation results 
+TODO: draft responses 
+
+OUT : 2020-06-01 16:35:41.141235
+DONE: 1d velocity model  
+DONE: 1d attenuation check 
+DONE: small changes to responses 
+
+OUT : 2020-06-02 17:22:58.006753
+DONE: nz1d full compliment 
+DONE: prepped yoshi meet 
+DONE: met with yoshi, discussed paper revisions and post doc opportunities 
+
+IN  : 2020-06-03 09:09:40.767971
+WORK: HOME
+TODO: prep carl meeting 
+TODO: meet with carl 
+TODO: check nz1d results 
+TODO: finish draft responses 
+
+OUT : 2020-06-03 14:47:36.637831
+DONE: met with carl 
+DONE: thats it really 
+
+OUT : 2020-06-04 15:37:14.836679
+DONE: formalized draft responses 
+DONE: nz1d full run and looking at results, started new pyflex preset 
+
+IN  : 2020-06-05 10:11:16.669168
+WORK: VUW
+TODO: finish draft responses and send to yoshi 
+
+OUT : 2020-06-05 17:08:26.413581
+DONE: sent draft responses to yoshi 
+DONE: talked a lot of shit aye 
+DONE: started a new sf run styx60d 
+
+IN  : 2020-06-08 08:28:54.640841
+WORK: HOME
+TODO: correct draft responses from yoshi 
+TODO: finish waveform gallery figures 
+TODO: check styx60d run 
+
+OUT : 2020-06-08 17:45:53.662073
+DONE: prep and met with yoshi 
+DONE: styx60d failed, tried again, line search stalled 
+DONE: worked on editing manuscript 
+DONE: talked with rents 
+
+IN  : 2020-06-10 11:51:31.197783
+WORK: VUW
+TODO: continue with manuscript changes and response letter 
+
+OUT : 2020-06-10 17:38:12.904864
+DONE: more paper corrections and started on figures[B[D 
+
+IN  : 2020-06-11 10:28:46.439239
+WORK: VUW
+TODO: paper fucking revisions 
+
+OUT : 2020-06-11 18:42:24.858752
+DONE: new figures and updated captions 
+
+OUT : 2020-06-12 16:46:27.049775
+DONE: finished restructuring section 2 and 3 intros for a more c cohesive flow, updated figures 
+
+IN  : 2020-06-15 09:53:53.366131
+WORK: VUW
+TODO: finish dose revisions 
+
+OUT : 2020-06-15 17:11:47.065207
+DONE: rewrote section 2 and 3 of paper, rewrote figure captions,, rewrote parts of appendix, added A5 section regarding Pandas data analysis 
+
+IN  : 2020-06-16 09:46:48.467203
+WORK: HOME
+TODO: finish paper revisions and prep yoshi meet 
+
+OUT : 2020-06-16 17:27:48.654588
+DONE: R and T waveform gallery figures 
+DONE: met with Yoshi 
+DONE: doing read throughs of current draft 
+
+OUT : 2020-06-17 09:43:23.703677
+IN  : 2020-06-17 09:43:27.805438
+WORK: VUW
+TODO: finalize read through and paper revisions please 
+
+OUT : 2020-06-17 16:54:35.568448
+DONE: edited figures, finished readthrough and edits, onto the appendix now 
+
+IN  : 2020-06-18 09:46:15.411985
+WORK: HOME
+TODO: papraioejvaifja 
+
+OUT : 2020-06-18 18:23:01.570550
+DONE: made model and gradient update figures 
+DONE: started running new chkbd inversion with reduced smoothing length as trial 
+
+OUT : 2020-06-19 19:41:18.789025
+DONE: godamint rewrote pyatoa section again, new figure but garbage, rerunning checkerboard but garbage! 
+
+OUT : 2020-06-22 17:26:34.835057
+DONE: met with yoshi talked about revising paper 
+DONE: talked to chet about postdoc 
+DONE: started new chkbd sims 
+
+IN  : 2020-06-23 09:22:06.602837
+WORK: VUW
+TODO: analyze checkerboard results and start running new checkerboard model 
+
+OUT : 2020-06-23 17:22:06.602837
+DONE: ran new chkbd results 
+DONE: looked at beta chkbd results 
+DONE: new plots for inspector 
+
+IN  : 2020-06-24 09:47:41.508651
+WORK: VUW
+TODO: look at chkbd charl results 
+
+OUT : 2020-06-24 15:33:19.030074
+DONE: finished chkb_charl run, looked at results 
+
+IN  : 2020-06-25 09:39:15.506080
+WORK: VUW
+TODO: chkbd alpha, 
+TODO: remake some figures 
+TODO: try to come up with relationships for smoothing and model difference 
+
+OUT : 2020-06-25 16:39:15.506080
+DONE: started new synth chkbd runs 
+DONE: realized my windowing parameters were kinda wrong 
+DONE: came up with a game plan for how to better paper 
+
+IN  : 2020-06-26 12:16:35.295524
+WORK: VUW
+TODO: initiate game plan 
+
+OUT : 2020-06-26 16:57:50.427791
+DONE: reran nz1d for new windowing and RTZ components 
+DONE: rerunning nznorth with new windowing and RTZ 
+DONE: running synth beta but iffy 
+
+IN  : 2020-06-29 09:14:03.163993
+WORK: VUW
+TODO: 253 reeval 
+TODO: aktomo email 
+TODO: prep meet with yoshi 
+
+OUT : 2020-06-29 16:40:02.217392
+DONE: synth bravo finished  
+DONE: prepped yoshi meet 
+DONE: met with yoshi 
+DONE: responded to aktomo 
+
+IN  : 2020-06-30 10:05:23.006226
+WORK: VUW
+TODO: new figures in paper 
+
+OUT : 2020-06-30 15:05:23.006226
+DONE: shoring up makevtk script 
+DONE: running synth delta and fail 
+DONE: helping kg with meshing 
+
+IN  : 2020-07-01 10:24:29.639102
+WORK: VUW
+TODO: kg meshing till lunch 
+TODO: synth d and finish makevtk  
+TODO: start making figures 
+
+OUT : 2020-07-03 16:58:19.149035
+DONE: remade some figures and looked at convergence 
+
+IN  : 2020-07-06 09:11:06.147667
+WORK: VUW
+TODO: make figures  
+
+OUT : 2020-07-06 20:17:48.282094
+DONE: meeting with yoshi 
+DONE: more figures done 
+
+IN  : 2020-07-07 09:19:28.126126
+WORK: HOME
+TODO: prep carl meeting 
+TODO: figures n text 
+
+OUT : 2020-07-07 18:35:33.086125
+DONE: talked to carl about uaf post doc 
+DONE: made some figures 
+
+IN  : 2020-07-08 09:17:41.013965
+WORK: HOME
+TODO: figures 
+
+OUT : 2020-07-08 17:17:41.013965
+DONE: made some figs 
+
+IN  : 2020-07-09 12:46:04.176719
+WORK: VUW
+TODO: make some figures 
+
+OUT : 2020-07-09 21:35:25.589006
+DONE: made some NICE figures :) 
+
+IN  : 2020-07-10 09:18:29.565042
+WORK: VUW
+TODO: text, response send yoshi 
+
