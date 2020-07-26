@@ -108,6 +108,7 @@ def plot_stations(m, fid, sta_ignore=[], net_ignore=[], **kwargs):
     zorder = kwargs.get("zorder", 100)
     edgecolor = kwargs.get("station_edgecolor", "k")
     marker = kwargs.get("station_marker", "v")
+
     stations = np.loadtxt(fid, usecols=(0,1,2,3), dtype=str) 
 
     x, y = [], []
@@ -223,6 +224,63 @@ def plot_beachballs(m, fid, cmap, norm_a, norm_b, mag_scale=None, **kwargs):
         y_val += 0.05 * (m.urcrnry - m.llcrnry) + m.llcrnry
 
 
+def plot_raypaths(m, cat_fid, sta_fid, **kwargs):
+    """
+    Plot lines connecting sources and receivers
+    """
+    event_color = kwargs.get("event_color", "r")
+    station_color = kwargs.get("station_color", "g")
+    ray_color = kwargs.get("station_color", "k")
+    
+    # Get event lat/lon values
+    cat = read_events(fid)
+
+    # First get some array info for scale bars and colormap
+    print(f"{len(cat)} events in catalog")
+    eventx, eventy = [], []
+    for i, event in enumerate(cat):
+        try:
+            origin = event.preferred_origin()
+            mag = event.preferred_magnitude().mag
+        except AttributeError:
+            origin = event.origins[0]
+            mag = event.magnitudes[0].mag
+
+        if (origin.depth * 1E-3 > 60) or (mag < 4.4):
+            continue
+
+        x_, y_ = m(origin.longitude, origin.latitude)
+        eventx.append(x)
+        eventy.append(y)
+
+    # Get station lat lon values
+    stations = np.loadtxt(fid, usecols=(0,1,2,3), dtype=str) 
+    stax, stay = [], []
+    for station in stations:
+        sta, net, lat, lon = station
+
+        x_, y_ = m(float(lon), float(lat))
+        stax.append(x_)
+        stay.append(y_)
+
+    # Plot event markers, station markers and connecting line
+    stations_plotted, events_plotted = [], []
+    for ex, ey in zip(eventx, eventy):
+        for sx, sy in zip(stax, stay):
+            # Plot a marker for each event and station
+            if (ex, ey) not in events_plotted:
+                plt.scatter(ex, ey, marker="o", c=event_color, edgecolors="k")
+                events_plotted.append((ex, ey))
+            if (sx, sy) not in stations_plotted:
+                plt.scatter(sx, sy, marker="v", c=station_color, edgecolors="k", 
+                            s=25, zorder=100)
+                stations_plotted.append((sx, sy))
+
+        # Connect source and receiver with a line
+        plt.plot([sx, sy], [ex, ey], color=ray_color, linestyle="-", 
+                 alpha=0.1, zorder=50)
+
+
 def draw_domain_bounds(m, bounds):
     """
     Draw the domain boundaries if theyre smaller than the map boundaries
@@ -311,5 +369,5 @@ if __name__ == "__main__":
                     )
 
     f.tight_layout()
-    plt.savefig("big_map.png")
+    plt.savefig("big_map_raw.png")
     plt.show()

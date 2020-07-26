@@ -39,7 +39,7 @@ def plot_cities(m, names=False, **kwargs):
                   (-39.4928, 176.9120, "Napier", city),
                   (-42.416665, 173.6833306, "Kaikoura", city),
                   (-38.6857, 176.0702, "Taupo", city),
-                  (-39.2968, 174.0634, "Mt. Taranaki", city),
+                  (-39.2968, 174.0634, "Mt. Taranaki", location),
                   (-37.8, 176., "Bay of Plenty", location),
 #                   (-39.3314, 177.5017, "Hawke Bay", location),
 #                   (-38.6623, 178.0176, "Gisborne", city),
@@ -225,5 +225,5 @@ if __name__ == "__main__":
                 fontsize=city_fontsize)
 
     f.tight_layout()
-    plt.savefig("./figures/rich_map.png")
+    plt.savefig("./figures/rich_map_raw.png")
     plt.show()

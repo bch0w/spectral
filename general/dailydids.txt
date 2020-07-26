@@ -1602,3 +1602,71 @@ IN  : 2020-07-10 09:18:29.565042
 WORK: VUW
 TODO: text, response send yoshi 
 
+OUT : 2020-07-10 17:11:25.213611
+DONE: revised texts and figures, final proofread next 
+
+IN  : 2020-07-13 10:04:12.071706
+WORK: VUW
+TODO: overhaul to pyatoa 
+
+OUT : 2020-07-13 19:30:07.581114
+DONE: met with yoshi 
+DONE: making new figures, i really fucking hate making figures 
+
+IN  : 2020-07-14 10:16:32.129025
+WORK: VUW
+TODO: figurines 
+
+OUT : 2020-07-14 17:17:02.099874
+DONE: made yoshi edits, getting ready for final read throughs and suoff to co-authors 
+
+IN  : 2020-07-16 09:17:32.924952
+WORK: VUW
+TODO: send off paper to carl and ryan 
+
+OUT : 2020-07-16 17:07:48.722750
+DONE: sent manuscript to carl ryan 
+DONE: responded to emails 
+
+IN  : 2020-07-17 09:36:13.770196
+WORK: VUW
+TODO: finish pyatoa changes 
+TODO: seisflows preprocess script? 
+TODO: real data inversion tests 
+
+OUT : 2020-07-20 16:24:41.481206
+DONE: met with yoshi 
+DONE: pyaflowa preprocess etc 
+
+IN  : 2020-07-21 09:23:09.471232
+WORK: VUW
+TODO: finish pyatoa preprocess class and sf3 updates 
+
+OUT : 2020-07-21 19:18:50.704632
+DONE: closer to finishing seifslows updates 
+
+OUT : 2020-07-22 17:20:56.827337
+DONE: mostly done with seisflows changes, need to test 
+DONE: made pyatoa changes to plotting capabilities' 
+
+IN  : 2020-07-23 09:17:52.339088
+WORK: VUW
+TODO: test new seisflows on maui 
+
+OUT : 2020-07-23 17:18:35.894202
+DONE:  
+DONE: manager plotter good state 
+DONE: started working on seisflows, going pretty good all things considered 
+
+IN  : 2020-07-24 09:42:22.928216
+WORK: VUW
+TODO: finish seisflows updates 
+
+OUT : 2020-07-24 13:52:22.928216
+DONE: seisflows trying 
+
+IN  : 2020-07-27 09:25:42.229990
+WORK: VUW
+TODO: read through ryans comments 
+TODO: prep yoshi meeting 
+

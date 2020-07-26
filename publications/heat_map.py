@@ -140,5 +140,5 @@ if __name__ == "__main__":
     # plt.gcf().set_size_inches(12,12)
 
     f.tight_layout()
-    plt.savefig("./figures/heat_map.png")
+    plt.savefig("./figures/heat_map_raw.png")
     plt.show()
