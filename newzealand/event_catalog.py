@@ -6,18 +6,13 @@ import os
 import csv
 import numpy as np
 import matplotlib.pyplot as plt
-from obspy import UTCDateTime, Catalog
+from obspy import UTCDateTime, Catalog, read_events
 from obspy.clients.fdsn import Client
 from obspy.geodetics import gps2dist_azimuth
-from pyatoa.utils.tools.srcrcv import generate_focal_mechanism
-from pyatoa.utils.gather.grab_auxiliaries import grab_geonet_moment_tensor
-
-import sys
-sys.path.append('./')
-import catalog_to_cmtsolutions
+from pyatoa.plugins.new_zealand.gather import geonet_focal_mechanism
 
 
-def cut_cat(cat, indices=[], method="remove"):
+def cut_cat(cat, indices=None, method="remove"):
     """
     Obspy's catalog object has no delete, so here it is!
 
@@ -30,6 +25,9 @@ def cut_cat(cat, indices=[], method="remove"):
     :rtype: obspy.Catalog
     :return: new catalog object cut from old one
     """
+    if indices is None:
+        return cat
+
     new_cat = Catalog()
     if method == "remove":
         events = [e for i, e in enumerate(cat) if i not in indices]
@@ -210,7 +208,7 @@ def check_moment_tensor(geonet_csv_file, cat):
     return cut_cat(cat, indices_remove, method="remove")
 
 
-def append_mt(cat, csv_file):
+def append_mt(cat, csv_fid=None):
     """
     Append GeoNet moment tensor information to the events in catalog
     Assumes that all the events have moment tensor information, meaning 
@@ -218,15 +216,15 @@ def append_mt(cat, csv_file):
 
     :type cat: obspy.Catalog
     :param cat: catalog of events to add moment tensor information to
-    :type csv_file: str
-    :param csv_file: csv_file containing moment tensor information
+    :type csv_fid: str
+    :param csv_fid: csv file containing moment tensor information
     """
     cat_out = Catalog()
     events = []
     for event in cat:
-        mtlist = grab_geonet_moment_tensor(event.resource_id.id.split('/')[1],
-                                           fid=csv_file)
-        event_out, _ = generate_focal_mechanism(mtlist=mtlist, event=event)
+        event_id = event.resource_id.id.split('/')[1]
+        event_out, _ = geonet_focal_mechanism(event_id=event_id, units="dynecm",
+                                              event=event, csv_fid=csv_fid)
         events.append(event_out)
 
     cat_out.extend(events)
@@ -266,7 +264,7 @@ def plot_cat(cat, evnts, tag=""):
     plt.close('all')
 
 
-def event_trials(choice, csv_file, desired_length, sep_km=None):
+def event_trials(choice, csv_file, sep_km=None, desired_length=None):
     """
     For a given set of trial parameters, retrieve an event catalog and then
     slim it down with various check parameters; make sure events are not too 
@@ -282,87 +280,101 @@ def event_trials(choice, csv_file, desired_length, sep_km=None):
     :param desired_length: desired length of catalog, event removal will try to 
     :return:
     """
-    trials = {"charlie_trial": {
-                "name": "charlie_trial",
-                "starttime": UTCDateTime("2010-01-01T00:00:00"),
-                "endtime": UTCDateTime("2019-11-01T00:00:00"),
-                "minmagnitude": 4.75,
-                "maxmagnitude": 6.,
-                "minlatitude": -42.5,  # LLC
-                "minlongitude": 173.5,  # LLC
-                "maxlatitude": -37.25,  # URC
-                "maxlongitude": 178.5,  # URC
-                "maxdepth": 60.
-                },
-                "fullscale":{
-                 "name": "fullscale",
-                 "starttime": UTCDateTime("2000-01-01T00:00:00"),
-                 "endtime": UTCDateTime("2019-11-01T00:00:00"),
-                 "minmagnitude": 4.5,
-                 "maxmagnitude": 6.,
-                 "minlatitude": -42.5,  # LLC
-                 "minlongitude": 173.5,  # LLC
-                 "maxlatitude": -37.25,  # URC
-                 "maxlongitude": 178.5,  # URC
-                 "maxdepth": 60.
-               }}
-    evnts = trials[choice]
+    trials = {
+        "charlie_trial": {
+            "name": "charlie_trial",
+            "starttime": UTCDateTime("2010-01-01T00:00:00"),
+            "endtime": UTCDateTime("2019-11-01T00:00:00"),
+            "minmagnitude": 4.75,
+            "maxmagnitude": 6.,
+            "minlatitude": -42.5,  # LLC
+            "minlongitude": 173.5,  # LLC
+            "maxlatitude": -37.25,  # URC
+            "maxlongitude": 178.5,  # URC
+            "maxdepth": 60.
+            },
+        "fullscale": {
+            "name": "fullscale",
+            "starttime": UTCDateTime("2000-01-01T00:00:00"),
+            "endtime": UTCDateTime("2019-11-01T00:00:00"),
+            "minmagnitude": 4.5,
+            "maxmagnitude": 6.,
+            "minlatitude": -42.5,  # LLC
+            "minlongitude": 173.5,  # LLC
+            "maxlatitude": -37.25,  # URC
+            "maxlongitude": 178.5,  # URC
+            "maxdepth": 60.
+          },
+        "aspen": {
+            "name": "aspen",
+            "starttime": UTCDateTime("2003-08-20T00:00:00"),  # GeoNet MT cat
+            "endtime": UTCDateTime(),
+            "minmagnitude": 4.4,
+            "maxmagnitude": 6.,
+            "minlatitude": -42.5,  # LLC
+            "minlongitude": 173.5,  # LLC
+            "maxlatitude": -37.0,  # URC
+            "maxlongitude": 178.5,  # URC
+            "maxdepth": 60.
+          }
+    }
 
-    # Change directory so that all outputs are saved into a new folder
-    event_dir = os.path.join(os.getcwd(), choice)
-    if not os.path.exists(event_dir):
-        os.makedirs(event_dir)
-    os.chdir(event_dir)
+    evnts = trials[choice]
     
     # Create the catalog and plot the raw event catalog
-    c = Client("GEONET")
-    original_cat = c.get_events(starttime=evnts['starttime'],
-                                endtime=evnts['endtime'],
-                                minmagnitude=evnts['minmagnitude'],
-                                maxmagnitude=evnts['maxmagnitude'],
-                                minlatitude=evnts['minlatitude'],
-                                minlongitude=evnts['minlongitude'],
-                                maxlatitude=evnts['maxlatitude'],
-                                maxlongitude=evnts['maxlongitude'],
-                                maxdepth=evnts['maxdepth']
-                                )
-    print("catalog has {} events".format(len(original_cat)))
+    original_cat_fid = f"{cat_name}_original.xml"
+    if not os.path.exists(original_cat_fid):
+        c = Client("GEONET")
+        original_cat = c.get_events(starttime=evnts['starttime'],
+                                    endtime=evnts['endtime'],
+                                    minmagnitude=evnts['minmagnitude'],
+                                    maxmagnitude=evnts['maxmagnitude'],
+                                    minlatitude=evnts['minlatitude'],
+                                    minlongitude=evnts['minlongitude'],
+                                    maxlatitude=evnts['maxlatitude'],
+                                    maxlongitude=evnts['maxlongitude'],
+                                    maxdepth=evnts['maxdepth'],
+                                    orderby="magnitude-asc"
+                                    )
+        print("catalog has {} events".format(len(original_cat)))
+        # Delete unncessary attributes to save space
+        for attr in ["picks", "amplitudes", "station_magnitudes"]:
+            for event in original_cat:
+                try:
+                    delattr(event, attr)
+                except KeyError:
+                    continue
+        original_cat.write(original_cat_fid, format="QUAKEML")
+    else:
+        original_cat = read_events(original_cat_fid)
 
     # Remove if no GeoNet moment tensors
     new_cat = check_moment_tensor(csv_file, original_cat)
     print("catalog has {} events".format(len(new_cat)))
-    
-    import ipdb;ipdb.set_trace()
-    if len(new_cat) < desired_catalog_length and sep_km is not None:
-        print("Initial catalog is smaller than desired length,"
-              "consider adjusting search parameters.")
-        new_cat_no_groups = new_cat
-    elif sep_km is not None:
-        new_cat_no_groups = remove_groupings(new_cat, sep_km=sep_km)
+
+    if sep_km is not None and desired_length is not None:
+        cat_out = remove_groupings(new_cat, sep_km=sep_km)
         # Try separation distances until new catalog has desired length
         while True:
-            if len(new_cat_no_groups) ==  desired_catalog_length:
+            if len(cat_out) == desired_length:
                 break
             else:
-                print(f"{len(new_cat_no_groups)} events; " 
-                      f"desired: {desired_catalog_length}; "
+                print(f"{len(cat_out)} events; " 
+                      f"desired: {desired_length}; "
                       f"current separation: {sep_km}")
                 sep_km = input("new separation distance?: ")
                 if sep_km:
-                    sep_km =float(sep_km)
+                    sep_km = float(sep_km)
 
-            new_cat_no_groups = remove_groupings(new_cat, sep_km=sep_km)
+            cat_out = remove_groupings(new_cat, sep_km=sep_km)
+            print("catalog has {} events".format(len(cat_out)))
     else:
-        new_cat_no_groups = new_cat
-    
-    print("catalog has {} events".format(len(new_cat_no_groups)))
+        cat_out = new_cat
 
     # add moment tensor information to all events
-    cat_out = append_mt(new_cat_no_groups, csv_file)
+    cat_out_w_mt = append_mt(cat_out, csv_file)
 
-    plot_cat(cat_out, evnts)
-    
-    return cat_out
+    cat_out_w_mt.write(f"{cat_name}_w_mt.xml", format="QUAKEML")
 
 
 if __name__ == "__main__":
@@ -375,20 +387,11 @@ if __name__ == "__main__":
             csv_file = os.path.join(path_to, geonet_path)
             break
     else:
+        csv_file = None
         print("No GeoNet .csv file found")
 
     # USER PARAMETERS
-    cat_name = "fullscale"
-    desired_catalog_length = None
+    cat_name = "aspen"
 
     # Get the catalog and its name, based on the functions
-    cat = event_trials(cat_name, csv_file, desired_catalog_length)
-
-    # Write to an XML file
-    cat.write(f"{cat_name}.xml", format="QUAKEML")
-
-    # Write the catalog to CMTSOLUTION files required by Specfem3D,
-    # catalog_to_cmtsolutions.generate_cmtsolutions(cat, csv_file, 
-    #                                               make_bball=True)
-
-
+    event_trials(cat_name, csv_file=csv_file)
