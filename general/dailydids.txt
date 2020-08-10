@@ -1754,3 +1754,25 @@ TODO: look at checkerboard inversion
 TODO: extra events 
 TODO: new mesh 
 
+OUT : 2020-08-07 19:01:35.064468
+DONE: documenting pyatoa  
+DONE: running extra event fwd sims 
+DONE: testing new mesh 
+
+IN  : 2020-08-10 09:32:12.463866
+WORK: HOME
+TODO: documenting pyatoa 
+TODO: check extra event waveforms 
+TODO: check new mesh results 
+
+OUT : 2020-08-10 14:32:12.463866
+DONE: checked extra events 
+DONE: converted notebooks to docs pages 
+
+IN  : 2020-08-11 09:13:05.858295
+WORK: VUW
+TODO: final event catalog and post hoc events 
+TODO: 60 event inversion 
+TODO: fix pyatoa finalize method 
+TODO: continue documentation 
+
