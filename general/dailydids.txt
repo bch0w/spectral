@@ -1776,3 +1776,42 @@ TODO: 60 event inversion
 TODO: fix pyatoa finalize method 
 TODO: continue documentation 
 
+OUT : 2020-08-11 17:49:43.788794
+DONE: started new sixty run but failed, need to check 
+DONE: lots of pyatoa docs and cleaned up repo a little 
+DONE: stuck on uplodaing to readthedocs 
+
+IN  : 2020-08-12 09:02:04.012621
+WORK: VUW
+TODO: paper proofs oder was 
+TODO: sixty inversion 
+TODO: continue with docs 
+
+OUT : 2020-08-12 17:12:42.021380
+DONE: sixty ran to trial step but timed 
+DONE: more documentation 
+
+IN  : 2020-08-13 09:42:39.815792
+WORK: VUW
+TODO: sixty results analysis 
+TODO: readthedocs and continue docs 
+TODO: gji proofs 
+
+OUT : 2020-08-13 18:02:39.815792
+DONE: pyatoa on readthedocs 
+DONE: sixty stopped 
+
+IN  : 2020-08-14 13:16:05
+WORK: VUW
+TODO: scec abstract 
+TODO: sixty 
+
+OUT : 2020-08-14 18:00:00
+TODO: submitted scec abstract
+TODO: sixty 
+
+IN  : 2020-08-17 10:06:26
+WORK: VUW
+TODO: sixty and meet with yoshi to discuss 
+
+

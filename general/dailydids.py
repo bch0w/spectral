@@ -1,6 +1,8 @@
 import os
 import datetime
 
+datetime_str = "%Y-%m-%d %I:%M:%S"
+
 def check_last_entry(fid):
     """
     see if the last entry is IN or OUT, if IN create new entry
@@ -12,8 +14,7 @@ def check_last_entry(fid):
             if "IN" in line:
                 # Get the last time in entry    
                 time_in = ":".join(line.split(":")[1:]).strip()
-                time_in = datetime.datetime.strptime(time_in,
-                                                     "%Y-%m-%d %I:%M:%S.%f")
+                time_in = datetime.datetime.strptime(time_in, datetime_str)
                 break
             elif "OUT" in line:
                 return
@@ -55,7 +56,8 @@ def daily_did(fid):
             entry_time = now - datetime.timedelta(minutes=int(entry_time))
         else:
             entry_time = now
-        f.write(f"{in_or_out:<4}: {entry_time}\n")
+
+        f.write(f"{in_or_out:<4}: {entry_time:{datetime_str}}\n")
 
         # Determine where you're working
         if in_or_out == "IN":
