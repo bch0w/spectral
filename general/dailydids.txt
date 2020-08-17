@@ -1815,3 +1815,14 @@ WORK: VUW
 TODO: sixty and meet with yoshi to discuss 
 
 
+OUT : 2020-08-17 17:06:26
+DONE: prep and meet with yoshi 
+DONE: sixty inversion going and looking at results 
+DONE: plotting event catalog 
+
+IN  : 2020-08-18 09:21:44
+WORK: HOME
+TODO: sixty results 
+TODO: ngll results 
+TODO: nsf ear brainstorm 
+
