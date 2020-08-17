@@ -106,7 +106,7 @@ def preprocess(st_in, inv=None, sampling_rate=None, response=True,
     """
     Process a stream to retrieve noise information
     """
-    tmin, tmax = 30, 60
+    tmin, tmax = 10, 30
     print(f"\tpreprocess {st_in[0].get_id()}")
     st = st_in.copy()
     # Decimate and then resample the data
@@ -120,7 +120,7 @@ def preprocess(st_in, inv=None, sampling_rate=None, response=True,
     st.taper(max_percentage=0.05)
     if response:
         st.remove_response(output="DISP", inventory=inv)
-    st.filter("bandpass", freqmin=1/tmax, freqmax=1/tmin)
+    st.filter("bandpass", freqmin=1/tmax, freqmax=1/tmin, zerophase=True)
     
     # Special preprocessing for beacon data
     if st[0].stats.network == "XX":
@@ -167,7 +167,8 @@ def plot_waveforms(st, show=True, save=""):
     plt.close()
 
 
-def gather_data(choice, min_freq=1/100, sampling_rate=2, response=True): 
+def gather_data(choice, min_freq=1/100, sampling_rate=2, response=True, 
+                comp="Z"): 
     """
     Wrapping the data gathering step into a function
     """
@@ -193,7 +194,6 @@ def gather_data(choice, min_freq=1/100, sampling_rate=2, response=True):
         end = start + (3 * 60 * 60)
 
     # Define full station names
-    comp = "Z"
     bcn_fmt = "{:0>2}"  # sneak a format into a formatted string
     geonet = [f"NZ.BFZ.10.HH{comp}", f"NZ.PXZ.10.HH{comp}", 
               f"NZ.TSZ.10.HH{comp}"]
@@ -211,21 +211,22 @@ def gather_data(choice, min_freq=1/100, sampling_rate=2, response=True):
         except DataGapError:
             print("Non continuous data")
             continue
-        st_b_ = preprocess(st_b_, None, sampling_rate, response)
+        st_b_ = preprocess(st_b_, None, sampling_rate, response=response)
         st_b += st_b_
     
     # Stream A for GeoNet
     st_a = Stream()
     for gn in geonet:
         st_a_, inv_a_ = geonet_waveforms(gn, start, end)
-        st_a_ = preprocess(st_a_, inv_a_, sampling_rate, response)
+        st_a_ = preprocess(st_a_, inv_a_, sampling_rate, response=response)
         st_a += st_a_
 
     return st_a, st_b
 
 
 if __name__ == "__main__":
-    choices = ["alaska"]  #, "mexico", "chiapas", "png"]
-    for choice in choices:
-        st_a, st_b = gather_data(choice, response=True)
-        # plot_waveforms(st_a + st_b, show=True, save=f"{choice}_waveforms.png")
+    choices = ["alaska"] 
+    choices = ["mexico", "chiapas", "png"]
+    for choice in ["alaska"]:
+        for comp in ["N"]:  #, "N", "E"]:
+            st_a, st_b = gather_data(choice, response=True, comp=comp)

@@ -19,8 +19,8 @@ import matplotlib.pyplot as plt
 from obspy import read, Stream
 from obspy.signal.cross_correlation import correlate, xcorr_max
 
-from pyatoa.utils.tools.io import read_ascii
-from pyatoa.utils.visuals.plot_tools import pretty_grids
+from pyatoa.utils.read import read_ascii
+from pyatoa.visuals.plot_tools import pretty_grids
 
 mpl.rcParams['font.size'] = 12
 mpl.rcParams['lines.linewidth'] = .6

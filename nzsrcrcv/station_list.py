@@ -130,22 +130,22 @@ def sahke(network_code="X2", level="station", comp_list=["N", "E", "Z"]):
     :rtype: obspy.core.inventory.network.Network
     :return: obspy Network object with information propogated to chosen level
     """
-    # station, start, stop, lat, lon, instr type
+    # station, location, start, stop, lat, lon, instr type
     station_info = np.array([
-        ["LE4",  "2010-136", "2010-331", -41.3579, 175.6919, "40t"],
-        ["LTN6", "2010-193", "2010-349", -41.1033, 175.3238, "3esp"],
-        ["T004", "2010-088", "2010-255", -41.3403, 175.6688, "3esp"],
-        ["T007", "2010-041", "2010-123", -41.3041, 175.6513, "40t"],
-        ["T010", "2010-135", "2010-348", -41.2520, 175.5825, "40t"],
-        ["T014", "2010-034", "2010-350", -41.2075, 175.5063, "40t"],
-        ["T016", "2010-088", "2010-322", -41.1893, 175.4737, "40t"],
-        ["T018", "2010-055", "2010-349", -41.1715, 175.3850, "40t"],
-        ["T020", "2010-089", "2010-261", -41.1251, 175.3497, "40t"]
+        ["LE4",  "", "2010-136", "2010-331", -41.3579, 175.6919, "40t"],
+        ["LTN6", "LT", "2010-193", "2010-349", -41.1033, 175.3238, "3esp"],
+        ["T004", "", "2010-088", "2010-255", -41.3403, 175.6688, "3esp"],
+        ["T007", "", "2010-041", "2010-123", -41.3041, 175.6513, "40t"],
+        ["T010", "T0", "2010-135", "2010-348", -41.2520, 175.5825, "40t"],
+        ["T014", "", "2010-034", "2010-350", -41.2075, 175.5063, "40t"],
+        ["T016", "", "2010-088", "2010-322", -41.1893, 175.4737, "40t"],
+        ["T018", "", "2010-055", "2010-349", -41.1715, 175.3850, "40t"],
+        ["T020", "", "2010-089", "2010-261", -41.1251, 175.3497, "40t"]
     ])
 
     # For setting the network timing
-    starttimes = station_info[:, 1]
-    endtimes = station_info[:, 2]
+    starttimes = station_info[:, 2]
+    endtimes = station_info[:, 3]
 
     unique_starts = [UTCDateTime(str(_)) for _ in np.unique(starttimes)]
     unique_ends = [UTCDateTime(str(_)) for _ in np.unique(endtimes)]
@@ -175,16 +175,17 @@ def sahke(network_code="X2", level="station", comp_list=["N", "E", "Z"]):
     for stalist in station_info:
         # Parse the list to avoid confusion with indices
         code = stalist[0]
-        start_date = UTCDateTime(stalist[1])
-        end_date = UTCDateTime(stalist[2])
-        latitude = stalist[3]
-        longitude = stalist[4]
+        location = stalist[1]
+        start_date = UTCDateTime(stalist[2])
+        end_date = UTCDateTime(stalist[3])
+        latitude = stalist[4]
+        longitude = stalist[5]
 
         # Create channel level objects if required
         if level == "channel":
             channels = []
             for comp in comp_list:
-                cha = Channel(code=f"HH{comp}", location_code="",
+                cha = Channel(code=f"HH{comp}", location_code=location,
                               start_date=start_date, end_date=end_date,
                               latitude=latitude, longitude=longitude,
                               elevation=default_elevation, depth=default_depth,
@@ -589,9 +590,9 @@ def export_seed_fmt(inv):
 if __name__ == "__main__":
     # Parameters
     level = "channel"  # channel, station
-    write_to = "beacon.xml"
+    write_to = "sahke_dataless.xml"
     export_to_specfem = False
-    export_to_seed_fmt = False
+    export_to_seed_fmt = True
     plot = False
 
     # Create the Inventory
@@ -599,10 +600,10 @@ if __name__ == "__main__":
         networks=[
             # geonet_north_island(level=level),
             # hobitss(level=level),
-            # sahke(level=level),
+            sahke(level=level),
             # bannister(network_code="ZX", level=level),
             # bannister(network_code="Z8", level=level),
-            beacon(level=level)
+            # beacon(level=level)
         ], source="PYATOA")
     # Export to various output formats
     if write_to:
