@@ -66,7 +66,7 @@ class Minresper:
         pretty_grids(ax)
         self.ax = ax
 
-    def finalize_plot(self, show=True, save="./MRP.png"):
+    def finalize_plot(self, show=True, save=None, **kwargs):
         """
         Final touches to the plot before showing or saving.
         """
@@ -79,7 +79,7 @@ class Minresper:
         plt.gca().axes.get_yaxis().set_ticks([])
 
         if save:
-            plt.savefig(save)
+            plt.savefig(os.path.join(save, f"{self._current}.png"))
         if show:
             plt.show()
         else:
@@ -134,7 +134,7 @@ class Minresper:
         return tr_a_filt, tr_b_filt, value
 
     def process_single(self, code, min_period, max_period, dt, step=1.1,
-                       plot=True, components=None):
+                       plot=True, components=None, **kwargs):
         """
         Process a single station/component by reading in synthetic waveforms,
         filtering, evaluating objective functions and  collecting information
@@ -201,14 +201,16 @@ class Minresper:
                     self.plot_traces(tr_a_, tr_b_, current_step,
                                      tag=f"T={period:.2f} / Value={value:.2f}"
                                      )
-
             current_step += step
 
-        self.finalize_plot()
+        self.finalize_plot(**kwargs)
 
-    def calc(self, **kwargs):
+    def calc(self, df_fid="minresper.csv", **kwargs):
         """
         Main function to calculate MRP for all available stations
+        
+        :type df_fid: str
+        :param df_fid: path and file name to save the Pandas dataframe
         """
         for code in self.stations:
             self.initiate_plot()
@@ -218,8 +220,7 @@ class Minresper:
             print(self._current)
             self.process_single(code, **kwargs)
 
-            import ipdb;ipdb.set_trace()
-
         self.dfstats = pd.DataFrame(self.stats)
+        self.dfstats.to_csv(df_fid, index=False)
 
 

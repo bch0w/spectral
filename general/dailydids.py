@@ -1,7 +1,25 @@
 import os
+import sys
 import datetime
 
 datetime_str = "%Y-%m-%d %I:%M:%S"
+
+
+def print_last(fid, n=1):
+    """
+    print the last `n` entries
+    """
+    with open(fid, "r") as f:
+        lines = f.readlines()
+        entries = 0
+        for i, line in enumerate(reversed(lines)):
+            if "IN" in line or "OUT" in line:
+                entries += 1
+                if entries >= n:
+                    break
+        print("\n")
+        print("".join(lines[-1*i-1:]))
+
 
 def check_last_entry(fid):
     """
@@ -88,12 +106,25 @@ def daily_did(fid):
                         break
                 f.write(f"DONE: {done} \n")
         f.write("\n")
-               
+
+
 if __name__ == "__main__":
-    txtfile = "/Users/Chow/Documents/academic/vuw/packages/spectral/general/dailydids.txt"
+    # Ensure the file exists
+    txtfile = ("/Users/Chow/Documents/academic/vuw/packages/spectral/"
+               "general/dailydids.txt")
     if not os.path.exists(txtfile):
         raise FileNotFoundError(f"No such file {txtfile}")
-    daily_did(fid=txtfile)
+
+    # Either check the last entry or write a new entry
+    try:
+        sys.argv[1] = "last"
+        try:
+            n = int(sys.argv[2])
+        except IndexError:
+            n = 1
+        print_last(fid=txtfile, n=n)
+    except IndexError:
+        daily_did(fid=txtfile)
 
 
 

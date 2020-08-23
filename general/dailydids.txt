@@ -1826,3 +1826,52 @@ TODO: sixty results
 TODO: ngll results 
 TODO: nsf ear brainstorm 
 
+OUT : 2020-08-18 05:43:41
+DONE: sixty inversion i2 
+DONE: min res period now class and ngll determine 4second mesh 
+DONE: nsf fastlane  
+
+IN  : 2020-08-19 08:34:15
+WORK: HOME
+TODO: prep meeting with carl 
+TODO: sixty inversion i4 hopefully 
+TODO: 2 second mesh 
+TODO: misfit assessment  
+
+OUT : 2020-08-19 05:33:26
+DONE: met with Carl talked about NSF postdoc 
+DONE: fixed make vtk 
+DONE: sixty i04 
+DONE: working on 2second mesh 
+
+IN  : 2020-08-20 10:17:41
+WORK: HOME
+TODO: 2 second mesh 
+TODO: sixty i4 
+TODO: summary misfit assessment inspector 
+TODO: lit review alaska 
+
+OUT : 2020-08-20 05:42:42
+DONE: testing 2second mesh 
+DONE: sixty i4 stopped 
+
+IN  : 2020-08-21 09:56:21
+WORK: HOME
+TODO: sixty restart i4 
+TODO: 2s mesh ngll comparisons 
+TODO: scec cvm slides rough 
+TODO: alaska table 
+
+OUT : 2020-08-21 05:36:05
+DONE: sixty i5 
+DONE: pyatoa docs 
+DONE: running ngll7 2s mesh 
+DONE: nalaska lit review 
+
+IN  : 2020-08-24 09:20:33
+WORK: VUW
+TODO: prep yoshi meeting 
+TODO: 2sec mesh check 
+TODO: sixty prep results and run i6 
+TODO: nalaska reference table 
+
