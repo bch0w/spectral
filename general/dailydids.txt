@@ -1875,3 +1875,86 @@ TODO: 2sec mesh check
 TODO: sixty prep results and run i6 
 TODO: nalaska reference table 
 
+OUT : 2020-08-24 06:07:13
+DONE: met with yoshi long discussion on next steps for trial inversion 
+DONE: mrp 1node mesh 
+DONE: working on inspsector and vtk modeler features 
+DONE: nalaska lookup table 
+
+IN  : 2020-08-25 09:39:55
+WORK: VUW
+TODO: 1node mrp to see max res 
+TODO: sixty push to max res 
+TODO: pyatoa add variance reduction and gen summary figures function 
+TODO: vtk modeler out of bounds? 
+
+OUT : 2020-08-25 04:48:25
+DONE: 1node_10s figured out is a 6s mesh 
+DONE: sixty running new leg 8-30s bandpass 
+DONE: new hopefully forest 3s mesh 
+DONE:  
+DONE: certified mesh decisions by checking min velocities in tomo files 
+DONE: nalaska refs 
+
+IN  : 2020-08-26 09:17:28
+WORK: VUW
+TODO: sixty inversion 
+TODO: forest 3s mesh 
+TODO: pyatoa tests? 
+TODO: solvi email 
+
+OUT : 2020-08-26 15:17:28
+DONE: meet with carl uaf pf 
+DONE: sixty analysis and new pyflex windowing params 
+DONE: scec cvm slides to yoshi 
+
+IN  : 2020-08-28 09:20:28
+WORK: VUW
+TODO: sixty analysis 
+TODO: finish scec cvm slides 
+TODO: talk to yoshi 
+
+OUT : 2020-08-28 15:20:28
+DONE: scec cvm presi 
+DONE: meet with yoshi to discuss presi 
+
+IN  : 2020-08-29 09:14:52
+WORK: HOME
+TODO: scec cvm finish presi 
+TODO: nalaska work 
+
+OUT : 2020-08-29 18:14:52
+DONE: scec cvm presi 
+
+IN  : 2020-08-30 10:03:15
+WORK: HOME
+TODO: capuaf and nalaska stuff 
+
+OUT : 2020-08-30 12:28:11
+DONE: capuaf 
+DONE: paper proofs 
+DONE: random busywork 
+DONE: nalaska table caption 
+
+IN  : 2020-08-31 09:05:25
+WORK: VUW
+TODO: sixty need to run more 
+TODO: convergence plot 
+TODO: setup new inversion  
+TODO: pyatoa docs and testing 
+
+OUT : 2020-08-31 08:15:35
+DONE: solvi email 
+DONE: capuaf nalaska 
+DONE: sixty running again 
+DONE: gji proofs 
+DONE: convergence plot working 
+DONE: met with yoshi 
+
+IN  : 2020-09-01 09:31:17
+WORK: VUW
+TODO: new inversion 
+TODO: docs and testing 
+TODO: finish load() command in manager 
+TODO: email aktomo 
+

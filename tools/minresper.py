@@ -3,6 +3,7 @@ Caclulate the minimum resolvable period of a numerical mesh by comparing
 synthetic waveforms generated using a coarse (ngll5) and fine (ngll7) mesh.
 """
 import os
+import traceback
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -75,7 +76,7 @@ class Minresper:
         plt.grid()
         plt.legend(loc="upper right")
         plt.xlabel("Time [s]")
-        plt.ylabel("Filter bands [s]")
+        plt.ylabel("Filter bands [s], MRP Value")
         plt.gca().axes.get_yaxis().set_ticks([])
 
         if save:
@@ -85,7 +86,7 @@ class Minresper:
         else:
             plt.close()
 
-    def plot_traces(self, tr_a, tr_b, step=0, tag=""):
+    def plot_traces(self, tr_a, tr_b, step=0, c_ngll5="k", c_ngll7="r", tag=""):
         """
         Convenience function to plot the two NORMALIZED traces with a step added
         to the data so that multiple traces can be plotted together.
@@ -102,11 +103,13 @@ class Minresper:
 
         self.ax.plot(tr_a_plot.times(),
                      tr_a_plot.data / tr_a_plot.data.max() + step,
-                     c="k", label=label_a)
+                     linewidth=.75,
+                     c=c_ngll5, label=label_a)
 
         self.ax.plot(tr_b_plot.times(),
                      tr_b_plot.data / tr_b_plot.data.max() + step,
-                     c="r", label=label_b)
+                     linewidth=.75,
+                     c=c_ngll7, label=label_b)
 
         self.ax.annotate(tag, xy=(0, step))
 
@@ -159,11 +162,11 @@ class Minresper:
         # Poplate Stream objects with all available synthetics
         st_a = Stream()
         for fid in glob(os.path.join(self.path_ngll5, f"{code}.sem?")):
-            st_a += read_sem(fid, dummy_time)
+            st_a += read_sem(fid, origintime=dummy_time, precision=4)
 
         st_b = Stream()
         for fid in glob(os.path.join(self.path_ngll7, f"{code}.sem?")):
-            st_b += read_sem(fid, dummy_time)
+            st_b += read_sem(fid, origintime=dummy_time, precision=4)
 
         # Determine which components are available
         if components is None:
@@ -173,19 +176,27 @@ class Minresper:
 
         # Resample one of the streams to the sampling rate of the other
         # ASSUMING all the sampling rates are the same within a single stream
-        sampling_rate = min(st_a[0].stats.sampling_rate,
-                            st_b[0].stats.sampling_rate)
-        for st in [st_a, st_b]:
-            if st[0].stats.sampling_rate > sampling_rate:
-                st.resample(sampling_rate)
+        if st_a[0].stats.sampling_rate != st_b[0].stats.sampling_rate:
+            sampling_rate = min(st_a[0].stats.sampling_rate,
+                                st_b[0].stats.sampling_rate)
+            for st in [st_a, st_b]:
+                if st[0].stats.sampling_rate > sampling_rate:
+                    st.resample(sampling_rate)
+
+        # Incase the two traces have different lengths, trim to the shorter
+        if st_a[0].stats.endtime != st_b[0].stats.endtime:
+            endtime = min(st_a[0].stats.endtime, st_b[0].stats.endtime)
+            for st in [st_a, st_b]:
+                st.trim(dummy_time, endtime)
 
         # Apply filter and calculate the function evaluation
         current_step = 0
-        for comp in components:
+        for i, comp in enumerate(components):
             tr_a = st_a.select(component=comp)[0]
             tr_b = st_b.select(component=comp)[0]
             if plot:
-                self.plot_traces(tr_a, tr_b, current_step, tag="RAW")
+                self.plot_traces(tr_a, tr_b, current_step, c_ngll7=f"C{i}",
+                                 tag=f"RAW_{comp}")
 
             for period in np.arange(min_period, max_period, dt):
                 current_step += step
@@ -198,14 +209,16 @@ class Minresper:
                 self.stats["value"].append(value)
 
                 if plot:
-                    self.plot_traces(tr_a_, tr_b_, current_step,
-                                     tag=f"T={period:.2f} / Value={value:.2f}"
+                    self.plot_traces(tr_a_, tr_b_, current_step, 
+                                     c_ngll7=f"C{i}",
+                                     tag=(f"T={period:.2f}s, "
+                                          f"{value:.3E}")
                                      )
             current_step += step
 
         self.finalize_plot(**kwargs)
 
-    def calc(self, df_fid="minresper.csv", **kwargs):
+    def calc(self, df_fid="dfmrp.csv", **kwargs):
         """
         Main function to calculate MRP for all available stations
         
@@ -223,4 +236,24 @@ class Minresper:
         self.dfstats = pd.DataFrame(self.stats)
         self.dfstats.to_csv(df_fid, index=False)
 
+
+if __name__ == "__main__":
+    # Parameters
+    min_period = 5
+    max_period = 10
+    dt = 1
+    step = 2.
+    show = False
+    save = "./figures"
+    ngll5 = "./ngll5"
+    ngll7 = "./ngll7"
+
+    # Call Minresper
+    try:
+        mr = Minresper(path_ngll5=ngll5, path_ngll7=ngll7)
+        mr.calc(min_period=min_period, max_period=max_period, step=step, dt=dt, 
+                show=show, save=save)
+    except Exception as e:
+        traceback.print_exc()
+        import ipdb; ipdb.set_trace()
 
