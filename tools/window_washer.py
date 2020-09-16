@@ -246,7 +246,7 @@ if __name__ == "__main__":
     total = 0
     for fid in glob("*.h5"):
         ww = WindowWasher(ds_fid=fid)
-        ww.configure(10, 15, "nznorth_15-30s")
+        ww.configure(15, 30, "nznorth_15-30s")
         for sta in ww.ds.waveforms.list():
             try:
                 ww.setup(sta)

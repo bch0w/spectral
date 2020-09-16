@@ -1958,3 +1958,127 @@ TODO: docs and testing
 TODO: finish load() command in manager 
 TODO: email aktomo 
 
+OUT : 2020-09-01 07:37:51
+DONE: window testing for 15-30s 
+DONE: new inversion sechzig started 
+DONE: finished load function from manager 
+DONE: emailed aktomo and yoshi about scholarship 
+DONE: nalaska capuaf work 
+
+IN  : 2020-09-02 07:30:33
+WORK: HOME
+TODO: scec cvm workshop 
+TODO: proofs in 
+TODO: new mesh 
+TODO: sechzig inversion 
+TODO: scec poster 
+TODO: abstract ssa to yoshi 
+
+OUT : 2020-09-02 05:39:47
+DONE: scec meeting 
+DONE: lots of emails 
+DONE: window plotter working noice 
+DONE: sechzig manual push 
+
+IN  : 2020-09-03 09:36:31
+WORK: VUW
+TODO: prep aktomo meeting 
+TODO: nalaska meeting carl 
+TODO: ssa 
+TODO: abstract and proofs 
+
+OUT : 2020-09-03 05:33:50
+DONE: nalaska meet with carl 
+DONE: prep aktomo meet 
+DONE: aktomo meet  
+DONE: started reading DP paper on mini batches 
+DONE: finished GJI proofs 
+
+IN  : 2020-09-04 09:11:01
+WORK: VUW
+TODO: nalaska prep for meet with carl 
+TODO: new inversion with declustered events 
+TODO: try out declustering method 
+
+OUT : 2020-09-04 16:41:01
+DONE: prepped nalaska meeting 
+DONE: declustered events and new inversion 
+
+IN  : 2020-09-07 09:44:29
+WORK: HOME
+TODO: check and restart new inversion 
+TODO: nalaska proposal 
+
+OUT : 2020-09-07 18:04:29
+DONE: decluster running but maybe messed it up 
+DONE: nalaska proposal 
+
+IN  : 2020-09-08 08:50:12
+WORK: HOME
+TODO: decluster and nalaska 
+
+OUT : 2020-09-08 18:50:12
+DONE: decluster ran till 6, need to check results 
+DONE: nalaska proposal 
+
+IN  : 2020-09-09 08:24:17
+WORK: VUW
+TODO: turn in nalaska proposal 
+TODO: become a real person again 
+
+OUT : 2020-09-09 05:20:27
+DONE: NALASKA DONE! Good grief 
+DONE: submitted GSNZ abstract 
+DONE: checked out and started decluster 7-9 iters 
+
+IN  : 2020-09-10 09:14:30
+WORK: VUW
+TODO: jim ansell write up 
+TODO: vic travel grant? 
+TODO: scec poster 
+TODO: decluster 
+TODO: respond donna! 
+
+OUT : 2020-09-10 05:22:08
+DONE: decluster running with smaller smooth length 
+DONE: jim ansell proposal written and submitted by yoshi 
+DONE: responded to donna 
+DONE: working on VIC travel grant 
+DONE: working on SCEC poster 
+
+IN  : 2020-09-11 11:04:34
+WORK: VUW
+TODO: decluster keep running 
+TODO: scec poster 
+TODO: scec lightning talk 
+
+OUT : 2020-09-11 05:21:44
+DONE: scec poster 
+DONE: got sem model slicer from kai wang, started python wrapper 
+DONE: scec poster 
+
+IN  : 2020-09-14 09:34:45
+WORK: VUW
+TODO: decluster windowing parameters and run 8s 
+TODO: finish scec poster 
+TODO: prep yoshi meet 
+
+OUT : 2020-09-14 04:01:01
+DONE: decluster check and run 8 
+DONE: pyatoa and sf3 now make pdfs that are searchable 
+DONE: met with yoshi and plans update 
+DONE: scec poster final figures 
+
+IN  : 2020-09-15 01:20:30
+WORK: HOME
+TODO: work on sem slicer 
+
+OUT : 2020-09-15 04:02:05
+DONE: decluster stopped and running again 
+DONE: working on sem slicer but not running yet 
+
+IN  : 2020-09-16 08:47:30
+WORK: VUW
+TODO: decluster finish run and check 
+TODO: model slicer working 
+
