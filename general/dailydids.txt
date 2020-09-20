@@ -2082,3 +2082,33 @@ WORK: VUW
 TODO: decluster finish run and check 
 TODO: model slicer working 
 
+OUT : 2020-09-16 06:49:06
+DONE: scec poster 
+DONE: decluster manual running things 
+DONE: model slicer working but not working 
+
+IN  : 2020-09-17 09:09:48
+WORK: VUW
+TODO: decluster check results 
+TODO: model slicer 
+
+OUT : 2020-09-17 14:09:48
+DONE: model slicer sort of working but not working 
+DONE: decluster manual run 
+
+IN  : 2020-09-18 09:30:05
+WORK: HOME
+TODO: model slicer come on this time 
+TODO: decluster check again 
+
+OUT : 2020-09-18 05:24:02
+DONE: decluster running a few more itertions 
+DONE: sem slicer works but I dont know why... oh well, get in 
+
+IN  : 2020-09-21 09:50:09
+WORK: HOME
+TODO: sem slicer for real 
+TODO: decluster results check 
+TODO: prep meeting with yoshi 
+TODO: ssa tomo slides 
+

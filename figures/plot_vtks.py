@@ -11,6 +11,7 @@ Note:
     $ convert -delay 20 -loop 1 *png model_animated.gif
 """
 import os
+import sys
 import time
 from glob import glob
 from pyatoa.visuals.vtk_modeler import VTKModeler
@@ -64,6 +65,9 @@ def set_kwargs(vtk_fid, depth_km=None, pct=None, **kwargs):
     """
     _, tag, model_number, quantity = split_fid(vtk_fid) 
 
+    # Default values are None
+    min_max, cbar_title, round_to = None, None, None
+
     # Determine color kwargs based on tag
     if tag == "gradient":
         cmap = "RdBu"
@@ -73,7 +77,7 @@ def set_kwargs(vtk_fid, depth_km=None, pct=None, **kwargs):
         cmap = "RdBu"
         reverse = False
         default_range = False
-        min_max = [-.1, .1]
+        min_max = [-.15, .15]
         round_to = 1
     elif tag == "poissons":
         cmap = "RdBu"
@@ -85,7 +89,7 @@ def set_kwargs(vtk_fid, depth_km=None, pct=None, **kwargs):
         round_to = 0.1
         if quantity == "vpvs":
             default_range = False
-            min_max = [1.6, 2.1]
+            min_max = [1.5, 2.3]
         elif quantity == "poissons":
             default_range = False
             min_max = [0.15, 0.4]
@@ -212,15 +216,10 @@ def make_four_banger():
     from numpy import array 
 
     # Set Parameters here
-    depths = ["surface"]
+    depths = ["surface", 15]
     slices = []
 
     # !!! These need to be 'glob'able
-    # choices = ["model/model_????_vp*", 
-    #            "model/model_????_vs*", 
-    #            "model/update_????_vp*", 
-    #            "model/update_????_vs*"
-    #            ]
     choices = ["model/update_????_vp*", 
                "model/update_????_vs*",
                "model/ratio_????_vpvs*",
@@ -264,7 +263,7 @@ def make_four_banger():
         # Generate all slices for each choice
         for choice in sorted_choices:
             call_vtk_modeler(vtk_fid=choice, src_fid=src_fid, rcv_fid=rcv_fid,
-                             coast_fid=coast_fid, path_out=scratch, show=True,
+                             coast_fid=coast_fid, path_out=scratch, show=False,
                              slices=slices, depths=depths, make_pdf=False,
                              )
 
@@ -300,7 +299,58 @@ def make_four_banger():
                                f"panel_{model_number}_{quantity}.png")
         im_out.save(fid_out)
 
+def make_single():
+    """
+    No frills no saving just plot a single slice or cross section for a single
+    file and show, useful for quick-looking models
+    """
+    # Set your arguments here
+    vtk_fid = "gradient/gradient_0014_vs_kernel.vtk"
+    kwargs = {"cmap": "RdBu",
+              "reverse": True,
+              "default_range": False,
+              # "min_max": [-.15, .15],
+              # "round_to": None,
+              # "cbar_title": "Update Vs_0014"
+              }
+
+    # Pick what you want to plot here
+    depth_km = 15
+    x_pct = None
+    y_pct = None
+
+    # Auxiliary files
+    src_fid = "./srcs.vtk"
+    rcv_fid = "./rcvs.vtk"
+    coast_fid = "/Users/Chow/subduction/data/carto/coastline/coast.npy"
+
+    # Initiate the class with some preset keyword arguments
+    vm = VTKModeler(num_clabels=3, num_colors=30, scale_axes=1E-3,
+                    zero_origin=True, xlabel="E [km]", ylabel="N [km]",
+                    zlabel="Z [km]", figsize=(1000, 1000), offscreen=False,
+                    **kwargs
+                    )
+
+    # Load in the VTK files
+    vm.load(fid=vtk_fid, src_fid=src_fid, rcv_fid=rcv_fid, coast_fid=coast_fid)
+    
+    if depth_km:
+        vm.depth_slice(depth_km=depth_km, show=True, save=False)
+    if x_pct:
+        vm.cross_section(axis="X", pct=x_pct, show=True, save=False)
+    if y_pct:
+        vm.cross_section(axis="Y", pct=y_pct, show=True, save=False)
 
 if __name__ == "__main__":
-    make_four_banger()
+    if len(sys.argv) > 1:
+        if sys.argv[1] == "pdf":
+            make_pdfs()
+        elif sys.argv[1] == "one":
+            make_single()
+        elif sys.argv[1] == "4banger":
+            make_four_banger()
+        else:
+            raise NotImplementedError
+    else:
+        print("Argument needed: [one, pdf, 4banger]")
 
