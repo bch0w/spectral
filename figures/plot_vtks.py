@@ -32,7 +32,7 @@ def split_fid(fid):
     parts = fid_stripped.split("_")
     tag = parts[0]
     model_number = parts[1]
-    assert int(model_number), f"Model number does not match formatting"
+    # assert int(model_number), f"Model number does not match formatting"
     quantity = " ".join(parts[2:])
 
     return fid_stripped, tag, model_number, quantity
@@ -89,7 +89,7 @@ def set_kwargs(vtk_fid, depth_km=None, pct=None, **kwargs):
         round_to = 0.1
         if quantity == "vpvs":
             default_range = False
-            min_max = [1.5, 2.3]
+            min_max = [1.55, 1.9]
         elif quantity == "poissons":
             default_range = False
             min_max = [0.15, 0.4]
@@ -97,14 +97,15 @@ def set_kwargs(vtk_fid, depth_km=None, pct=None, **kwargs):
         cmap = "jet"
         reverse = True
         round_to = 1
+        default_range = False
         if depth_km == "surface":
-            default_range = False
-            if quantity == "vp":
-                min_max = [2135, 6000]
-            elif quantity == "vs":
-                min_max = [1190, 3500]
-            else:
-                raise NotImplementedError
+            min_max = {"vp": [2135, 6000], "vs": [1190, 3500]}[quantity]
+        elif depth_km < 15:
+            min_max = {"vp": [3000, 6000], "vs": [1500, 4000]}[quantity]
+        elif 15 <= depth_km < 30:
+            min_max = {"vp": [5000, 6500], "vs": [2500, 4000]}[quantity]
+        elif 30 <= depth_km < 50:
+            min_max = {"vp": [6000, 8750], "vs": [3000, 5000]}[quantity]
         else:
             default_range = True
     else:
@@ -182,10 +183,10 @@ def make_pdfs():
     """
     # Set slices here
     slices = []  # should be in percentages, e.g. .25
-    depths = ["surface"]
+    depths = ["surface", 2, 4, 6, 8, 10, 12, 15]
 
     # File identifier list
-    vtk_fids = glob(f"./model/*.vtk")
+    vtk_fids = glob(f"./model/log_m0004_vs_minit_vs.vtk")
 
     # Auxiliary files
     src_fid = "./srcs.vtk"
@@ -220,10 +221,10 @@ def make_four_banger():
     slices = []
 
     # !!! These need to be 'glob'able
-    choices = ["model/update_????_vp*", 
-               "model/update_????_vs*",
-               "model/ratio_????_vpvs*",
-               "model/ratio_????_poissons*"
+    choices = ["model/model_??17_vp*", 
+               "model/model_??17_vs*",
+               "model/update_??17_vp*",
+               "model/update_??17_vs*"
                ]
 
     # Auxiliary files
@@ -286,6 +287,7 @@ def make_four_banger():
         # Hardcode positions based on images sizes, not very elegant  :/
         # 0 1 
         # 2 3
+        import ipdb;ipdb.set_trace()
         im_out.paste(images[0], (0, 0))                 # top left
         im_out.paste(images[1], (images[0].width, 0))   # top right
         im_out.paste(images[2], (0, images[0].height))  # bottom left

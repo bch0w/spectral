@@ -2112,3 +2112,318 @@ TODO: decluster results check
 TODO: prep meeting with yoshi 
 TODO: ssa tomo slides 
 
+OUT : 2020-09-21 04:43:37
+DONE: looked at m17, looks good to stop 
+DONE: sem slicer working with large grids and output model looks good, need to clean up now 
+DONE: met with yoshi to discuss m17 and sem slicer 
+DONE: model out script and wavcomp class written 
+
+IN  : 2020-09-22 10:05:27
+WORK: VUW
+TODO: ssa tomo talk slides 
+
+OUT : 2020-09-22 15:35:27
+DONE: working on semslicer 
+DONE: ran new decluster 8-20s 
+DONE: tomo slides 
+
+IN  : 2020-09-23 10:16:23
+WORK: VUW
+TODO: semslicer 
+TODO: check 8-20s results 
+TODO: tomo slides 
+
+OUT : 2020-09-23 17:46:23
+DONE: semslicer finished and working maybe 
+DONE: read some papers 
+
+IN  : 2020-09-24 10:01:34
+WORK: VUW
+TODO:  
+TODO: prep john meeting 
+TODO: ssa tomo slides and practice 
+TODO: semslicer checke 
+
+OUT : 2020-09-24 18:01:34
+DONE: semslicer testing 
+DONE: kennys defense 
+DONE: responded to some emails 
+DONE: met with john 
+
+IN  : 2020-09-25 09:59:17
+WORK: VUW
+TODO: ssa tomo slides and talk 
+
+OUT : 2020-09-25 16:59:17
+DONE: ssa tomo slides finished and some practice 
+
+IN  : 2020-09-27 09:38:47
+WORK: HOME
+TODO: pyatoa tests and potentially pyaflowa again 
+
+OUT : 2020-09-27 13:38:47
+DONE: concurrent futures in pyaflowa 
+
+IN  : 2020-09-28 09:57:27
+WORK: VUW
+TODO: ssa tomo slides 
+
+OUT : 2020-09-29 06:08:51
+DONE: ssa tomo presi my god that was brutal 
+
+IN  : 2020-09-30 09:14:19
+WORK: VUW
+TODO: model slicer 
+TODO: respond email carl 
+
+OUT : 2020-09-30 16:14:19
+DONE: semslicer 
+DONE: responded emails 
+
+IN  : 2020-10-01 09:37:39
+WORK: VUW
+TODO: semslicer make it work!!! 
+
+OUT : 2020-10-01 17:37:39
+DONE: semslicer did not make it work 
+DONE: looked at 8-20s waveforms 
+DONE: reenrolled phd 
+DONE: began thesis template 
+
+IN  : 2020-10-02 10:20:52
+WORK: VUW
+TODO: semslicer check no topo results 
+TODO: continue pyatoa tests 
+
+OUT : 2020-10-02 04:42:09
+DONE: semslicer figured out that topo has something to do with it but not everything.  
+DONE: pyaflowa now takes the functionality of seisflows.pyatoa class 
+DONE: finishline docs' 
+
+IN  : 2020-10-05 09:40:07
+WORK: VUW
+TODO: semslicer look at the code 
+TODO: docs and tests 
+
+OUT : 2020-10-05 05:32:04
+DONE: 6s mesh testing 
+DONE: semslicer still not working 
+DONE: multithreaded data gathering in pyatoa 
+DONE: rough finish pyaflowa 
+
+IN  : 2020-10-06 09:56:30
+WORK: VUW
+TODO: tomography questions 
+TODO: semslicer keep trying 
+TODO: unit tests process 
+
+OUT : 2020-10-06 06:01:04
+DONE: answered ssa tomo questions 
+DONE: pyaflowa working in serial 
+DONE: tried semslicer stuff 
+
+IN  : 2020-10-07 10:01:43
+WORK: VUW
+TODO: semslicer what am i doing 
+TODO: docs testing pyaflowa  
+
+OUT : 2020-10-07 03:05:09
+DONE: ssa tomo talk starting at 4am gorramit 
+DONE: working on pyatoa docs 
+
+IN  : 2020-10-08 10:48:26
+WORK: VUW
+TODO: semslicer 
+TODO: look at distances again, I think theres something in there 
+TODO: docs and tests 
+TODO: carl email 
+
+OUT : 2020-10-08 07:55:42
+DONE: seisflows updating some extra scripts 
+DONE: semslicer tried some stuff trying some new stuff 
+DONE: nsf email and carl email 
+
+IN  : 2020-10-09 09:24:59
+WORK: HOME
+TODO: sort out nsf stuff 
+TODO: semslicer check results 
+TODO: email carl and donna 
+TODO: prep yoshi meet 
+
+OUT : 2020-10-09 02:00:38
+DONE: semslicer maybe getting somewhere 
+DONE: met with yoshi 
+DONE: nsf stuff and respond to carl 
+
+IN  : 2020-10-12 09:40:00
+WORK: HOME
+TODO: semslicer try out the things talked about with yoshi 
+
+OUT : 2020-10-12 07:10:42
+DONE: semslicer more testing, onto very hi-res test, fingerse crossed 
+DONE: pyaflowa working on local machine, need to test on cluster 
+
+IN  : 2020-10-13 10:02:08
+WORK: VUW
+TODO: semslicer 
+TODO: pyaflowa on maui 
+
+OUT : 2020-10-13 06:07:07
+DONE: semslicer wrote function to combine subdivdied grids 
+DONE: pyaflowa updates 
+DONE: tests for gatherer done 
+DONE: started a pyaflowa doc page 
+
+IN  : 2020-10-14 11:23:25
+WORK: VUW
+TODO: semslicer FINGERS FUCKING CROSSED 
+TODO: tests and docs cont 
+
+OUT : 2020-10-14 19:23:25
+DONE: semslicer combine regions working 
+DONE: pyaflowa and inversion set up docs 
+DONE: semslicer maybe working 
+
+IN  : 2020-10-15 10:15:29
+WORK: HOME
+TODO: semslicer check waveforms 
+TODO: docs and testing 
+
+OUT : 2020-10-15 05:15:37
+DONE: semslicer making higher res 
+DONE: waveform checks and forest4s comparisons 
+DONE: update docs more 
+
+IN  : 2020-10-16 09:33:34
+WORK: VUW
+TODO: semslicer fine crust and mantle 
+TODO: prep yoshi meet 
+TODO: send links to aakash 
+
+OUT : 2020-10-19 03:44:47
+DONE: semslicer checked forest4s results look good 
+DONE: started working on pyatoa and seisflows updates maui 
+DONE: visa renewal stuff 
+
+OUT : 2020-10-20 04:32:37
+DONE: nothing really, medical stuff with the ear :/ 
+DONE: admin stuff: talking to international office  
+DONE: signed up for geosciences 
+
+IN  : 2020-10-21 09:42:11
+WORK: HOME
+TODO: finish twotest and run birch 
+TODO: testing 
+
+OUT : 2020-10-21 06:10:18
+DONE: twotest working and deleted 
+DONE: started running birch 
+DONE: passport renewal stuff 
+
+IN  : 2020-10-22 09:31:54
+WORK: VUW
+TODO: birch check and go 
+TODO: pyaflowa tests start em 
+
+OUT : 2020-10-22 05:05:20
+DONE: birch checked and running 
+DONE: pyatoa intro blurb 
+DONE: jurgens talk 
+DONE: semslicer email to aktomo and qinya 
+
+IN  : 2020-10-26 10:52:31
+WORK: HOME
+TODO: look at birch results 
+TODO: continue birch 
+TODO: prep meeting yoshi 
+TODO: start writing submission scholarship 
+TODO: pyaflowa tests 
+TODO: aakash pyatoa install problem 
+
+OUT : 2020-10-26 05:17:45
+DONE: birch running but will probably time out on line search 
+DONE: prep and met with yoshi 
+DONE: responded to aakash email and resolved install issue on chinook 
+DONE: submission scholarship timeline 
+DONE: seisflows documentation outline 
+DONE: updated handwritten notebook 
+
+IN  : 2020-10-27 08:47:21
+WORK: HOME
+TODO: birch check and run again 
+TODO: tests and docs 
+
+OUT : 2020-10-27 05:21:10
+DONE: birch check and run for 6-30s looking at results 
+DONE: started seisflows docs page 
+DONE: overhauled pyatoa docs page 
+DONE: overhauled all docstrings in pyatoa 
+DONE: writing seisflows scripts for higher level interaction with package 
+
+IN  : 2020-10-28 09:17:57
+WORK: VUW
+TODO: birch rerun misfit and check 
+TODO: continue seisflows docs 
+
+OUT : 2020-10-28 04:56:10
+DONE: birch running 
+DONE: seisflows docs 
+DONE: seisflows entry point 
+DONE: jesses proposal talk 
+
+IN  : 2020-10-29 09:45:19
+WORK: VUW
+TODO: birch check and run more 
+TODO: docs seisflows 
+TODO: unit tests pyatoa maybe maybe 
+
+OUT : 2020-10-29 18:45:19
+DONE: seisflows config function and completely overhauling the parameter input 
+DONE: birch ran 1st iter 6-30s  
+
+IN  : 2020-10-30 09:35:44
+WORK: VUW
+TODO: birch check results and run iter 2-3 
+TODO: finish seisflows config function 
+
+OUT : 2020-10-30 04:54:47
+DONE: looked at birch results and running iters2-3 
+DONE: completed overhaul of seisflows3 parameter system and seisflows entry point, working on local  
+DONE: wrote changelog for seisflows and cleaned up some unnecessary repos 
+
+IN  : 2020-11-02 11:25:08
+WORK: VUW
+TODO: birch check new iters 
+TODO: continue with seisflows commands 
+
+OUT : 2020-11-02 19:03:11
+DONE: vuw submission scholarship to john 
+DONE: birch check and run 4-5 iter 
+DONE: finished seisflows entry function 
+
+IN  : 2020-11-03 09:26:06
+WORK: HOME
+TODO: birch check 4-5 results and consider changing parameters 
+TODO: seisflows docs 
+TODO: figure placeholders into thesis 
+
+OUT : 2020-11-03 17:54:22
+DONE: birch check and fail, manually run through line search, tedious 
+DONE: wrote queuemonpy for better mail daemon capabilities 
+
+IN  : 2020-11-04 09:05:51
+WORK: VUW
+TODO: birch check iter4 and run 5? 
+TODO: gns health and safety 
+TODO: write 1 hour 
+
+OUT : 2020-11-04 16:42:56
+DONE: CDP 6 month report 
+DONE: birch checked i4 and running i5 
+DONE: started in on seisflows symbol 
+DONE: working more on seisflows entry point 
+
+IN  : 2020-11-05 09:55:32
+WORK: VUW
+TODO: birch check fail and try to figure out how to get it to stop stalling 
+

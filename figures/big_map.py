@@ -7,8 +7,62 @@ import matplotlib.pyplot as plt
 from obspy import read_events
 from mpl_toolkits.basemap import Basemap
 from obspy.imaging.beachball import beach
-from pyatoa.visuals.map_maker import event_beachball
 from pyatoa.utils.calculate import normalize_a_to_b, myround
+
+
+def event_beachball(m, event, fm_type="focal_mechanism", zorder=90, **kwargs):
+    """
+    Plot event beachball for a given moment tensor attribute from event object.
+    Note:
+    if strike_dip_rake chosen, nodal plane 1 is used for focal mechanism,
+    assuming that is the preferred plane
+    :type m: Basemap
+    :param m: basemap object
+    :type fm_type: str
+    :param fm_type: focal mech. type, 'focal_mechanism' or 'strike_dip_rake'
+    :type event: obspy.core.event.Event
+    :param event: event object which should contain focal mechanism
+    """
+    width = kwargs.get("src_width", 2.6E4)
+
+    src_marker = kwargs.get("src_marker", "o")
+    src_markercolor = kwargs.get("src_markercolor", "r")
+    src_markersize = kwargs.get("src_markersize", 105)
+    src_linewidth = kwargs.get("src_linewidth", 1.75)
+
+    eventx, eventy = m(event.preferred_origin().longitude,
+                       event.preferred_origin().latitude
+                       )
+
+    # No focal mechanism? Just plot a ploint, same as connect_source_receiver()
+    if not hasattr(event, 'focal_mechanisms'):
+        m.scatter(eventx, eventy, marker=src_marker, color=src_markercolor,
+                  edgecolor="k", s=src_markersize, linewidth=src_linewidth,
+                  zorder=90)
+
+    else:
+        if fm_type == "focal_mechanism":
+            fm = event.focal_mechanisms[0].moment_tensor.tensor or \
+                 event.preferred_focal_mechanism().moment_tensor.tensor
+            beach_input = [fm['m_rr'], fm['m_tt'], fm['m_pp'],
+                           fm['m_rt'], fm['m_rp'], fm['m_tp']
+                           ]
+        elif fm_type == "strike_dip_rake":
+            nod_plane = event.focal_mechanisms[0].nodal_planes or \
+                        event.preferred_focal_mechanism().nodal_planes
+            # try determine the preferred nodal plane, default to 1
+            try:
+                sdr = nod_plane[f"nodal_plane_{nod_plane.preferred_plane}"]
+            except AttributeError:
+                sdr = nod_plane.nodal_plane_1
+            beach_input = [sdr.strike, sdr.dip, sdr.rake]
+
+        b = beach(beach_input, xy=(eventx, eventy), width=width,
+                  linewidth=src_linewidth, facecolor=src_markercolor
+                  )
+        b.set_zorder(zorder)
+        ax = plt.gca()
+        ax.add_collection(b)
 
 
 def place_scalebar(m, map_corners, **kwargs):
@@ -37,6 +91,7 @@ def place_scalebar(m, map_corners, **kwargs):
     if loc == "lower-right":
         latscale = mc['lat_min'] + (mc['lat_max'] - mc['lat_min']) * 0.04
         lonscale = mc['lon_min'] + (mc['lon_max'] - mc['lon_min']) * 0.9
+
     m.drawmapscale(lonscale, latscale, lonscale, latscale, 100,
                    yoffset=0.01 * (m.ymax-m.ymin), zorder=5000, 
                    linewidth=linewidth, fontsize=fontsize
@@ -127,7 +182,8 @@ def plot_stations(m, fid, sta_ignore=[], net_ignore=[], **kwargs):
               c=color, linestyle='-', linewidth=2., zorder=zorder)
     
     
-def plot_beachballs(m, fid, cmap, norm_a, norm_b, mag_scale=None, **kwargs):
+def plot_beachballs(m, fid, cmap, norm_a, norm_b, mag_scale=None, 
+                    mag_legend=True,**kwargs):
     """
     Plot moment tensors as beachballs, color by depth if requested
 
@@ -212,16 +268,20 @@ def plot_beachballs(m, fid, cmap, norm_a, norm_b, mag_scale=None, **kwargs):
     mag_scale_norm = normalize_a_to_b(mag_scale, a=norm_a, b=norm_b)
 
     # Create magnitude scale
-    x_val = 0.9 * (m.urcrnrx - m.llcrnrx) + m.llcrnrx
-    y_val = 0.1 * (m.urcrnry - m.llcrnry) + m.llcrnry
+    if mag_legend:
+        dx = (m.urcrnrx - m.llcrnrx) + m.llcrnrx
+        x_val = 0.9 * dx
+        y_val = 0.1 * (m.urcrnry - m.llcrnry) + m.llcrnry
 
-    for ms in mag_scale_norm:
-        b = beach([0, 90, 0], xy=(x_val, y_val), width=ms, facecolor="k")
-        b.set_zorder(90)
-        ax = plt.gca()
-        ax.add_collection(b)
+        for ms in mag_scale_norm:
+            b = beach([0, 90, 0], xy=(x_val, y_val), width=ms, facecolor="k")
+            b.set_zorder(90)
+            ax = plt.gca()
+            ax.add_collection(b)
 
-        y_val += 0.05 * (m.urcrnry - m.llcrnry) + m.llcrnry
+            plt.text(x_val + 0.05 * dx, y_val, f"M{ms}", fontsize=10)
+
+            y_val += 0.05 * (m.urcrnry - m.llcrnry) + m.llcrnry
 
 
 def plot_raypaths(m, cat_fid, sta_fid, **kwargs):

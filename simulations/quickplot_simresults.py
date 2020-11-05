@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 
 from obspy import UTCDateTime, Stream
 from obspy.signal.cross_correlation import correlate, xcorr_max
-from pyatoa.utils.tools.io import read_ascii
+from pyatoa import read_sem
 
 
 def linespecs():
@@ -128,8 +128,8 @@ def process(dir_a, dir_b, min_period=10., max_period=30., peak_amplitude=False,
         st_a = Stream()
         st_b = Stream()
         for i in range(len(stations_a)):
-            st_a += read_ascii(stations_a[i], throwaway_time)
-            st_b += read_ascii(stations_b[i], throwaway_time)
+            st_a += read_sem(stations_a[i], throwaway_time)
+            st_b += read_sem(stations_b[i], throwaway_time)
         
         if not st_a or not st_b: 
             print("skipped")
@@ -191,7 +191,7 @@ def process(dir_a, dir_b, min_period=10., max_period=30., peak_amplitude=False,
             # Plot the two traces
             ax.plot(t_a, st_a[i].data, color=color_a)
             ax.plot(t_b, st_b[i].data, color=color_b)
-            plt.xlim([0, 100])
+            # plt.xlim([0, 100])
 
             # Set the title with important information
             if i == 0:
@@ -222,10 +222,10 @@ def process(dir_a, dir_b, min_period=10., max_period=30., peak_amplitude=False,
 
 if __name__ == "__main__":
     base = './'
-    dir_a = os.path.join(base, "eberhart2015")
-    dir_b = os.path.join(base, "eberhart2019")
+    dir_a = os.path.join(base, "SEMD_HIRES")
+    dir_b = os.path.join(base, "SEMD_SUPERHIRES")
     if not os.path.exists(os.path.join(base, "figures")):
         os.makedirs(os.path.join(base, "figures"))
 
-    process(dir_a, dir_b, 2, 30, peak_amplitude=False, 
+    process(dir_a, dir_b, 8, 30, peak_amplitude=False, 
             cross_correlate=True, show=False, save=True)

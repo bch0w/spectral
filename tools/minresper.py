@@ -72,11 +72,13 @@ class Minresper:
         Final touches to the plot before showing or saving.
         """
         plt.sca(self.ax)
-        plt.title(f"{self._current} Minimum Resolvable Period")
+        # plt.title(f"{self._current} Minimum Resolvable Period")
+        plt.title(f"{self._current} Model Interpolation Differences")
         plt.grid()
         plt.legend(loc="upper right")
         plt.xlabel("Time [s]")
-        plt.ylabel("Filter bands [s], MRP Value")
+        # plt.ylabel("Filter bands [s], MRP Value")
+        plt.ylabel("Filter bands [s], Max CC Value")
         plt.gca().axes.get_yaxis().set_ticks([])
 
         if save:
@@ -96,8 +98,8 @@ class Minresper:
 
         # Only need to label once for legend
         if step == 0:
-            label_a = "NGLL5"
-            label_b = "NGLL7"
+            label_a = "Coarse-res M17"  # "NGLL5"
+            label_b = "Fine-res M00"  # "NGLL7"
         else:
             label_a = label_b = None
 
@@ -114,9 +116,24 @@ class Minresper:
         self.ax.annotate(tag, xy=(0, step))
 
     @staticmethod
-    def filter_and_evaluate(tr_a, tr_b, period, function="xcorr"):
+    def filter_and_evaluate(tr_a, tr_b, period, function="xcorr", 
+                            tshift_max=0, **kwargs):
         """
         Calculate the value of some objective function for a given period band
+
+        :type tr_?: obspy.core.trace.Trace
+        :param tr_?: the traces with data that need to be filtered and evaluated
+        :type period: float
+        :param period: the period at which to filter the data
+        :type function: str
+        :param function: the function to use to evaluate the 'misfit'
+            * xcorr: zero-lag cross correlation coefficient
+            * tshift: time shift for maximum cross correlation related to a max
+                shift value of 'tshift_max'
+            * l1_norm: the L1 norm of the entire waveform
+        :type tshift_max: float
+        :param tshift_max: maximum allowable time shift in sec. for the function 
+            'tshift' and 'xcorr', defaults to 0s for default function 'xcorr'
         """
         tr_a_filt = tr_a.copy()
         tr_b_filt = tr_b.copy()
@@ -125,10 +142,15 @@ class Minresper:
         tr_a_filt.filter("lowpass", freq=1 / period, corners=4)
         tr_b_filt.filter("lowpass", freq=1 / period, corners=4)
 
-        if function == "xcorr":
-            cc = correlate(tr_a_filt.data, tr_b_filt.data, shift=0)
+        if function in ["xcorr", "tshift"]:
+            cc = correlate(tr_a_filt.data, tr_b_filt.data, 
+                           shift=int(tshift_max / tr_a_filt.stats.delta)
+                           )
             shift, value = xcorr_max(cc)
-
+            # If tshift requested, return the time shift value rather than the
+            # maximum cross correlation coefficient
+            if function == "tshift":
+                value = shift * tr_a_filt.stats.delta
         elif function == "l1_norm":
             value = (np.abs(tr_a.data - tr_b.data).sum() /
                      np.sum(np.abs(tr_b.data))
@@ -201,7 +223,7 @@ class Minresper:
             for period in np.arange(min_period, max_period, dt):
                 current_step += step
                 tr_a_, tr_b_, value = self.filter_and_evaluate(tr_a, tr_b,
-                                                               period)
+                                                               period, **kwargs)
                 # Set the stats as a series of lists in a dict
                 self.stats["code"].append(self._current)
                 self.stats["comp"].append(comp)
@@ -212,7 +234,7 @@ class Minresper:
                     self.plot_traces(tr_a_, tr_b_, current_step, 
                                      c_ngll7=f"C{i}",
                                      tag=(f"T={period:.2f}s, "
-                                          f"{value:.3E}")
+                                          f"cc={value:.3f}")
                                      )
             current_step += step
 
@@ -239,20 +261,23 @@ class Minresper:
 
 if __name__ == "__main__":
     # Parameters
-    min_period = 5
-    max_period = 10
+    min_period = 4
+    max_period = 9.1
     dt = 1
-    step = 2.
+    step = 2.25
     show = False
     save = "./figures"
-    ngll5 = "./ngll5"
-    ngll7 = "./ngll7"
+    ngll5 = "./model_init"
+    ngll7 = "./forest_4s"
+
+    if save and not os.path.exists(save):
+        os.makedirs(save)
 
     # Call Minresper
     try:
         mr = Minresper(path_ngll5=ngll5, path_ngll7=ngll7)
         mr.calc(min_period=min_period, max_period=max_period, step=step, dt=dt, 
-                show=show, save=save)
+                function="xcorr", tshift_max=0, show=show, save=save)
     except Exception as e:
         traceback.print_exc()
         import ipdb; ipdb.set_trace()

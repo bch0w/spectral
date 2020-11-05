@@ -9,7 +9,6 @@ from mpl_toolkits.basemap import Basemap
 from obspy.imaging.beachball import beach
 from obspy import read_inventory, read_events
 from pyatoa.utils.calculate import normalize_a_to_b, myround
-from pyatoa.visuals.map_maker import event_beachball, interpolate_and_contour
 
 from big_map import (place_scalebar, initiate_basemap, draw_domain_bounds,
                      plot_stations, plot_beachballs)
@@ -121,14 +120,14 @@ def plot_interface_contour(m, fid, **kwargs):
 
 if __name__ == "__main__":
     cat_fid = ("/Users/Chow/Documents/academic/vuw/data/events/"
-               "checkerboard_30.xml")
+               "decluster_60.xml")
     sta_fid = ("/Users/Chow/Documents/academic/vuw/data/specfem/stations/"
-               "STATIONS_CHKBD")
+               "DECLUSTER")
     plate_fid = ("/Users/Chow/Documents/academic/vuw/data/carto/"
                  "fault_coordinates/hikurangi_plate_interface.npy")
 
     # Figure kwargs
-    figsize = (10, 12)
+    figsize = (8, 10)
     dpi = 100
 
     # Map kwargs
@@ -143,7 +142,7 @@ if __name__ == "__main__":
     scalebar_location = "lower-right"
     scalebar_fontsize = 18.
     scalebar_linewidth = 2.75
-    fontsize = 22.5
+    fontsize = 15
 
     # Station kwargs
     station_markersize = 90
@@ -159,6 +158,7 @@ if __name__ == "__main__":
     beachball_linewidths = 1.6
     beachball_zorder = station_zorder - 2
     mag_scale = [4.5, 6.0]
+    mag_legend = False
 
     cbar_shrink = 0.2
     cbar_fontsize = 15
@@ -199,7 +199,7 @@ if __name__ == "__main__":
                          scalebar_linewidth=scalebar_linewidth
                          )
 
-    draw_domain_bounds(m, domain_bounds)
+    # draw_domain_bounds(m, domain_bounds)
 
     plot_stations(m, sta_fid, markersize=station_markersize, 
               zorder=station_zorder, color=station_color, 
@@ -210,19 +210,19 @@ if __name__ == "__main__":
     plot_beachballs(m, cat_fid, cmap=beachball_cmap, norm_a=beachball_norm_a, 
                     norm_b=beachball_norm_b, linewidth=beachball_linewidths, 
                     zorder=beachball_zorder, cbar_shrink=cbar_shrink,
-                    mag_scale=mag_scale
+                    mag_scale=mag_scale, mag_legend=mag_legend
                     )
 
 
-    plot_interface_contour(m, plate_fid, zorder=contour_zorder, 
-                           levels=contour_levels, color=contour_color, 
-                           linestyle=contour_linestyle, alpha=contour_alpha, 
-                           fontsize=0, format_=clabel_format, 
-                           linewidth=contour_linewidth)    
+    # plot_interface_contour(m, plate_fid, zorder=contour_zorder, 
+    #                        levels=contour_levels, color=contour_color, 
+    #                        linestyle=contour_linestyle, alpha=contour_alpha, 
+    #                        fontsize=0, format_=clabel_format, 
+    #                        linewidth=contour_linewidth)    
 
-    plot_cities(m, markersize=city_markersize, zorder=city_zorder,
-                names=city_names, color=city_color, alpha=city_alpha, 
-                fontsize=city_fontsize)
+    # plot_cities(m, markersize=city_markersize, zorder=city_zorder,
+    #             names=city_names, color=city_color, alpha=city_alpha, 
+    #             fontsize=city_fontsize)
 
     f.tight_layout()
     plt.savefig("./figures/rich_map_raw.png")
