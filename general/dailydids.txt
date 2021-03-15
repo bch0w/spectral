@@ -2427,3 +2427,807 @@ IN  : 2020-11-05 09:55:32
 WORK: VUW
 TODO: birch check fail and try to figure out how to get it to stop stalling 
 
+OUT : 2020-11-05 18:40:23
+DONE: birch looked at 6-30s looked same so moved to 4-30s, checked windowing parameters and running 4-30s i6 
+DONE: plotting interface from xyz model 
+DONE: gsnz presi 
+
+IN  : 2020-11-06 10:09:17
+WORK: VUW
+TODO: birch check fail  
+TODO: prep yoshi meet 
+TODO: seisflows multi tiered argparse? 
+
+OUT : 2020-11-06 16:14:17
+DONE: prep and met with yoshi 
+DONE: birch running  
+DONE: setup and started running nzni1d inversion 
+
+IN  : 2020-11-09 09:35:03
+WORK: HOME
+TODO: birch continue running 
+TODO: nzni1d check results and run 
+TODO: geosciences talk record 
+
+OUT : 2020-11-09 17:28:16
+DONE: birch check and run i10 
+DONE: nzni1d check and switching bandpass 
+DONE: video chat with rents 
+DONE: record and uploade gsnz talk 
+
+IN  : 2020-11-10 09:13:32
+WORK: VUW
+TODO: birch check results 
+TODO: nzni1d check, write misfit and continue run 
+TODO: prep donna meeting 
+TODO: respond aakash 
+TODO: seisflows finish argparser 
+
+OUT : 2020-11-10 17:47:27
+DONE: birch checked and continued line search 
+DONE: nzni1d checked and continued run 
+DONE: prepped and met with donna 
+DONE: cleaned up seisflows entry point 
+
+IN  : 2020-11-11 09:41:45
+WORK: VUW
+TODO: birch check and continue to run 
+TODO: nzni1d check and run 
+TODO: look at agu poster 
+TODO: write 1 hour 
+TODO: respond aakash 
+TODO: williams plate geometry 
+
+OUT : 2020-11-11 16:48:21
+DONE: nzni1d and birch check and run 
+DONE: started on seisflows 2d example 
+
+IN  : 2020-11-12 09:57:46
+WORK: HOME
+TODO: respond aakash 
+TODO: birch check results and decided if new mesh or new windowing or continue 
+TODO: seisflows 2d example 
+
+OUT : 2020-11-12 16:42:07
+DONE: responded aakash 
+DONE: birch looking at results, need to do heavier analysis on results 
+DONE: seisflows 2d example making progress 
+
+IN  : 2020-11-13 10:52:44
+WORK: GNS
+TODO: birch analyze results 
+TODO: prep yoshi meeting 
+TODO: respond aakash 
+TODO: seisflows 2d example 
+
+OUT : 2020-11-13 16:30:37
+DONE: prep meet yoshi 
+DONE: seisflows specfem2d example 
+
+IN  : 2020-11-16 09:08:51
+WORK: HOME
+TODO: run birch once more for convergence 
+TODO: cedar 3s mesh check 
+TODO: birch slice model if converged 
+TODO: waveform improvements with map and no comparison 
+TODO: look at birch 3s waves, much difference to 4s?
+TODO: respond to Donna 
+TODO: specfem2d example for aakash 
+
+OUT : 2020-11-16 18:27:47
+DONE: birch ran another go  
+DONE: checked 3s vs 4s vs 2s waveforms 
+DONE: responded to Donna 
+DONE: fixed up wave comp plots 
+DONE: working on specfem2d example 
+
+IN  : 2020-11-17 08:49:59
+WORK: HOME
+TODO: prep meeting aakash 
+TODO: thorough results check birch 
+
+OUT : 2020-11-17 16:55:35
+DONE: seisflows2d example full run through 
+DONE: met with aakash 
+DONE: working on seisflows3d example 
+DONE: plotting waveform differences 
+
+IN  : 2020-11-18 09:37:31
+WORK: HOME
+TODO: agu poster 
+TODO: plate interface 
+TODO: close look at birch results 
+TODO: seisflows example3d maybe 
+
+OUT : 2020-11-18 17:14:26
+DONE: gsnz figures and slides 
+DONE: williams plate interface model 
+
+IN  : 2020-11-19 09:42:22
+WORK: GNS
+TODO: finish plate interface figures 
+TODO: make small model exploration movie 
+TODO: agu poster 
+
+OUT : 2020-11-19 19:18:56
+DONE: figures made, gsnz talk done 
+DONE: working on agu poster 
+DONE: running nzni1d 
+DONE: got lauras slip rate deficit plotting 
+
+IN  : 2020-11-20 09:31:46
+WORK: VUW
+TODO: agu poster finish 
+TODO: finish geosciences talk 
+TODO: prep meeting john and prep meeting yoshi 
+
+OUT : 2020-11-26 18:28:20
+DONE: responded aakash carl 
+DONE: follow up gji paper 
+DONE: student grant ssa 
+DONE: started inversion bonsai 
+
+IN  : 2020-11-27 10:44:20
+WORK: GNS
+TODO: bonsai check waveforms 
+TODO: nz1d setup for next run 
+TODO: prep yoshi meeting 
+
+OUT : 2020-11-27 16:36:38
+DONE: bonsai and nzni1d running 
+DONE: prepped and met with yoshi 
+
+IN  : 2020-11-30 09:40:18
+WORK: VUW
+TODO: rewrite part of seisflows to allow single solver runs without resubmitting every job 
+TODO: continue bonsai 
+TODO: look at nzni1d results 
+
+OUT : 2020-11-30 17:20:39
+DONE: nzni1d and bonsai running 
+DONE: working on sf3 3d example 
+DONE: quick check new q model 
+DONE: gsnz receipts 
+DONE: random admin stuff 
+
+IN  : 2020-12-01 10:41:20
+WORK: VUW
+TODO: bonsai continue running 
+TODO: nzni1d continue running 
+TODO: sf3 3d example finish 
+
+OUT : 2020-12-01 17:56:19
+DONE: bonsai running again and checking out array ntaskmax  
+DONE: working on sf3 3d example at line search 
+DONE: agu poster and agu schedule 
+
+IN  : 2020-12-02 11:11:18
+WORK: VUW
+TODO: bonsai, nzni1d, sf33d example 
+
+OUT : 2020-12-02 17:26:18
+DONE: bonsai checking 6s results 
+DONE: sf3d example 
+
+IN  : 2020-12-03 09:53:59
+WORK: HOME
+TODO: bonsai continue running 
+TODO: sf3 3d ex 
+
+OUT : 2020-12-03 20:08:50
+DONE: bonsai and nzni1d 
+
+IN  : 2020-12-04 09:43:56
+WORK: VUW
+TODO: bonsai and prep yoshi meeting 
+
+OUT : 2020-12-04 15:43:56
+DONE: prep meet with yoshi 
+DONE: pyflex global noise fix 
+
+IN  : 2020-12-07 09:18:34
+WORK: HOME
+TODO: pyflex global nosie fix on maui 
+TODO: continue with bonsai 
+TODO: sensitivity kernels 
+
+OUT : 2020-12-07 16:13:43
+DONE: fixed pyflex snr 
+DONE: implemented new snr checks  
+DONE: working on traveltime adjoint source 
+
+IN  : 2020-12-08 08:59:26
+WORK: HOME
+TODO: admin, submission scholarship 
+TODO: clean up maui nobackup 
+TODO: bonsai continue 
+TODO: sensitivity kernels 
+
+OUT : 2020-12-08 15:59:27
+DONE: cleaned up nesi00253 
+DONE: running bonsai again 
+DONE: figured out sensitivity kernel problem 
+
+IN  : 2020-12-09 09:46:58
+WORK: HOME
+TODO: bonsai check and run 
+TODO: sensitivity kernels 
+TODO: agu 
+
+OUT : 2020-12-09 14:37:47
+DONE: bonsai manually running after line search failure 
+DONE: extracted ristau event ids 
+DONE: sensitivty kernels not working, trying again 
+
+IN  : 2020-12-10 09:22:58
+WORK: GNS
+TODO: agu online  
+TODO: bonsai 
+TODO: sensitivity kernels 
+
+OUT : 2020-12-10 16:02:58
+DONE: bonsai running more 
+DONE: sensitivity kernels maybe working and trying again 
+DONE: attended hikurangi agu  
+
+IN  : 2020-12-11 09:50:24
+WORK: VUW
+TODO: bonsai running mas 
+TODO: sensitivity kernels continue 
+
+OUT : 2020-12-11 15:23:33
+DONE: checked on bonsai and running at 4-30s 
+DONE: compiled logs into one file 
+DONE: looking at more sensitivity kernels 
+
+IN  : 2020-12-14 09:59:53
+WORK: VUW
+TODO: visa renewal stuff 
+TODO: bonsai check and run more? 
+TODO: sensitivity kernels 
+TODO: prep agu chat 
+
+OUT : 2020-12-14 15:54:06
+DONE: bonsai checked and tighted window parameters to half, continue i14 
+DONE: sensitivity kernel direct p works, trying for surface waves 
+
+IN  : 2020-12-15 10:00:06
+WORK: VUW
+TODO: bonsai check and run 
+TODO: prep posthoc 
+TODO: look into resolution analysis 
+TODO: sensitivity kernels 
+
+OUT : 2020-12-15 18:37:09
+DONE: bonsai checked and run 4s  
+DONE: prepped post-hoc cmtsolutions 
+DONE: sensitivity kernels for a new event 
+DONE: started reading fichtner and trampert for resolution 
+
+IN  : 2020-12-16 09:29:23
+WORK: GNS
+TODO: bonsai check and run 
+TODO: sensitivity kernels 
+TODO: continue reading fichtner paper 
+TODO: agu? 
+
+OUT : 2020-12-16 13:16:10
+DONE: bonsai running a bit 
+DONE: sensitivity kernels 
+DONE: read a little ficthner and trampert 
+DONE: gns holiday party 
+
+IN  : 2020-12-17 08:58:50
+WORK: HOME
+TODO: bonsai 
+TODO: sensitivity kernels 
+TODO: hessian 
+TODO: agu 
+
+OUT : 2020-12-17 16:58:50
+DONE: bonsai checked 
+DONE: agu live presentation and live session 
+DONE: sensitivity kernels 
+
+IN  : 2020-12-18 08:53:16
+WORK: VUW
+TODO: bonsai check and run 
+TODO: prep john yoshi meeting 
+
+OUT : 2020-12-18 16:18:53
+DONE: met with yoshi 
+DONE: birch new run 
+DONE: sensitivity kernels 
+DONE: locked out of office 
+DONE: packign adn leaving 
+
+IN  : 2020-12-27 10:53:22
+WORK: HOME
+TODO: birch check and run 
+TODO: seisflows submit from console 
+TODO: restart nzni1d 
+TODO: look into model comparisons 
+
+OUT : 2020-12-27 17:45:11
+DONE: not much 
+
+IN  : 2020-12-28 10:46:18
+WORK: HOME
+TODO: birch 
+TODO: nzni1d 
+TODO: autoplot screenshots 
+TODO: some type of model comparison 
+
+OUT : 2020-12-29 04:46:18
+DONE: fixing up pyshell autoplot 
+DONE: nzni1d and birch running 
+
+IN  : 2020-12-29 09:38:38
+WORK: HOME
+TODO: birch check and make results 
+TODO: prep yoshi meet 
+
+OUT : 2020-12-29 16:07:32
+DONE: finished pyshell autplot 
+DONE: made figures and prepped and met with yoshi 
+DONE: looking at new 4-30s results for birch 
+
+IN  : 2021-01-08 10:22:27
+WORK: HOME
+TODO: birch check and run 
+
+OUT : 2021-01-08 17:34:41
+DONE: birch check waveforms and models 
+DONE: working on semslicer for birch m112 
+
+IN  : 2021-01-09 11:00:53
+WORK: HOME
+TODO: semslicer 
+TODO: read 
+
+OUT : 2021-01-09 16:57:30
+DONE: not much eh 
+
+IN  : 2021-01-11 07:37:57
+WORK: GNS
+TODO: finish semslicer and start cedar first run 
+TODO: read 1 paper, donna 2015? 
+TODO: figure out forest2-3s dt 
+TODO: cross sections in pvmake 
+
+OUT : 2021-01-11 17:41:23
+DONE: finished semslicer and created external tomo file, currently validating 
+DONE: pvmake now has a trench parallel plotter 
+DONE: figured out dt max for forest2-3s mesh 
+DONE: read some more of donnas 2015 paper 
+
+IN  : 2021-01-12 08:38:43
+WORK: GNS
+TODO: check semslicer results 
+TODO: get cedar up and running 
+TODO: interface plots in pvmake 
+
+OUT : 2021-01-12 16:26:36
+DONE: checked semslicer results, need to redo crust section 
+DONE: improved pvpyplot script 
+DONE: watched science talks 
+DONE: working mostly on visuals 
+
+IN  : 2021-01-13 09:53:53
+WORK: GNS
+TODO: semslicer crust  
+TODO: smoothing away artefacts 
+TODO: cedar 
+TODO: interface plots 
+
+OUT : 2021-01-13 16:49:26
+DONE: ssa abstract 
+DONE: geonet survey 
+DONE: pvpyplot improvements 
+DONE: lots of time spent looking at artefact problem, better idea bof problem but no solution 
+DONE: tried smoothing but no 
+DONE: semslicer check and running for crust 
+
+IN  : 2021-01-14 08:30:45
+WORK: GNS
+TODO: continue looking at artefacts 
+TODO: push on with semslicer results 
+TODO: interface plot? 
+
+OUT : 2021-01-14 18:02:52
+DONE: more improvements to pvmake 
+DONE: figured out smoothing works on artefacts, to an extent 
+DONE: working on testing the effects of smoothing 
+DONE: trying to figure out best move for next inversion leg, whether new mesh or going to GLL7 
+
+IN  : 2021-01-15 09:57:37
+WORK: HOME
+TODO: prep yoshi meeting 
+TODO: check xgen_db results 
+TODO: try and get first iter of cedar up and going 
+TODO: make a plan 
+
+OUT : 2021-01-15 19:57:37
+DONE: made figures  
+DONE: analyzing artefacts and prepping cedar 
+DONE: met with yoshi 
+
+IN  : 2021-01-18 08:29:51
+WORK: GNS
+TODO: get cedar running 
+
+OUT : 2021-01-18 16:15:18
+DONE: looking at results of birch m11 
+DONE: trying to figure out this semsliscer thing 
+DONE: getting closer but not quite 
+
+IN  : 2021-01-19 09:27:41
+WORK: GNS
+TODO: visa renewal stuff 
+TODO: get cedar running, why is this taking so long, fucking do it!!! 
+
+OUT : 2021-01-19 17:35:31
+DONE: mostly figured out the cedar xgen_db problem, waiting for jobs to finish to fix it 
+DONE: map view comparison plots 
+DONE: added min max glyphs to pvpyplot 
+DONE: admin stuff 
+
+IN  : 2021-01-20 08:45:47
+WORK: HOME
+TODO: finish semslicer fix and get cedar up and running 
+
+OUT : 2021-01-20 18:02:33
+DONE: interface figure and making pvpyplot even PRETTIER! 
+DONE: finished semslicer, looks good, started CEDAR! FINALLY 
+DONE: started cleaning up to work on sensi kernels again but havent started 
+
+IN  : 2021-01-21 09:35:28
+WORK: GNS
+TODO: cedar inversion check and continue, cross fingers that memory storage is sufficient 
+TODO: continue to refine pvpyplot 
+
+OUT : 2021-01-21 19:31:00
+DONE: cedar finally up and running 
+DONE: pvpyplot more optimized 
+
+IN  : 2021-01-22 08:55:13
+WORK: HOME
+TODO: check failed cedar run 
+TODO: prep yoshi meet figurse 
+TODO: get cedar running again 
+TODO: start writing paper 2 
+
+OUT : 2021-01-22 17:36:33
+DONE: cedar fix and run 
+DONE: nesi support faulty node 
+DONE: prep and met with yoshi 
+DONE: fault traces on pvpyplots 
+
+IN  : 2021-01-25 12:29:52
+WORK: HOME
+TODO: prep paper outline 
+TODO: prep thesis outline 
+
+OUT : 2021-01-25 17:20:56
+DONE: cedar checked and run iter 2 
+DONE: outlined jgr paper 
+DONE: started putting stuff into thesis 
+
+OUT : 2021-01-26 16:41:51
+DONE: emedical and paid fees 
+DONE: writing thesis background section 
+
+IN  : 2021-01-27 08:55:59
+WORK: HOME
+TODO: check cedar gradient and see if you can run more 
+TODO: create interpretation figures for BirchM11 and check the model differences between Aspen17 and Birch11 
+TODO: more writing, outline appendices 
+
+OUT : 2021-01-27 16:14:53
+DONE: admin 
+DONE: working on interpretation figures 
+DONE: cedar finishing line search 
+
+IN  : 2021-01-28 09:15:17
+WORK: GNS
+TODO: forgot my charger 
+TODO: running cedar in bg 
+TODO: writing 
+
+OUT : 2021-01-28 16:30:17
+DONE: writing thesis 
+DONE: paper outline 
+DONE: cedar running 
+DONE: slow slip contour plotting 
+
+IN  : 2021-01-29 07:23:16
+WORK: HOME
+TODO: prep yoshi meet with cedar results 
+TODO: parallel trench figures 
+
+OUT : 2021-01-29 16:57:40
+DONE: cedar check results and prep for yoshi meet 
+DONE: visa renewal process 
+DONE: met with yoshi and new things to do 
+DONE: started onedim 
+
+IN  : 2021-02-01 08:40:46
+WORK: HOME
+TODO: set up doodlepoll for alaska meeting 
+TODO: prep figures for john meeting tomorrow 
+TODO: nzni1D check and run 
+TODO: high frequency window selection 
+TODO: write 
+
+OUT : 2021-02-01 17:47:52
+DONE: not much 
+DONE: running nzni1D 
+DONE: making figures 
+
+IN  : 2021-02-02 08:49:49
+WORK: VUW
+TODO: prep john meeting, interpretation figures 
+TODO: pyflex high frequency windowing 
+TODO: nzni1d inversion 
+
+OUT : 2021-02-02 16:45:43
+DONE: prepped john meeting no meeting 
+DONE: started on high freq stuff 
+DONE: met with calum and finn talked about interpretations 
+DONE: met with yoshi talked about nesi allocation 
+
+IN  : 2021-02-03 08:45:36
+WORK: HOME
+TODO: high freq waveforms 
+TODO: make some tvz figures 
+
+OUT : 2021-02-03 15:45:36
+DONE: figures 
+DONE: highfreqwin 
+DONE: met with John 
+
+IN  : 2021-02-04 06:45:35
+WORK: HOME
+TODO: highfreqwin 
+TODO: nzni1d 
+TODO: prep figs for nz tomo meeting 
+
+OUT : 2021-02-04 20:48:16
+DONE: nzni1d continued 
+DONE: model update gifs 
+DONE: vrl plots 
+
+IN  : 2021-02-05 07:17:40
+WORK: HOME
+TODO: prep nz tomo meeting 
+TODO: probably run cypress afterwards 
+TODO: nzni1d results 
+TODO: read something 
+
+OUT : 2021-02-05 17:21:19
+DONE: over it 
+
+IN  : 2021-02-08 10:05:09
+WORK: HOME
+TODO: resolution analysis 
+TODO: nzni1d 
+TODO: respond ryan 
+
+OUT : 2021-02-08 16:05:09
+DONE: setup and ran sensitivity analysis 
+DONE: worked on new trench figures with z-scaling 
+
+IN  : 2021-02-09 09:00:46
+WORK: GNS
+TODO: sensitivity analysis 
+TODO: finish z-scaling figures 
+TODO: run bonsai 
+
+OUT : 2021-02-09 17:30:46
+DONE: sensitivity analysis 
+DONE: finished plotting script 
+DONE: running bonsai and nzni1d and sensitivity kernels 
+
+IN  : 2021-02-10 10:13:16
+WORK: GNS
+TODO: sens ana 
+TODO: check bonsai, nzni1d and sensitivity 
+
+OUT : 2021-02-10 18:28:14
+DONE: sensitivity kernels 
+DONE: still runnning sensitivity analysis 
+DONE: making interp figures 
+DONE: started file transfer on eucalpyt 
+
+IN  : 2021-02-11 09:23:39
+WORK: HOME
+TODO: the same shit 
+
+OUT : 2021-02-11 16:23:39
+DONE: sensitivity analysis 
+DONE: sensitivity kernels 
+DONE: posthoc  
+
+IN  : 2021-02-12 09:28:23
+WORK: HOME
+TODO: same as before 
+
+OUT : 2021-02-12 14:28:23
+DONE: prep and met with yoshi 
+
+IN  : 2021-02-15 10:58:27
+WORK: GNS
+TODO: work on psf 
+TODO: create interpretation presentation 
+TODO: create a new posthoc catalog 
+
+OUT : 2021-02-15 17:33:27
+DONE: cleaning maui 
+DONE: psf checkerboard 
+
+IN  : 2021-02-16 09:47:52
+WORK: HOME
+TODO: point spread test 
+TODO: interpretations 
+
+OUT : 2021-02-16 16:58:51
+DONE: working on pst 
+DONE: headway on interpretations 
+
+IN  : 2021-02-17 09:02:22
+WORK: HOME
+TODO: pst and interpretations 
+
+OUT : 2021-02-17 19:04:00
+DONE: finally figured out psf perturbation 
+DONE: working on interpretation presentation 
+
+IN  : 2021-02-19 09:23:02
+WORK: HOME
+TODO: finish interpretation presi 
+TODO: try another checkerboard thing 
+
+OUT : 2021-02-19 17:07:17
+DONE: good headway on interpretations 
+DONE: redoing checkerboard after yoshi meet 
+DONE: prep and met with yoshi 
+
+IN  : 2021-02-22 09:33:22
+WORK: HOME
+TODO: pst and interp 
+
+OUT : 2021-02-22 18:20:25
+DONE: checked and reran pst stuff 
+DONE: making more headway into interpretations 
+
+IN  : 2021-02-23 09:52:06
+WORK: HOME
+TODO: same shit different day 
+
+OUT : 2021-02-23 16:52:06
+DONE: slides for carl 
+DONE: interpretation slideshow 
+
+IN  : 2021-02-24 09:43:40
+WORK: GNS
+TODO: point spread test figure out whats wrong 
+TODO: finish interpretation presi 
+
+OUT : 2021-02-24 18:32:32
+DONE: read a lot of papers about subducting seamounts 
+DONE: checked new pst results, upped perturbation amplitude and reran 
+DONE: added some to interpretation presi 
+
+IN  : 2021-02-25 10:12:07
+WORK: HOME
+TODO: pst and interp... again 
+
+OUT : 2021-02-25 21:11:10
+DONE: new checkers 
+DONE: more reading and interp 
+
+IN  : 2021-02-26 09:27:12
+WORK: HOME
+TODO: finish interpretations 
+TODO: keep an eye on pst 
+TODO: quick look at resolution lengths 
+
+OUT : 2021-02-26 14:57:12
+DONE: prepped meeting with yoshi 
+DONE: met with yoshi 
+
+IN  : 2021-03-01 09:31:49
+WORK: HOME
+TODO: interpretations 
+TODO: writing a bit 
+TODO: point spread test 
+
+OUT : 2021-03-01 16:45:09
+DONE: honestly dicked around all fucking day 
+
+IN  : 2021-03-02 09:02:52
+WORK: HOME
+TODO: dense checkers 
+TODO: interpretations 
+
+OUT : 2021-03-02 17:25:09
+DONE: running checkers dense 
+DONE: interpretations of tvz 
+
+OUT : 2021-03-03 18:48:13
+DONE: finished porangahau interpretations 
+DONE: made solid progress on TVZ interpretations 
+DONE: looked at less smoothing on dense action hessian 
+DONE: looked at calums kaikoura catalog ontop of Vs model 
+
+IN  : 2021-03-04 09:54:29
+WORK: VUW
+TODO: staggered checkers 
+TODO: finish tvz interpretations 
+
+OUT : 2021-03-04 17:21:39
+DONE: staggered checkers 
+DONE: headway on tvz interpretations 
+
+IN  : 2021-03-08 08:56:29
+WORK: HOME
+TODO: prep for bannister mortimer meeting 
+TODO: take a look at nznorth extended mesh process 
+
+OUT : 2021-03-08 14:01:01
+DONE: prepped meeting and had meeting with mortimer and bannister 
+
+IN  : 2021-03-09 10:33:49
+WORK: HOME
+TODO: nznorth extended mesh 
+TODO: resolution testing 
+TODO: 2 hours of writing 
+
+OUT : 2021-03-09 19:00:40
+DONE: almost done with hackfish mesh 
+DONE: started writing paper 
+
+IN  : 2021-03-10 10:07:29
+WORK: HOME
+TODO: respond to emails 
+TODO: updated abstract for john 
+TODO: finish mesh for yoshi 
+TODO: point spread test 
+TODO: write more paper 
+
+OUT : 2021-03-10 17:16:49
+DONE: abstract for john 
+DONE: responded nicks email 
+DONE: finished mesh for yoshi 
+DONE: working on point spread test with hanning window 
+DONE: wrote part of methods section jgr paper 
+
+IN  : 2021-03-11 11:04:29
+WORK: HOME
+TODO: hanning point spread test 
+TODO: email carl 
+TODO: write 
+
+OUT : 2021-03-11 16:52:33
+DONE: started hanning point spread test 
+DONE: got interface contours to plot on depth slices 
+
+IN  : 2021-03-12 08:25:27
+WORK: VUW
+TODO: nesi deletions, transfers to hdd 
+TODO: prep meeting yoshi 
+TODO: write and sensitivity kernels 
+
+OUT : 2021-03-12 18:03:19
+DONE: met with yoshi and calum 
+DONE: worked on some visualizations 
+DONE: wrote a bit 
+DONE: transferring files 
+
+IN  : 2021-03-15 09:28:19
+WORK: VUW
+TODO: admin stuff 
+TODO: nesi deletions 
+TODO: writing 
+TODO: resolution analysis 
+

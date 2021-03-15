@@ -118,7 +118,7 @@ def generate_cmtsolutions(catalog, convert=1E7, path="./"):
 
 
 if __name__ == "__main__":
-    path = '/Users/Chow/Documents/academic/vuw/inversion/prep/extra_events'
-    fid = os.path.join(path, "extra_events.xml")
+    path = '/Users/Chow/Documents/academic/vuw/forest/posthoc'
+    fid = os.path.join(path, "posthoc_w_mt.xml")
     cat = read_events(fid)
-    generate_cmtsolutions(catalog=cat, convert=1E7, path=path)
+    generate_cmtsolutions(catalog=cat, convert=1, path=path)
