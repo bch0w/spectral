@@ -7,10 +7,11 @@ from matplotlib.ticker import PercentFormatter
 event = None
 station = None
 comp = None
+window = None
 
 vrl = np.loadtxt(sys.argv[1], dtype=str, delimiter=", ")
 vrl_dict = {"event": vrl[:,0], "station": vrl[:,1], "comp": vrl[:,2], 
-            "vrl": vrl[:,3].astype(float)}
+            "window": vrl[:, 3], "vrl": vrl[:,4].astype(float)}
 df = pd.DataFrame(vrl_dict)
 if event:
     df = df.loc[df["event"] == event]

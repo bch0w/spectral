@@ -317,6 +317,18 @@ def event_trials(choice, csv_file, sep_km=None, desired_length=None):
             "maxlatitude": -37.0,  # URC
             "maxlongitude": 178.5,  # URC
             "maxdepth": 60.
+          },
+        "south": {
+            "name": "south",
+            "starttime": UTCDateTime("2003-08-20T00:00:00"),  # GeoNet MT cat
+            "endtime": UTCDateTime(),
+            "minmagnitude": 4.5,
+            "maxmagnitude": 6.,
+            "minlatitude": -48,  # LLC
+            "minlongitude": 165,  # LLC
+            "maxlatitude": -40.0,  # URC
+            "maxlongitude": 175,  # URC
+            "maxdepth": 60.
           }
     }
 
@@ -413,9 +425,9 @@ if __name__ == "__main__":
 
 
     # USER PARAMETERS
-    cat_name = "posthoc"
+    cat_name = "south"
 
-    if False:
+    if True:
         # Get the catalog and its name, based on the functions
         event_trials(cat_name, csv_file=csv_file)
     else:

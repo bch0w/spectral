@@ -4,6 +4,7 @@ Only usable for the New Zealand problem, hardcoding for GeoNet moment tensors
 Expects that the events have been gathered using the 'event_catalog.py' script
 """
 import os
+import sys
 from obspy import read_events
 from obspy.geodetics import FlinnEngdahl
 
@@ -118,7 +119,5 @@ def generate_cmtsolutions(catalog, convert=1E7, path="./"):
 
 
 if __name__ == "__main__":
-    path = '/Users/Chow/Documents/academic/vuw/forest/posthoc'
-    fid = os.path.join(path, "posthoc_w_mt.xml")
-    cat = read_events(fid)
-    generate_cmtsolutions(catalog=cat, convert=1, path=path)
+    cat = read_events(sys.argv[1])
+    generate_cmtsolutions(catalog=cat, convert=1, path="./")

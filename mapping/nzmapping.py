@@ -6,15 +6,79 @@ fairly general.
 
 Requires configs to define flags and keyword arguments, located in 'mapcfgs'
 To change the config file, change the import statement in main()
+
+Tickmarks:
+    https://stackoverflow.com/questions/18363987/basemap-how-to-remove-actual-lat-lon-lines-while-keeping-the-ticks-on-the-axis/62087643#62087643
 """
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import matplotlib.patheffects as pe
 from obspy import read_events
 from scipy.interpolate import griddata
 from mpl_toolkits.basemap import Basemap
 from obspy.imaging.beachball import beach
 from pyatoa.utils.calculate import normalize_a_to_b, myround
+
+
+class FixPointNormalize(mpl.colors.Normalize):
+    """
+    Taken from:
+    https://stackoverflow.com/questions/40895021/python-equivalent-for-matlabs-demcmap-elevation-appropriate-colormap
+    ===============================
+    Inspired by
+    https://stackoverflow.com/questions/20144529/shifted-colorbar-matplotlib
+    Subclassing Normalize to obtain a colormap with a fixpoint
+    somewhere in the middle of the colormap.
+
+    This may be useful for a `terrain` map, to set the "sea level"
+    to a color in the blue/turquise range.
+
+    col_val sets whichever value in the colormap to be the sealevel [0, 1]
+    Stackoverflow decided 0.22 was a good choice
+
+    Example Call:
+    norm4 = FixPointNormalize(sealevel=0, vmax=3400)
+    im4 = ax[1,0].imshow(data+1000, norm=norm4, cmap=cut_terrain_map)
+    fig.colorbar(im4, ax=ax[1,0])
+    """
+    def __init__(self, vmin=None, vmax=None, sealevel=0, col_val=0.21875,
+                 clip=False):
+        # sealevel is the fix point of the colormap (in data units)
+        self.sealevel = sealevel
+
+        # col_val is the color value in the range [0,1] that should represent
+        # the sealevel.
+        self.col_val = col_val
+        mpl.colors.Normalize.__init__(self, vmin, vmax, clip)
+
+    def __call__(self, value, clip=None):
+        x, y = [self.vmin, self.sealevel, self.vmax], [0, self.col_val, 1]
+        return np.ma.masked_array(np.interp(value, x, y))
+
+
+def cut_terrain_cmap(cmap_segments=256):
+    """
+    Combine the lower and upper range of the terrain colormap with a gap in the
+    middle to let the coastline appear more prominently.
+    inspired by
+    https://stackoverflow.com/questions/31051488/combining-two-matplotlib-colormaps
+    """
+    colors_undersea = plt.cm.terrain(np.linspace(0, 0.17, 56))
+    colors_land = plt.cm.terrain(np.linspace(0.25, 1, 200))
+
+    # combine them and build a new colormap
+    colors = np.vstack((colors_undersea, colors_land))
+    return mpl.colors.LinearSegmentedColormap.from_list('cuterraine', colors,
+                                                        cmap_segments)
+
+def discretize_cmap(cmap, N):
+    """
+    Set the number of values to some discrete number of values N
+    :return:
+    """
+    pass
+    # color_list=
 
 
 def initiate_basemap(map_corners, scalebar=True, **kwargs):
@@ -33,12 +97,13 @@ def initiate_basemap(map_corners, scalebar=True, **kwargs):
     axis_linewidth = kwargs.get("axis_linewidth", 2)
     continent_color = kwargs.get("continent_color", "w")
     lake_color = kwargs.get("lake_color", "w")
-    coastline_zorder = kwargs.get("coastline_zorder", 5)
+    zorder = kwargs.get("zorder", 5)
     coastline_linewidth = kwargs.get("coastline_linewidth", 2.0)
     fill_color = kwargs.get("fill_color", "w")
     fontsize = kwargs.get("fontsize", 13)
     area_thresh = kwargs.get("area_thresh", None)
     resolution = kwargs.get("resolution", "h")
+    degrees = kwargs.get("degrees", 1)
 
     f = plt.figure(figsize=figsize, dpi=dpi)
     ax = f.add_subplot(111)
@@ -54,17 +119,24 @@ def initiate_basemap(map_corners, scalebar=True, **kwargs):
                 urcrnrlon=map_corners["lon_max"],
                 )
 
-    m.drawcoastlines(linewidth=coastline_linewidth, zorder=coastline_zorder)
-    m.fillcontinents(color=continent_color, lake_color=lake_color)
     m.drawrivers(linewidth=0.)
-    m.drawmapboundary(fill_color=fill_color)
+    m.drawcoastlines(linewidth=coastline_linewidth, zorder=zorder)
+    if continent_color:
+        m.fillcontinents(color=continent_color, lake_color=lake_color,
+                         zorder=zorder)
+    if fill_color:
+        m.drawmapboundary(fill_color=fill_color)
+
     m.drawparallels(np.arange(int(map_corners["lat_min"]),
-                              int(map_corners["lat_max"]), 1),
-                    labels=[1, 0, 0, 0], linewidth=0, fontsize=fontsize,
+                              int(map_corners["lat_max"]), degrees),
+                    labels=[1, 0, 0, 0], zorder=zorder+10,
+                    dashes=[6, 900], linewidth=axis_linewidth,
+                    fontsize=fontsize,
                     rotation=45)
     m.drawmeridians(np.arange(int(map_corners["lon_min"]),
-                              int(map_corners["lon_max"]) + 1, 1),
-                    labels=[0, 0, 0, 1], linewidth=0, fontsize=fontsize,
+                              int(map_corners["lon_max"]) + 1, degrees),
+                    labels=[0, 0, 0, 1], fontsize=fontsize, zorder=zorder+10,
+                    dashes=[6, 900], linewidth=axis_linewidth,
                     rotation=45)
 
     if scalebar:
@@ -97,22 +169,29 @@ def place_scalebar(m, map_corners, **kwargs):
     loc = kwargs.get("scalebar_location", "upper-right")
     fontsize = kwargs.get("scalebar_fontsize", 13)
     linewidth = kwargs.get("scalebar_linewidth", 2)
+    scalebar_length = kwargs.get("scalebar_length", 100)
 
     mc = map_corners
     if loc == "upper-right":
         latscale = mc["lat_min"] + (mc["lat_max"] - mc["lat_min"]) * 0.94
         lonscale = mc["lon_min"] + (mc["lon_max"] - mc["lon_min"]) * 0.875
     if loc == "lower-right":
+        # ORIGINAL
         latscale = mc["lat_min"] + (mc["lat_max"] - mc["lat_min"]) * 0.04
         lonscale = mc["lon_min"] + (mc["lon_max"] - mc["lon_min"]) * 0.9
+        
+        # BEACON
+        # latscale = mc["lat_min"] + (mc["lat_max"] - mc["lat_min"]) * 0.1
+        # lonscale = mc["lon_min"] + (mc["lon_max"] - mc["lon_min"]) * 0.8
 
-    m.drawmapscale(lonscale, latscale, lonscale, latscale, 100,
+    m.drawmapscale(lonscale, latscale, lonscale, latscale, scalebar_length,
                    yoffset=0.01 * (m.ymax-m.ymin), zorder=5000,
                    linewidth=linewidth, fontsize=fontsize
                    )
 
 
-def plot_stations(m, fid, sta_ignore=[], net_ignore=[], **kwargs):
+def plot_stations(m, fid, annotate=False, 
+                  sta_ignore=[], net_ignore=[], **kwargs):
     """
     Get station info from a Specfem STATION file
     
@@ -130,20 +209,67 @@ def plot_stations(m, fid, sta_ignore=[], net_ignore=[], **kwargs):
 
     stations = np.loadtxt(fid, usecols=(0,1,2,3), dtype=str) 
 
-    x, y = [], []
+    networks = np.unique(stations[:, 1])
+    # networks = {net: f"C{i}" for i, net in enumerate(networks)}
+
+    xlist, ylist, clist = [], [], []
     for station in stations:
         sta, net, lat, lon = station
         if net in net_ignore:
             continue
         if sta in sta_ignore:
             continue
-        xy = m(float(lon), float(lat))
+        x, y = m(float(lon), float(lat))
 
-        x.append(xy[0])
-        y.append(xy[1])
+        xlist.append(x)
+        ylist.append(y)
+        if annotate and net in ["NZ"]:
+            sta_ = station[0]
+            ha = "center"
+            if sta_ == "RD17":
+                sta_ = "RD17/RD21"
+                ha = "left"
+            elif sta_ == "RD11":
+                sta_ = "RD11/RD20"
+                ha = "left"
+            plt.text(x=x, y=y+3000, s=sta_, 
+                     zorder=zorder+5, va="bottom", ha=ha, fontsize=12)
+        if net == "NZ":
+            c = "g"
+            m_ = "d"
+        elif net == "XX":
+            c = "orange"
+            m_ = "^"
+        elif net == "X2":
+            c = "r"
+            m_ = "<"
+        elif net == "ZX":
+            c = "forestgreen"
+            m_ = ">"
+        elif net == "Z8":
+            c = "yellow"
+            m_ = "d"
+        elif net == "SL":
+            c = "g"
+            m_ = "d"
+        elif net == "CC":
+            c = "purple"
+            m_ = ">"
+        else:
+            c = "w"
+            m_ = "v"
 
-    m.scatter(x, y, marker=marker, s=markersize, edgecolors=edgecolor,
-              c=color, linestyle="-", linewidth=2., zorder=zorder)
+        clist.append(c)
+        m.scatter(x, y, marker=m_, s=markersize, edgecolors="k",
+                  c=c, linestyle="-", linewidth=2., zorder=zorder)
+
+        # if color == "by_network":
+        #     c.append(networks[net])
+        # else:
+        #     c.append(color)
+
+    # m.scatter(xlist, ylist, marker=marker, s=markersize, edgecolors="k",
+    #           c=clist, linestyle="-", linewidth=2., zorder=zorder)
 
 
 def event_beachball(m, event, fm_type="focal_mechanism", zorder=90, **kwargs):
@@ -222,8 +348,11 @@ def plot_beachballs(m, fid, norm_a, norm_b, mag_scale=None,
     cbar_shrink = kwargs.get("cbar_shrink", 0.35)
     cbar_fontsize = kwargs.get("cbar_fontsize", 15)
     cbar_tickfontsize = kwargs.get("cbar_tickfontsize", 15)
+    cbar_ticknum = kwargs.get("cbar_ticknum", 11)
     cbar_labelpad = kwargs.get("cbar_labelpad", 15)
+    cbar_linewidth = kwargs.get("cbar_linewidth", 2.)
     cmap_name = kwargs.get("cmap_name", "jet_r")
+    zorder = kwargs.get("zorder", 10)
 
     cmap = getattr(plt.cm, cmap_name)
 
@@ -239,12 +368,6 @@ def plot_beachballs(m, fid, norm_a, norm_b, mag_scale=None,
         except AttributeError:
             depth = event.origins[0].depth * 1E-3
             mag = event.magnitudes[0].mag
-
-        # if (depth > 60) or (mag < 4.4):
-        #     ignore.append(i)
-        #     depths.append(np.nan)
-        #     mags.append(np.nan)
-        #     continue
 
         depths.append(depth)
         mags.append(mag)
@@ -264,20 +387,29 @@ def plot_beachballs(m, fid, norm_a, norm_b, mag_scale=None,
     for i, event in enumerate(cat):
         if i in ignore:
             continue
-        event_beachball(m, event, fm_type="focal_mechanism",
-                        src_markercolor=cmap(normalize(depths[i])),
-                        src_width=mags_norm[i], zorder=90 + 1/mags_norm[i]
-                        )
+        try:
+            event_beachball(m, event, fm_type="focal_mechanism",
+                            src_markercolor=cmap(normalize(depths[i])),
+                            src_width=mags_norm[i], 
+                            zorder=zorder + 1/mags_norm[i]
+                            )
+        except Exception as e:
+            print(f"event {i} failed")
+            continue
 
     # Create a colormap for the colorbar
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=normalize)
     sm.set_array([])
     cbar = plt.colorbar(sm, extend="max", shrink=cbar_shrink, aspect=10)
-    cbar.set_label("depth (km)", rotation=270, labelpad=cbar_labelpad, 
+    # To change the number of labels
+    # cbar.locator = mpl.ticker.MaxNLocator(nbins=cbar_ticknum)
+    # cbar.update_ticks()
+    cbar.set_label("depth (km)", rotation=270, labelpad=cbar_labelpad,
                    fontsize=cbar_fontsize)
     cbar.ax.invert_yaxis()
     cbar.ax.tick_params(axis="y", direction="in", length=0, width=3., 
                         labelsize=cbar_tickfontsize)
+    cbar.outline.set_linewidth(cbar_linewidth)
 
     # Find the bounds of the magnitude range for scale
     if mag_scale is None:
@@ -306,64 +438,67 @@ def plot_beachballs(m, fid, norm_a, norm_b, mag_scale=None,
             y_val += 0.05 * (m.urcrnry - m.llcrnry) + m.llcrnry
 
 
-def plot_raypaths(m, cat_fid, sta_fid, **kwargs):
+def plot_raypaths(m, events_fid, stations_fid, pairs, **kwargs):
     """
     Plot lines connecting sources and receivers
+
+    :type pairs: dict
+    :param pairs: src rcv pairs {event_id: station_name}
     """
     event_color = kwargs.get("event_color", "r")
-    station_color = kwargs.get("station_color", "g")
-    ray_color = kwargs.get("station_color", "k")
 
-    # Get event lat/lon values
-    cat = read_events(fid)
+    cat = read_events(events_fid)
+    cat_indices = [_.resource_id.id.split('/')[1] for _ in cat]
 
-    # First get some array info for scale bars and colormap
-    print(f"{len(cat)} events in catalog")
-    eventx, eventy = [], []
-    for i, event in enumerate(cat):
-        try:
-            origin = event.preferred_origin()
-            mag = event.preferred_magnitude().mag
-        except AttributeError:
-            origin = event.origins[0]
-            mag = event.magnitudes[0].mag
+    stations = np.loadtxt(stations_fid, usecols=(0,1,2,3), dtype=str)
+    sta_indices = [f"{_[1]}.{_[0]}" for _ in stations]
 
-        if (origin.depth * 1E-3 > 60) or (mag < 4.4):
-            continue
+    plotted_stations = []
 
-        x_, y_ = m(origin.longitude, origin.latitude)
-        eventx.append(x)
-        eventy.append(y)
+    for i, (event_id, station_name) in enumerate(pairs):
+        # Plot focal mechanism
+        event = cat[cat_indices.index(event_id)]
+        ex, ey = m(event.preferred_origin().longitude,
+                   event.preferred_origin().latitude
+                   )
+        event_beachball(m, event, fm_type="focal_mechanism",
+                        src_markercolor="r", src_width=1E4, zorder=100
+                        )
+        # Plot station
+        station = stations[sta_indices.index(station_name)]
+        _, _, lat, lon = station
+        sx, sy = m(float(lon), float(lat))
+        if station_name.split(".")[0] == "NZ":
+            c = "c"
+        else:
+            c = "darkorange"
 
-    # Get station lat lon values
-    stations = np.loadtxt(fid, usecols=(0,1,2,3), dtype=str)
-    stax, stay = [], []
-    for station in stations:
-        sta, net, lat, lon = station
+        if station_name not in plotted_stations:
+            plt.scatter(sx, sy, marker="v", s=50, edgecolor="k", linewidth=2.,
+                        zorder=100, color=c)
+            plotted_stations.append(station_name)
 
-        x_, y_ = m(float(lon), float(lat))
-        stax.append(x_)
-        stay.append(y_)
+        # Connect with a line
+        # plt.plot([sx, ex], [sy, ey], color=f"C{i}", linestyle="-", 
+        #          linewidth=3., zorder=90)
 
-    # Plot event markers, station markers and connecting line
-    stations_plotted, events_plotted = [], []
-    for ex, ey in zip(eventx, eventy):
-        for sx, sy in zip(stax, stay):
-            # Plot a marker for each event and station
-            if (ex, ey) not in events_plotted:
-                plt.scatter(ex, ey, marker="o", c=event_color, edgecolors="k")
-                events_plotted.append((ex, ey))
-            if (sx, sy) not in stations_plotted:
-                plt.scatter(sx, sy, marker="v", c=station_color, edgecolors="k",
-                            s=25, zorder=100)
-                stations_plotted.append((sx, sy))
+        plt.plot([sx, ex], [sy, ey], color=f"k", linestyle="-", 
+                linewidth=.75, zorder=90, alpha=0.2)
 
-        # Connect source and receiver with a line
-        plt.plot([sx, sy], [ex, ey], color=ray_color, linestyle="-",
-                 alpha=0.1, zorder=50)
+        # Find midpoint in line annotate
+        if False:
+            xvals = [sx, ex]
+            yvals = [sy, ey]
+            midpoint = ((max(xvals) - min(xvals)) / 3 + min(xvals), 
+                        (max(yvals) - min(yvals)) / 3 + min(yvals))
+            plt.text(x=midpoint[0], y=midpoint[1], 
+                     s=f"{event_id}_{station_name}", fontsize=15, zorder=200)
 
 
-def draw_domain_bounds(m, bounds):
+        print(event_id, station_name)
+
+
+def draw_domain_bounds(m, bounds, **kwargs):
     """
     Draw the domain boundaries if theyre smaller than the map boundaries
     """
@@ -373,8 +508,7 @@ def draw_domain_bounds(m, bounds):
             bounds["lon_max"], bounds["lon_max"]]
     x, y = m(lons, lats)
     xy = zip(x,y)
-    poly = mpl.patches.Polygon(list(xy), facecolor="None", edgecolor="k", 
-                               linewidth=1.5, linestyle="--", alpha=1)
+    poly = mpl.patches.Polygon(list(xy), **kwargs)
 
     plt.gca().add_patch(poly)
 
@@ -392,33 +526,39 @@ def plot_landmarks(m, locations, **kwargs):
     """
     markersize = kwargs.get("markersize", 80)
     color = kwargs.get("color", "w")
+    edgecolor = kwargs.get("edgecolor", "k")
     fontsize = kwargs.get("fontsize", 12)
+    linewidth = kwargs.get("linewidth", 2)
     zorder = kwargs.get("zorder", 100)
     alpha = kwargs.get("alpha", 0.85)
+    textborder = kwargs.get("textborder", "k")
+    fontcolor = kwargs.get("fontcolor", "k")
     marker = kwargs.get("marker", "o")
+    fontweight = kwargs.get("fontweight", "normal")
+    annotate = kwargs.get("annotate", True)
+    mark = kwargs.get("mark", True)
 
     for name, tup in locations.items():
-        lat, lon, locbool = tup
+        try:
+            lat, lon = tup
+            kwargs = {}
+        except ValueError:
+            lat, lon, kwargs = tup
         xy = m(lon, lat)
-        if locbool:
+        if mark:
+            m.scatter(xy[0], xy[1], marker=marker, s=markersize,
+                      edgecolor=edgecolor, c=color, linewidth=linewidth,
+                      zorder=zorder)
+        if annotate:
             plt.text(xy[0] + 0.01 * (m.xmax - m.xmin),
                      xy[1] + 0.01 * (m.ymax - m.ymin),
                      s=name, fontsize=fontsize, zorder=zorder,
-                     fontweight="normal", bbox=dict(facecolor="w", fill=True,
-                                                    edgecolor="k",
-                                                    linewidth=1.5, alpha=alpha,
-                                                    boxstyle="square")
-                     )
-        else:
-            m.scatter(xy[0], xy[1], marker=marker, s=markersize, edgecolor="k",
-                      c=color, linewidth=2, zorder=zorder)
-            plt.text(xy[0] + 0.01 * (m.xmax - m.xmin),
-                     xy[1] + 0.01 * (m.ymax - m.ymin),
-                     s=name, fontsize=fontsize, zorder=zorder,
-                     fontweight="normal", bbox=dict(facecolor="w", fill=True,
-                                                    edgecolor="k",
-                                                    linewidth=1.5, alpha=alpha,
-                                                    boxstyle="round")
+                     fontweight=fontweight, c=fontcolor,
+                     path_effects=[pe.withStroke(linewidth=linewidth,
+                                                 foreground=textborder)],
+                     **kwargs
+                     # bbox=dict(facecolor="w", fill=True, edgecolor="k",
+                     #           linewidth=1.5, alpha=alpha, boxstyle="round")
                      )
 
 def plot_interface_contour(m, fid, **kwargs):
@@ -458,7 +598,7 @@ def plot_interface_contour(m, fid, **kwargs):
     cs = m.contour(xi, yi, zi, levels, vmin=0, colors=color,
                    linestyles=linestyle, alpha=alpha, zorder=zorder,
                    linewidths=linewidth)
-    clabels = plt.clabel(cs, levels[1:], fontsize=fontsize, fmt=format_)
+    clabels = plt.clabel(cs, levels[1:], fontsize=fontsize, fmt=format_,)
 
     [txt.set_bbox(dict(facecolor="white", edgecolor="None", pad=0))
      for txt in clabels]
@@ -476,13 +616,57 @@ def plot_active_faults(m, fid, **kwargs):
         m.plot(x[idx], y[idx], **kwargs)
 
 
+def plot_topography(m, fid, **kwargs):
+    """
+    Plot topography based on an xyz file
+    :param m:
+    :param fid:
+    :param kwargs:
+    :return:
+    """
+    zorder = kwargs.get("zorder", 20)
+    cbar_shrink = kwargs.get("cbar_shrink", 0.35)
+    cbar_fontsize = kwargs.get("cbar_fontsize", 15)
+    cbar_tickfontsize = kwargs.get("cbar_tickfontsize", 15)
+    cbar_labelpad = kwargs.get("cbar_labelpad", 15)
+    cbar_linewidth = kwargs.get("cbar_linewidth", 2.)
+    cmap_segments = kwargs.get("cmap_segments", 256)
+    zero_col_val = kwargs.get("zero_col_val", .21875)
+    markersize = kwargs.get("markersize", 0.05)
+
+    # Load in the topography/bathymetry file
+    lon, lat, z = np.loadtxt(fid).T
+    z *= 1E-3
+    x, y = m(lon, lat)
+    
+    # Generate a segmented colormap that creates a hard boundary at coastline
+    # colors (between browns and blues)
+    cmap = cut_terrain_cmap(cmap_segments)
+
+    # Set 0 value to sea-level, so turquoise colors
+    normalize = FixPointNormalize(sealevel=0, vmax=max(z), vmin=min(z),
+                                  col_val=zero_col_val)
+
+    # Plot that ish, small pointsize to get fine detail
+    sc = m.scatter(x, y, c=z, cmap=cmap, zorder=zorder, norm=normalize, 
+                   s=markersize)
+
+    # Create a corresponding colorbar
+    cbar = plt.colorbar(sc, shrink=cbar_shrink, aspect=10)  # extend="both"
+    cbar.set_label("elevation [km]", rotation=270, labelpad=cbar_labelpad,
+                   fontsize=cbar_fontsize)
+    cbar.ax.tick_params(axis="y", direction="in", length=0, width=3.,
+                        labelsize=cbar_tickfontsize)
+    cbar.outline.set_linewidth(cbar_linewidth)
+
+
 if __name__ == "__main__":
-    from mapcfgs.srcrcv import *
+    from configs.stations_south import *
 
     f, m = initiate_basemap(**MAP_KWARGS)
 
     if BOUNDS:
-        draw_domain_bounds(m, DOMAIN_BOUNDS)
+        draw_domain_bounds(m, DOMAIN_BOUNDS, **DMN_KWARGS)
 
     if STATIONS:
         plot_stations(m, FIDS["STATIONS"], **STA_KWARGS)
@@ -490,8 +674,14 @@ if __name__ == "__main__":
     if EVENTS:
         plot_beachballs(m, FIDS["EVENTS"], **EVT_KWARGS)
 
+    if RAYPATHS:
+        plot_raypaths(m, FIDS["EVENTS"], FIDS["STATIONS"], PAIRS)
+
+    if CITIES:
+        plot_landmarks(m, CITIES_DICT, **CTY_KWARGS)
+
     if LANDMARKS:
-        plot_landmarks(m, LANDMARKS, **LMK_KWARGS)
+        plot_landmarks(m, LANDMARKS_DICT, **LMK_KWARGS)
 
     if INTERFACE:
         plot_interface_contour(m, FIDS["INTERFACE"], **INT_KWARGS)
@@ -499,5 +689,8 @@ if __name__ == "__main__":
     if FAULTS:
         plot_active_faults(m, FIDS["FAULTS"], **FLT_KWARGS)
 
-    plt.savefig(FIDS["OUTPUT"])
+    if TOPO:
+        plot_topography(m, FIDS["TOPO"], **TPO_KWARGS)
+
+    plt.savefig(FIDS["OUTPUT"], transparent=True, figsize=FIGSIZE, dpi=DPI)
     plt.show()

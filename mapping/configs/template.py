@@ -1,24 +1,30 @@
-STATIONS = 1
-EVENTS = 1
+STATIONS = 0
+EVENTS = 0
 LANDMARKS = 0
-INTERFACE = 1
+INTERFACE = 0
 FAULTS = 0
-BOUNDS = 1
+BOUNDS = 0
 
 FIDS = {
-    "EVENTS": "/Users/Chow/Documents/academic/vuw/data/events/"
-              "decluster_60.xml",
-    "STATIONS": "/Users/Chow/Documents/academic/vuw/data/specfem/stations/"
-                "DECLUSTER",
-    "INTERFACE": "/Users/Chow/Documents/academic/vuw/data/carto/interface/"
-                 "williams_hikurangi_interface.npy",
-    "FAULTS": "/Users/Chow/Documents/academic/vuw/data/carto/fault_coordinates/"
-              "forest_mesh_gns_active_faults.txt",
-    "OUTPUT": "./figures/srcrcv_map.png"
+    "EVENTS": "",
+    "STATIONS": "",
+    "INTERFACE": "",
+    "FAULTS": "",
+    "OUTPUT": ""
 }
 
 # 1 for city, 0 for non-city
 LANDMARKS = {
+    "Wellington": (-41.28664, 174.77557, 0),
+    "Kaikoura": (-42.416665, 173.6833306, 0),
+    "Taupo": (-38.6857, 176.0702, 0),
+    "Mt. Taranaki": (-39.5, 174.0634, 1),
+    "Bay of Plenty": (-37.5, 176., 1),
+    "Cook Strait": (-41.6, 174.1, 1),
+    "Mahia\nPeninsula": (-39.14, 177.90, 1),
+    "Porangahau": (-40.30, 176.61, 0),
+    "Australian Plate": (-38.4, 173., 1),
+    "Pacific Plate": (-42., 176.5, 1)
 }
 
 FIGSIZE = (8, 10)
@@ -32,10 +38,9 @@ MAP_KWARGS = {
                     "lon_min": 172.5, "lon_max": 178.8},
     "continent_color": "whitesmoke",
     "lake_color": "azure",
-    "fill_color": "azure",
     "coastline_linewidth": 2.,
     "fontsize": 12,
-    "area_thresh": None,
+    "area_thresh": 500,
     "scalebar": True,
     "scalebar_location": "lower-right",
     "scalebar_fontsize": 14.,
@@ -63,6 +68,7 @@ EVT_KWARGS = {
     "cbar_fontsize": 15,
     "cbar_tickfontsize": 15,
     "cbar_labelpad": 17.5,
+    "cbar_linewidth": 2.,
 }
 
 # LANDMARKS
@@ -96,5 +102,9 @@ FLT_KWARGS = {
     "alpha": 1.,
     "linewidth": .5,
     "linestyle": ":"
+}
+
+TPO_KWARGS = {
+    "zorder": 5,
 }
 

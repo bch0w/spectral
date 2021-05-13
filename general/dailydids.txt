@@ -3231,3 +3231,442 @@ TODO: nesi deletions
 TODO: writing 
 TODO: resolution analysis 
 
+OUT : 2021-03-15 21:17:40
+DONE: making figures and writing 
+
+IN  : 2021-03-16 10:33:58
+WORK: VUW
+TODO: point spread test design 
+TODO: writing 
+
+OUT : 2021-03-16 19:15:34
+DONE: point local script and implemented 
+DONE: writing and figures 
+
+IN  : 2021-03-17 10:11:57
+WORK: HOME
+TODO: meet with carl regarding uaf stuff 
+TODO: look at point local pst 
+TODO: writing 
+
+OUT : 2021-03-17 17:16:20
+DONE: met with carl 
+DONE: point local spread test working! 
+
+IN  : 2021-03-18 09:45:40
+WORK: VUW
+TODO: point spread test again 
+TODO: write and figures 
+TODO: look at seamount subduction papers from carl 
+TODO: yoshi mesh 
+
+OUT : 2021-03-18 16:25:40
+DONE: fixed and ran new point spread test 
+DONE: wrote some more and put some new figures in 
+DONE: got interface working on pvpyplot 
+
+IN  : 2021-03-19 09:13:48
+WORK: VUW
+TODO: check point spread test 
+TODO: make some interface plots 
+TODO: prep meeting yoshi 
+TODO: SSA talk prep
+
+OUT : 2021-03-19 19:13:48
+DONE: ssa talk 
+DONE: prep and met with yoshi 
+DONE: emailed phil barnes about offshore 
+
+IN  : 2021-03-22 08:56:35
+WORK: HOME
+TODO: finish and record ssa talk 
+
+OUT : 2021-03-22 17:01:06
+DONE: ssa talk prep and rehearse slightly, sent to yoshi 
+
+IN  : 2021-03-23 08:55:31
+WORK: HOME
+TODO: ssa talk 
+TODO: finish topo remove 
+TODO: run point local for tvz 
+TODO: write 
+
+OUT : 2021-03-23 15:55:31
+DONE: ssa presi 
+DONE: ran tvz pl pst 
+DONE: topo for charles but not done 
+
+IN  : 2021-03-24 08:17:29
+WORK: VUW
+TODO: check tvz pl pst results 
+TODO: finish topo and send to charles 
+TODO: write motherfucker 
+
+OUT : 2021-03-24 21:29:14
+DONE: finished topo but not working 
+DONE: looked at pst results and started new ones running 
+DONE: lots added to writing but still more to do ... 
+
+IN  : 2021-03-25 08:36:00
+WORK: VUW
+TODO: meeting with carolyn boulton(?) 
+TODO: write  
+TODO: maybe 1 hr on pst 
+
+OUT : 2021-03-25 16:51:00
+DONE: writing and figure making 
+DONE: met with carolyn  
+
+IN  : 2021-03-26 08:38:03
+WORK: VUW
+TODO: writing, figure making, topography? 
+TODO: maybe meet with tim little 
+
+OUT : 2021-03-26 16:38:03
+DONE: finished writing and figures ish 
+DONE: prepped and met with yoshi 
+DONE: read sun 2020 paper on seamount subduction 
+
+IN  : 2021-03-27 11:45:03
+WORK: HOME
+TODO: read some papers and get an idea of the tectonic interpretations you want to make 
+
+OUT : 2021-03-27 19:45:03
+DONE: revamped presentation and read emilys paper to get some better interpretations for seamounts 
+DONE: worked on point local a bit but somethings wrong 
+
+IN  : 2021-03-28 10:29:23
+WORK: HOME
+TODO: point local get it running 
+TODO: read one paper 
+TODO: finish results and discussions sections and once over thesis 
+
+OUT : 2021-03-28 18:35:25
+DONE: finished presentation 
+DONE: got point local running 
+DONE: wrote a tiny bit 
+DONE:  
+DONE: read a few more papers to get a better idea on interp 
+
+IN  : 2021-03-29 09:53:30
+WORK: HOME
+TODO: prep meeting 
+TODO: run another point local 
+TODO: write write write write write 
+
+OUT : 2021-03-29 14:27:46
+DONE: prepped met with susan and laura 
+
+IN  : 2021-03-30 08:18:09
+WORK: HOME
+TODO: check and run another point spread 
+TODO: finish results and discussions 
+TODO: format thesis 
+
+OUT : 2021-03-30 21:28:57
+DONE: finished rough discussion writing 
+DONE: meeting with phil barnes 
+DONE: cleaned up plotting script  
+DONE: putting together finalized figures 
+
+IN  : 2021-03-31 08:56:20
+WORK: HOME
+TODO: figures and writing, run another point local 
+TODO: john yoshi meeting
+
+OUT : 2021-03-31 15:56:20
+DONE: figure making 
+DONE: writing 
+DONE: met with john and yoshi re. thesis 
+
+IN  : 2021-04-01 08:57:27
+WORK: VUW
+TODO: admin stuff like getting thesis exam date 
+TODO: write 
+TODO: try to meet with tim little 
+
+OUT : 2021-04-01 17:15:29
+DONE: working on vrl 
+DONE: split paper and outlined part 2 
+DONE: talked to katie, emailed tim little 
+DONE: working on posthoc events 
+
+IN  : 2021-04-02 09:47:42
+WORK: HOME
+TODO: make waveform improvement figures 
+TODO: write waveform improvement section 
+TODO: find and run post hoc events 
+TODO: write post hoc section 
+
+OUT : 2021-04-02 16:58:09
+DONE: waveform comparisons 
+DONE: met with yoshi 
+
+IN  : 2021-04-03 10:24:02
+WORK: HOME
+TODO: finish raypath plot 
+TODO: do waveform improvement and model update figure 
+TODO: write those sections 
+TODO: make post hoc catalog 
+TODO: run post hoc  
+TODO: make new histograms 
+
+OUT : 2021-04-03 19:54:02
+DONE: finished waveform comparison figures 
+DONE: created posthoc catalog and ran it 
+DONE: proofread first half of paper 
+
+IN  : 2021-04-04 09:27:46
+WORK: HOME
+TODO: run post hoc 
+TODO: finish proofread and writing of last half of paper 
+TODO: new histograms 
+TODO: remake figures 
+
+OUT : 2021-04-04 21:57:43
+DONE: figures and writing 
+
+IN  : 2021-04-05 07:56:35
+WORK: HOME
+TODO: finish paper draft 
+TODO: tectonic map 
+TODO: add data grid to pvpyplot figures 
+
+OUT : 2021-04-05 18:29:32
+DONE: finished paper draft 
+DONE: dicked around 
+DONE: improved some pvpyplot capabilities 
+
+IN  : 2021-04-06 09:48:46
+WORK: GNS
+TODO: histograms 
+TODO: start copy pasting into thesis to get an idea of what needs to be written 
+
+OUT : 2021-04-06 21:21:35
+DONE: started organizing thesis and writing beacon section 
+DONE: met with yoshi on paper 
+DONE: restructured discussions 
+DONE: remaking figures and making new figures 
+
+OUT : 2021-04-07 21:18:17
+DONE: tomo files to charles 
+DONE: responded all emails 
+DONE: all of yoshis minor corrections 
+DONE: updated a figure 
+DONE: rough paragraphs for new discussion sections 
+
+IN  : 2021-04-08 08:30:44
+WORK: HOME
+TODO: finalize all figures  
+
+OUT : 2021-04-08 22:36:20
+DONE: fixed pvpyplot diagonal plotting 
+DONE: tvz and francis comparison figure 
+
+IN  : 2021-04-09 10:00:33
+WORK: GNS
+TODO: finish figures 
+
+OUT : 2021-04-09 21:30:33
+DONE: read some cook strait stuff 
+DONE: made cook strait depth figures 
+DONE: made srcrcv figure 
+
+IN  : 2021-04-10 10:30:27
+WORK: HOME
+TODO: tectonic map figure 
+TODO: all the other ones too aye 
+
+OUT : 2021-04-10 20:40:39
+DONE: finished tectonic map, tvz figure revised and cook straitt  t and along strike figure. almost there boi 
+
+IN  : 2021-04-11 12:34:02
+WORK: HOME
+TODO: recalc and posthoc events 
+TODO: write around new figures 
+TODO: volumetric resolution figures 
+
+OUT : 2021-04-11 21:12:37
+DONE: finished figures and rewrote sections 
+DONE: posthoc 60 events and recalc 
+DONE: need to proofread  
+
+IN  : 2021-04-12 10:18:16
+WORK: GNS
+TODO: volumetric psf 
+TODO: run a new Vpp psf, same % as Vss 
+TODO: prep for yoshi meet and start writing thesis 
+
+OUT : 2021-04-12 18:26:28
+DONE: proofread paper 
+DONE: ran dvp stuff 
+DONE: met with yoshi 
+DONE: started on thesis 
+
+IN  : 2021-04-13 09:29:46
+WORK: HOME
+TODO: nesi deletions 
+TODO: dvp volumetric psf 
+TODO: thesis 
+
+OUT : 2021-04-13 22:35:55
+DONE: formatted ch 3 4 5 
+DONE: wrote more intro and beacon 
+DONE: cig one pager 
+
+IN  : 2021-04-14 10:19:05
+WORK: HOME
+TODO: writing 
+
+OUT : 2021-04-14 21:12:33
+DONE: finished beacon 
+DONE: wrote more ch2 
+
+IN  : 2021-04-15 10:24:15
+WORK: GNS
+TODO: words on motivation, conclusion etc. words on the page today 
+
+OUT : 2021-04-15 21:33:00
+DONE: figures and writing 
+
+IN  : 2021-04-16 09:07:05
+WORK: VUW
+TODO: thesis wrap up and draft to john, yoshi 
+
+OUT : 2021-04-16 18:54:11
+DONE: first draft done and sent to john and yoshi 
+DONE: pasans defense talk 
+DONE: more figures more writing 
+
+IN  : 2021-04-18 10:32:47
+WORK: VUW
+TODO: figures and tables 
+
+OUT : 2021-04-18 16:59:53
+DONE: made some figures, attempted making some new ones, looked into tvz a bit more 
+
+IN  : 2021-04-19 09:34:54
+WORK: HOME
+TODO: figures 
+
+OUT : 2021-04-19 19:28:30
+DONE: new interpretation figures, like 4 of em 
+DONE: met with yoshi 
+
+IN  : 2021-04-20 09:32:55
+WORK: GNS
+TODO: figures and tables finish today 
+
+OUT : 2021-04-20 18:30:04
+DONE: figures done 
+
+IN  : 2021-04-21 08:49:51
+WORK: HOME
+TODO: write around all the new figures, finalize draft text, figure out what needs to go in 
+
+OUT : 2021-04-21 21:04:07
+DONE: read on nz geology 
+DONE: discussion sections on geology and seamounts 
+
+IN  : 2021-04-23 08:03:02
+WORK: VUW
+TODO: ssa since 5, finish chapters 1 and 2 proofreading and give to hubert and lauren 
+TODO: clean up chapter 5 
+
+OUT : 2021-04-23 16:03:02
+DONE: finished ch1 revisions and rewrote heaps of ch1 
+
+IN  : 2021-04-24 09:04:16
+WORK: HOME
+TODO: ch2 revisions 
+
+OUT : 2021-04-24 20:55:59
+DONE: rewrote section 2.fucking1 
+
+IN  : 2021-04-25 09:25:39
+WORK: HOME
+TODO: finish proofread 
+TODO: finish ch 6 and proofread 4 and 5 
+TODO: list of priorities 
+
+OUT : 2021-04-28 22:36:48
+DONE: finished proofread edits and all major to dos 
+DONE: almost there 
+
+IN  : 2021-04-29 09:11:25
+WORK: VUW
+TODO: finish it 
+
+OUT : 2021-04-29 22:11:25
+DONE: john comments, major to dos and almost done 
+
+IN  : 2021-04-30 09:04:49
+WORK: VUW
+TODO: proofread and submit babeeeeee! 
+
+OUT : 2021-04-30 12:57:50
+DONE: finished 
+
+IN  : 2021-05-04 08:55:37
+WORK: GNS
+TODO: plan for the next 3 months 
+TODO: respond nsf pf  
+TODO: meeting with yoshi 
+
+OUT : 2021-05-04 12:10:37
+DONE: met with yoshi and emails 
+
+IN  : 2021-05-06 10:17:09
+WORK: GNS
+TODO: prep AM meeting 
+TODO: paper 1 
+
+OUT : 2021-05-06 19:02:58
+DONE: timesheets 
+DONE: read random probing paper closely 
+DONE: working on res analysis more 
+
+IN  : 2021-05-07 09:06:54
+WORK: HOME
+TODO: paper draft out to co-authors today 
+
+OUT : 2021-05-07 14:04:21
+DONE: finished transferring thesis to paper 
+DONE: proofreading paper 
+
+IN  : 2021-05-10 09:42:32
+WORK: HOME
+TODO: paper out and meet with yoshi 
+
+OUT : 2021-05-10 17:46:30
+DONE: writing and met w yoshi 
+DONE: kinda dicked around thb 
+
+IN  : 2021-05-11 10:18:15
+WORK: HOME
+TODO: paper out 
+
+OUT : 2021-05-11 18:42:24
+DONE: paper and pyrateview 
+
+IN  : 2021-05-12 09:39:39
+WORK: HOME
+TODO: paper out god damnit 
+
+OUT : 2021-05-12 16:39:39
+DONE: paper to co authors 
+DONE: working on point spread function 
+
+IN  : 2021-05-13 09:23:58
+WORK: HOME
+TODO: work on paper 2 and point spread stuff 
+
+OUT : 2021-05-13 19:23:58
+DONE: figured out problem with sensitivity kernel 
+DONE: bathymetry mapping 
+
+IN  : 2021-05-14 10:06:25
+WORK: VUW
+TODO: sensitivity kernels 
+TODO: bathmetry 
+

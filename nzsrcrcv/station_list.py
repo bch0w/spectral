@@ -71,6 +71,35 @@ def geonet_north_island(level="station"):
     return inv_geonet[0]
 
 
+def geonet_south_island(level="station"):
+    """
+    Return geonet broadband stations in an obspy network
+
+    :type level: str
+    :param level: level to propogate network creation
+    :rtype: obspy.core.inventory.network.Network
+    """
+    c = Client("GEONET")
+
+    # Extended North Island coverage, Kaikoura to East Cape
+    lat_min = -48.
+    lat_max = -40.
+    lon_min = 165.
+    lon_max = 175.
+
+    starttime = UTCDateTime("2000-01-01")
+
+    # GeoNet Broadband instruments with standard station code Z
+    inv_geonet = c.get_stations(network="NZ", station="*Z", channel="HH?",
+                                minlatitude=lat_min, maxlatitude=lat_max,
+                                minlongitude=lon_min, maxlongitude=lon_max,
+                                level=level, starttime=starttime,
+                                endtime=UTCDateTime()
+                                )
+
+    return inv_geonet[0]
+
+
 def hobitss(level="station"):
     """
     Return hobitss broadband OBS sensors (trillium compacts)
@@ -590,17 +619,18 @@ def export_seed_fmt(inv):
 if __name__ == "__main__":
     # Parameters
     level = "channel"  # channel, station
-    write_to = "sahke_dataless.xml"
-    export_to_specfem = False
-    export_to_seed_fmt = True
+    write_to = None
+    export_to_specfem = True
+    export_to_seed_fmt = False
     plot = False
 
     # Create the Inventory
     master_inventory = Inventory(
         networks=[
+            geonet_south_island(level=level),
             # geonet_north_island(level=level),
             # hobitss(level=level),
-            sahke(level=level),
+            # sahke(level=level),
             # bannister(network_code="ZX", level=level),
             # bannister(network_code="Z8", level=level),
             # beacon(level=level)
