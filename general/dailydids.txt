@@ -3670,3 +3670,68 @@ WORK: VUW
 TODO: sensitivity kernels 
 TODO: bathmetry 
 
+OUT : 2021-05-14 15:56:25
+DONE: reading papers 
+DONE: point spread stuff 
+DONE: making figures 
+
+IN  : 2021-05-16 12:07:35
+WORK: HOME
+TODO: point spread and read papers 
+
+OUT : 2021-05-16 16:17:23
+DONE: point spread and paper 
+
+OUT : 2021-05-17 17:49:51
+DONE: met with yoshi 
+DONE: emailed on point spread stuff 
+DONE: reread on some point spred stuff 
+
+IN  : 2021-05-20 10:08:06
+WORK: HOME
+TODO: paper 2 and psf 
+
+OUT : 2021-05-21 18:09:24
+DONE: pyrateview 
+DONE: emails 
+DONE: some paper stuff 
+
+IN  : 2021-05-22 11:34:07
+WORK: HOME
+TODO: emails and paper 1 
+
+OUT : 2021-05-22 17:29:22
+DONE: point spread functions 
+DONE: paper figures 
+
+IN  : 2021-05-23 11:02:45
+WORK: HOME
+TODO: finish paper 2 draft and run another psf 
+
+OUT : 2021-05-23 16:40:15
+DONE: writing paper 2 
+DONE: looking at pora psf, kinda confusing 
+DONE: running cook psf 
+
+IN  : 2021-05-24 10:01:30
+WORK: HOME
+TODO: papers 
+
+OUT : 2021-05-24 17:14:24
+DONE: met with yoshi 
+DONE: point spread testing larger spread functions and ran volumetric 
+
+IN  : 2021-05-25 12:01:58
+WORK: HOME
+TODO: paper and psf 
+
+OUT : 2021-05-25 18:42:31
+DONE: more psf 
+DONE: geodetic map 
+
+IN  : 2021-05-26 09:00:26
+WORK: HOME
+TODO: paper 2 geophysical setting 
+TODO: psf 
+TODO: paper 2 finish draft 
+
