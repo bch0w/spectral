@@ -17,6 +17,8 @@ for line in header_lines:
     key, val = line.strip().split()
     header[key] = float(val)
 
+# Load the data, if loading from ASCII will take a while, save in numpy format
+# for faster subsequent loading
 try:
     data = np.load("nzbathymetry_2016_ascii-grid.npy")
 except FileNotFoundError:
@@ -26,18 +28,12 @@ except FileNotFoundError:
         # Convert to a numpy array
         data[i] = np.array(list(map(float, line.strip().split())))
     data = np.array(data)
+    np.save("nzbathymetry_2016_ascii-grid.npy", data)
 
 # We will use PyProj to convert from EPSG:3994 to UTM60S (a.k.a EPSG:32760) 
-crs_32760 = CRS.from_epsg(32760)  # UTM60S
-crs_3994 = CRS.from_epsg(3994)
+crs_32760 = CRS.from_epsg(32760)  # UTM60S -- change this for other projections
+crs_3994 = CRS.from_epsg(3994)  # NIWA Standard format
 transform = Transformer.from_crs(crs_3994, crs_32760)
-
-# Define bounds of the NZNorth mesh in UTM60
-xmin = 171311.85
-xmax = 633468.31 
-xmax += (xmax - xmin) / 3
-ymin = 5286952.00
-ymax = 5904085.00
 
 # Generate the grid values based on the given header info
 x_end = header["xllcorner"] + (header["ncols"] * header["cellsize"])
@@ -55,16 +51,23 @@ y_vector = ygrid.ravel()
 
 # Convert the grid from EPGS:3994 to UTM60S
 x_vector, y_vector = transform.transform(x_vector, y_vector)  # takes a while
-data_vector = data_cut[::-1].ravel()
+data_vector = data_cut[::-1].ravel()  # flip to get Z axis pointing positive
 data_out = np.vstack((x_vector, y_vector, data_vector)).T
 
-# Cut around the NZNorth Mesh bounds
-idx = np.where((data_out[:, 0] > xmin) &
-               (data_out[:, 0] < xmax) &
-               (data_out[:, 1] > ymin) &
-               (data_out[:, 1] < ymax))[0]
-data_cut = data_out[idx]
+# Define bounds to trim data to reduce file size
+trim_file = False
+if trim_file:
+    xmin = 171311.85
+    xmax = 633468.31 
+    xmax += (xmax - xmin) / 3
+    ymin = 5286952.00
+    ymax = 5904085.00
+    idx = np.where((data_out[:, 0] > xmin) &
+                   (data_out[:, 0] < xmax) &
+                   (data_out[:, 1] > ymin) &
+                   (data_out[:, 1] < ymax))[0]
+    data_out = data_out[idx]
 
-np.savetxt("niwa_nznorthext_bathy_utm60s_250m.txt", data_cut)
+np.savetxt("niwa_nznorthext_bathy_utm60s_250m.txt", data_out)
 
 
