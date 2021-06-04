@@ -3735,3 +3735,67 @@ TODO: paper 2 geophysical setting
 TODO: psf 
 TODO: paper 2 finish draft 
 
+OUT : 2021-05-26 14:31:28
+DONE: geophysical map done 
+DONE: working on point spread plotting 
+
+IN  : 2021-05-27 09:52:02
+WORK: HOME
+TODO: write all day 
+
+OUT : 2021-05-27 18:37:18
+DONE: finished point spread test 
+DONE: wrote intro for paper 2 
+DONE: running new pst 
+
+IN  : 2021-05-28 10:06:29
+WORK: VUW
+TODO: back up nesi stuff 
+TODO: finish drafts of both papers, if no figures then placeholders 
+
+OUT : 2021-05-28 16:06:29
+DONE: reading papers 
+DONE: writing 
+DONE: calums talk 
+
+IN  : 2021-05-30 11:12:09
+WORK: HOME
+TODO: writing 
+
+OUT : 2021-05-30 17:20:52
+DONE: finished rough draft paper 2 
+DONE: nesi migration 
+DONE: read some additional seamount papers 
+
+IN  : 2021-06-01 10:54:53
+WORK: VUW
+TODO: point spread function 
+TODO: set up spread on gns nesi account 
+TODO: paper number 2 edits 
+
+OUT : 2021-06-01 16:19:14
+DONE: rewrote discussion 
+DONE: remade isocontour figure 
+DONE: psf 
+
+IN  : 2021-06-02 09:53:50
+WORK: VUW
+TODO: finish paper 2 draft and send to john, yoshi 
+
+OUT : 2021-06-02 18:12:55
+DONE: proofread draft 2 
+DONE: and cleaned up writing 
+DONE: making psf figres 
+
+IN  : 2021-06-03 10:15:36
+WORK: HOME
+TODO: paper 2 draft out in email 
+TODO: to do list paper 1 
+
+OUT : 2021-06-03 16:37:08
+DONE: paper 2 draft out 
+
+IN  : 2021-06-04 10:17:26
+WORK: VUW
+TODO: seismicity on paper 1 
+
