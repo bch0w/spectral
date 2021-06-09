@@ -3799,3 +3799,16 @@ IN  : 2021-06-04 10:17:26
 WORK: VUW
 TODO: seismicity on paper 1 
 
+OUT : 2021-06-04 17:03:37
+DONE: paper 2 figure seismicity  
+DONE: running new psf 
+
+IN  : 2021-06-08 08:58:51
+WORK: VUW
+TODO: paper 1 point spread function 
+TODO: paper 2 yoshi corrections 
+
+OUT : 2021-06-08 18:22:52
+DONE: remade figures based on yoshis comments 
+DONE: ran another 2 psf 
+
