@@ -3812,3 +3812,163 @@ OUT : 2021-06-08 18:22:52
 DONE: remade figures based on yoshis comments 
 DONE: ran another 2 psf 
 
+IN  : 2021-06-10 09:36:46
+WORK: VUW
+TODO: update all of paper 1 figures 
+
+OUT : 2021-06-10 17:56:15
+DONE: updating paper 1 figures 
+
+OUT : 2021-06-11 17:07:02
+DONE: cook strait figure 
+DONE: working on tvz figure but not satisfying 
+DONE: started new tvz psf 
+
+IN  : 2021-06-14 10:07:23
+WORK: HOME
+TODO: prep meet with yoshi 
+TODO: paper 1 out TODAY 
+
+OUT : 2021-06-14 14:07:23
+DONE: nothing 
+
+IN  : 2021-06-15 08:53:50
+WORK: VUW
+TODO: paper 1 out TODAY TODAY 
+
+OUT : 2021-06-15 18:38:38
+DONE: paper 1 out 
+DONE: paper 2 fixing figures 
+
+IN  : 2021-06-16 06:43:04
+WORK: VUW
+TODO: paper 2 OUT 
+
+OUT : 2021-06-16 10:14:27
+DONE: set up meeting paper 2 
+DONE: meant paper 1; emailed paper 2 to john 
+
+IN  : 2021-06-17 10:26:13
+WORK: VUW
+TODO: hackfish and south island meshes 
+TODO: pyrateview 
+
+OUT : 2021-06-17 17:46:30
+DONE: working on meshing 
+DONE: working on pyrateview 
+
+OUT : 2021-06-18 15:45:07
+DONE: prepped and met with nztomo  
+DONE: pats on the head 
+DONE: reading on volcanoes and gases 
+
+IN  : 2021-06-22 09:41:07
+WORK: VUW
+TODO: paper 1 comments 
+TODO: respond emails 
+
+OUT : 2021-06-22 18:33:08
+DONE: responding emails 
+DONE: tvz interpretations 
+
+IN  : 2021-06-23 10:01:39
+WORK: HOME
+TODO: paper 1 figures 
+
+OUT : 2021-06-23 14:01:39
+DONE: some figures 
+
+IN  : 2021-06-24 10:28:18
+WORK: VUW
+TODO: finish figures off 
+
+OUT : 2021-06-24 17:25:57
+DONE: almost finished all figure updates 
+
+OUT : 2021-06-28 16:52:10
+DONE: met with yoshi 
+DONE: updated figs paper 1 
+
+IN  : 2021-06-30 10:51:40
+WORK: GNS
+TODO: paper 1 out today! 
+
+OUT : 2021-06-30 16:51:40
+
+IN  : 2021-07-05 10:55:38
+WORK: HOME
+TODO: prep meet with yoshi 
+TODO: paper 2 draft 
+TODO: SI inversion stuff 
+
+OUT : 2021-07-06 17:06:48
+DONE: responded to emails, lots of emails 
+DONE: started reading some vpvs papers 
+DONE: made gsnz postgrad seminar talk 
+
+IN  : 2021-07-07 10:06:23
+WORK: VUW
+TODO: nick and stephens comments paper 1 
+TODO: practice talk once 
+
+OUT : 2021-07-07 16:47:07
+DONE: minor comments from nick and stephen 
+DONE: emails 
+DONE: nsf stuff 
+
+IN  : 2021-07-08 10:17:22
+WORK: VUW
+TODO: paper 1 figures and final draft done 
+TODO: psf bigger 
+TODO: prep talk 
+
+OUT : 2021-07-09 17:03:21
+DONE: figures paper 1 and remaking tvz stuff 
+DONE: read some paper 
+
+IN  : 2021-07-13 09:55:37
+WORK: VUW
+TODO: cover letter 
+TODO: jgr submission requirements 
+TODO: tvz new figure 
+TODO: psf new figure 
+TODO: final read throughs 
+
+OUT : 2021-07-15 16:22:47
+DONE: most of the stuff on the list, but still proofreading 
+
+IN  : 2021-07-16 09:03:35
+WORK: VUW
+TODO: paper drafts to yoshi 
+TODO: meeting with martha on specfem 
+
+OUT : 2021-07-16 16:12:32
+DONE: drafts to yoshi and john 
+DONE: specfem meeting with martha and huw 
+
+IN  : 2021-07-19 09:54:41
+WORK: HOME
+TODO: meshing 
+TODO: meet with yoshi 
+TODO: south island inversion 
+
+OUT : 2021-07-19 12:54:41
+DONE: nothing really 
+
+IN  : 2021-07-20 09:21:31
+WORK: VUW
+TODO: paper comments 
+TODO: meshing 
+TODO: south island inversion prep 
+
+OUT : 2021-07-20 17:32:54
+DONE: comments from yoshi into paper 
+
+IN  : 2021-07-21 10:00:19
+WORK: VUW
+TODO: submit papers 
+TODO: meshing 
+
+OUT : 2021-07-21 18:24:54
+DONE: papers submitted 
+

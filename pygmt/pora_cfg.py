@@ -2,6 +2,8 @@
 output = "figures/pora_inset.png"
 seis_fid = ("/Users/Chow/Documents/academic/vuw/tomo/interface/seismicity/"
             "pora_eqs_geonet_2000_2021_z30_m2p5.csv_filtered.txt")
+mt_fid = ("/Users/Chow/Documents/academic/vuw/tomo/interface/moment_tensors/"
+          "mt_pora.csv")
 
 # Flags
 plate_coupling = True
@@ -13,10 +15,11 @@ deep_sses = True
 seamounts_ext = False
 coast = True
 trench = True
-seismicity = True
+seismicity = False
 seamounts = True
 boxes = False
 points = True
+moment_tensors = True
 
 # Colors
 coast_color = "white"

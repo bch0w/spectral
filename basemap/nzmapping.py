@@ -18,7 +18,6 @@ from obspy import read_events
 from scipy.interpolate import griddata
 from mpl_toolkits.basemap import Basemap
 from obspy.imaging.beachball import beach
-from pyatoa.utils.calculate import normalize_a_to_b, myround
 
 
 class FixPointNormalize(mpl.colors.Normalize):
@@ -57,7 +56,49 @@ class FixPointNormalize(mpl.colors.Normalize):
         return np.ma.masked_array(np.interp(value, x, y))
 
 
-def cut_terrain_cmap(cmap_segments=256):
+def myround(x, base=5, choice='near'):
+    """
+    Round value x to nearest base, round 'up','down' or to 'near'est base
+
+    :type x: float
+    :param x: value to be rounded
+    :type base: int
+    :param base: nearest integer to be rounded to
+    :type choice: str
+    :param choice: method of rounding, 'up', 'down' or 'near'
+    :rtype roundout: int
+    :return: rounded value
+    """
+    if choice == 'near':
+        roundout = int(base * round(float(x)/base))
+    elif choice == 'down':
+        roundout = int(base * np.floor(float(x)/base))
+    elif choice == 'up':
+        roundout = int(base * np.ceil(float(x)/base))
+
+    return roundout
+
+
+def normalize_a_to_b(array, a=0, b=1):
+    """
+    normalize an array from a to b for e.g. plotting, maths
+
+    :type array: list
+    :param array: values to be normalized
+    :type a: int
+    :param a: lower bound of normalization
+    :type b: int
+    :param b: upper bound of normalization
+    :rtype z: numpy.array
+    :return z: normalized array
+    """
+    array = np.array(array)
+    z = ((b-a) * (array-array.min()) / (array.max()-array.min())) + a
+
+    return z
+
+
+def cut_terrain_cmap(land_segments=200, sea_segments=56):
     """
     Combine the lower and upper range of the terrain colormap with a gap in the
     middle to let the coastline appear more prominently.
@@ -69,6 +110,7 @@ def cut_terrain_cmap(cmap_segments=256):
 
     # combine them and build a new colormap
     colors = np.vstack((colors_undersea, colors_land))
+    cmap_segments = land_segments + sea_segments
     return mpl.colors.LinearSegmentedColormap.from_list('cuterraine', colors,
                                                         cmap_segments)
 
@@ -630,7 +672,8 @@ def plot_topography(m, fid, **kwargs):
     cbar_tickfontsize = kwargs.get("cbar_tickfontsize", 15)
     cbar_labelpad = kwargs.get("cbar_labelpad", 15)
     cbar_linewidth = kwargs.get("cbar_linewidth", 2.)
-    cmap_segments = kwargs.get("cmap_segments", 256)
+    land_segments = kwargs.get("land_segments", 200)
+    sea_segments = kwargs.get("sea_segments", 56)
     zero_col_val = kwargs.get("zero_col_val", .21875)
     markersize = kwargs.get("markersize", 0.05)
 
@@ -641,7 +684,8 @@ def plot_topography(m, fid, **kwargs):
     
     # Generate a segmented colormap that creates a hard boundary at coastline
     # colors (between browns and blues)
-    cmap = cut_terrain_cmap(cmap_segments)
+    cmap = cut_terrain_cmap(land_segments=land_segments, 
+                            sea_segments=sea_segments)
 
     # Set 0 value to sea-level, so turquoise colors
     normalize = FixPointNormalize(sealevel=0, vmax=max(z), vmin=min(z),
@@ -661,7 +705,7 @@ def plot_topography(m, fid, **kwargs):
 
 
 if __name__ == "__main__":
-    from configs.stations_south import *
+    from configs.tectonics import *
 
     f, m = initiate_basemap(**MAP_KWARGS)
 
@@ -692,5 +736,5 @@ if __name__ == "__main__":
     if TOPO:
         plot_topography(m, FIDS["TOPO"], **TPO_KWARGS)
 
-    plt.savefig(FIDS["OUTPUT"], transparent=True, figsize=FIGSIZE, dpi=DPI)
+    plt.savefig(FIDS["OUTPUT"], transparent=True, dpi=DPI)
     plt.show()

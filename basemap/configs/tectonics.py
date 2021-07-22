@@ -25,24 +25,31 @@ CITIES_DICT = {
     "Wellington": (-41.309, 174.759),
     r"Kaik$\mathrm{\bar{o}}$ura": (-42.405, 173.659),
     r"Taup$\mathrm{\bar{o}}$": (-38.6857, 176.0702),
-    "Hamilton": (-37.783, 175.252),
+    # "Hamilton": (-37.783, 175.252),
+    "Auckland": (-36.903, 174.753),
     "Gisborne": (-38.665, 178.023, {"ha": "right"}),
-    "Te Araroa": (-37.636, 178.363, {"ha": "right"}),
+    # "Te Araroa": (-37.636, 178.363, {"ha": "right"}),
+    "East Cape": (-37.691, 178.539, {"ha": "right"}),
     "Whanganui": (-39.955, 175.028, {"ha": "right"}),
-    "Porangahau": (-40.30, 176.61),
+    r"P$\mathrm{\bar{o}}$rangahau": (-40.30, 176.61),
 }
 
+# Need to get newline working with raw string
+mahia = r"M$\mathrm{\bar{a}}$hia" + "\nPeninsula"
 LANDMARKS_DICT = {
-    "Australian\nPlate": (-39, 173.1),
-    "Pacific Plate": (-42., 177.),
+    # "AUSTRALIAN\nPLATE": (-38.8, 172.5),
+    # "PACIFIC PLATE": (-42., 177.5),
+    # "ACCRETIONARY\nWEDGE": (-41.25, 176.3),
+    # "CHATHAM RISE": (-42.85, 175),
+    # "HIKURANGI\nPLATEAU": (-40.75, 178.2),
     "Mt. Taranaki": (-39.298, 174.063, {"ha": "center"}),
     "Bay of Plenty": (-37.5, 176.),
     "Cook Strait": (-41.6, 174.1),
     "Hawke Bay": (-39.6, 177.154),
-    "Cook Strait": (-41.838, 174.541),
+    "Cook Strait": (-41.838, 174.525),
     "Mt. Ruapehu": (-39.283, 175.564, {"ha": "center"}),
-    "Mahia\nPeninsula": (-39.145, 177.9, {"ha": "right"}),
-    "TVZ": (-38.33, 175.8)
+    mahia: (-39.145, 177.9, {"ha": "right"}),
+    "TVZ": (-38.33, 176)
 }
 
 FIGSIZE = (10, 12)
@@ -61,8 +68,10 @@ DMN_KWARGS = {
 }
 
 MAP_KWARGS = {
-    "map_corners": {"lat_min": -42.75, "lat_max": -36.75,
-                    "lon_min": 172.5, "lon_max": 178.8},
+    # "map_corners": {"lat_min": -42.75, "lat_max": -36.75,
+    #                 "lon_min": 172.5, "lon_max": 178.8},
+    "map_corners": {"lat_min": -42.9, "lat_max": -36.5,
+                    "lon_min": 172, "lon_max": 179.25},
     "continent_color": "None",
     "lake_color": "None",
     "fill_color": "None",
@@ -94,7 +103,7 @@ LMK_KWARGS = {
 CTY_KWARGS = {
     "markersize": 50,
     "annotate": True,
-    "fontsize": 12,
+    "fontsize": 11,
     "fontcolor": "w",
     "textborder": "k",
     "fontweight": "normal",
@@ -131,6 +140,7 @@ FLT_KWARGS = {
 TPO_KWARGS = {
     "zorder": 20,
     "cbar_shrink": .2,
-    "cmap_segments": 64,
+    "land_segments": 200,
+    "sea_segments": 200,
     "zero_col_val": .219
 }

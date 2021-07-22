@@ -13,8 +13,10 @@ from pygmt import Figure, makecpt
 
 # ============================= DEFAULT CONFIG =================================
 # File IDs
-output = "figures/geodetic_setting.png"
+# output = "figures/geodetic_setting.png"
+output = "/Users/Chow/Documents/academic/vuw/publi/seamounts/figures/geosetting/figures/geodetic_setting.png"
 seis_fid = None
+mt_fid = None
 
 # Flags
 plate_coupling = True
@@ -30,13 +32,15 @@ seismicity = False
 seamounts = True
 boxes = False
 points = True
+moment_tensors = True
 
 # Colors
 coast_color = "black"
 sse_color = "gold"
-deep_sse_color = "greenyellow"
+deep_sse_color = "deeppink1"
 seamount_color = "limegreen"
 seamount_ext_color = "lightslategray"
+box_color = "yellow"
 
 # Pens
 sse_pen = f"1.5,{sse_color},solid" 
@@ -52,7 +56,7 @@ interface_label = "l173/-39/177/-42"
 map_scale = "g178/-42+c178/-42+w100"
 
 # Overwrite config parameters for specific look using .py files, comment to skip
-from pora_cfg import *
+from mahia_cfg import *
 # ==============================================================================
 
 
@@ -60,8 +64,8 @@ from pora_cfg import *
 fig = Figure()
 fig.coast(projection=projection, region=region, 
           shorelines=[f"1/1.5p,{coast_color}", f"2/1p,{coast_color}"], 
-          frame=["WSne", "xa", "ya"],
-          land="white", water="white")
+          frame=["WSne", "xa", "ya"])
+          # land="white", water="white")
 
 # Set up colormap for plate coupling
 cpt = "/Users/Chow/Documents/academic/vuw/data/carto/plate_coupling/rwb.cpt"
@@ -119,19 +123,31 @@ if deep_sses:
 if seismicity:
     fig.plot(data=seis_fid, style="c", color="white", pen="1.,black")
 
+if moment_tensors:
+    mts = open(mt_fid, "r").readlines()
+    for mt in mts[1:]:
+        _, _, lat, lon, strike, dip, rake, *_ = mt.split(",")
+        *_, ml, mw, m0 = mt.split(",")
+        fig.meca(dict(strike=float(strike), dip=float(dip), rake=float(rake), 
+                      magnitude=float(mw)/2),
+                 scale="1c", longitude=float(lon), latitude=float(lat),
+                 depth=0
+                 )
+
+
 # Draw rectangles related to insets
 if boxes:
     fig.plot(data=np.array([[176.,-40.9,177.25,-39.8]]), style='r+s', 
-             pen="2p,yellow,-")
+             pen=f"2p,{box_color},-")
     fig.plot(data=np.array([[177.42,-39.75,178.67,-38.65]]), style='r+s', 
-             pen="2p,yellow,-")
+             pen=f"2p,{box_color},-")
 
 # No frame because we don't want to see the grid lines
 # map_scale > g=ref point, c=set scale at, w=length
 fig.basemap(region=region, projection=projection, #frame=["WSne", "gfa"],
             map_scale=map_scale)
 
-# Plot the locations of the seamounts as filled circles
+# Plot the locations of the seamounts 
 if seamounts:
     # Porangahau
     fig.plot(x=176.609, y=-40.300, style="x0.6c", color=seamount_color, 
