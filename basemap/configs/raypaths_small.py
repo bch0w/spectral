@@ -16,25 +16,26 @@ FIDS = {
                  "williams_hikurangi_interface.npy",
     "FAULTS": "/Users/Chow/Documents/academic/vuw/data/carto/fault_coordinates/"
               "forest_mesh_gns_active_faults.txt",
-    "OUTPUT": "./figures/raypath_map.png"
+    "OUTPUT": "./figures/raypath_map_a.png"
 }
 
 PAIRS = [
-         ("2013p617227", "NZ.TOZ"),
-         ("2014p952799", "NZ.NTVZ"),
+         ("2013p617227", "NZ.TOZ"),  # A
+         ("2014p952799", "NZ.NTVZ"),  # B
          # ("2019p927023", "NZ.TMVZ"),
          # ("3367989", "NZ.NNZ"),
          # ("2013p614135", "NZ.MWZ"),
          # ("2016p105478", "NZ.ETVZ"), 
-         ("2016p105478", "NZ.PUZ"),
+         ("2016p105478", "NZ.PUZ"),  # C
          # ("2016p105478", "NZ.WAZ"),
          # ("2016p356297", "NZ.KNZ"),
-         ("2016p881118", "NZ.MWZ"),
+         ("2016p881118", "NZ.MWZ"),  # D
          # ("2019p927023", "NZ.NNZ"),
-         ("2018p465580", "NZ.KHEZ"),
-         ("2019p738432", "NZ.KHZ"),
-         ("2019p754447", "NZ.HIZ"),
-         ("2019p927023", "NZ.VRZ"),]
+         ("2018p465580", "NZ.KHEZ"),  # E
+         ("2019p738432", "NZ.KHZ"),  # F
+         ("2019p754447", "NZ.HIZ"),  # G
+         ("2019p927023", "NZ.VRZ"),]  # H
+PAIRS = PAIRS[0]
 
 # 1 for city, 0 for non-city
 LANDMARKS = {

@@ -3972,3 +3972,69 @@ TODO: meshing
 OUT : 2021-07-21 18:24:54
 DONE: papers submitted 
 
+OUT : 2021-07-22 16:43:10
+
+IN  : 2021-07-23 09:57:05
+WORK: GNS
+TODO: meshing 
+TODO: backup carbon 
+TODO: specfem movie? 
+TODO: south island data 
+
+OUT : 2021-07-23 16:27:05
+DONE: specfem movies 
+
+IN  : 2021-07-26 10:53:47
+WORK: HOME
+TODO: prep meeting yoshi 
+TODO: emails 
+TODO: specfem movies 
+TODO: meshing 
+
+OUT : 2021-07-26 17:45:37
+DONE: made slides for defense talk 
+DONE: met with yoshi 
+
+IN  : 2021-07-27 10:30:17
+WORK: VUW
+TODO: sensitivity kernel 
+TODO: specfem movie cleanup 
+TODO: hackfish mesh 
+
+OUT : 2021-07-27 18:00:17
+DONE: specfem movie with waveforms 
+DONE: chatted with simon barker and with calum 
+
+IN  : 2021-07-28 14:08:28
+WORK: VUW
+TODO: sensitivity kernels 
+TODO: finish movie and t ocalum 
+TODO: respond to some emails 
+
+OUT : 2021-07-28 17:37:27
+DONE: finished movies 
+DONE: working on sensitivity kernels 
+DONE: went to madison franks talk 
+
+OUT : 2021-07-29 16:07:14
+DONE: reading some paper 
+DONE: sensitivity kernels not fucking working 
+DONE: meshign more 
+DONE: postgradexpo 
+
+OUT : 2021-07-30 18:30:52
+DONE: meshing 
+DONE: converting donnas model 
+
+IN  : 2021-08-02 09:36:27
+WORK: HOME
+TODO: meshing 
+TODO: sensitivity kernels 
+
+OUT : 2021-08-03 19:10:50
+DONE: looked at reviewer comments 
+DONE: met with john 
+DONE: agu abstract 
+DONE: ext_north 8s mesh 
+DONE: sensitivity kernels and adjoint simulation movies 
+

@@ -13,9 +13,9 @@ from pygmt import Figure, makecpt
 
 # ============================= DEFAULT CONFIG =================================
 # File IDs
-# output = "figures/geodetic_setting.png"
-output = "/Users/Chow/Documents/academic/vuw/publi/seamounts/figures/geosetting/figures/geodetic_setting.png"
-seis_fid = None
+output = "figures/geodetic_only.png"
+# output = "/Users/Chow/Documents/academic/vuw/publi/seamounts/figures/geosetting/figures/geodetic_only.png"
+seis_fid = "/Users/Chow/Documents/academic/vuw/data/events/geonet_forest_north_mgt4/earthquakes_norm.txt"
 mt_fid = None
 
 # Flags
@@ -28,10 +28,10 @@ deep_sses = True
 seamounts_ext = False
 coast = True
 trench = True
-seismicity = False
-seamounts = True
+seismicity = True
+seamounts = False
 boxes = False
-points = True
+points = False
 moment_tensors = True
 
 # Colors
@@ -56,7 +56,7 @@ interface_label = "l173/-39/177/-42"
 map_scale = "g178/-42+c178/-42+w100"
 
 # Overwrite config parameters for specific look using .py files, comment to skip
-from mahia_cfg import *
+# from mahia_cfg import *
 # ==============================================================================
 
 
@@ -104,8 +104,8 @@ if coast:
 if trench:
     trench_fid = ("/Users/Chow/Documents/academic/vuw/data/carto/trench/"
                   "hikurangi_trench_lonlat.txt")
-    fig.plot(data=trench_fid, pen="thicker,black,solid", 
-             style="f1c/0.3c+r+t")
+    fig.plot(data=trench_fid, pen="thicker,black,solid") 
+             # style="f1c/0.3c+r+t")
 
 
 # Plot major SSEs as contours
@@ -123,7 +123,7 @@ if deep_sses:
 if seismicity:
     fig.plot(data=seis_fid, style="c", color="white", pen="1.,black")
 
-if moment_tensors:
+if moment_tensors and mt_fid:
     mts = open(mt_fid, "r").readlines()
     for mt in mts[1:]:
         _, _, lat, lon, strike, dip, rake, *_ = mt.split(",")

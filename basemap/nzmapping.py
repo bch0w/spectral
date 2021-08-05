@@ -705,7 +705,7 @@ def plot_topography(m, fid, **kwargs):
 
 
 if __name__ == "__main__":
-    from configs.tectonics import *
+    from configs.raypaths_small import *
 
     f, m = initiate_basemap(**MAP_KWARGS)
 
