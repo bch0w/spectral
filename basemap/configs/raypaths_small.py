@@ -6,6 +6,7 @@ INTERFACE = 0
 FAULTS = 0
 BOUNDS = 1
 TOPO = 0
+CITIES = 0
 
 FIDS = {
     "EVENTS": "/Users/Chow/Documents/academic/vuw/data/events/"
@@ -16,7 +17,7 @@ FIDS = {
                  "williams_hikurangi_interface.npy",
     "FAULTS": "/Users/Chow/Documents/academic/vuw/data/carto/fault_coordinates/"
               "forest_mesh_gns_active_faults.txt",
-    "OUTPUT": "./figures/raypath_map_a.png"
+    "OUTPUT": "./figures/raypath_map_b.png"
 }
 
 PAIRS = [
@@ -35,13 +36,14 @@ PAIRS = [
          ("2019p738432", "NZ.KHZ"),  # F
          ("2019p754447", "NZ.HIZ"),  # G
          ("2019p927023", "NZ.VRZ"),]  # H
-PAIRS = PAIRS[0]
+
+PAIRS = [PAIRS[4]]
 
 # 1 for city, 0 for non-city
 LANDMARKS = {
 }
 
-FIGSIZE = (8, 10)
+FIGSIZE = (4, 5)
 DPI = 100
 AXIS_LINEWIDTH = 2.
 DOMAIN_BOUNDS = {"lat_min": -42.5, "lat_max": -37.0,  

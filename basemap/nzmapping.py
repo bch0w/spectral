@@ -503,8 +503,10 @@ def plot_raypaths(m, events_fid, stations_fid, pairs, **kwargs):
         ex, ey = m(event.preferred_origin().longitude,
                    event.preferred_origin().latitude
                    )
+
+        # original src_width=1E4
         event_beachball(m, event, fm_type="focal_mechanism",
-                        src_markercolor="r", src_width=1E4, zorder=100
+                        src_markercolor="r", src_width=3E4, zorder=100
                         )
         # Plot station
         station = stations[sta_indices.index(station_name)]
@@ -516,16 +518,18 @@ def plot_raypaths(m, events_fid, stations_fid, pairs, **kwargs):
             c = "darkorange"
 
         if station_name not in plotted_stations:
-            plt.scatter(sx, sy, marker="v", s=50, edgecolor="k", linewidth=2.,
-                        zorder=100, color=c)
+            # Original s=50
+            plt.scatter(sx, sy, marker="v", s=150, edgecolor="k", linewidth=2.,
+                        zorder=100, color="C4")#c)
             plotted_stations.append(station_name)
 
-        # Connect with a line
-        # plt.plot([sx, ex], [sy, ey], color=f"C{i}", linestyle="-", 
-        #          linewidth=3., zorder=90)
+        # Connect with a line (thick and colored)
+        plt.plot([sx, ex], [sy, ey], color=f"C4", linestyle="-", 
+                 linewidth=3., zorder=90)
 
-        plt.plot([sx, ex], [sy, ey], color=f"k", linestyle="-", 
-                linewidth=.75, zorder=90, alpha=0.2)
+        # Connect with a line (thin and black)
+        # plt.plot([sx, ex], [sy, ey], color=f"k", linestyle="-", 
+        #         linewidth=.75, zorder=90, alpha=0.2)
 
         # Find midpoint in line annotate
         if False:

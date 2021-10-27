@@ -25,7 +25,7 @@ AUTHORS:
 REFERENCE MODEL:
 	NZ-Wide2.2 Velocity Model (https://zenodo.org/record/3779523#.YPi7ClMzbHo)
 	Eberhart-Phillips et al. (2021)
-	Note the provided reference model has been rotated and interpolated from the
+	Note the provided reference model has been rotated and interpolated from its
 	original format for use in our tomographic inversion.
 DEPTH COVERAGE:
 	-3.0 to 400.0 km (below earth surface)
@@ -46,27 +46,23 @@ DATA SET DESCRIPTION:
 		-Deep Geothermal HADES Seismic Array (http://www.fdsn.org/networks/detail/Z8_2009/)
 		-Gisborne-Mahia Seismic Tremor Array (http://www.fdsn.org/networks/detail/ZX_2011/)
 DATA FILES DESCRIPTION:
-	The velocity model is separated into three ASCII files covering overlapping 
-	depth ranges and with differing grid spacing. These files are formatted in
-	the SPECFEM3D_Cartesian external tomography file format. 
-	
-	+ Header: First 4 lines of each file define the following quantities
-		x_min y_min z_min x_max y_max z_max
-		dx dy dz
-		nx ny nz
-		vp_min vp_max vs_min vs_max rho_min rho_max
-	+ Data: The remainder of the file contains lines with 8 values each defining
-		X Y Z Vp Vs rho Qp Qs 
-	+ Notes:
-		'dx' is the x-axis grid spacing in m defined in the UTM 60S coord. system
-		'nx' is the number of points on the x-axis
-		'Vp' and 'Vs' are in units of m/s
-		'rho' is density in units of kg/m^3
+	The velocity model is separated into three files covering overlapping 
+	depth ranges and with differing grid spacing. 
 		'shallow' defines depths -3 to 9 km (BSL)
 		'crust' defines depths 7 to 47 km (BSL)
 		'mantle' defines depths 44 to 400 km (BSL)
 CONTACT:
 	Bryant Chow (bryant.chow@vuw.ac.nz)
+
+MODEL REFERENCE:
+	Chow, Bryant, Yoshihiro Kaneko, Carl Tape, Ryan Modrak, Nick Mortimer, Stephen Bannister, and John Townend. "Strong upper-plate heterogeneity at the Hikurangi subduction margin (North Island, New Zealand) imaged by adjoint tomography." Journal of Geophysical Research: Solid Earth, in review.
+
+RELATED REFERENCES:
+	Chow, Bryant, Yoshihiro Kaneko, and John Townend. "Evidence for deeply-subducted lower-plate seamounts at the Hikurangi subduction margin: implications for seismic and aseismic behavior." Journal of Geophysical Research: Solid Earth, in review.
+
+	Chow, Bryant, Yoshihiro Kaneko, Carl Tape, Ryan Modrak, and John Townend. "An automated workflow for adjoint tomography—waveform misfits and synthetic inversions for the North Island, New Zealand." Geophysical Journal International 223, no. 3 (2020): 1461-1480.
+
+	Eberhart-Phillips, Donna, Bannister, Stephen, Reyners, Martin, & Henrys, Stuart. (2020). New Zealand Wide model 2.2 seismic velocity and Qs and Qp models for New Zealand [Data set]. Zenodo. https://doi.org/10.5281/zenodo.3779523
 
 	
 	

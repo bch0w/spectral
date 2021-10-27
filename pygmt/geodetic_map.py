@@ -13,34 +13,37 @@ from pygmt import Figure, makecpt
 
 # ============================= DEFAULT CONFIG =================================
 # File IDs
-output = "figures/geodetic_only.png"
+output = "figures/geodetic_revised.png"
 # output = "/Users/Chow/Documents/academic/vuw/publi/seamounts/figures/geosetting/figures/geodetic_only.png"
-seis_fid = "/Users/Chow/Documents/academic/vuw/data/events/geonet_forest_north_mgt4/earthquakes_norm.txt"
+seis_fid = "/Users/Chow/Documents/academic/vuw/data/events/geonet_forest_north_mgt6/earthquakes_norm.txt"
 mt_fid = None
 
 # Flags
 plate_coupling = True
-colorbar = True
+colorbar = False
 interface = True
 interface_bounds = False
 sses = True
 deep_sses = True
 seamounts_ext = False
+tsunami_eq = True
 coast = True
 trench = True
 seismicity = True
-seamounts = False
+seamounts = True
 boxes = False
-points = False
+points = True
 moment_tensors = True
 
 # Colors
 coast_color = "black"
 sse_color = "gold"
-deep_sse_color = "deeppink1"
+tsunami_eq_color = "gold"
+deep_sse_color = "slategray1"  # "deeppink1"
 seamount_color = "limegreen"
 seamount_ext_color = "lightslategray"
 box_color = "yellow"
+bg_transparent = False
 
 # Pens
 sse_pen = f"1.5,{sse_color},solid" 
@@ -57,6 +60,7 @@ map_scale = "g178/-42+c178/-42+w100"
 
 # Overwrite config parameters for specific look using .py files, comment to skip
 # from mahia_cfg import *
+from cartoon_cfg import *
 # ==============================================================================
 
 
@@ -104,8 +108,8 @@ if coast:
 if trench:
     trench_fid = ("/Users/Chow/Documents/academic/vuw/data/carto/trench/"
                   "hikurangi_trench_lonlat.txt")
-    fig.plot(data=trench_fid, pen="thicker,black,solid") 
-             # style="f1c/0.3c+r+t")
+    fig.plot(data=trench_fid, pen="thicker,black,solid",
+             style="f1c/0.3c+r+t")  # carrots denoting subduction direction
 
 
 # Plot major SSEs as contours
@@ -121,7 +125,7 @@ if deep_sses:
     fig.contour(data=deep, levels=20, pen=deep_sse_pen, annotation=(20, "+f8"))
 
 if seismicity:
-    fig.plot(data=seis_fid, style="c", color="white", pen="1.,black")
+    fig.plot(data=seis_fid, style="a", color="white", pen="1.,black")  # style='c'
 
 if moment_tensors and mt_fid:
     mts = open(mt_fid, "r").readlines()
@@ -134,6 +138,15 @@ if moment_tensors and mt_fid:
                  depth=0
                  )
 
+# Plot the locations of the 1947 Tsunami earthquakes
+if tsunami_eq:
+    # M 7.0 Gisborne, Mar 26 1947 (Offshore Poverty Bay)
+    # Markersize taken from normalized earthquake list
+    fig.plot(x=178.8, y=-38.85, style="a0.4099c", color="mediumpurple1", 
+             pen="1,black") 
+    # M 6.9 Gisborne, May 17 1947 (Offshore Tolaga Bay)
+    fig.plot(x=178.87, y=-38.42, style="a0.3989c", color="deeppink", 
+             pen="1,black") 
 
 # Draw rectangles related to insets
 if boxes:
@@ -191,5 +204,5 @@ if points:
     fig.plot(y=-39.238, x=178.635, style="c0.01c", pen="1.,black")  # Poverty
 
 # Save and show               
-fig.savefig(output, transparent=True)
+fig.savefig(output, transparent=bg_transparent)
 fig.show(method="external")
