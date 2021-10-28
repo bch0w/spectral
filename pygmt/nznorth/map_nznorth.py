@@ -15,7 +15,8 @@ from pygmt import Figure, makecpt
 # File IDs
 output = "figures/geodetic_revised.png"
 # output = "/Users/Chow/Documents/academic/vuw/publi/seamounts/figures/geosetting/figures/geodetic_only.png"
-seis_fid = "/Users/Chow/Documents/academic/vuw/data/events/geonet_forest_north_mgt6/earthquakes_norm.txt"
+# seis_fid = "/Users/Chow/Documents/academic/vuw/data/events/geonet_forest_north_mgt6/earthquakes_norm.txt"
+seis_fid = None
 mt_fid = None
 
 # Flags
