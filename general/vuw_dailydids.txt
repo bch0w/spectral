@@ -1,0 +1,4040 @@
+DAILYDIDS
+
+IN  : 2019-10-14 09:29:58.938904
+WORK: VUW
+TODO: determine model points close to failure 
+TODO: email ryan about lame parameters 
+TODO: start paper draft 
+TODO: corsica writeup 
+
+OUT : 2019-10-14 17:13:00.120974
+DONE: found the location of poissons ratio error 
+DONE: sent email to ryan/carl about this 
+DONE: amended email after call from yoshi 
+
+IN  : 2019-10-15 10:23:30.328447
+WORK: VUW
+TODO: read Tromp 2005 notes from Carl 
+TODO: setup cc vs mtm testing seisflows 
+TODO: email john for meeting next week 
+TODO: paper draft 
+
+OUT : 2019-10-15 14:45:46.252602
+DONE: set up john/yoshi meeting 
+DONE: started cc vs mtm seisflows testing 
+DONE: wrote 1 paragraph of untitled paper 1 
+DONE: attended marthas talk 
+
+IN  : 2019-10-16 09:56:29.289062
+WORK: HOME
+TODO: mtm vs cc results and continuation 
+TODO: paper draft 
+TODO: reading Tromp 2005 notes 
+
+OUT : 2019-10-16 17:59:58.617727
+DONE: wrote a mail daemon to check on running jobs on maui, uwill be really useful in the future when running long jobs 
+DONE: wrote 1st draft rough outline of untitled paper 1 
+DONE: registered for AGU on pcard 
+
+IN  : 2019-10-17 09:45:19.468196
+WORK: GNS
+TODO: mtm vs cc results check 
+TODO: continue paper draft 
+TODO: prep yoshi meeting 
+TODO: continue reading tromp 2005 
+
+IN  : 2019-10-19 10:09:47.460376
+WORK: HOME
+TODO: new meshes, meshfem meshing priority 
+TODO: check new specfem version with smoothing changes 
+TODO: respond to Carls email 
+
+OUT : 2019-10-19 12:22:16.789211
+DONE: started setting up new specfem version with fixed smoothing 
+DONE: setting up new meshfem mesh with different doubling layer depths 
+DONE: figured out I didnt constrain depths on beta trial, starting over with charlie trial 
+
+IN  : 2019-10-21 10:21:37.387907
+WORK: VUW
+TODO: meshfem meshing with new layers 
+TODO: charlie event seisflows 
+TODO: smooth testing with new seisflows 
+TODO: respond Carl 
+
+OUT : 2019-10-21 18:30:25.669087
+DONE: started hand writing derivations from Tromp 2005 
+DONE: meshfem new mesh benchmarking and setting up for seisflows runs 
+DONE: made kernels with meshfem mesh to look at new layering affects, still noticed artefacts 
+DONE: more detailed outline of untitled paper 1, started reading writing tips from esci class 
+DONE: testing pyflex/pyadjoint again 
+DONE: tested smoothing of new specfem devel 
+
+IN  : 2019-10-22 10:14:46.028053
+WORK: VUW
+TODO: smooth trelis mesh with new specfem, report results on github issue 
+TODO: test windowing parameters 
+
+OUT : 2019-10-22 18:26:36.033689
+DONE: wrote a misfit tuner to quickly test out pyflex parameters, in search of a fine tuned pyflex 
+
+IN  : 2019-10-23 09:24:04.239598
+WORK: VUW
+TODO: email yoshi update on work 
+TODO: continue pyflex tuning  
+TODO: with new pyflex tuning and new meshfem mesh, run a 10 event test inversion 
+
+OUT : 2019-10-23 17:27:35.912278
+DONE: mtm vs cc kernel creation and quantification 
+DONE: sent email to yoshi 
+DONE: looked at kernel for 2015 event at depth 
+DONE: edited untitled paper 1 
+
+IN  : 2019-10-24 11:04:44.740889
+WORK: GNS
+TODO: prep yoshi and john meeting 
+TODO: run inversion with meshfem mesh and mtm misfit and hikurangi windowing 
+
+OUT : 2019-10-24 19:19:02.650183
+DONE: looked at smoothing of trelis mesh 
+DONE: refactored devel version of Specfem 
+DONE: ran a trial 2 event 1 iteration inversion of new meshfem mesh 
+DONE: started CC vs MTM tests on meshfem mesh 
+DONE: met with yoshi 
+
+IN  : 2019-10-25 09:40:31.943607
+WORK: VUW
+TODO: meet with john 
+TODO: look at cc vs mtm single iteration failures 
+TODO: send message to specfem issue 
+TODO: continue pyatoa refactoring 
+TODO: keep looking at stf convolution 
+
+OUT : 2019-10-25 16:58:44.075308
+DONE: met with John and discussed next steps for paper 
+DONE: continued with mtm vs cc testing, iterations 2-5 running for mtm vs cc 
+DONE: continuted refactoring pyatoa, cleaned up the interface with pyflex and pyadjoint 
+
+IN  : 2019-10-28 10:26:20.016627
+WORK: HOME
+TODO: look at cc vs mtm results 
+TODO: convolution work 
+TODO: pyatoa refactoring 
+
+OUT : 2019-10-28 12:20:50.620941
+DONE: looked at vtk and output optim results of cc vs mtm 
+
+IN  : 2019-10-29 10:46:18.223915
+WORK: VUW
+TODO: start working on figure placeholders 
+TODO: continue looking at mtm vs cc and now vs both 
+TODO: continue refactoring pyatoa, test example 
+
+OUT : 2019-10-29 18:25:54.886437
+DONE: looked at mtm vs cc vs both, created some figures 
+DONE: cleared out lots of data on maui for inodes quota 
+DONE: ran a real data 'until_adjoint' and visualized the kernels 
+DONE: came up with a cool way of plotting 3d sections 
+DONE: did some refactoring on pyatoa and seisflows 
+DONE: created some placeholder figures for untitled paper 1 
+
+IN  : 2019-10-30 10:02:33.757100
+WORK: VUW
+TODO: coding expenses 
+TODO: seisflows output models and gradients as npy fix up 
+TODO: finish pyatoa refactoring 
+TODO: write 
+
+OUT : 2019-10-30 17:30:18.995706
+DONE: continued with pyatoa refactoring, changing visual folder and removing the need for subprocess in the combine images 
+DONE: started working on misfit map for entire models rather than single events 
+DONE: continued 'both' workflow in seisflows 
+
+IN  : 2019-10-31 10:36:20.776249
+WORK: GNS
+TODO: prep yoshi meeting 
+TODO: run old mesh meshfem to poissons ratio error 
+TODO: continue with misfit figure 
+
+OUT : 2019-10-31 14:47:55.273899
+DONE: worked on misfit map 
+DONE: looked at mtm vs cc vs both results 
+DONE: started old mesh run searching for poisson 
+DONE: met w/ yoshi 1h15m 
+
+IN  : 2019-11-01 09:57:04.048896
+WORK: VUW
+TODO: code expenses 
+TODO: corsica writeup 
+TODO: old mesh poissons ratio 
+TODO: beacon teleseismics 
+
+OUT : 2019-11-01 14:56:03.998774
+DONE: beacon waveform checks 
+DONE: data availability plots 
+DONE: cc_old_mesh runs 
+
+IN  : 2019-11-04 09:41:24.984762
+WORK: VUW
+TODO: annotated heat maps 
+TODO: beacon waveforms 
+TODO: set up 30 event cc, mtm trials 
+TODO: trelis mesh to failure? 
+TODO: finish figure scaffold 
+
+OUT : 2019-11-04 15:44:53.787445
+DONE: started running trelis mesh to find poisson but no misfits? 
+DONE: worked on figures for paper 
+DONE: finished beacon heatmap data plot 
+DONE: started 30event mtm vs cc run 
+
+IN  : 2019-11-05 08:59:40.545724
+WORK: GNS
+TODO: check 30 event mtm vs cc and continue run 
+TODO: transfer mseeds to maui, data availability plot 
+TODO: continue with paper figures and writing 
+TODO: figure out why the trelis mesh stuff isnt working 
+
+OUT : 2019-11-05 16:05:27.795123
+DONE: 30 event mtm vs cc on 2-5 iterations 
+DONE: 10event with trelis running 
+DONE: converted seisflows parameters to yaml 
+DONE: started seisflows3 endeavor 
+DONE: started domain map for untitled paper 
+DONE: converted beacon data to 2019 
+
+IN  : 2019-11-06 09:08:48.954587
+WORK: HOME
+TODO: beacon waveforms 
+TODO: figures for paper 
+TODO: write  
+TODO: 30event mtm vs cc 
+
+OUT : 2019-11-06 16:09:28.874625
+DONE: beacon waveform checks 
+DONE: wrote part of methods section 
+DONE: data availability script 
+
+IN  : 2019-11-07 10:09:46.795842
+WORK: GNS
+TODO: beacon waveform checks, figures for meeting 
+TODO: write 
+
+OUT : 2019-11-07 19:17:29.276610
+DONE: beacon waveform checks 
+DONE: clear outline on paper 
+DONE: met with yoshi 
+
+IN  : 2019-11-10 09:32:44.658715
+WORK: HOME
+TODO: rerun old poisson error folder with updated version of specfem 
+TODO: finish running mtm, start running both 
+TODO: real data inversion 
+
+OUT : 2019-11-10 13:47:10.003039
+DONE: cleansf script written 
+DONE: set up 10event mimic 1603deb run folder 
+DONE: cleaned up some maui directories 
+
+IN  : 2019-11-11 07:14:24.766203
+WORK: HOME
+TODO: start making paper figures 
+
+OUT : 2019-11-11 08:32:33.262856
+DONE: started working on domain map 
+
+IN  : 2019-11-11 09:25:37.507296
+WORK: VUW
+TODO: paper figure 
+
+OUT : 2019-11-11 20:56:57.380348
+DONE: source receiver map 
+DONE: started 5 event poissons run 
+DONE: tried to resume mtm 30 event run 
+
+IN  : 2019-11-12 08:37:36.232265
+WORK: VUW
+TODO: continue paper figures 
+TODO: check 30event and 10event poisson 
+TODO: set up realdata 
+
+OUT : 2019-11-12 17:48:39.915844
+DONE: made more figures 
+
+IN  : 2019-11-13 09:57:14.554568
+WORK: VUW
+TODO: more paper figures 
+TODO: more maui runs 
+TODO: more more 
+
+OUT : 2019-11-13 18:21:13.782535
+DONE: waveform paper figure 
+DONE: more poisson testing, havent found em 
+DONE: both run for checkerboard test 
+DONE: started 30event realdata 
+
+IN  : 2019-11-14 09:07:22.939760
+WORK: HOME
+TODO: prep yoshi meeting 
+TODO: check why jobs failed maui, keep going, make cc mtm both plots 
+TODO: cotninue geosciences presi 
+TODO: continue making figures 
+
+OUT : 2019-11-14 12:38:43.514266
+DONE: real data run going 
+DONE: mtm run going 
+DONE: updated figures in presi 
+
+IN  : 2019-11-14 13:30:06.342939
+WORK: GNS
+TODO: prep meeting with yoshi  
+
+OUT : 2019-11-14 16:30:40.929576
+DONE: met with yoshi and set up roadmap for geosciences 
+
+IN  : 2019-11-15 10:33:04.258719
+WORK: HOME
+TODO: 30 event inversion with WEL 
+TODO: mtm cc both results 
+TODO: beacon waveforms 
+
+OUT : 2019-11-15 13:02:24.572124
+DONE: started beacon waveform checks 
+
+IN  : 2019-11-15 15:52:46.366528
+WORK: HOME
+TODO: beacon waveforms and get try get pyatoa working with beacon 
+
+IN  : 2019-11-18 08:37:06.735454
+WORK: HOME
+TODO: kernel figures 
+TODO: beacon amplitudes 
+TODO: progress report 
+TODO: mtm cc both plots 
+
+OUT : 2019-11-18 20:54:28.239367
+DONE: new type of kernel figures using thresholds 
+DONE: running 30 obs inversion multiple updates 
+DONE: misfit map with specific src rcv paths 
+DONE: ran obs and syn onetime inversions for kernel stuff 
+DONE: looked at beacon waveforms but stopped 
+
+IN  : 2019-11-19 09:31:26.370548
+WORK: VUW
+TODO: model update waveforms 
+TODO: synthetic kernels 
+TODO: obs 30 inversion models 
+TODO: misfit map 
+
+OUT : 2019-11-19 20:20:45.355565
+DONE: finished presi 
+DONE: model update waveforms 
+DONE: kernel figures 
+DONE: obs figures 
+DONE: 30 event real data inversion going 
+
+IN  : 2019-11-20 10:01:40.333696
+WORK: HOME
+TODO: progress report 
+TODO: beacon waveforms 
+TODO: realdata inversion 
+TODO: practice talk 
+
+IN  : 2019-11-21 08:32:58.168012
+WORK: HOME
+TODO: fix up presentation 
+TODO: beacon waveforms 
+TODO: practice talk 
+
+IN  : 2019-11-28 10:34:59.541136
+WORK: HOME
+TODO: prep for AGU presi 
+TODO: respond to carl about tomo files 
+
+OUT : 2019-11-28 18:03:25.661667
+DONE: tried to test carls new tomo files 
+DONE: started working on agu presi 
+
+IN  : 2019-11-29 08:03:52.295127
+WORK: HOME
+TODO: agu presentation 
+TODO: prep for john meeting 
+TODO: corsica writeup? 
+
+OUT : 2019-11-29 16:21:41.307625
+DONE: met with john discussed progress and goals 
+DONE: worked on AGU presie 
+DONE: new misfits plotting script 
+
+IN  : 2019-12-02 09:42:23.393339
+WORK: VUW
+TODO: finish agu presentation 
+TODO: start writing paper 
+
+OUT : 2019-12-02 16:25:16.587929
+DONE: made misfit statistics plots 
+DONE: working on agu presi 
+
+IN  : 2019-12-03 08:59:56.857532
+WORK: HOME
+TODO: finish misfit histograms 
+TODO: find other plots to make ala tape et al 
+TODO: check results of new tomography file 
+
+OUT : 2019-12-03 17:43:01.186407
+DONE: looked at eberhart19 velocity model 
+DONE: finished statistics plots 
+DONE: met with yoshi to prep for AGU 
+
+IN  : 2019-12-04 11:29:02.083292
+WORK: VUW
+TODO: finish agu presi and work on things that yoshi mentioned 
+
+OUT : 2019-12-04 22:18:07.591863
+DONE: almost finished to do list for presentation 
+DONE: showed model 9 checkerboard at 3 slices 
+DONE: added events and stations to synthetic results 
+DONE: added dearthquake metrics for perspectives 
+DONE: highlighted max changes for real data 
+DONE: added contours to misfit map 
+DONE: and other random little things 
+DONE: still need to get the 2 second waveforms 
+
+IN  : 2019-12-05 10:33:32.244498
+WORK: VUW
+TODO: finish agu presi 
+TODO: if time look at attenuation and email Carl 
+TODO: 2 second waveforms 
+TODO: beacon data 
+
+OUT : 2019-12-05 16:09:09.145157
+DONE: fine tuned agu presi with all the comments from yoshi 
+DONE: organized agu accomodations etc 
+
+IN  : 2019-12-17 09:12:29.056074
+WORK: HOME
+TODO: update pyatoa 
+
+OUT : 2019-12-17 12:12:51.572218
+DONE: overhauled config object pyatoa 
+
+IN  : 2020-01-06 10:00:10.716753
+WORK: HOME
+TODO: get back into the swing of things, big picture day 
+
+OUT : 2020-01-06 16:24:18.423083
+DONE: wrote some of first paper 
+DONE: worked on pyatoa seisflows yaml file 
+DONE: met with yoshi 
+
+IN  : 2020-01-07 08:25:03.607126
+WORK: GNS
+TODO: qc donnas mode 
+
+OUT : 2020-01-08 00:12:02.732954
+DONE: started rewriting carls scripts to convert donnas model 
+
+IN  : 2020-01-08 09:56:57.996022
+WORK: HOME
+TODO: quality check Donnas model from Carl 
+TODO: write 1 hour paper 
+TODO: beacon station correction 
+
+OUT : 2020-01-08 16:23:07.098037
+DONE: wrote email to Carl about eberhart19 model 
+DONE: wrote some paper 
+DONE: looked at beacon waveforms 
+
+IN  : 2020-01-09 09:20:05.794408
+WORK: VUW
+TODO: continue looking at beacon data 
+TODO: write 
+
+OUT : 2020-01-09 15:41:56.696701
+DONE: looked at attenuation for specfem and emailed with carl, yoshi 
+DONE: worked on yaml file for seisflows/pyatoa 
+
+IN  : 2020-01-10 08:41:50.905725
+WORK: GNS
+TODO: donnas model qc 
+TODO: beacon waveforms 
+TODO: write 
+
+OUT : 2020-01-10 16:47:02.981007
+DONE: qc'd ebht19 model, found some weird artefacts in the attenuation 
+DONE: started updating seisflows to work with parameters.yaml 
+DONE: updated pyatoa to work better with seisflows and its parameters.yaml 
+
+IN  : 2020-01-13 09:08:35.350936
+WORK: HOME
+TODO: write for 1 hour 
+
+OUT : 2020-01-13 10:32:03.961233
+DONE: wrote 1 hour for pyatoa 
+
+IN  : 2020-01-13 10:32:12.756775
+WORK: VUW
+TODO: pyatoa + seisflows 
+TODO: github issue for attenuation 
+TODO: qc donnas model 
+
+OUT : 2020-01-13 17:09:06.794746
+DONE: succesful trial run with new specfem + pyatoa combination 
+DONE: looked at reading .bin files with python again. I dont think this will work, too muddled up in the code 
+DONE: looked at the attenuation patch in Ebht19, determined it comes from negligible bulk attenuation due to the definition of vp, vs qp and qs  
+
+IN  : 2020-01-14 10:06:29.667114
+WORK: HOME
+TODO: write 
+TODO: look at tomo files 
+TODO: beacon waveforms 
+
+IN  : 2020-01-15 10:02:50.468466
+WORK: HOME
+TODO: beacon waveforms 
+TODO: write 
+TODO: look at donnas model paths through mantle wedge 
+
+OUT : 2020-01-15 11:45:18.235825
+DONE: wrote 
+
+IN  : 2020-01-16 09:53:55.962213
+WORK: GNS
+TODO: write 
+TODO: beacon waveforms 
+TODO: prep yoshi meeting 
+
+OUT : 2020-01-16 16:00:24.335570
+DONE: wrote a bit 
+DONE: organized papers on mendeley 
+DONE: worked on checkerboard in z direction 
+DONE: beacon map for emily 
+
+IN  : 2020-01-17 09:41:58.779177
+WORK: VUW
+TODO: send carl email about velocity model 
+TODO: checkerboard with vertical checkers 
+TODO: beacon with noise 
+
+OUT : 2020-01-17 16:25:46.865942
+DONE: wrote email to calr about new velocity model 
+DONE: finished depth checkerboardiphy but something went wrong? 
+DONE: looked at noise and event periodograms for beacon 
+
+IN  : 2020-01-20 09:46:49.119426
+WORK: VUW
+TODO: writing 
+TODO: update seisflows 
+
+OUT : 2020-01-20 16:47:06.991533
+DONE: wrote 
+DONE: updated seisflows to py3 with docstrings 
+
+IN  : 2020-01-21 09:56:21.565764
+WORK: VUW
+TODO: write 
+TODO: test seisflows saving capabilities 
+TODO: return emails  
+TODO: beacon 
+
+OUT : 2020-01-21 15:03:46.446024
+DONE: wrote paper 
+DONE: updated seisflows  
+DONE: emailed carl about attenuation 
+
+IN  : 2020-01-22 09:42:02.334670
+WORK: VUW
+TODO: write 
+TODO: seisflows 
+TODO: test seisflows saving 
+TODO: beacon 
+TODO: dani, andrei 
+TODO: beacon 
+
+OUT : 2020-01-22 20:14:35.618431
+DONE: looked a bit at noise for beacon waveforms 
+DONE: wrote email to dani 
+DONE: worked heavily on py3 seisflows, and wrote pyaflowa to interact with seisflows 
+
+IN  : 2020-01-23 09:20:08.956966
+WORK: HOME
+TODO: noise 
+
+OUT : 2020-01-23 16:08:46.134070
+DONE: noise analysis beacon 
+DONE: bannister data first looks and sort on maui 
+DONE: sort sahke data 
+DONE: met with yoshi 
+
+IN  : 2020-01-24 10:36:12.111096
+WORK: VUW
+TODO: respond attenuation email carl, yoshi 
+TODO: finish seisflows pyaflowa 
+
+OUT : 2020-01-24 20:10:59.008881
+DONE: attenuation email carl 
+DONE: seisflows3 
+
+IN  : 2020-01-27 10:50:28.775569
+WORK: VUW
+TODO: finish seisflows3 
+TODO: respond carl and try new velocity model 
+TODO: beacon/bannister data 
+
+OUT : 2020-01-27 18:12:22.174239
+DONE: sorted new vel model from carl but need to check 
+DONE: bug fixing new pyatoa/seisflows 
+
+IN  : 2020-01-28 09:50:03.512840
+WORK: HOME
+TODO: beacon 
+TODO: bannister 
+TODO: write 
+TODO: seisflows 
+
+OUT : 2020-01-28 19:02:33.219856
+DONE: finished seisflows! 
+DONE: looked at beacon noise 
+
+IN  : 2020-01-29 07:57:04.737133
+WORK: HOME
+TODO: run trial seisflows 
+TODO: check new carl mesh 
+TODO: recap donna carl email chain 
+TODO: beacon/bannister data 
+
+OUT : 2020-01-29 18:58:52.814159
+DONE: seisflows succfessful trial runs 
+DONE: working on beacon data 
+
+IN  : 2020-01-30 07:00:46.556526
+WORK: GNS
+TODO: look at new simulation results 
+TODO: beacon waveforms 
+TODO: prep yoshi meet 
+
+OUT : 2020-01-30 15:20:26.551221
+DONE: more inversions 
+DONE: beacon waveforms 
+DONE: met with yoshi 
+
+IN  : 2020-01-31 10:20:44.965200
+WORK: VUW
+TODO: include temporary data in inversion 
+TODO: run checkerboard inversion, real data inversion 
+TODO: beacon amplitude factor 
+
+IN  : 2020-02-03 09:22:50.157448
+WORK: VUW
+TODO: run a few inversions 
+TODO: write 
+TODO: email yoshi regarding john meeting 
+
+OUT : 2020-02-03 18:47:00.925296
+DONE: cleaned up old work maui 
+DONE: finished checkerboard 10 event to 5 iterations 
+DONE: wrote some 
+DONE: rearranged some functions in pyatao/pyaflowa 
+DONE: listened to some of the talks during serpentinisation meeting 
+
+IN  : 2020-02-04 09:53:00.922013
+WORK: VUW
+TODO: checkerboard 30 event 
+TODO: 8fwd 
+TODO: write 
+
+OUT : 2020-02-04 16:41:52.607338
+DONE: seisflowa working again, started 30event cc chkbd 
+DONE: wrote a bit, restructuring document to deemphasize the workflow 
+
+IN  : 2020-02-05 09:13:59.913546
+WORK: HOME
+TODO: checkerboard to 10 iter 
+TODO: write 
+
+OUT : 2020-02-05 18:02:40.720644
+DONE: todo and changelogs on pyatoa and seisflows 
+DONE: rewrote methods sections of paper, reorganized and remphasized the main points of the methodologies section 
+
+IN  : 2020-02-07 09:38:39.079039
+WORK: VUW
+TODO: analyze checkerboard results 
+TODO: beacon amplitudes on 8fwd, and bannister and sahke? 
+TODO: write 
+TODO: prep meeting john yoshi 
+
+IN  : 2020-02-10 09:58:18.717441
+WORK: VUW
+TODO: forward and checkerboard check results 
+TODO: make figures 
+
+OUT : 2020-02-10 19:24:14.397784
+DONE:  
+DONE: inspector class for pyatoa 
+DONE: misfit plots for inspector 
+
+IN  : 2020-02-11 08:30:36.109499
+WORK: HOME
+TODO: come up with some misfit plots to show yoshi 
+TODO: finalize all figures you can paper 
+TODO: write 
+
+OUT : 2020-02-11 19:57:28.128960
+DONE: inspector class 
+DONE: making figures for paper 
+
+IN  : 2020-02-12 09:43:09.655753
+WORK: VUW
+TODO: finish workflow diagram and other paper figures 
+TODO: analyze checkerboard results 
+TODO: analyze 330fwd results 
+
+OUT : 2020-02-12 20:59:11.226441
+DONE: finished 330fwd and inspected results 
+DONE: cleaned up inspector plots 
+DONE: started working on mayavi vtk plotting 
+
+IN  : 2020-02-13 08:32:22.070504
+WORK: HOME
+TODO: shut up and write 
+TODO: rerun 30 event for 330 fwd 
+TODO: rerun chkbd 
+
+OUT : 2020-02-13 17:12:16.268309
+DONE: inspector plots 
+DONE: wrote more 
+DONE: reran 30mtm first iter 
+DONE: redid 300fwd 
+DONE: met with yoshi 
+
+IN  : 2020-02-17 13:56:11.601611
+WORK: HOME
+TODO: nice figures 
+
+IN  : 2020-02-18 09:10:02.078231
+WORK: HOME
+TODO: first draft by the end of today 
+
+OUT : 2020-02-18 21:42:36.299375
+DONE: model visualization  
+DONE: 8 hires siulations and misfit figure 
+DONE: checkerboard model figures 
+
+IN  : 2020-02-20 08:11:45.679516
+WORK: GNS
+TODO: write 
+TODO: beacon amplitudes 
+
+OUT : 2020-02-20 16:33:02.092555
+DONE: finished writing up to discussion 
+DONE: met with yoshi, restructured paper 
+DONE: met with jonathan, pascal's student 
+
+IN  : 2020-02-21 09:57:16.220286
+WORK: VUW
+TODO: look at fsrg proposal 
+TODO: look at nsf proposal 
+TODO: restructure paper 
+TODO: edit figures 
+
+OUT : 2020-02-21 18:59:19.778512
+DONE: restructured paper 
+DONE: fsrg application 
+DONE: editing figures 
+DONE: 30event inversion 11+ 
+
+IN  : 2020-02-24 09:49:57.871749
+WORK: VUW
+TODO: look at updated 30fwd model 
+TODO: finish first draft and email to john 
+TODO: look at FSRG application and email to john 
+
+OUT : 2020-02-24 20:26:57.106483
+DONE: new figures and text up to synthetic inversions on paper 
+DONE: looked at 30event inversion results and emailed yoshi 
+
+IN  : 2020-02-25 10:40:29.188984
+WORK: VUW
+TODO: finish writing and send draft 
+
+IN  : 2020-02-26 09:31:23.720457
+WORK: VUW
+TODO: finish that fucking paper god damnit 
+
+OUT : 2020-02-26 19:12:57.167714
+DONE: finished results sections, started work on discussions, wrote abstract, started going through and revising 
+
+IN  : 2020-02-27 10:01:08.707545
+WORK: VUW
+TODO: finish paper 
+TODO: prep yoshi meeting 
+
+IN  : 2020-02-28 09:11:34.069681
+WORK: VUW
+TODO: make edits from yesterdays yoshi meeting 
+TODO: start new pyatoa run with 5km vertical smoothign 
+
+OUT : 2020-02-28 18:00:28.694518
+DONE: ended up helping a bunch of people, didnt really get any work done 
+
+IN  : 2020-03-02 09:28:38.195995
+WORK: VUW
+TODO: paper to yoshi 
+TODO: beacon amplitudes 
+TODO: real data inversion? 
+
+OUT : 2020-03-02 19:04:24.202957
+DONE: sent in fsrg 
+DONE: started obs run with 20x6km smoothin 
+DONE: making figures 
+
+IN  : 2020-03-03 09:05:06.838641
+WORK: VUW
+TODO: finish figures, finish discussion, send to yoshi 
+
+OUT : 2020-03-03 20:42:00.347240
+DONE: wrote discussions, started proofing draft 
+DONE: ran mtm with new parameters 
+
+IN  : 2020-03-04 08:31:16.431578
+WORK: VUW
+TODO: paper, tutoring 
+
+OUT : 2020-03-04 17:51:00.510482
+DONE: course tutoring 
+DONE: pdf to yoshi 
+DONE: mayavi stuff 
+
+IN  : 2020-03-05 09:06:10.539078
+WORK: GNS
+TODO: mtm new run 
+TODO: pascals talk 
+TODO: email to carl, ryan 
+TODO: new model for yoshi meet 
+
+OUT : 2020-03-03 15:09:19.926830
+OUT : 2020-03-05 16:39:33.133531
+DONE: looked at mtm results 
+DONE: met with yoshi on paper, things to do 
+DONE: emailed ryan carl 
+DONE: dove into pyadjoint mtm error 
+
+IN  : 2020-03-06 09:28:56.251247
+WORK: VUW
+TODO: email ryan, carl 
+TODO: mtm jackknife stuff 
+TODO: paper 
+
+OUT : 2020-03-06 17:16:15.299545
+DONE: addressed paper 
+DONE: github issue seisflows 
+DONE: looked at pyadjoint 
+DONE: started new chkbd cc 
+DONE: started new extra layer fwd 
+
+IN  : 2020-03-09 10:08:13.092233
+WORK: VUW
+TODO: rerun mtm and cc inversion first trial check results 
+TODO: finish paper edits send to yoshi 
+
+OUT : 2020-03-09 19:38:19.137745
+DONE: looked at meshing again, found a problem in my meshing practice 
+DONE: made a superhires mesh for depth visualizations 
+DONE: ran 30cc and 30mtm hopefully last time 
+
+IN  : 2020-03-10 09:37:27.948092
+WORK: VUW
+TODO: finish that fucking paper and send it 
+
+OUT : 2020-03-10 17:08:30.817365
+DONE: finalized cc vs mt figures 
+
+IN  : 2020-03-11 09:15:53.041189
+WORK: GNS
+TODO: god damnit finish that paper 
+TODO: new mesh 
+
+OUT : 2020-03-11 15:31:27.085258
+DONE: new mesh, finish paper, yoshi meet 
+
+IN  : 2020-03-12 08:40:15.276845
+WORK: VUW
+TODO: paper to yoshi 
+TODO: new mesh 
+
+OUT : 2020-03-12 18:14:18.275365
+DONE:  
+DONE: finished paper sent to yoshi 
+
+OUT : 2020-03-13 15:45:27.925534
+DONE: finished meshing scripts, made new mesh, testing 
+
+IN  : 2020-03-16 09:45:18.956063
+WORK: VUW
+TODO: paper comments and draft to carl, ryan 
+TODO: check new mesh results and run for inversion 
+
+OUT : 2020-03-16 16:24:48.456892
+DONE: addressed paper suggestiosn from yoshi 
+
+IN  : 2020-03-17 09:09:30.830945
+WORK: HOME
+TODO: new mesh results and new mesh full inversion 
+TODO: start updating seisflows and pyatoa 
+
+OUT : 2020-03-17 17:40:47.910040
+DONE: started updating pyatoa and sf3 
+DONE: verified 3second mesh 
+DONE: trying to make a 10sec mesh but failing 
+
+IN  : 2020-03-18 08:28:06.948200
+WORK: HOME
+TODO: 10second mesh 
+TODO: new inversion 
+TODO: how to locate poissons ratio error 
+
+OUT : 2020-03-18 17:19:58.444527
+DONE: converted paper to gji format 
+DONE: created 6second mesh after much huffing and puffing 
+DONE: testined mrp 6second mesh 
+DONE: started 30event with new 6second mes 
+
+IN  : 2020-03-19 09:40:38.689671
+WORK: VUW
+TODO: check inversion results new mesh 
+TODO: push to 6 seconds? 
+TODO: keep updating sf3 and pyatoa 
+
+OUT : 2020-03-19 17:06:35.694980
+DONE: checked off almost all to do list items for pyatoa 
+DONE: started working on model plotters 
+DONE: turned in extra forms for employment 
+
+IN  : 2020-03-20 08:09:54.282069
+WORK: VUW
+TODO: check inversion results 
+TODO: vtk plotting pyatoa 
+
+OUT : 2020-03-20 16:59:54.282069
+DONE: ran new mesh inversion 
+DONE: etc 
+
+IN  : 2020-03-23 10:31:15.894419
+WORK: HOME
+TODO: continue updating sf3, pyatoa 
+TODO: incorporate new packages into a trial inversion 
+TODO: vtk plotter finish 
+
+OUT : 2020-03-23 19:58:31.684488
+DONE: responded email from Carl 
+DONE: ran inversion 6-30s 
+DONE: little bit of pyatoa editing 
+DONE: honestly, not that much, NZ shutdown today, that was crazy 
+
+IN  : 2020-03-24 09:29:24.766047
+WORK: HOME
+TODO: start addressing paper comments 
+
+OUT : 2020-03-24 17:30:20.861162
+DONE: minor and moderate comments addressed in paper 
+DONE: responded to ryans email 
+
+IN  : 2020-03-25 10:14:18.151427
+WORK: HOME
+TODO: prep yoshi meeting 
+TODO: continue paper edits 
+
+OUT : 2020-03-25 16:10:37.945104
+DONE: prepped meeting with yoshi 
+DONE: met with yoshi 
+DONE: started looking for poissons ratio error 
+
+IN  : 2020-03-26 09:16:11.536769
+WORK: HOME
+TODO: prep for yoshi carl ryan meeting 
+
+OUT : 2020-03-26 17:12:20.466587
+DONE: prepped and met with aktomo group 
+
+IN  : 2020-03-27 09:46:45.733200
+WORK: HOME
+TODO: address comments to paper 
+
+OUT : 2020-03-27 16:00:04.378637
+DONE: restructured paper to reflect edits from aktomo 
+
+IN  : 2020-03-30 09:30:05.708732
+WORK: HOME
+TODO: finish paper edits from ryan 
+TODO: try implement new pyatoa/seisflows in maui 
+TODO: outline how to implement pyatoa preprocessor class seisflows 
+
+OUT : 2020-03-30 19:34:27.997542
+DONE: finished all figure and paper changes suggested by co-authors 
+
+IN  : 2020-03-31 10:15:18.817894
+WORK: HOME
+TODO: john has paper 
+TODO: pyatoa vtk plotter finish  
+TODO: pyatoa as seisflows preprocess class 
+
+OUT : 2020-03-31 18:14:48.175725
+DONE: vtk plotter scripts working ~80%' 
+DONE: skyped with yoshi 
+DONE: got paper comments from John 
+
+IN  : 2020-04-01 09:56:54.739984
+WORK: HOME
+TODO: kennys mesh 
+TODO: respond john, comments on paper 
+TODO: vtk plotter finish 
+
+OUT : 2020-04-01 17:47:57.248161
+DONE: paper revisions 
+
+IN  : 2020-04-01 18:49:41.753107
+WORK: HOME
+TODO: working on paper figures 
+
+OUT : 2020-04-02 00:50:56.467957
+DONE: paper figure edits based on johns comments 
+
+IN  : 2020-04-02 09:29:00.294855
+WORK: HOME
+TODO: kennys mesh 
+TODO: finish read through and send to co-authors 
+TODO: finish paper adjustments 
+TODO: vtk plotter 
+
+OUT : 2020-04-02 18:42:46.708996
+DONE: finished paper corrections, sent to co-authors 
+
+IN  : 2020-04-06 09:26:04.195418
+WORK: HOME
+TODO: address yoshi paper comments, prepare for submission 
+TODO: fix figures from johns comments 
+
+OUT : 2020-04-06 16:49:35.100618
+DONE: finished paper figure revisions and yoshis comments 
+DONE: met with yoshi, 20 min to go over paper 
+
+IN  : 2020-04-07 09:40:36.180932
+WORK: HOME
+TODO: submit paper 
+TODO: start working on new inversion capabilities 
+
+OUT : 2020-04-07 16:36:05.994592
+DONE: finished last edits on paper 
+DONE: submitted to GJI 
+
+IN  : 2020-04-08 09:42:18.738573
+WORK: HOME
+TODO: newinversion 
+
+OUT : 2020-04-08 16:02:53.057284
+DONE: fluffed around mostly 
+DONE: made a flowchart for seisflows 
+DONE: getting new pyatoa and seisflows working 
+
+IN  : 2020-04-09 11:20:42.507456
+WORK: HOME
+TODO: start new inversion, try making a new mesh for 10-30s?  
+TODO: new smoothing lenght 
+TODO: kennys mesh? 
+
+OUT : 2020-04-09 17:20:42.507456
+DONE: model vis scripts 
+DONE: new mesh 
+DONE: pyatoa and seisflows working maui 
+
+IN  : 2020-04-10 09:19:50.428541
+WORK: HOME
+TODO: kennys mesh 
+TODO: new inversion 
+
+OUT : 2020-04-10 13:56:05.014783
+DONE: finished model vis scripts 
+DONE: slow running first iteration new inversion new mes 
+DONE: looked at kennys mesh problem 
+
+IN  : 2020-04-12 10:44:24.783551
+WORK: HOME
+TODO: get inversion running 
+
+OUT : 2020-04-12 11:03:53.901838
+DONE: inversion running to end 
+
+OUT : 2020-04-12 16:49:23.808211
+DONE: inversion working? i hope, looked at results of iter1, looks good, running 2 to 4 
+
+IN  : 2020-04-13 11:35:32.476574
+WORK: HOME
+TODO: evaluate inversion, change parameters, continue 
+
+OUT : 2020-04-13 13:35:32.476574
+DONE: inversion hit unknown error 
+
+IN  : 2020-04-14 09:42:07.701506
+WORK: HOME
+TODO: inversion 
+TODO: meet with yoshi 
+TODO: kg mesh 
+
+OUT : 2020-04-14 16:16:12.800856
+DONE: ran manual inversion but still same problem 
+DONE: met with yoshi talked about inversion 
+DONE: realized that  seisflows has steplenmax parameter, which I can set. it was set to default of 50%, ive changed it to 10% 
+
+IN  : 2020-04-15 10:02:39.284317
+WORK: HOME
+TODO: kennys mesh 
+TODO: continue inversion 
+
+OUT : 2020-04-15 16:40:07.710233
+DONE: kennys mesh, zoomed with kenny 
+DONE: 30beta inversion, realize error in make vtk script 
+DONE: running 30beta 2-3 
+
+IN  : 2020-04-16 10:08:52.780639
+WORK: HOME
+TODO: respond johns email 
+TODO: continue inversion 
+TODO: look at temp data 
+
+OUT : 2020-04-16 16:07:26.523588
+DONE: 30beta stop at 3, started 30charlie with new parameters as extension of 30beta 
+DONE: responded john 
+DONE: looking at beacon data again 
+
+IN  : 2020-04-17 10:03:02.780021
+WORK: HOME
+TODO: figure out why inversion stalled 
+TODO: get that shit goinngggggg 
+TODO: beacon data 
+
+OUT : 2020-04-17 17:39:19.240797
+DONE: fixed inspector class, fix windowing is broken, trying to fix 
+
+IN  : 2020-04-19 17:37:44.988519
+WORK: HOME
+TODO: try to fix window fixing and get an inversion running overnight 
+
+OUT : 2020-04-19 19:30:17.243174
+DONE: fixed that windowing thing hopefully 
+
+IN  : 2020-04-20 09:26:05.556998
+WORK: HOME
+TODO: inversion stuff 
+
+OUT : 2020-04-20 17:57:24.544481
+DONE: prepped and met with yoshi 
+DONE: inversion with fixed windowing working 
+DONE: looking at scaling beacon waveforms 
+
+IN  : 2020-04-21 10:10:47.396948
+WORK: HOME
+TODO: inversion and beacon 
+
+OUT : 2020-04-21 15:10:02.452650
+DONE: nothing 
+
+IN  : 2020-04-22 10:20:01.793734
+WORK: HOME
+TODO: inversion aannddd beacon 
+
+OUT : 2020-04-22 16:20:01.793734
+DONE: ran inversion 30delta but stopped 
+DONE: ran simulations for all events captured on beacon 
+
+IN  : 2020-04-23 11:05:11.901628
+WORK: HOME
+TODO: check inversion results 
+TODO: look at bannister data finish beacon data scaling 
+
+OUT : 2020-04-23 16:49:44.456940
+DONE: looked at inversion results 
+DONE: beacon data, and bannister data 
+DONE: started making sahke dataless 
+
+IN  : 2020-04-24 09:44:56.317051
+WORK: HOME
+TODO: start a larger scale test inversion, 50 events? with temp data 
+
+OUT : 2020-04-24 13:57:48.287794
+DONE: sahke data dataless 
+DONE: beacon testing responses 
+
+IN  : 2020-04-26 10:54:03.693870
+WORK: HOME
+TODO: inversions with new data 
+
+OUT : 2020-04-26 14:44:27.472794
+DONE: updated pyatoa manager for cleaner exceptions 
+DONE: updated manager functions to better handle intricacies of temporary data 
+
+IN  : 2020-04-27 11:10:32.023194
+WORK: HOME
+TODO: continue work from yesterday 
+
+OUT : 2020-04-27 17:08:46.364542
+DONE: pretty printing in inspector 
+
+IN  : 2020-04-28 09:16:58.969094
+WORK: HOME
+TODO: beacon waveforms  
+TODO: prepare yoshi meeting 
+
+OUT : 2020-04-28 14:08:39.101929
+DONE: beacon amplitudes 
+DONE: prepped yoshi meet 
+DONE: met with yoshi 
+
+IN  : 2020-04-29 11:52:34.909300
+WORK: HOME
+TODO: beacon teleseismic waveforms polarity reversal 
+TODO: set up new inversion 
+
+OUT : 2020-04-29 17:02:37.714151
+DONE: meh 
+DONE: checked beacon teleseismic waveforms 
+DONE: set up styx60 inversino 
+
+IN  : 2020-04-30 09:30:15.661805
+WORK: HOME
+TODO: continue looking at beacon teleseiss 
+TODO: finish inspector to pandas 
+
+OUT : 2020-04-30 15:46:37.931728
+DONE: beacon station conversing with emily on response information, i might be wrong? 
+
+IN  : 2020-05-01 10:30:54.133721
+WORK: HOME
+TODO: beacon new response files? 
+
+OUT : 2020-05-01 16:06:37.613719
+DONE: banging my head over beacon 
+
+IN  : 2020-05-04 09:29:03.031613
+WORK: HOME
+TODO: beacon hammer it down! 
+
+OUT : 2020-05-04 16:59:03.031613
+DONE: beacon stuff 
+DONE: met with yoshi 
+
+IN  : 2020-05-05 09:55:18.631158
+WORK: HOME
+TODO: beacon teleseismics 
+TODO: continue with pandas in inspector 
+
+OUT : 2020-05-05 15:56:19.884363
+DONE: beacon realizing now that shits fucked 
+DONE: integrating pandas into pyatoa 
+
+IN  : 2020-05-06 09:59:29.576533
+WORK: HOME
+TODO: pandas 
+TODO: inversion 
+
+OUT : 2020-05-06 16:09:39.842079
+DONE: pandas fully integrated into inspector, tackle gadget next 
+
+IN  : 2020-05-07 10:02:10.785029
+WORK: HOME
+TODO: styx60  
+TODO: inspector gadget 
+
+OUT : 2020-05-07 16:35:27.932476
+DONE: finished overhauling inspector gadget with pandas 
+
+IN  : 2020-05-08 09:47:04.753876
+WORK: HOME
+TODO: inversion! 
+
+OUT : 2020-05-08 14:47:04.753876
+DONE: updated form of pyatoa running with seisflows 
+DONE: code cleaning pyatoa 
+
+IN  : 2020-05-09 11:11:59.231650
+WORK: HOME
+TODO: start an inversion running 
+TODO: pyatoa preprocess class in seisflows? 
+
+OUT : 2020-05-09 14:02:49.458291
+DONE: restructured pyaflowa, started trial inversion 
+
+OUT : 2020-05-11 14:13:05.123651
+DONE: fixed bug in inspector 
+DONE: got styx60 running 
+DONE: met with yoshi 
+
+IN  : 2020-05-13 08:11:13.144433
+WORK: HOME
+TODO: get inversion runnin 
+
+OUT : 2020-05-13 17:34:41.028850
+DONE: fixed gatherer class pyatoa 
+DONE: looked at beacon waveforms a bit more 
+DONE: standardized sahke data and fixed some dataless bits 
+DONE: styx60 kinda going 
+
+IN  : 2020-05-14 09:04:54.211503
+WORK: HOME
+TODO: inversion inversion inversion 
+
+OUT : 2020-05-14 16:05:43.121826
+DONE: jobs queue stuck, writing tests for pyatoa 
+
+IN  : 2020-05-15 08:51:13.871490
+WORK: HOME
+TODO: inversion for yoshi? 
+TODO: pytest 
+
+OUT : 2020-05-15 17:05:31.607143
+DONE: more pytest 
+DONE: rewriting more parts of pyatoa 
+DONE: made some slides for yoshi 
+
+OUT : 2020-05-18 17:07:31.665974
+DONE: looked at styx60 inversion results 
+DONE: prepped yoshi meet 
+DONE: met with yoshi 
+DONE: worked on waveform improvement figures 
+
+IN  : 2020-05-19 09:30:54.490910
+WORK: HOME
+TODO: set up new styx60 trials 
+TODO: ls 
+TODO: continue looking at styx60 results 
+TODO: CDP 
+TODO: summarize reviewer comments 
+
+OUT : 2020-05-19 17:10:49.154901
+DONE: styx60b12 running 
+DONE: did my CDP 
+DONE: pyflex src code editing 
+DONE: styx60 analysis 
+
+IN  : 2020-05-20 09:06:25.864549
+WORK: HOME
+TODO: check results of styx60b12 
+TODO: finish manager plotter with rejected windows 
+TODO: come up with polished results from styx60 
+TODO: respond johno, ryan, pasan 
+
+OUT : 2020-05-20 17:03:15.010987
+DONE: worked on reformatting manager plotter, added ability to plot reject windows 
+DONE: responded to backlogged emails 
+DONE: reformatted waveform improvement figure 
+DONE: looking at inspector plots 
+
+IN  : 2020-05-21 09:17:01.062644
+WORK: HOME
+TODO: continue with styx60 analysis 
+TODO: respond email yoshi 
+TODO: reviewer comments paper 
+
+OUT : 2020-05-21 17:17:01.062644
+DONE: making stats plots for inspector 
+DONE: blah blah 
+
+IN  : 2020-05-22 08:43:46.530134
+WORK: HOME
+TODO: reviewer comments 
+
+OUT : 2020-05-22 15:10:46.064664
+DONE:  
+DONE: wrote up responses to reviewer comments on paper 
+
+IN  : 2020-05-25 08:12:27.924905
+WORK: HOME
+TODO: styx60 results and run new?  
+TODO: prep john/yoshi meeting 
+
+OUT : 2020-05-26 16:48:47.008932
+DONE: ristau 1d model 
+DONE: horizontal components for paper 
+DONE: paper responses 
+
+IN  : 2020-05-27 07:29:06.631159
+WORK: HOME
+TODO: 1d velocity model 
+TODO: paper responses 
+TODO: horizontal components 
+
+OUT : 2020-05-27 13:18:31.769040
+DONE: preprocessing woes 
+DONE: cleaning up plotting 
+DONE: ni1d results 
+
+IN  : 2020-05-27 17:46:19.662785
+WORK: HOME
+TODO: pyaflowa unit tests 
+
+OUT : 2020-05-27 18:54:03.488884
+DONE: started pyaflowa test 
+
+IN  : 2020-05-28 08:52:37.038835
+WORK: HOME
+TODO: testing pyaflowa 
+TODO: run 1d synthetics 
+TODO: draft responses for paper 
+
+OUT : 2020-05-28 15:43:30.488021
+DONE: testing pyaflowa 
+DONE: nz1d test run 
+DONE: restructuring seisflows  
+
+OUT : 2020-05-29 08:42:20.195460
+IN  : 2020-05-29 08:42:26.529536
+WORK: HOME
+TODO: set up new sf3 
+TODO: nz1d full run 
+TODO: horizontal components and draft responses 
+
+OUT : 2020-05-29 15:22:26.529536
+
+IN  : 2020-06-01 10:12:42.236570
+WORK: HOME
+TODO: nz1d simulation results 
+TODO: draft responses 
+
+OUT : 2020-06-01 16:35:41.141235
+DONE: 1d velocity model  
+DONE: 1d attenuation check 
+DONE: small changes to responses 
+
+OUT : 2020-06-02 17:22:58.006753
+DONE: nz1d full compliment 
+DONE: prepped yoshi meet 
+DONE: met with yoshi, discussed paper revisions and post doc opportunities 
+
+IN  : 2020-06-03 09:09:40.767971
+WORK: HOME
+TODO: prep carl meeting 
+TODO: meet with carl 
+TODO: check nz1d results 
+TODO: finish draft responses 
+
+OUT : 2020-06-03 14:47:36.637831
+DONE: met with carl 
+DONE: thats it really 
+
+OUT : 2020-06-04 15:37:14.836679
+DONE: formalized draft responses 
+DONE: nz1d full run and looking at results, started new pyflex preset 
+
+IN  : 2020-06-05 10:11:16.669168
+WORK: VUW
+TODO: finish draft responses and send to yoshi 
+
+OUT : 2020-06-05 17:08:26.413581
+DONE: sent draft responses to yoshi 
+DONE: talked a lot of shit aye 
+DONE: started a new sf run styx60d 
+
+IN  : 2020-06-08 08:28:54.640841
+WORK: HOME
+TODO: correct draft responses from yoshi 
+TODO: finish waveform gallery figures 
+TODO: check styx60d run 
+
+OUT : 2020-06-08 17:45:53.662073
+DONE: prep and met with yoshi 
+DONE: styx60d failed, tried again, line search stalled 
+DONE: worked on editing manuscript 
+DONE: talked with rents 
+
+IN  : 2020-06-10 11:51:31.197783
+WORK: VUW
+TODO: continue with manuscript changes and response letter 
+
+OUT : 2020-06-10 17:38:12.904864
+DONE: more paper corrections and started on figures[B[D 
+
+IN  : 2020-06-11 10:28:46.439239
+WORK: VUW
+TODO: paper fucking revisions 
+
+OUT : 2020-06-11 18:42:24.858752
+DONE: new figures and updated captions 
+
+OUT : 2020-06-12 16:46:27.049775
+DONE: finished restructuring section 2 and 3 intros for a more c cohesive flow, updated figures 
+
+IN  : 2020-06-15 09:53:53.366131
+WORK: VUW
+TODO: finish dose revisions 
+
+OUT : 2020-06-15 17:11:47.065207
+DONE: rewrote section 2 and 3 of paper, rewrote figure captions,, rewrote parts of appendix, added A5 section regarding Pandas data analysis 
+
+IN  : 2020-06-16 09:46:48.467203
+WORK: HOME
+TODO: finish paper revisions and prep yoshi meet 
+
+OUT : 2020-06-16 17:27:48.654588
+DONE: R and T waveform gallery figures 
+DONE: met with Yoshi 
+DONE: doing read throughs of current draft 
+
+OUT : 2020-06-17 09:43:23.703677
+IN  : 2020-06-17 09:43:27.805438
+WORK: VUW
+TODO: finalize read through and paper revisions please 
+
+OUT : 2020-06-17 16:54:35.568448
+DONE: edited figures, finished readthrough and edits, onto the appendix now 
+
+IN  : 2020-06-18 09:46:15.411985
+WORK: HOME
+TODO: papraioejvaifja 
+
+OUT : 2020-06-18 18:23:01.570550
+DONE: made model and gradient update figures 
+DONE: started running new chkbd inversion with reduced smoothing length as trial 
+
+OUT : 2020-06-19 19:41:18.789025
+DONE: godamint rewrote pyatoa section again, new figure but garbage, rerunning checkerboard but garbage! 
+
+OUT : 2020-06-22 17:26:34.835057
+DONE: met with yoshi talked about revising paper 
+DONE: talked to chet about postdoc 
+DONE: started new chkbd sims 
+
+IN  : 2020-06-23 09:22:06.602837
+WORK: VUW
+TODO: analyze checkerboard results and start running new checkerboard model 
+
+OUT : 2020-06-23 17:22:06.602837
+DONE: ran new chkbd results 
+DONE: looked at beta chkbd results 
+DONE: new plots for inspector 
+
+IN  : 2020-06-24 09:47:41.508651
+WORK: VUW
+TODO: look at chkbd charl results 
+
+OUT : 2020-06-24 15:33:19.030074
+DONE: finished chkb_charl run, looked at results 
+
+IN  : 2020-06-25 09:39:15.506080
+WORK: VUW
+TODO: chkbd alpha, 
+TODO: remake some figures 
+TODO: try to come up with relationships for smoothing and model difference 
+
+OUT : 2020-06-25 16:39:15.506080
+DONE: started new synth chkbd runs 
+DONE: realized my windowing parameters were kinda wrong 
+DONE: came up with a game plan for how to better paper 
+
+IN  : 2020-06-26 12:16:35.295524
+WORK: VUW
+TODO: initiate game plan 
+
+OUT : 2020-06-26 16:57:50.427791
+DONE: reran nz1d for new windowing and RTZ components 
+DONE: rerunning nznorth with new windowing and RTZ 
+DONE: running synth beta but iffy 
+
+IN  : 2020-06-29 09:14:03.163993
+WORK: VUW
+TODO: 253 reeval 
+TODO: aktomo email 
+TODO: prep meet with yoshi 
+
+OUT : 2020-06-29 16:40:02.217392
+DONE: synth bravo finished  
+DONE: prepped yoshi meet 
+DONE: met with yoshi 
+DONE: responded to aktomo 
+
+IN  : 2020-06-30 10:05:23.006226
+WORK: VUW
+TODO: new figures in paper 
+
+OUT : 2020-06-30 15:05:23.006226
+DONE: shoring up makevtk script 
+DONE: running synth delta and fail 
+DONE: helping kg with meshing 
+
+IN  : 2020-07-01 10:24:29.639102
+WORK: VUW
+TODO: kg meshing till lunch 
+TODO: synth d and finish makevtk  
+TODO: start making figures 
+
+OUT : 2020-07-03 16:58:19.149035
+DONE: remade some figures and looked at convergence 
+
+IN  : 2020-07-06 09:11:06.147667
+WORK: VUW
+TODO: make figures  
+
+OUT : 2020-07-06 20:17:48.282094
+DONE: meeting with yoshi 
+DONE: more figures done 
+
+IN  : 2020-07-07 09:19:28.126126
+WORK: HOME
+TODO: prep carl meeting 
+TODO: figures n text 
+
+OUT : 2020-07-07 18:35:33.086125
+DONE: talked to carl about uaf post doc 
+DONE: made some figures 
+
+IN  : 2020-07-08 09:17:41.013965
+WORK: HOME
+TODO: figures 
+
+OUT : 2020-07-08 17:17:41.013965
+DONE: made some figs 
+
+IN  : 2020-07-09 12:46:04.176719
+WORK: VUW
+TODO: make some figures 
+
+OUT : 2020-07-09 21:35:25.589006
+DONE: made some NICE figures :) 
+
+IN  : 2020-07-10 09:18:29.565042
+WORK: VUW
+TODO: text, response send yoshi 
+
+OUT : 2020-07-10 17:11:25.213611
+DONE: revised texts and figures, final proofread next 
+
+IN  : 2020-07-13 10:04:12.071706
+WORK: VUW
+TODO: overhaul to pyatoa 
+
+OUT : 2020-07-13 19:30:07.581114
+DONE: met with yoshi 
+DONE: making new figures, i really fucking hate making figures 
+
+IN  : 2020-07-14 10:16:32.129025
+WORK: VUW
+TODO: figurines 
+
+OUT : 2020-07-14 17:17:02.099874
+DONE: made yoshi edits, getting ready for final read throughs and suoff to co-authors 
+
+IN  : 2020-07-16 09:17:32.924952
+WORK: VUW
+TODO: send off paper to carl and ryan 
+
+OUT : 2020-07-16 17:07:48.722750
+DONE: sent manuscript to carl ryan 
+DONE: responded to emails 
+
+IN  : 2020-07-17 09:36:13.770196
+WORK: VUW
+TODO: finish pyatoa changes 
+TODO: seisflows preprocess script? 
+TODO: real data inversion tests 
+
+OUT : 2020-07-20 16:24:41.481206
+DONE: met with yoshi 
+DONE: pyaflowa preprocess etc 
+
+IN  : 2020-07-21 09:23:09.471232
+WORK: VUW
+TODO: finish pyatoa preprocess class and sf3 updates 
+
+OUT : 2020-07-21 19:18:50.704632
+DONE: closer to finishing seifslows updates 
+
+OUT : 2020-07-22 17:20:56.827337
+DONE: mostly done with seisflows changes, need to test 
+DONE: made pyatoa changes to plotting capabilities' 
+
+IN  : 2020-07-23 09:17:52.339088
+WORK: VUW
+TODO: test new seisflows on maui 
+
+OUT : 2020-07-23 17:18:35.894202
+DONE:  
+DONE: manager plotter good state 
+DONE: started working on seisflows, going pretty good all things considered 
+
+IN  : 2020-07-24 09:42:22.928216
+WORK: VUW
+TODO: finish seisflows updates 
+
+OUT : 2020-07-24 13:52:22.928216
+DONE: seisflows trying 
+
+IN  : 2020-07-27 09:25:42.229990
+WORK: VUW
+TODO: read through ryans comments 
+TODO: prep yoshi meeting 
+
+OUT : 2020-07-27 17:25:42.229990
+DONE: agu abstract 
+DONE: met with yoshi 
+DONE: kept testing seisflows 
+DONE: emailing with co-authors 
+
+IN  : 2020-07-28 09:41:50.844320
+WORK: VUW
+TODO: look at co-author comments 
+TODO: agu abstract 
+TODO: seisflows 
+
+OUT : 2020-07-28 17:38:33.139637
+DONE: agu abstract to john 
+DONE: ryan and carl minor comments in manuscript 
+DONE: seisflows up to line search, almost there 
+DONE: played skwash 
+
+IN  : 2020-07-29 09:06:23.208279
+WORK: VUW
+TODO: prep for carl yoshi meeting 
+TODO: finish seisflows 
+
+OUT : 2020-07-29 15:24:43.660955
+DONE: prep meeting with aktomo 
+DONE: seisflows runnin 
+DONE: agu abstract submit 
+DONE: almost paper to john 
+
+IN  : 2020-07-30 09:16:06.681321
+WORK: HOME
+TODO: finish corrections to paper send to john 
+TODO: run checkerboard inversion 
+TODO: new mesh and event catalog testing 
+
+OUT : 2020-07-30 17:01:19.496774
+DONE: sent paper off to john 
+DONE: did some more updates on seisflows 
+DONE: new event catalog, 289 events 4.4<=m<6.0 
+DONE: thats it 
+
+OUT : 2020-07-31 14:42:10.057708
+DONE: got john manuscript updates,  
+DONE: did final readthrough paper and sent to coauthors 
+DONE: gsnz membership 
+DONE: fixed init problem seisflows 
+
+IN  : 2020-08-03 08:59:56.538428
+WORK: HOME
+TODO: seisflows working with new checkerboard 
+TODO: new mesh 
+TODO: check waveforms 
+
+OUT : 2020-08-03 17:06:15.139304
+DONE: sorted waveforms 
+DONE: started new mesh 
+DONE: gridded stations 
+DONE: testing chkbd with seisflows changes 
+DONE: met with yoshi 
+
+IN  : 2020-08-05 07:48:07.144846
+WORK: VUW
+TODO: submit paper gji 
+TODO: check seisflows test 
+TODO: event catalog 
+TODO: new mesh 
+
+OUT : 2020-08-05 15:11:21.084975
+DONE: resubmitted paper 
+DONE: trying to run seisflows but job q 
+DONE: trying new mesh but job q 
+DONE: event catalog 
+
+OUT : 2020-08-06 14:36:54.446218
+DONE: model maker now better 
+DONE: started running events for extra events 
+DONE: testing out new mesh with ngll 
+
+IN  : 2020-08-07 10:01:35.064468
+WORK: VUW
+TODO: look at checkerboard inversion 
+TODO: extra events 
+TODO: new mesh 
+
+OUT : 2020-08-07 19:01:35.064468
+DONE: documenting pyatoa  
+DONE: running extra event fwd sims 
+DONE: testing new mesh 
+
+IN  : 2020-08-10 09:32:12.463866
+WORK: HOME
+TODO: documenting pyatoa 
+TODO: check extra event waveforms 
+TODO: check new mesh results 
+
+OUT : 2020-08-10 14:32:12.463866
+DONE: checked extra events 
+DONE: converted notebooks to docs pages 
+
+IN  : 2020-08-11 09:13:05.858295
+WORK: VUW
+TODO: final event catalog and post hoc events 
+TODO: 60 event inversion 
+TODO: fix pyatoa finalize method 
+TODO: continue documentation 
+
+OUT : 2020-08-11 17:49:43.788794
+DONE: started new sixty run but failed, need to check 
+DONE: lots of pyatoa docs and cleaned up repo a little 
+DONE: stuck on uplodaing to readthedocs 
+
+IN  : 2020-08-12 09:02:04.012621
+WORK: VUW
+TODO: paper proofs oder was 
+TODO: sixty inversion 
+TODO: continue with docs 
+
+OUT : 2020-08-12 17:12:42.021380
+DONE: sixty ran to trial step but timed 
+DONE: more documentation 
+
+IN  : 2020-08-13 09:42:39.815792
+WORK: VUW
+TODO: sixty results analysis 
+TODO: readthedocs and continue docs 
+TODO: gji proofs 
+
+OUT : 2020-08-13 18:02:39.815792
+DONE: pyatoa on readthedocs 
+DONE: sixty stopped 
+
+IN  : 2020-08-14 13:16:05
+WORK: VUW
+TODO: scec abstract 
+TODO: sixty 
+
+OUT : 2020-08-14 18:00:00
+TODO: submitted scec abstract
+TODO: sixty 
+
+IN  : 2020-08-17 10:06:26
+WORK: VUW
+TODO: sixty and meet with yoshi to discuss 
+
+
+OUT : 2020-08-17 17:06:26
+DONE: prep and meet with yoshi 
+DONE: sixty inversion going and looking at results 
+DONE: plotting event catalog 
+
+IN  : 2020-08-18 09:21:44
+WORK: HOME
+TODO: sixty results 
+TODO: ngll results 
+TODO: nsf ear brainstorm 
+
+OUT : 2020-08-18 05:43:41
+DONE: sixty inversion i2 
+DONE: min res period now class and ngll determine 4second mesh 
+DONE: nsf fastlane  
+
+IN  : 2020-08-19 08:34:15
+WORK: HOME
+TODO: prep meeting with carl 
+TODO: sixty inversion i4 hopefully 
+TODO: 2 second mesh 
+TODO: misfit assessment  
+
+OUT : 2020-08-19 05:33:26
+DONE: met with Carl talked about NSF postdoc 
+DONE: fixed make vtk 
+DONE: sixty i04 
+DONE: working on 2second mesh 
+
+IN  : 2020-08-20 10:17:41
+WORK: HOME
+TODO: 2 second mesh 
+TODO: sixty i4 
+TODO: summary misfit assessment inspector 
+TODO: lit review alaska 
+
+OUT : 2020-08-20 05:42:42
+DONE: testing 2second mesh 
+DONE: sixty i4 stopped 
+
+IN  : 2020-08-21 09:56:21
+WORK: HOME
+TODO: sixty restart i4 
+TODO: 2s mesh ngll comparisons 
+TODO: scec cvm slides rough 
+TODO: alaska table 
+
+OUT : 2020-08-21 05:36:05
+DONE: sixty i5 
+DONE: pyatoa docs 
+DONE: running ngll7 2s mesh 
+DONE: nalaska lit review 
+
+IN  : 2020-08-24 09:20:33
+WORK: VUW
+TODO: prep yoshi meeting 
+TODO: 2sec mesh check 
+TODO: sixty prep results and run i6 
+TODO: nalaska reference table 
+
+OUT : 2020-08-24 06:07:13
+DONE: met with yoshi long discussion on next steps for trial inversion 
+DONE: mrp 1node mesh 
+DONE: working on inspsector and vtk modeler features 
+DONE: nalaska lookup table 
+
+IN  : 2020-08-25 09:39:55
+WORK: VUW
+TODO: 1node mrp to see max res 
+TODO: sixty push to max res 
+TODO: pyatoa add variance reduction and gen summary figures function 
+TODO: vtk modeler out of bounds? 
+
+OUT : 2020-08-25 04:48:25
+DONE: 1node_10s figured out is a 6s mesh 
+DONE: sixty running new leg 8-30s bandpass 
+DONE: new hopefully forest 3s mesh 
+DONE:  
+DONE: certified mesh decisions by checking min velocities in tomo files 
+DONE: nalaska refs 
+
+IN  : 2020-08-26 09:17:28
+WORK: VUW
+TODO: sixty inversion 
+TODO: forest 3s mesh 
+TODO: pyatoa tests? 
+TODO: solvi email 
+
+OUT : 2020-08-26 15:17:28
+DONE: meet with carl uaf pf 
+DONE: sixty analysis and new pyflex windowing params 
+DONE: scec cvm slides to yoshi 
+
+IN  : 2020-08-28 09:20:28
+WORK: VUW
+TODO: sixty analysis 
+TODO: finish scec cvm slides 
+TODO: talk to yoshi 
+
+OUT : 2020-08-28 15:20:28
+DONE: scec cvm presi 
+DONE: meet with yoshi to discuss presi 
+
+IN  : 2020-08-29 09:14:52
+WORK: HOME
+TODO: scec cvm finish presi 
+TODO: nalaska work 
+
+OUT : 2020-08-29 18:14:52
+DONE: scec cvm presi 
+
+IN  : 2020-08-30 10:03:15
+WORK: HOME
+TODO: capuaf and nalaska stuff 
+
+OUT : 2020-08-30 12:28:11
+DONE: capuaf 
+DONE: paper proofs 
+DONE: random busywork 
+DONE: nalaska table caption 
+
+IN  : 2020-08-31 09:05:25
+WORK: VUW
+TODO: sixty need to run more 
+TODO: convergence plot 
+TODO: setup new inversion  
+TODO: pyatoa docs and testing 
+
+OUT : 2020-08-31 08:15:35
+DONE: solvi email 
+DONE: capuaf nalaska 
+DONE: sixty running again 
+DONE: gji proofs 
+DONE: convergence plot working 
+DONE: met with yoshi 
+
+IN  : 2020-09-01 09:31:17
+WORK: VUW
+TODO: new inversion 
+TODO: docs and testing 
+TODO: finish load() command in manager 
+TODO: email aktomo 
+
+OUT : 2020-09-01 07:37:51
+DONE: window testing for 15-30s 
+DONE: new inversion sechzig started 
+DONE: finished load function from manager 
+DONE: emailed aktomo and yoshi about scholarship 
+DONE: nalaska capuaf work 
+
+IN  : 2020-09-02 07:30:33
+WORK: HOME
+TODO: scec cvm workshop 
+TODO: proofs in 
+TODO: new mesh 
+TODO: sechzig inversion 
+TODO: scec poster 
+TODO: abstract ssa to yoshi 
+
+OUT : 2020-09-02 05:39:47
+DONE: scec meeting 
+DONE: lots of emails 
+DONE: window plotter working noice 
+DONE: sechzig manual push 
+
+IN  : 2020-09-03 09:36:31
+WORK: VUW
+TODO: prep aktomo meeting 
+TODO: nalaska meeting carl 
+TODO: ssa 
+TODO: abstract and proofs 
+
+OUT : 2020-09-03 05:33:50
+DONE: nalaska meet with carl 
+DONE: prep aktomo meet 
+DONE: aktomo meet  
+DONE: started reading DP paper on mini batches 
+DONE: finished GJI proofs 
+
+IN  : 2020-09-04 09:11:01
+WORK: VUW
+TODO: nalaska prep for meet with carl 
+TODO: new inversion with declustered events 
+TODO: try out declustering method 
+
+OUT : 2020-09-04 16:41:01
+DONE: prepped nalaska meeting 
+DONE: declustered events and new inversion 
+
+IN  : 2020-09-07 09:44:29
+WORK: HOME
+TODO: check and restart new inversion 
+TODO: nalaska proposal 
+
+OUT : 2020-09-07 18:04:29
+DONE: decluster running but maybe messed it up 
+DONE: nalaska proposal 
+
+IN  : 2020-09-08 08:50:12
+WORK: HOME
+TODO: decluster and nalaska 
+
+OUT : 2020-09-08 18:50:12
+DONE: decluster ran till 6, need to check results 
+DONE: nalaska proposal 
+
+IN  : 2020-09-09 08:24:17
+WORK: VUW
+TODO: turn in nalaska proposal 
+TODO: become a real person again 
+
+OUT : 2020-09-09 05:20:27
+DONE: NALASKA DONE! Good grief 
+DONE: submitted GSNZ abstract 
+DONE: checked out and started decluster 7-9 iters 
+
+IN  : 2020-09-10 09:14:30
+WORK: VUW
+TODO: jim ansell write up 
+TODO: vic travel grant? 
+TODO: scec poster 
+TODO: decluster 
+TODO: respond donna! 
+
+OUT : 2020-09-10 05:22:08
+DONE: decluster running with smaller smooth length 
+DONE: jim ansell proposal written and submitted by yoshi 
+DONE: responded to donna 
+DONE: working on VIC travel grant 
+DONE: working on SCEC poster 
+
+IN  : 2020-09-11 11:04:34
+WORK: VUW
+TODO: decluster keep running 
+TODO: scec poster 
+TODO: scec lightning talk 
+
+OUT : 2020-09-11 05:21:44
+DONE: scec poster 
+DONE: got sem model slicer from kai wang, started python wrapper 
+DONE: scec poster 
+
+IN  : 2020-09-14 09:34:45
+WORK: VUW
+TODO: decluster windowing parameters and run 8s 
+TODO: finish scec poster 
+TODO: prep yoshi meet 
+
+OUT : 2020-09-14 04:01:01
+DONE: decluster check and run 8 
+DONE: pyatoa and sf3 now make pdfs that are searchable 
+DONE: met with yoshi and plans update 
+DONE: scec poster final figures 
+
+IN  : 2020-09-15 01:20:30
+WORK: HOME
+TODO: work on sem slicer 
+
+OUT : 2020-09-15 04:02:05
+DONE: decluster stopped and running again 
+DONE: working on sem slicer but not running yet 
+
+IN  : 2020-09-16 08:47:30
+WORK: VUW
+TODO: decluster finish run and check 
+TODO: model slicer working 
+
+OUT : 2020-09-16 06:49:06
+DONE: scec poster 
+DONE: decluster manual running things 
+DONE: model slicer working but not working 
+
+IN  : 2020-09-17 09:09:48
+WORK: VUW
+TODO: decluster check results 
+TODO: model slicer 
+
+OUT : 2020-09-17 14:09:48
+DONE: model slicer sort of working but not working 
+DONE: decluster manual run 
+
+IN  : 2020-09-18 09:30:05
+WORK: HOME
+TODO: model slicer come on this time 
+TODO: decluster check again 
+
+OUT : 2020-09-18 05:24:02
+DONE: decluster running a few more itertions 
+DONE: sem slicer works but I dont know why... oh well, get in 
+
+IN  : 2020-09-21 09:50:09
+WORK: HOME
+TODO: sem slicer for real 
+TODO: decluster results check 
+TODO: prep meeting with yoshi 
+TODO: ssa tomo slides 
+
+OUT : 2020-09-21 04:43:37
+DONE: looked at m17, looks good to stop 
+DONE: sem slicer working with large grids and output model looks good, need to clean up now 
+DONE: met with yoshi to discuss m17 and sem slicer 
+DONE: model out script and wavcomp class written 
+
+IN  : 2020-09-22 10:05:27
+WORK: VUW
+TODO: ssa tomo talk slides 
+
+OUT : 2020-09-22 15:35:27
+DONE: working on semslicer 
+DONE: ran new decluster 8-20s 
+DONE: tomo slides 
+
+IN  : 2020-09-23 10:16:23
+WORK: VUW
+TODO: semslicer 
+TODO: check 8-20s results 
+TODO: tomo slides 
+
+OUT : 2020-09-23 17:46:23
+DONE: semslicer finished and working maybe 
+DONE: read some papers 
+
+IN  : 2020-09-24 10:01:34
+WORK: VUW
+TODO:  
+TODO: prep john meeting 
+TODO: ssa tomo slides and practice 
+TODO: semslicer checke 
+
+OUT : 2020-09-24 18:01:34
+DONE: semslicer testing 
+DONE: kennys defense 
+DONE: responded to some emails 
+DONE: met with john 
+
+IN  : 2020-09-25 09:59:17
+WORK: VUW
+TODO: ssa tomo slides and talk 
+
+OUT : 2020-09-25 16:59:17
+DONE: ssa tomo slides finished and some practice 
+
+IN  : 2020-09-27 09:38:47
+WORK: HOME
+TODO: pyatoa tests and potentially pyaflowa again 
+
+OUT : 2020-09-27 13:38:47
+DONE: concurrent futures in pyaflowa 
+
+IN  : 2020-09-28 09:57:27
+WORK: VUW
+TODO: ssa tomo slides 
+
+OUT : 2020-09-29 06:08:51
+DONE: ssa tomo presi my god that was brutal 
+
+IN  : 2020-09-30 09:14:19
+WORK: VUW
+TODO: model slicer 
+TODO: respond email carl 
+
+OUT : 2020-09-30 16:14:19
+DONE: semslicer 
+DONE: responded emails 
+
+IN  : 2020-10-01 09:37:39
+WORK: VUW
+TODO: semslicer make it work!!! 
+
+OUT : 2020-10-01 17:37:39
+DONE: semslicer did not make it work 
+DONE: looked at 8-20s waveforms 
+DONE: reenrolled phd 
+DONE: began thesis template 
+
+IN  : 2020-10-02 10:20:52
+WORK: VUW
+TODO: semslicer check no topo results 
+TODO: continue pyatoa tests 
+
+OUT : 2020-10-02 04:42:09
+DONE: semslicer figured out that topo has something to do with it but not everything.  
+DONE: pyaflowa now takes the functionality of seisflows.pyatoa class 
+DONE: finishline docs' 
+
+IN  : 2020-10-05 09:40:07
+WORK: VUW
+TODO: semslicer look at the code 
+TODO: docs and tests 
+
+OUT : 2020-10-05 05:32:04
+DONE: 6s mesh testing 
+DONE: semslicer still not working 
+DONE: multithreaded data gathering in pyatoa 
+DONE: rough finish pyaflowa 
+
+IN  : 2020-10-06 09:56:30
+WORK: VUW
+TODO: tomography questions 
+TODO: semslicer keep trying 
+TODO: unit tests process 
+
+OUT : 2020-10-06 06:01:04
+DONE: answered ssa tomo questions 
+DONE: pyaflowa working in serial 
+DONE: tried semslicer stuff 
+
+IN  : 2020-10-07 10:01:43
+WORK: VUW
+TODO: semslicer what am i doing 
+TODO: docs testing pyaflowa  
+
+OUT : 2020-10-07 03:05:09
+DONE: ssa tomo talk starting at 4am gorramit 
+DONE: working on pyatoa docs 
+
+IN  : 2020-10-08 10:48:26
+WORK: VUW
+TODO: semslicer 
+TODO: look at distances again, I think theres something in there 
+TODO: docs and tests 
+TODO: carl email 
+
+OUT : 2020-10-08 07:55:42
+DONE: seisflows updating some extra scripts 
+DONE: semslicer tried some stuff trying some new stuff 
+DONE: nsf email and carl email 
+
+IN  : 2020-10-09 09:24:59
+WORK: HOME
+TODO: sort out nsf stuff 
+TODO: semslicer check results 
+TODO: email carl and donna 
+TODO: prep yoshi meet 
+
+OUT : 2020-10-09 02:00:38
+DONE: semslicer maybe getting somewhere 
+DONE: met with yoshi 
+DONE: nsf stuff and respond to carl 
+
+IN  : 2020-10-12 09:40:00
+WORK: HOME
+TODO: semslicer try out the things talked about with yoshi 
+
+OUT : 2020-10-12 07:10:42
+DONE: semslicer more testing, onto very hi-res test, fingerse crossed 
+DONE: pyaflowa working on local machine, need to test on cluster 
+
+IN  : 2020-10-13 10:02:08
+WORK: VUW
+TODO: semslicer 
+TODO: pyaflowa on maui 
+
+OUT : 2020-10-13 06:07:07
+DONE: semslicer wrote function to combine subdivdied grids 
+DONE: pyaflowa updates 
+DONE: tests for gatherer done 
+DONE: started a pyaflowa doc page 
+
+IN  : 2020-10-14 11:23:25
+WORK: VUW
+TODO: semslicer FINGERS FUCKING CROSSED 
+TODO: tests and docs cont 
+
+OUT : 2020-10-14 19:23:25
+DONE: semslicer combine regions working 
+DONE: pyaflowa and inversion set up docs 
+DONE: semslicer maybe working 
+
+IN  : 2020-10-15 10:15:29
+WORK: HOME
+TODO: semslicer check waveforms 
+TODO: docs and testing 
+
+OUT : 2020-10-15 05:15:37
+DONE: semslicer making higher res 
+DONE: waveform checks and forest4s comparisons 
+DONE: update docs more 
+
+IN  : 2020-10-16 09:33:34
+WORK: VUW
+TODO: semslicer fine crust and mantle 
+TODO: prep yoshi meet 
+TODO: send links to aakash 
+
+OUT : 2020-10-19 03:44:47
+DONE: semslicer checked forest4s results look good 
+DONE: started working on pyatoa and seisflows updates maui 
+DONE: visa renewal stuff 
+
+OUT : 2020-10-20 04:32:37
+DONE: nothing really, medical stuff with the ear :/ 
+DONE: admin stuff: talking to international office  
+DONE: signed up for geosciences 
+
+IN  : 2020-10-21 09:42:11
+WORK: HOME
+TODO: finish twotest and run birch 
+TODO: testing 
+
+OUT : 2020-10-21 06:10:18
+DONE: twotest working and deleted 
+DONE: started running birch 
+DONE: passport renewal stuff 
+
+IN  : 2020-10-22 09:31:54
+WORK: VUW
+TODO: birch check and go 
+TODO: pyaflowa tests start em 
+
+OUT : 2020-10-22 05:05:20
+DONE: birch checked and running 
+DONE: pyatoa intro blurb 
+DONE: jurgens talk 
+DONE: semslicer email to aktomo and qinya 
+
+IN  : 2020-10-26 10:52:31
+WORK: HOME
+TODO: look at birch results 
+TODO: continue birch 
+TODO: prep meeting yoshi 
+TODO: start writing submission scholarship 
+TODO: pyaflowa tests 
+TODO: aakash pyatoa install problem 
+
+OUT : 2020-10-26 05:17:45
+DONE: birch running but will probably time out on line search 
+DONE: prep and met with yoshi 
+DONE: responded to aakash email and resolved install issue on chinook 
+DONE: submission scholarship timeline 
+DONE: seisflows documentation outline 
+DONE: updated handwritten notebook 
+
+IN  : 2020-10-27 08:47:21
+WORK: HOME
+TODO: birch check and run again 
+TODO: tests and docs 
+
+OUT : 2020-10-27 05:21:10
+DONE: birch check and run for 6-30s looking at results 
+DONE: started seisflows docs page 
+DONE: overhauled pyatoa docs page 
+DONE: overhauled all docstrings in pyatoa 
+DONE: writing seisflows scripts for higher level interaction with package 
+
+IN  : 2020-10-28 09:17:57
+WORK: VUW
+TODO: birch rerun misfit and check 
+TODO: continue seisflows docs 
+
+OUT : 2020-10-28 04:56:10
+DONE: birch running 
+DONE: seisflows docs 
+DONE: seisflows entry point 
+DONE: jesses proposal talk 
+
+IN  : 2020-10-29 09:45:19
+WORK: VUW
+TODO: birch check and run more 
+TODO: docs seisflows 
+TODO: unit tests pyatoa maybe maybe 
+
+OUT : 2020-10-29 18:45:19
+DONE: seisflows config function and completely overhauling the parameter input 
+DONE: birch ran 1st iter 6-30s  
+
+IN  : 2020-10-30 09:35:44
+WORK: VUW
+TODO: birch check results and run iter 2-3 
+TODO: finish seisflows config function 
+
+OUT : 2020-10-30 04:54:47
+DONE: looked at birch results and running iters2-3 
+DONE: completed overhaul of seisflows3 parameter system and seisflows entry point, working on local  
+DONE: wrote changelog for seisflows and cleaned up some unnecessary repos 
+
+IN  : 2020-11-02 11:25:08
+WORK: VUW
+TODO: birch check new iters 
+TODO: continue with seisflows commands 
+
+OUT : 2020-11-02 19:03:11
+DONE: vuw submission scholarship to john 
+DONE: birch check and run 4-5 iter 
+DONE: finished seisflows entry function 
+
+IN  : 2020-11-03 09:26:06
+WORK: HOME
+TODO: birch check 4-5 results and consider changing parameters 
+TODO: seisflows docs 
+TODO: figure placeholders into thesis 
+
+OUT : 2020-11-03 17:54:22
+DONE: birch check and fail, manually run through line search, tedious 
+DONE: wrote queuemonpy for better mail daemon capabilities 
+
+IN  : 2020-11-04 09:05:51
+WORK: VUW
+TODO: birch check iter4 and run 5? 
+TODO: gns health and safety 
+TODO: write 1 hour 
+
+OUT : 2020-11-04 16:42:56
+DONE: CDP 6 month report 
+DONE: birch checked i4 and running i5 
+DONE: started in on seisflows symbol 
+DONE: working more on seisflows entry point 
+
+IN  : 2020-11-05 09:55:32
+WORK: VUW
+TODO: birch check fail and try to figure out how to get it to stop stalling 
+
+OUT : 2020-11-05 18:40:23
+DONE: birch looked at 6-30s looked same so moved to 4-30s, checked windowing parameters and running 4-30s i6 
+DONE: plotting interface from xyz model 
+DONE: gsnz presi 
+
+IN  : 2020-11-06 10:09:17
+WORK: VUW
+TODO: birch check fail  
+TODO: prep yoshi meet 
+TODO: seisflows multi tiered argparse? 
+
+OUT : 2020-11-06 16:14:17
+DONE: prep and met with yoshi 
+DONE: birch running  
+DONE: setup and started running nzni1d inversion 
+
+IN  : 2020-11-09 09:35:03
+WORK: HOME
+TODO: birch continue running 
+TODO: nzni1d check results and run 
+TODO: geosciences talk record 
+
+OUT : 2020-11-09 17:28:16
+DONE: birch check and run i10 
+DONE: nzni1d check and switching bandpass 
+DONE: video chat with rents 
+DONE: record and uploade gsnz talk 
+
+IN  : 2020-11-10 09:13:32
+WORK: VUW
+TODO: birch check results 
+TODO: nzni1d check, write misfit and continue run 
+TODO: prep donna meeting 
+TODO: respond aakash 
+TODO: seisflows finish argparser 
+
+OUT : 2020-11-10 17:47:27
+DONE: birch checked and continued line search 
+DONE: nzni1d checked and continued run 
+DONE: prepped and met with donna 
+DONE: cleaned up seisflows entry point 
+
+IN  : 2020-11-11 09:41:45
+WORK: VUW
+TODO: birch check and continue to run 
+TODO: nzni1d check and run 
+TODO: look at agu poster 
+TODO: write 1 hour 
+TODO: respond aakash 
+TODO: williams plate geometry 
+
+OUT : 2020-11-11 16:48:21
+DONE: nzni1d and birch check and run 
+DONE: started on seisflows 2d example 
+
+IN  : 2020-11-12 09:57:46
+WORK: HOME
+TODO: respond aakash 
+TODO: birch check results and decided if new mesh or new windowing or continue 
+TODO: seisflows 2d example 
+
+OUT : 2020-11-12 16:42:07
+DONE: responded aakash 
+DONE: birch looking at results, need to do heavier analysis on results 
+DONE: seisflows 2d example making progress 
+
+IN  : 2020-11-13 10:52:44
+WORK: GNS
+TODO: birch analyze results 
+TODO: prep yoshi meeting 
+TODO: respond aakash 
+TODO: seisflows 2d example 
+
+OUT : 2020-11-13 16:30:37
+DONE: prep meet yoshi 
+DONE: seisflows specfem2d example 
+
+IN  : 2020-11-16 09:08:51
+WORK: HOME
+TODO: run birch once more for convergence 
+TODO: cedar 3s mesh check 
+TODO: birch slice model if converged 
+TODO: waveform improvements with map and no comparison 
+TODO: look at birch 3s waves, much difference to 4s?
+TODO: respond to Donna 
+TODO: specfem2d example for aakash 
+
+OUT : 2020-11-16 18:27:47
+DONE: birch ran another go  
+DONE: checked 3s vs 4s vs 2s waveforms 
+DONE: responded to Donna 
+DONE: fixed up wave comp plots 
+DONE: working on specfem2d example 
+
+IN  : 2020-11-17 08:49:59
+WORK: HOME
+TODO: prep meeting aakash 
+TODO: thorough results check birch 
+
+OUT : 2020-11-17 16:55:35
+DONE: seisflows2d example full run through 
+DONE: met with aakash 
+DONE: working on seisflows3d example 
+DONE: plotting waveform differences 
+
+IN  : 2020-11-18 09:37:31
+WORK: HOME
+TODO: agu poster 
+TODO: plate interface 
+TODO: close look at birch results 
+TODO: seisflows example3d maybe 
+
+OUT : 2020-11-18 17:14:26
+DONE: gsnz figures and slides 
+DONE: williams plate interface model 
+
+IN  : 2020-11-19 09:42:22
+WORK: GNS
+TODO: finish plate interface figures 
+TODO: make small model exploration movie 
+TODO: agu poster 
+
+OUT : 2020-11-19 19:18:56
+DONE: figures made, gsnz talk done 
+DONE: working on agu poster 
+DONE: running nzni1d 
+DONE: got lauras slip rate deficit plotting 
+
+IN  : 2020-11-20 09:31:46
+WORK: VUW
+TODO: agu poster finish 
+TODO: finish geosciences talk 
+TODO: prep meeting john and prep meeting yoshi 
+
+OUT : 2020-11-26 18:28:20
+DONE: responded aakash carl 
+DONE: follow up gji paper 
+DONE: student grant ssa 
+DONE: started inversion bonsai 
+
+IN  : 2020-11-27 10:44:20
+WORK: GNS
+TODO: bonsai check waveforms 
+TODO: nz1d setup for next run 
+TODO: prep yoshi meeting 
+
+OUT : 2020-11-27 16:36:38
+DONE: bonsai and nzni1d running 
+DONE: prepped and met with yoshi 
+
+IN  : 2020-11-30 09:40:18
+WORK: VUW
+TODO: rewrite part of seisflows to allow single solver runs without resubmitting every job 
+TODO: continue bonsai 
+TODO: look at nzni1d results 
+
+OUT : 2020-11-30 17:20:39
+DONE: nzni1d and bonsai running 
+DONE: working on sf3 3d example 
+DONE: quick check new q model 
+DONE: gsnz receipts 
+DONE: random admin stuff 
+
+IN  : 2020-12-01 10:41:20
+WORK: VUW
+TODO: bonsai continue running 
+TODO: nzni1d continue running 
+TODO: sf3 3d example finish 
+
+OUT : 2020-12-01 17:56:19
+DONE: bonsai running again and checking out array ntaskmax  
+DONE: working on sf3 3d example at line search 
+DONE: agu poster and agu schedule 
+
+IN  : 2020-12-02 11:11:18
+WORK: VUW
+TODO: bonsai, nzni1d, sf33d example 
+
+OUT : 2020-12-02 17:26:18
+DONE: bonsai checking 6s results 
+DONE: sf3d example 
+
+IN  : 2020-12-03 09:53:59
+WORK: HOME
+TODO: bonsai continue running 
+TODO: sf3 3d ex 
+
+OUT : 2020-12-03 20:08:50
+DONE: bonsai and nzni1d 
+
+IN  : 2020-12-04 09:43:56
+WORK: VUW
+TODO: bonsai and prep yoshi meeting 
+
+OUT : 2020-12-04 15:43:56
+DONE: prep meet with yoshi 
+DONE: pyflex global noise fix 
+
+IN  : 2020-12-07 09:18:34
+WORK: HOME
+TODO: pyflex global nosie fix on maui 
+TODO: continue with bonsai 
+TODO: sensitivity kernels 
+
+OUT : 2020-12-07 16:13:43
+DONE: fixed pyflex snr 
+DONE: implemented new snr checks  
+DONE: working on traveltime adjoint source 
+
+IN  : 2020-12-08 08:59:26
+WORK: HOME
+TODO: admin, submission scholarship 
+TODO: clean up maui nobackup 
+TODO: bonsai continue 
+TODO: sensitivity kernels 
+
+OUT : 2020-12-08 15:59:27
+DONE: cleaned up nesi00253 
+DONE: running bonsai again 
+DONE: figured out sensitivity kernel problem 
+
+IN  : 2020-12-09 09:46:58
+WORK: HOME
+TODO: bonsai check and run 
+TODO: sensitivity kernels 
+TODO: agu 
+
+OUT : 2020-12-09 14:37:47
+DONE: bonsai manually running after line search failure 
+DONE: extracted ristau event ids 
+DONE: sensitivty kernels not working, trying again 
+
+IN  : 2020-12-10 09:22:58
+WORK: GNS
+TODO: agu online  
+TODO: bonsai 
+TODO: sensitivity kernels 
+
+OUT : 2020-12-10 16:02:58
+DONE: bonsai running more 
+DONE: sensitivity kernels maybe working and trying again 
+DONE: attended hikurangi agu  
+
+IN  : 2020-12-11 09:50:24
+WORK: VUW
+TODO: bonsai running mas 
+TODO: sensitivity kernels continue 
+
+OUT : 2020-12-11 15:23:33
+DONE: checked on bonsai and running at 4-30s 
+DONE: compiled logs into one file 
+DONE: looking at more sensitivity kernels 
+
+IN  : 2020-12-14 09:59:53
+WORK: VUW
+TODO: visa renewal stuff 
+TODO: bonsai check and run more? 
+TODO: sensitivity kernels 
+TODO: prep agu chat 
+
+OUT : 2020-12-14 15:54:06
+DONE: bonsai checked and tighted window parameters to half, continue i14 
+DONE: sensitivity kernel direct p works, trying for surface waves 
+
+IN  : 2020-12-15 10:00:06
+WORK: VUW
+TODO: bonsai check and run 
+TODO: prep posthoc 
+TODO: look into resolution analysis 
+TODO: sensitivity kernels 
+
+OUT : 2020-12-15 18:37:09
+DONE: bonsai checked and run 4s  
+DONE: prepped post-hoc cmtsolutions 
+DONE: sensitivity kernels for a new event 
+DONE: started reading fichtner and trampert for resolution 
+
+IN  : 2020-12-16 09:29:23
+WORK: GNS
+TODO: bonsai check and run 
+TODO: sensitivity kernels 
+TODO: continue reading fichtner paper 
+TODO: agu? 
+
+OUT : 2020-12-16 13:16:10
+DONE: bonsai running a bit 
+DONE: sensitivity kernels 
+DONE: read a little ficthner and trampert 
+DONE: gns holiday party 
+
+IN  : 2020-12-17 08:58:50
+WORK: HOME
+TODO: bonsai 
+TODO: sensitivity kernels 
+TODO: hessian 
+TODO: agu 
+
+OUT : 2020-12-17 16:58:50
+DONE: bonsai checked 
+DONE: agu live presentation and live session 
+DONE: sensitivity kernels 
+
+IN  : 2020-12-18 08:53:16
+WORK: VUW
+TODO: bonsai check and run 
+TODO: prep john yoshi meeting 
+
+OUT : 2020-12-18 16:18:53
+DONE: met with yoshi 
+DONE: birch new run 
+DONE: sensitivity kernels 
+DONE: locked out of office 
+DONE: packign adn leaving 
+
+IN  : 2020-12-27 10:53:22
+WORK: HOME
+TODO: birch check and run 
+TODO: seisflows submit from console 
+TODO: restart nzni1d 
+TODO: look into model comparisons 
+
+OUT : 2020-12-27 17:45:11
+DONE: not much 
+
+IN  : 2020-12-28 10:46:18
+WORK: HOME
+TODO: birch 
+TODO: nzni1d 
+TODO: autoplot screenshots 
+TODO: some type of model comparison 
+
+OUT : 2020-12-29 04:46:18
+DONE: fixing up pyshell autoplot 
+DONE: nzni1d and birch running 
+
+IN  : 2020-12-29 09:38:38
+WORK: HOME
+TODO: birch check and make results 
+TODO: prep yoshi meet 
+
+OUT : 2020-12-29 16:07:32
+DONE: finished pyshell autplot 
+DONE: made figures and prepped and met with yoshi 
+DONE: looking at new 4-30s results for birch 
+
+IN  : 2021-01-08 10:22:27
+WORK: HOME
+TODO: birch check and run 
+
+OUT : 2021-01-08 17:34:41
+DONE: birch check waveforms and models 
+DONE: working on semslicer for birch m112 
+
+IN  : 2021-01-09 11:00:53
+WORK: HOME
+TODO: semslicer 
+TODO: read 
+
+OUT : 2021-01-09 16:57:30
+DONE: not much eh 
+
+IN  : 2021-01-11 07:37:57
+WORK: GNS
+TODO: finish semslicer and start cedar first run 
+TODO: read 1 paper, donna 2015? 
+TODO: figure out forest2-3s dt 
+TODO: cross sections in pvmake 
+
+OUT : 2021-01-11 17:41:23
+DONE: finished semslicer and created external tomo file, currently validating 
+DONE: pvmake now has a trench parallel plotter 
+DONE: figured out dt max for forest2-3s mesh 
+DONE: read some more of donnas 2015 paper 
+
+IN  : 2021-01-12 08:38:43
+WORK: GNS
+TODO: check semslicer results 
+TODO: get cedar up and running 
+TODO: interface plots in pvmake 
+
+OUT : 2021-01-12 16:26:36
+DONE: checked semslicer results, need to redo crust section 
+DONE: improved pvpyplot script 
+DONE: watched science talks 
+DONE: working mostly on visuals 
+
+IN  : 2021-01-13 09:53:53
+WORK: GNS
+TODO: semslicer crust  
+TODO: smoothing away artefacts 
+TODO: cedar 
+TODO: interface plots 
+
+OUT : 2021-01-13 16:49:26
+DONE: ssa abstract 
+DONE: geonet survey 
+DONE: pvpyplot improvements 
+DONE: lots of time spent looking at artefact problem, better idea bof problem but no solution 
+DONE: tried smoothing but no 
+DONE: semslicer check and running for crust 
+
+IN  : 2021-01-14 08:30:45
+WORK: GNS
+TODO: continue looking at artefacts 
+TODO: push on with semslicer results 
+TODO: interface plot? 
+
+OUT : 2021-01-14 18:02:52
+DONE: more improvements to pvmake 
+DONE: figured out smoothing works on artefacts, to an extent 
+DONE: working on testing the effects of smoothing 
+DONE: trying to figure out best move for next inversion leg, whether new mesh or going to GLL7 
+
+IN  : 2021-01-15 09:57:37
+WORK: HOME
+TODO: prep yoshi meeting 
+TODO: check xgen_db results 
+TODO: try and get first iter of cedar up and going 
+TODO: make a plan 
+
+OUT : 2021-01-15 19:57:37
+DONE: made figures  
+DONE: analyzing artefacts and prepping cedar 
+DONE: met with yoshi 
+
+IN  : 2021-01-18 08:29:51
+WORK: GNS
+TODO: get cedar running 
+
+OUT : 2021-01-18 16:15:18
+DONE: looking at results of birch m11 
+DONE: trying to figure out this semsliscer thing 
+DONE: getting closer but not quite 
+
+IN  : 2021-01-19 09:27:41
+WORK: GNS
+TODO: visa renewal stuff 
+TODO: get cedar running, why is this taking so long, fucking do it!!! 
+
+OUT : 2021-01-19 17:35:31
+DONE: mostly figured out the cedar xgen_db problem, waiting for jobs to finish to fix it 
+DONE: map view comparison plots 
+DONE: added min max glyphs to pvpyplot 
+DONE: admin stuff 
+
+IN  : 2021-01-20 08:45:47
+WORK: HOME
+TODO: finish semslicer fix and get cedar up and running 
+
+OUT : 2021-01-20 18:02:33
+DONE: interface figure and making pvpyplot even PRETTIER! 
+DONE: finished semslicer, looks good, started CEDAR! FINALLY 
+DONE: started cleaning up to work on sensi kernels again but havent started 
+
+IN  : 2021-01-21 09:35:28
+WORK: GNS
+TODO: cedar inversion check and continue, cross fingers that memory storage is sufficient 
+TODO: continue to refine pvpyplot 
+
+OUT : 2021-01-21 19:31:00
+DONE: cedar finally up and running 
+DONE: pvpyplot more optimized 
+
+IN  : 2021-01-22 08:55:13
+WORK: HOME
+TODO: check failed cedar run 
+TODO: prep yoshi meet figurse 
+TODO: get cedar running again 
+TODO: start writing paper 2 
+
+OUT : 2021-01-22 17:36:33
+DONE: cedar fix and run 
+DONE: nesi support faulty node 
+DONE: prep and met with yoshi 
+DONE: fault traces on pvpyplots 
+
+IN  : 2021-01-25 12:29:52
+WORK: HOME
+TODO: prep paper outline 
+TODO: prep thesis outline 
+
+OUT : 2021-01-25 17:20:56
+DONE: cedar checked and run iter 2 
+DONE: outlined jgr paper 
+DONE: started putting stuff into thesis 
+
+OUT : 2021-01-26 16:41:51
+DONE: emedical and paid fees 
+DONE: writing thesis background section 
+
+IN  : 2021-01-27 08:55:59
+WORK: HOME
+TODO: check cedar gradient and see if you can run more 
+TODO: create interpretation figures for BirchM11 and check the model differences between Aspen17 and Birch11 
+TODO: more writing, outline appendices 
+
+OUT : 2021-01-27 16:14:53
+DONE: admin 
+DONE: working on interpretation figures 
+DONE: cedar finishing line search 
+
+IN  : 2021-01-28 09:15:17
+WORK: GNS
+TODO: forgot my charger 
+TODO: running cedar in bg 
+TODO: writing 
+
+OUT : 2021-01-28 16:30:17
+DONE: writing thesis 
+DONE: paper outline 
+DONE: cedar running 
+DONE: slow slip contour plotting 
+
+IN  : 2021-01-29 07:23:16
+WORK: HOME
+TODO: prep yoshi meet with cedar results 
+TODO: parallel trench figures 
+
+OUT : 2021-01-29 16:57:40
+DONE: cedar check results and prep for yoshi meet 
+DONE: visa renewal process 
+DONE: met with yoshi and new things to do 
+DONE: started onedim 
+
+IN  : 2021-02-01 08:40:46
+WORK: HOME
+TODO: set up doodlepoll for alaska meeting 
+TODO: prep figures for john meeting tomorrow 
+TODO: nzni1D check and run 
+TODO: high frequency window selection 
+TODO: write 
+
+OUT : 2021-02-01 17:47:52
+DONE: not much 
+DONE: running nzni1D 
+DONE: making figures 
+
+IN  : 2021-02-02 08:49:49
+WORK: VUW
+TODO: prep john meeting, interpretation figures 
+TODO: pyflex high frequency windowing 
+TODO: nzni1d inversion 
+
+OUT : 2021-02-02 16:45:43
+DONE: prepped john meeting no meeting 
+DONE: started on high freq stuff 
+DONE: met with calum and finn talked about interpretations 
+DONE: met with yoshi talked about nesi allocation 
+
+IN  : 2021-02-03 08:45:36
+WORK: HOME
+TODO: high freq waveforms 
+TODO: make some tvz figures 
+
+OUT : 2021-02-03 15:45:36
+DONE: figures 
+DONE: highfreqwin 
+DONE: met with John 
+
+IN  : 2021-02-04 06:45:35
+WORK: HOME
+TODO: highfreqwin 
+TODO: nzni1d 
+TODO: prep figs for nz tomo meeting 
+
+OUT : 2021-02-04 20:48:16
+DONE: nzni1d continued 
+DONE: model update gifs 
+DONE: vrl plots 
+
+IN  : 2021-02-05 07:17:40
+WORK: HOME
+TODO: prep nz tomo meeting 
+TODO: probably run cypress afterwards 
+TODO: nzni1d results 
+TODO: read something 
+
+OUT : 2021-02-05 17:21:19
+DONE: over it 
+
+IN  : 2021-02-08 10:05:09
+WORK: HOME
+TODO: resolution analysis 
+TODO: nzni1d 
+TODO: respond ryan 
+
+OUT : 2021-02-08 16:05:09
+DONE: setup and ran sensitivity analysis 
+DONE: worked on new trench figures with z-scaling 
+
+IN  : 2021-02-09 09:00:46
+WORK: GNS
+TODO: sensitivity analysis 
+TODO: finish z-scaling figures 
+TODO: run bonsai 
+
+OUT : 2021-02-09 17:30:46
+DONE: sensitivity analysis 
+DONE: finished plotting script 
+DONE: running bonsai and nzni1d and sensitivity kernels 
+
+IN  : 2021-02-10 10:13:16
+WORK: GNS
+TODO: sens ana 
+TODO: check bonsai, nzni1d and sensitivity 
+
+OUT : 2021-02-10 18:28:14
+DONE: sensitivity kernels 
+DONE: still runnning sensitivity analysis 
+DONE: making interp figures 
+DONE: started file transfer on eucalpyt 
+
+IN  : 2021-02-11 09:23:39
+WORK: HOME
+TODO: the same shit 
+
+OUT : 2021-02-11 16:23:39
+DONE: sensitivity analysis 
+DONE: sensitivity kernels 
+DONE: posthoc  
+
+IN  : 2021-02-12 09:28:23
+WORK: HOME
+TODO: same as before 
+
+OUT : 2021-02-12 14:28:23
+DONE: prep and met with yoshi 
+
+IN  : 2021-02-15 10:58:27
+WORK: GNS
+TODO: work on psf 
+TODO: create interpretation presentation 
+TODO: create a new posthoc catalog 
+
+OUT : 2021-02-15 17:33:27
+DONE: cleaning maui 
+DONE: psf checkerboard 
+
+IN  : 2021-02-16 09:47:52
+WORK: HOME
+TODO: point spread test 
+TODO: interpretations 
+
+OUT : 2021-02-16 16:58:51
+DONE: working on pst 
+DONE: headway on interpretations 
+
+IN  : 2021-02-17 09:02:22
+WORK: HOME
+TODO: pst and interpretations 
+
+OUT : 2021-02-17 19:04:00
+DONE: finally figured out psf perturbation 
+DONE: working on interpretation presentation 
+
+IN  : 2021-02-19 09:23:02
+WORK: HOME
+TODO: finish interpretation presi 
+TODO: try another checkerboard thing 
+
+OUT : 2021-02-19 17:07:17
+DONE: good headway on interpretations 
+DONE: redoing checkerboard after yoshi meet 
+DONE: prep and met with yoshi 
+
+IN  : 2021-02-22 09:33:22
+WORK: HOME
+TODO: pst and interp 
+
+OUT : 2021-02-22 18:20:25
+DONE: checked and reran pst stuff 
+DONE: making more headway into interpretations 
+
+IN  : 2021-02-23 09:52:06
+WORK: HOME
+TODO: same shit different day 
+
+OUT : 2021-02-23 16:52:06
+DONE: slides for carl 
+DONE: interpretation slideshow 
+
+IN  : 2021-02-24 09:43:40
+WORK: GNS
+TODO: point spread test figure out whats wrong 
+TODO: finish interpretation presi 
+
+OUT : 2021-02-24 18:32:32
+DONE: read a lot of papers about subducting seamounts 
+DONE: checked new pst results, upped perturbation amplitude and reran 
+DONE: added some to interpretation presi 
+
+IN  : 2021-02-25 10:12:07
+WORK: HOME
+TODO: pst and interp... again 
+
+OUT : 2021-02-25 21:11:10
+DONE: new checkers 
+DONE: more reading and interp 
+
+IN  : 2021-02-26 09:27:12
+WORK: HOME
+TODO: finish interpretations 
+TODO: keep an eye on pst 
+TODO: quick look at resolution lengths 
+
+OUT : 2021-02-26 14:57:12
+DONE: prepped meeting with yoshi 
+DONE: met with yoshi 
+
+IN  : 2021-03-01 09:31:49
+WORK: HOME
+TODO: interpretations 
+TODO: writing a bit 
+TODO: point spread test 
+
+OUT : 2021-03-01 16:45:09
+DONE: honestly dicked around all fucking day 
+
+IN  : 2021-03-02 09:02:52
+WORK: HOME
+TODO: dense checkers 
+TODO: interpretations 
+
+OUT : 2021-03-02 17:25:09
+DONE: running checkers dense 
+DONE: interpretations of tvz 
+
+OUT : 2021-03-03 18:48:13
+DONE: finished porangahau interpretations 
+DONE: made solid progress on TVZ interpretations 
+DONE: looked at less smoothing on dense action hessian 
+DONE: looked at calums kaikoura catalog ontop of Vs model 
+
+IN  : 2021-03-04 09:54:29
+WORK: VUW
+TODO: staggered checkers 
+TODO: finish tvz interpretations 
+
+OUT : 2021-03-04 17:21:39
+DONE: staggered checkers 
+DONE: headway on tvz interpretations 
+
+IN  : 2021-03-08 08:56:29
+WORK: HOME
+TODO: prep for bannister mortimer meeting 
+TODO: take a look at nznorth extended mesh process 
+
+OUT : 2021-03-08 14:01:01
+DONE: prepped meeting and had meeting with mortimer and bannister 
+
+IN  : 2021-03-09 10:33:49
+WORK: HOME
+TODO: nznorth extended mesh 
+TODO: resolution testing 
+TODO: 2 hours of writing 
+
+OUT : 2021-03-09 19:00:40
+DONE: almost done with hackfish mesh 
+DONE: started writing paper 
+
+IN  : 2021-03-10 10:07:29
+WORK: HOME
+TODO: respond to emails 
+TODO: updated abstract for john 
+TODO: finish mesh for yoshi 
+TODO: point spread test 
+TODO: write more paper 
+
+OUT : 2021-03-10 17:16:49
+DONE: abstract for john 
+DONE: responded nicks email 
+DONE: finished mesh for yoshi 
+DONE: working on point spread test with hanning window 
+DONE: wrote part of methods section jgr paper 
+
+IN  : 2021-03-11 11:04:29
+WORK: HOME
+TODO: hanning point spread test 
+TODO: email carl 
+TODO: write 
+
+OUT : 2021-03-11 16:52:33
+DONE: started hanning point spread test 
+DONE: got interface contours to plot on depth slices 
+
+IN  : 2021-03-12 08:25:27
+WORK: VUW
+TODO: nesi deletions, transfers to hdd 
+TODO: prep meeting yoshi 
+TODO: write and sensitivity kernels 
+
+OUT : 2021-03-12 18:03:19
+DONE: met with yoshi and calum 
+DONE: worked on some visualizations 
+DONE: wrote a bit 
+DONE: transferring files 
+
+IN  : 2021-03-15 09:28:19
+WORK: VUW
+TODO: admin stuff 
+TODO: nesi deletions 
+TODO: writing 
+TODO: resolution analysis 
+
+OUT : 2021-03-15 21:17:40
+DONE: making figures and writing 
+
+IN  : 2021-03-16 10:33:58
+WORK: VUW
+TODO: point spread test design 
+TODO: writing 
+
+OUT : 2021-03-16 19:15:34
+DONE: point local script and implemented 
+DONE: writing and figures 
+
+IN  : 2021-03-17 10:11:57
+WORK: HOME
+TODO: meet with carl regarding uaf stuff 
+TODO: look at point local pst 
+TODO: writing 
+
+OUT : 2021-03-17 17:16:20
+DONE: met with carl 
+DONE: point local spread test working! 
+
+IN  : 2021-03-18 09:45:40
+WORK: VUW
+TODO: point spread test again 
+TODO: write and figures 
+TODO: look at seamount subduction papers from carl 
+TODO: yoshi mesh 
+
+OUT : 2021-03-18 16:25:40
+DONE: fixed and ran new point spread test 
+DONE: wrote some more and put some new figures in 
+DONE: got interface working on pvpyplot 
+
+IN  : 2021-03-19 09:13:48
+WORK: VUW
+TODO: check point spread test 
+TODO: make some interface plots 
+TODO: prep meeting yoshi 
+TODO: SSA talk prep
+
+OUT : 2021-03-19 19:13:48
+DONE: ssa talk 
+DONE: prep and met with yoshi 
+DONE: emailed phil barnes about offshore 
+
+IN  : 2021-03-22 08:56:35
+WORK: HOME
+TODO: finish and record ssa talk 
+
+OUT : 2021-03-22 17:01:06
+DONE: ssa talk prep and rehearse slightly, sent to yoshi 
+
+IN  : 2021-03-23 08:55:31
+WORK: HOME
+TODO: ssa talk 
+TODO: finish topo remove 
+TODO: run point local for tvz 
+TODO: write 
+
+OUT : 2021-03-23 15:55:31
+DONE: ssa presi 
+DONE: ran tvz pl pst 
+DONE: topo for charles but not done 
+
+IN  : 2021-03-24 08:17:29
+WORK: VUW
+TODO: check tvz pl pst results 
+TODO: finish topo and send to charles 
+TODO: write motherfucker 
+
+OUT : 2021-03-24 21:29:14
+DONE: finished topo but not working 
+DONE: looked at pst results and started new ones running 
+DONE: lots added to writing but still more to do ... 
+
+IN  : 2021-03-25 08:36:00
+WORK: VUW
+TODO: meeting with carolyn boulton(?) 
+TODO: write  
+TODO: maybe 1 hr on pst 
+
+OUT : 2021-03-25 16:51:00
+DONE: writing and figure making 
+DONE: met with carolyn  
+
+IN  : 2021-03-26 08:38:03
+WORK: VUW
+TODO: writing, figure making, topography? 
+TODO: maybe meet with tim little 
+
+OUT : 2021-03-26 16:38:03
+DONE: finished writing and figures ish 
+DONE: prepped and met with yoshi 
+DONE: read sun 2020 paper on seamount subduction 
+
+IN  : 2021-03-27 11:45:03
+WORK: HOME
+TODO: read some papers and get an idea of the tectonic interpretations you want to make 
+
+OUT : 2021-03-27 19:45:03
+DONE: revamped presentation and read emilys paper to get some better interpretations for seamounts 
+DONE: worked on point local a bit but somethings wrong 
+
+IN  : 2021-03-28 10:29:23
+WORK: HOME
+TODO: point local get it running 
+TODO: read one paper 
+TODO: finish results and discussions sections and once over thesis 
+
+OUT : 2021-03-28 18:35:25
+DONE: finished presentation 
+DONE: got point local running 
+DONE: wrote a tiny bit 
+DONE:  
+DONE: read a few more papers to get a better idea on interp 
+
+IN  : 2021-03-29 09:53:30
+WORK: HOME
+TODO: prep meeting 
+TODO: run another point local 
+TODO: write write write write write 
+
+OUT : 2021-03-29 14:27:46
+DONE: prepped met with susan and laura 
+
+IN  : 2021-03-30 08:18:09
+WORK: HOME
+TODO: check and run another point spread 
+TODO: finish results and discussions 
+TODO: format thesis 
+
+OUT : 2021-03-30 21:28:57
+DONE: finished rough discussion writing 
+DONE: meeting with phil barnes 
+DONE: cleaned up plotting script  
+DONE: putting together finalized figures 
+
+IN  : 2021-03-31 08:56:20
+WORK: HOME
+TODO: figures and writing, run another point local 
+TODO: john yoshi meeting
+
+OUT : 2021-03-31 15:56:20
+DONE: figure making 
+DONE: writing 
+DONE: met with john and yoshi re. thesis 
+
+IN  : 2021-04-01 08:57:27
+WORK: VUW
+TODO: admin stuff like getting thesis exam date 
+TODO: write 
+TODO: try to meet with tim little 
+
+OUT : 2021-04-01 17:15:29
+DONE: working on vrl 
+DONE: split paper and outlined part 2 
+DONE: talked to katie, emailed tim little 
+DONE: working on posthoc events 
+
+IN  : 2021-04-02 09:47:42
+WORK: HOME
+TODO: make waveform improvement figures 
+TODO: write waveform improvement section 
+TODO: find and run post hoc events 
+TODO: write post hoc section 
+
+OUT : 2021-04-02 16:58:09
+DONE: waveform comparisons 
+DONE: met with yoshi 
+
+IN  : 2021-04-03 10:24:02
+WORK: HOME
+TODO: finish raypath plot 
+TODO: do waveform improvement and model update figure 
+TODO: write those sections 
+TODO: make post hoc catalog 
+TODO: run post hoc  
+TODO: make new histograms 
+
+OUT : 2021-04-03 19:54:02
+DONE: finished waveform comparison figures 
+DONE: created posthoc catalog and ran it 
+DONE: proofread first half of paper 
+
+IN  : 2021-04-04 09:27:46
+WORK: HOME
+TODO: run post hoc 
+TODO: finish proofread and writing of last half of paper 
+TODO: new histograms 
+TODO: remake figures 
+
+OUT : 2021-04-04 21:57:43
+DONE: figures and writing 
+
+IN  : 2021-04-05 07:56:35
+WORK: HOME
+TODO: finish paper draft 
+TODO: tectonic map 
+TODO: add data grid to pvpyplot figures 
+
+OUT : 2021-04-05 18:29:32
+DONE: finished paper draft 
+DONE: dicked around 
+DONE: improved some pvpyplot capabilities 
+
+IN  : 2021-04-06 09:48:46
+WORK: GNS
+TODO: histograms 
+TODO: start copy pasting into thesis to get an idea of what needs to be written 
+
+OUT : 2021-04-06 21:21:35
+DONE: started organizing thesis and writing beacon section 
+DONE: met with yoshi on paper 
+DONE: restructured discussions 
+DONE: remaking figures and making new figures 
+
+OUT : 2021-04-07 21:18:17
+DONE: tomo files to charles 
+DONE: responded all emails 
+DONE: all of yoshis minor corrections 
+DONE: updated a figure 
+DONE: rough paragraphs for new discussion sections 
+
+IN  : 2021-04-08 08:30:44
+WORK: HOME
+TODO: finalize all figures  
+
+OUT : 2021-04-08 22:36:20
+DONE: fixed pvpyplot diagonal plotting 
+DONE: tvz and francis comparison figure 
+
+IN  : 2021-04-09 10:00:33
+WORK: GNS
+TODO: finish figures 
+
+OUT : 2021-04-09 21:30:33
+DONE: read some cook strait stuff 
+DONE: made cook strait depth figures 
+DONE: made srcrcv figure 
+
+IN  : 2021-04-10 10:30:27
+WORK: HOME
+TODO: tectonic map figure 
+TODO: all the other ones too aye 
+
+OUT : 2021-04-10 20:40:39
+DONE: finished tectonic map, tvz figure revised and cook straitt  t and along strike figure. almost there boi 
+
+IN  : 2021-04-11 12:34:02
+WORK: HOME
+TODO: recalc and posthoc events 
+TODO: write around new figures 
+TODO: volumetric resolution figures 
+
+OUT : 2021-04-11 21:12:37
+DONE: finished figures and rewrote sections 
+DONE: posthoc 60 events and recalc 
+DONE: need to proofread  
+
+IN  : 2021-04-12 10:18:16
+WORK: GNS
+TODO: volumetric psf 
+TODO: run a new Vpp psf, same % as Vss 
+TODO: prep for yoshi meet and start writing thesis 
+
+OUT : 2021-04-12 18:26:28
+DONE: proofread paper 
+DONE: ran dvp stuff 
+DONE: met with yoshi 
+DONE: started on thesis 
+
+IN  : 2021-04-13 09:29:46
+WORK: HOME
+TODO: nesi deletions 
+TODO: dvp volumetric psf 
+TODO: thesis 
+
+OUT : 2021-04-13 22:35:55
+DONE: formatted ch 3 4 5 
+DONE: wrote more intro and beacon 
+DONE: cig one pager 
+
+IN  : 2021-04-14 10:19:05
+WORK: HOME
+TODO: writing 
+
+OUT : 2021-04-14 21:12:33
+DONE: finished beacon 
+DONE: wrote more ch2 
+
+IN  : 2021-04-15 10:24:15
+WORK: GNS
+TODO: words on motivation, conclusion etc. words on the page today 
+
+OUT : 2021-04-15 21:33:00
+DONE: figures and writing 
+
+IN  : 2021-04-16 09:07:05
+WORK: VUW
+TODO: thesis wrap up and draft to john, yoshi 
+
+OUT : 2021-04-16 18:54:11
+DONE: first draft done and sent to john and yoshi 
+DONE: pasans defense talk 
+DONE: more figures more writing 
+
+IN  : 2021-04-18 10:32:47
+WORK: VUW
+TODO: figures and tables 
+
+OUT : 2021-04-18 16:59:53
+DONE: made some figures, attempted making some new ones, looked into tvz a bit more 
+
+IN  : 2021-04-19 09:34:54
+WORK: HOME
+TODO: figures 
+
+OUT : 2021-04-19 19:28:30
+DONE: new interpretation figures, like 4 of em 
+DONE: met with yoshi 
+
+IN  : 2021-04-20 09:32:55
+WORK: GNS
+TODO: figures and tables finish today 
+
+OUT : 2021-04-20 18:30:04
+DONE: figures done 
+
+IN  : 2021-04-21 08:49:51
+WORK: HOME
+TODO: write around all the new figures, finalize draft text, figure out what needs to go in 
+
+OUT : 2021-04-21 21:04:07
+DONE: read on nz geology 
+DONE: discussion sections on geology and seamounts 
+
+IN  : 2021-04-23 08:03:02
+WORK: VUW
+TODO: ssa since 5, finish chapters 1 and 2 proofreading and give to hubert and lauren 
+TODO: clean up chapter 5 
+
+OUT : 2021-04-23 16:03:02
+DONE: finished ch1 revisions and rewrote heaps of ch1 
+
+IN  : 2021-04-24 09:04:16
+WORK: HOME
+TODO: ch2 revisions 
+
+OUT : 2021-04-24 20:55:59
+DONE: rewrote section 2.fucking1 
+
+IN  : 2021-04-25 09:25:39
+WORK: HOME
+TODO: finish proofread 
+TODO: finish ch 6 and proofread 4 and 5 
+TODO: list of priorities 
+
+OUT : 2021-04-28 22:36:48
+DONE: finished proofread edits and all major to dos 
+DONE: almost there 
+
+IN  : 2021-04-29 09:11:25
+WORK: VUW
+TODO: finish it 
+
+OUT : 2021-04-29 22:11:25
+DONE: john comments, major to dos and almost done 
+
+IN  : 2021-04-30 09:04:49
+WORK: VUW
+TODO: proofread and submit babeeeeee! 
+
+OUT : 2021-04-30 12:57:50
+DONE: finished 
+
+IN  : 2021-05-04 08:55:37
+WORK: GNS
+TODO: plan for the next 3 months 
+TODO: respond nsf pf  
+TODO: meeting with yoshi 
+
+OUT : 2021-05-04 12:10:37
+DONE: met with yoshi and emails 
+
+IN  : 2021-05-06 10:17:09
+WORK: GNS
+TODO: prep AM meeting 
+TODO: paper 1 
+
+OUT : 2021-05-06 19:02:58
+DONE: timesheets 
+DONE: read random probing paper closely 
+DONE: working on res analysis more 
+
+IN  : 2021-05-07 09:06:54
+WORK: HOME
+TODO: paper draft out to co-authors today 
+
+OUT : 2021-05-07 14:04:21
+DONE: finished transferring thesis to paper 
+DONE: proofreading paper 
+
+IN  : 2021-05-10 09:42:32
+WORK: HOME
+TODO: paper out and meet with yoshi 
+
+OUT : 2021-05-10 17:46:30
+DONE: writing and met w yoshi 
+DONE: kinda dicked around thb 
+
+IN  : 2021-05-11 10:18:15
+WORK: HOME
+TODO: paper out 
+
+OUT : 2021-05-11 18:42:24
+DONE: paper and pyrateview 
+
+IN  : 2021-05-12 09:39:39
+WORK: HOME
+TODO: paper out god damnit 
+
+OUT : 2021-05-12 16:39:39
+DONE: paper to co authors 
+DONE: working on point spread function 
+
+IN  : 2021-05-13 09:23:58
+WORK: HOME
+TODO: work on paper 2 and point spread stuff 
+
+OUT : 2021-05-13 19:23:58
+DONE: figured out problem with sensitivity kernel 
+DONE: bathymetry mapping 
+
+IN  : 2021-05-14 10:06:25
+WORK: VUW
+TODO: sensitivity kernels 
+TODO: bathmetry 
+
+OUT : 2021-05-14 15:56:25
+DONE: reading papers 
+DONE: point spread stuff 
+DONE: making figures 
+
+IN  : 2021-05-16 12:07:35
+WORK: HOME
+TODO: point spread and read papers 
+
+OUT : 2021-05-16 16:17:23
+DONE: point spread and paper 
+
+OUT : 2021-05-17 17:49:51
+DONE: met with yoshi 
+DONE: emailed on point spread stuff 
+DONE: reread on some point spred stuff 
+
+IN  : 2021-05-20 10:08:06
+WORK: HOME
+TODO: paper 2 and psf 
+
+OUT : 2021-05-21 18:09:24
+DONE: pyrateview 
+DONE: emails 
+DONE: some paper stuff 
+
+IN  : 2021-05-22 11:34:07
+WORK: HOME
+TODO: emails and paper 1 
+
+OUT : 2021-05-22 17:29:22
+DONE: point spread functions 
+DONE: paper figures 
+
+IN  : 2021-05-23 11:02:45
+WORK: HOME
+TODO: finish paper 2 draft and run another psf 
+
+OUT : 2021-05-23 16:40:15
+DONE: writing paper 2 
+DONE: looking at pora psf, kinda confusing 
+DONE: running cook psf 
+
+IN  : 2021-05-24 10:01:30
+WORK: HOME
+TODO: papers 
+
+OUT : 2021-05-24 17:14:24
+DONE: met with yoshi 
+DONE: point spread testing larger spread functions and ran volumetric 
+
+IN  : 2021-05-25 12:01:58
+WORK: HOME
+TODO: paper and psf 
+
+OUT : 2021-05-25 18:42:31
+DONE: more psf 
+DONE: geodetic map 
+
+IN  : 2021-05-26 09:00:26
+WORK: HOME
+TODO: paper 2 geophysical setting 
+TODO: psf 
+TODO: paper 2 finish draft 
+
+OUT : 2021-05-26 14:31:28
+DONE: geophysical map done 
+DONE: working on point spread plotting 
+
+IN  : 2021-05-27 09:52:02
+WORK: HOME
+TODO: write all day 
+
+OUT : 2021-05-27 18:37:18
+DONE: finished point spread test 
+DONE: wrote intro for paper 2 
+DONE: running new pst 
+
+IN  : 2021-05-28 10:06:29
+WORK: VUW
+TODO: back up nesi stuff 
+TODO: finish drafts of both papers, if no figures then placeholders 
+
+OUT : 2021-05-28 16:06:29
+DONE: reading papers 
+DONE: writing 
+DONE: calums talk 
+
+IN  : 2021-05-30 11:12:09
+WORK: HOME
+TODO: writing 
+
+OUT : 2021-05-30 17:20:52
+DONE: finished rough draft paper 2 
+DONE: nesi migration 
+DONE: read some additional seamount papers 
+
+IN  : 2021-06-01 10:54:53
+WORK: VUW
+TODO: point spread function 
+TODO: set up spread on gns nesi account 
+TODO: paper number 2 edits 
+
+OUT : 2021-06-01 16:19:14
+DONE: rewrote discussion 
+DONE: remade isocontour figure 
+DONE: psf 
+
+IN  : 2021-06-02 09:53:50
+WORK: VUW
+TODO: finish paper 2 draft and send to john, yoshi 
+
+OUT : 2021-06-02 18:12:55
+DONE: proofread draft 2 
+DONE: and cleaned up writing 
+DONE: making psf figres 
+
+IN  : 2021-06-03 10:15:36
+WORK: HOME
+TODO: paper 2 draft out in email 
+TODO: to do list paper 1 
+
+OUT : 2021-06-03 16:37:08
+DONE: paper 2 draft out 
+
+IN  : 2021-06-04 10:17:26
+WORK: VUW
+TODO: seismicity on paper 1 
+
+OUT : 2021-06-04 17:03:37
+DONE: paper 2 figure seismicity  
+DONE: running new psf 
+
+IN  : 2021-06-08 08:58:51
+WORK: VUW
+TODO: paper 1 point spread function 
+TODO: paper 2 yoshi corrections 
+
+OUT : 2021-06-08 18:22:52
+DONE: remade figures based on yoshis comments 
+DONE: ran another 2 psf 
+
+IN  : 2021-06-10 09:36:46
+WORK: VUW
+TODO: update all of paper 1 figures 
+
+OUT : 2021-06-10 17:56:15
+DONE: updating paper 1 figures 
+
+OUT : 2021-06-11 17:07:02
+DONE: cook strait figure 
+DONE: working on tvz figure but not satisfying 
+DONE: started new tvz psf 
+
+IN  : 2021-06-14 10:07:23
+WORK: HOME
+TODO: prep meet with yoshi 
+TODO: paper 1 out TODAY 
+
+OUT : 2021-06-14 14:07:23
+DONE: nothing 
+
+IN  : 2021-06-15 08:53:50
+WORK: VUW
+TODO: paper 1 out TODAY TODAY 
+
+OUT : 2021-06-15 18:38:38
+DONE: paper 1 out 
+DONE: paper 2 fixing figures 
+
+IN  : 2021-06-16 06:43:04
+WORK: VUW
+TODO: paper 2 OUT 
+
+OUT : 2021-06-16 10:14:27
+DONE: set up meeting paper 2 
+DONE: meant paper 1; emailed paper 2 to john 
+
+IN  : 2021-06-17 10:26:13
+WORK: VUW
+TODO: hackfish and south island meshes 
+TODO: pyrateview 
+
+OUT : 2021-06-17 17:46:30
+DONE: working on meshing 
+DONE: working on pyrateview 
+
+OUT : 2021-06-18 15:45:07
+DONE: prepped and met with nztomo  
+DONE: pats on the head 
+DONE: reading on volcanoes and gases 
+
+IN  : 2021-06-22 09:41:07
+WORK: VUW
+TODO: paper 1 comments 
+TODO: respond emails 
+
+OUT : 2021-06-22 18:33:08
+DONE: responding emails 
+DONE: tvz interpretations 
+
+IN  : 2021-06-23 10:01:39
+WORK: HOME
+TODO: paper 1 figures 
+
+OUT : 2021-06-23 14:01:39
+DONE: some figures 
+
+IN  : 2021-06-24 10:28:18
+WORK: VUW
+TODO: finish figures off 
+
+OUT : 2021-06-24 17:25:57
+DONE: almost finished all figure updates 
+
+OUT : 2021-06-28 16:52:10
+DONE: met with yoshi 
+DONE: updated figs paper 1 
+
+IN  : 2021-06-30 10:51:40
+WORK: GNS
+TODO: paper 1 out today! 
+
+OUT : 2021-06-30 16:51:40
+
+IN  : 2021-07-05 10:55:38
+WORK: HOME
+TODO: prep meet with yoshi 
+TODO: paper 2 draft 
+TODO: SI inversion stuff 
+
+OUT : 2021-07-06 17:06:48
+DONE: responded to emails, lots of emails 
+DONE: started reading some vpvs papers 
+DONE: made gsnz postgrad seminar talk 
+
+IN  : 2021-07-07 10:06:23
+WORK: VUW
+TODO: nick and stephens comments paper 1 
+TODO: practice talk once 
+
+OUT : 2021-07-07 16:47:07
+DONE: minor comments from nick and stephen 
+DONE: emails 
+DONE: nsf stuff 
+
+IN  : 2021-07-08 10:17:22
+WORK: VUW
+TODO: paper 1 figures and final draft done 
+TODO: psf bigger 
+TODO: prep talk 
+
+OUT : 2021-07-09 17:03:21
+DONE: figures paper 1 and remaking tvz stuff 
+DONE: read some paper 
+
+IN  : 2021-07-13 09:55:37
+WORK: VUW
+TODO: cover letter 
+TODO: jgr submission requirements 
+TODO: tvz new figure 
+TODO: psf new figure 
+TODO: final read throughs 
+
+OUT : 2021-07-15 16:22:47
+DONE: most of the stuff on the list, but still proofreading 
+
+IN  : 2021-07-16 09:03:35
+WORK: VUW
+TODO: paper drafts to yoshi 
+TODO: meeting with martha on specfem 
+
+OUT : 2021-07-16 16:12:32
+DONE: drafts to yoshi and john 
+DONE: specfem meeting with martha and huw 
+
+IN  : 2021-07-19 09:54:41
+WORK: HOME
+TODO: meshing 
+TODO: meet with yoshi 
+TODO: south island inversion 
+
+OUT : 2021-07-19 12:54:41
+DONE: nothing really 
+
+IN  : 2021-07-20 09:21:31
+WORK: VUW
+TODO: paper comments 
+TODO: meshing 
+TODO: south island inversion prep 
+
+OUT : 2021-07-20 17:32:54
+DONE: comments from yoshi into paper 
+
+IN  : 2021-07-21 10:00:19
+WORK: VUW
+TODO: submit papers 
+TODO: meshing 
+
+OUT : 2021-07-21 18:24:54
+DONE: papers submitted 
+
+OUT : 2021-07-22 16:43:10
+
+IN  : 2021-07-23 09:57:05
+WORK: GNS
+TODO: meshing 
+TODO: backup carbon 
+TODO: specfem movie? 
+TODO: south island data 
+
+OUT : 2021-07-23 16:27:05
+DONE: specfem movies 
+
+IN  : 2021-07-26 10:53:47
+WORK: HOME
+TODO: prep meeting yoshi 
+TODO: emails 
+TODO: specfem movies 
+TODO: meshing 
+
+OUT : 2021-07-26 17:45:37
+DONE: made slides for defense talk 
+DONE: met with yoshi 
+
+IN  : 2021-07-27 10:30:17
+WORK: VUW
+TODO: sensitivity kernel 
+TODO: specfem movie cleanup 
+TODO: hackfish mesh 
+
+OUT : 2021-07-27 18:00:17
+DONE: specfem movie with waveforms 
+DONE: chatted with simon barker and with calum 
+
+IN  : 2021-07-28 14:08:28
+WORK: VUW
+TODO: sensitivity kernels 
+TODO: finish movie and t ocalum 
+TODO: respond to some emails 
+
+OUT : 2021-07-28 17:37:27
+DONE: finished movies 
+DONE: working on sensitivity kernels 
+DONE: went to madison franks talk 
+
+OUT : 2021-07-29 16:07:14
+DONE: reading some paper 
+DONE: sensitivity kernels not fucking working 
+DONE: meshign more 
+DONE: postgradexpo 
+
+OUT : 2021-07-30 18:30:52
+DONE: meshing 
+DONE: converting donnas model 
+
+IN  : 2021-08-02 09:36:27
+WORK: HOME
+TODO: meshing 
+TODO: sensitivity kernels 
+
+OUT : 2021-08-03 19:10:50
+DONE: looked at reviewer comments 
+DONE: met with john 
+DONE: agu abstract 
+DONE: ext_north 8s mesh 
+DONE: sensitivity kernels and adjoint simulation movies 
+
