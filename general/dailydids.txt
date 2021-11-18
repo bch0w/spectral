@@ -22,3 +22,56 @@ TODO: meet with carl for basemap talk
 TODO: try working on earthquake data collection 
 TODO: read some papers 
 
+OUT : 2021-11-08 16:29:13
+DONE: met with carl about basemapping and progress 
+DONE: read some ANAT papers 
+DONE: started based_alaska 
+
+IN  : 2021-11-09 09:53:59
+WORK: UAF
+TODO: based_alaska 
+TODO: usgs moment tensors 
+TODO: start looking into ambient noise cc stuff 
+TODO: read 1 paper 
+
+OUT : 2021-11-09 13:53:59
+DONE: some stuff 
+
+IN  : 2021-11-11 10:54:43
+WORK: UAF
+TODO: respond emails 
+TODO: work on pyatoa, seisflows, based_alaska 
+TODO: a little on the interim report 
+
+OUT : 2021-11-11 18:24:43
+DONE: paper revisions 
+DONE: emails 
+DONE: meeting with shun and yoshi 
+DONE: based alaska 
+
+IN  : 2021-11-12 08:28:17
+WORK: UAF
+TODO: yoshi/shun basemap issue 
+TODO: based alaska 
+TODO: meeting with amanda 
+TODO: pyatoa/seisflows etc. 
+TODO: reply ryan email 
+
+OUT : 2021-11-12 17:56:21
+DONE: emails to aktomo 
+DONE: carls paper edits 
+DONE: aktomo email 
+DONE: yoshi/shun sf3 problem 
+DONE: casarotti problem 
+
+IN  : 2021-11-16 09:44:49
+WORK: UAF
+TODO: respond yoshi emails 
+TODO: respond deans list emails 
+TODO: pyatoa multiprocess 
+TODO: suggestions amanda code 
+TODO:  nsf interim report 
+
+OUT : 2021-11-16 15:48:32
+DONE: not really sure 
+
