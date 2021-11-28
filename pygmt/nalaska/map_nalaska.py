@@ -17,7 +17,8 @@ overwrite_default_config = 0
 
 # File IDs
 output = "../figures/nalaska.png"
-mt_fid = "/home/bchow/work/data/earthquakes/nalaska_mts_nolabel.txt"
+# mt_fid = "/home/bchow/work/data/earthquakes/nalaska_mts_nolabel.txt"
+mt_fid = "/Users/Chow/Documents/academic/uaf/data/earthquakes/nalaska_mts_nolabel.txt"
 landmarks_fid = "./landmarks.txt"
 
 # Toggle map features

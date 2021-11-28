@@ -61,7 +61,7 @@ map_scale = "g178/-42+c178/-42+w100"
 
 # Overwrite config parameters for specific look using .py files, comment to skip
 # from mahia_cfg import *
-from cartoon_cfg import *
+# from cartoon_cfg import *
 # ==============================================================================
 
 
