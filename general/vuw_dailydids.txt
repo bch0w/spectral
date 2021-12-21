@@ -43,6 +43,9 @@ TODO: continue paper draft
 TODO: prep yoshi meeting 
 TODO: continue reading tromp 2005 
 
+OUT  : 2019-10-17 16:45:19.468196
+DONE: 
+
 IN  : 2019-10-19 10:09:47.460376
 WORK: HOME
 TODO: new meshes, meshfem meshing priority 
@@ -304,6 +307,9 @@ IN  : 2019-11-15 15:52:46.366528
 WORK: HOME
 TODO: beacon waveforms and get try get pyatoa working with beacon 
 
+OUT : 2019-11-15 16:52:46.366528
+DONE: 
+
 IN  : 2019-11-18 08:37:06.735454
 WORK: HOME
 TODO: kernel figures 
@@ -339,11 +345,16 @@ TODO: beacon waveforms
 TODO: realdata inversion 
 TODO: practice talk 
 
+OUT : 2019-11-20 15:01:40.333696
+
 IN  : 2019-11-21 08:32:58.168012
 WORK: HOME
 TODO: fix up presentation 
 TODO: beacon waveforms 
 TODO: practice talk 
+
+OUT : 2019-11-21 15:32:58.168012
+DONE: 
 
 IN  : 2019-11-28 10:34:59.541136
 WORK: HOME
@@ -487,6 +498,8 @@ WORK: HOME
 TODO: write 
 TODO: look at tomo files 
 TODO: beacon waveforms 
+
+OUT  : 2020-01-14 15:06:29.667114
 
 IN  : 2020-01-15 10:02:50.468466
 WORK: HOME
@@ -2069,7 +2082,7 @@ DONE: pyatoa and sf3 now make pdfs that are searchable
 DONE: met with yoshi and plans update 
 DONE: scec poster final figures 
 
-IN  : 2020-09-15 01:20:30
+IN  : 2020-09-15 13:20:30
 WORK: HOME
 TODO: work on sem slicer 
 
