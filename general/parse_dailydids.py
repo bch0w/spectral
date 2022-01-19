@@ -1,6 +1,6 @@
 from obspy import UTCDateTime
 
-daily_dids = "/seis/prj/fwi/bchow/spectral/avocation/dailydids.txt"
+daily_dids = "./dailydids.txt"
 lines = open(daily_dids, "r").readlines()
 
 date_convert = {"jan":1, "feb":2, "mar":3, "apr":4, "may":5, "jun":6, "jul":7,
@@ -10,7 +10,7 @@ date_convert = {"jan":1, "feb":2, "mar":3, "apr":4, "may":5, "jun":6, "jul":7,
 dates, starts, ends = [],[],[]
 for line in lines:
     try:
-        if "@" in line:
+        if "IN" in line:
             header = line.split()
             if len(header) == 6:
                 day, month, day_date, at, loc, hours = header

@@ -77,7 +77,7 @@ def set_kwargs(vtk_fid, depth_km=None, pct=None, **kwargs):
         cmap = "RdBu"
         reverse = False
         default_range = False
-        min_max = [-.15, .15]
+        min_max = [-.25, .25]
         round_to = 1
     elif tag == "poissons":
         cmap = "RdBu"
@@ -89,25 +89,42 @@ def set_kwargs(vtk_fid, depth_km=None, pct=None, **kwargs):
         round_to = 0.1
         if quantity == "vpvs":
             default_range = False
-            min_max = [1.55, 1.9]
+            min_max = [1.4, 2.25]
         elif quantity == "poissons":
             default_range = False
             min_max = [0.15, 0.4]
+    elif tag == "kernel":
+        cmap = "RdYlBu"
+        reverse = True
+        default_range = True
     elif tag == "model":
         cmap = "jet"
         reverse = True
         round_to = 1
-        default_range = False
-        if depth_km == "surface":
-            min_max = {"vp": [2135, 6000], "vs": [1190, 3500]}[quantity]
-        elif depth_km < 15:
-            min_max = {"vp": [3000, 6000], "vs": [1500, 4000]}[quantity]
-        elif 15 <= depth_km < 30:
-            min_max = {"vp": [5000, 6500], "vs": [2500, 4000]}[quantity]
-        elif 30 <= depth_km < 50:
-            min_max = {"vp": [6000, 8750], "vs": [3000, 5000]}[quantity]
-        else:
-            default_range = True
+        default_range = True
+        # if depth_km == "surface":
+        #     min_max = {"vp": [2135, 5500], 
+        #                "vs": [975, 3250]}[quantity]
+        # elif depth_km < 5:
+        #     min_max = {"vp": [2135, 5500], 
+        #                "vs": [975, 4000]}[quantity]
+        # elif 5 <= depth_km < 10:
+        #     min_max = {"vp": [3500, 7000], 
+        #                "vs": [1750, 4000]}[quantity]
+        # elif 10 <= depth_km < 15:
+        #     min_max = {"vp": [3500, 7500], 
+        #                "vs": [2000, 4000]}[quantity]
+        # elif 15 <= depth_km < 30:
+        #     min_max = {"vp": [5500, 8000], 
+        #                "vs": [2750, 4750]}[quantity]
+        # elif 30 <= depth_km < 40:
+        #     min_max = {"vp": [6000, 8750], 
+        #                "vs": [3000, 5000]}[quantity]
+        # elif 40 <= depth_km <= 50:
+        #     min_max = {"vp": [7000, 9250], 
+        #                "vs": [3500, 5000]}[quantity]
+        # else:
+        #     default_range = True
     else:
         raise NotImplementedError(tag)
 
@@ -175,7 +192,7 @@ def call_vtk_modeler(vtk_fid, src_fid, rcv_fid, coast_fid, show, path_out,
         if save_fids and make_pdf:
             save_pdf(save_fids, os.path.join(path_out, f"{fid}_{axis}.pdf"))
 
-def make_pdfs(): 
+def pdf(fid): 
     """
     MAIN:
     Create PDFs of depth slices and cross sections for each model, gradient etc. 
@@ -183,10 +200,7 @@ def make_pdfs():
     """
     # Set slices here
     slices = []  # should be in percentages, e.g. .25
-    depths = ["surface", 2, 4, 6, 8, 10, 12, 15]
-
-    # File identifier list
-    vtk_fids = glob(f"./model/log_m0004_vs_minit_vs.vtk")
+    depths = ["surface", 5, 10, 15]
 
     # Auxiliary files
     src_fid = "./srcs.vtk"
@@ -197,14 +211,13 @@ def make_pdfs():
     path_out = f"./figures"
     show = False
 
-    # Call the modeler for each fid
-    for vtkf in vtk_fids:
-        call_vtk_modeler(vtk_fid=vtkf, src_fid=src_fid, rcv_fid=rcv_fid,
+    for vtkfid in glob(fid):
+        call_vtk_modeler(vtk_fid=vtkfid, src_fid=src_fid, rcv_fid=rcv_fid,
                          coast_fid=coast_fid, path_out=path_out, show=show,
-                         slices=slices, depths=depths, make_pdf=True
+                         slices=slices, depths=depths, make_pdf=False
                          )
 
-def make_four_banger():
+def four_banger():
     """
     MAIN:
     Create a tiled image showing four different models, gradients etc. for each
@@ -287,7 +300,6 @@ def make_four_banger():
         # Hardcode positions based on images sizes, not very elegant  :/
         # 0 1 
         # 2 3
-        import ipdb;ipdb.set_trace()
         im_out.paste(images[0], (0, 0))                 # top left
         im_out.paste(images[1], (images[0].width, 0))   # top right
         im_out.paste(images[2], (0, images[0].height))  # bottom left
@@ -301,13 +313,13 @@ def make_four_banger():
                                f"panel_{model_number}_{quantity}.png")
         im_out.save(fid_out)
 
-def make_single():
+def single():
     """
     No frills no saving just plot a single slice or cross section for a single
     file and show, useful for quick-looking models
     """
     # Set your arguments here
-    vtk_fid = "gradient/gradient_0014_vs_kernel.vtk"
+    vtk_fid = "beta_kernel_smooth.vtk"
     kwargs = {"cmap": "RdBu",
               "reverse": True,
               "default_range": False,
@@ -317,13 +329,13 @@ def make_single():
               }
 
     # Pick what you want to plot here
-    depth_km = 15
+    depth_km = 5
     x_pct = None
     y_pct = None
 
     # Auxiliary files
-    src_fid = "./srcs.vtk"
-    rcv_fid = "./rcvs.vtk"
+    src_fid = None # "./srcs.vtk"
+    rcv_fid = None # "./rcvs.vtk"
     coast_fid = "/Users/Chow/subduction/data/carto/coastline/coast.npy"
 
     # Initiate the class with some preset keyword arguments
@@ -343,16 +355,47 @@ def make_single():
     if y_pct:
         vm.cross_section(axis="Y", pct=y_pct, show=True, save=False)
 
+def make_all():
+    """
+    MAIN:
+    Create PDFs of depth slices and cross sections for each model, gradient etc.
+    Addresses each model individually, deletes original .png files
+    """
+    # Set slices here
+    slices = []  # should be in percentages, e.g. .25
+    depths = ["surface", 2, 4, 6, 8, 10, 15, 20, 25, 30, 40, 50]
+
+    # File identifier list
+    vtk_fids = glob(f"./model/*0011*.vtk") + glob(f"./gradient/*0011*.vtk")
+
+    # Auxiliary files
+    src_fid = "./srcs.vtk"
+    rcv_fid = "./rcvs.vtk"
+    coast_fid = "/Users/Chow/subduction/data/carto/coastline/coast.npy"
+
+    # Additional parameters
+    path_out = f"./figures"
+    show = True
+
+    # Call the modeler for each fid
+    for vtkf in vtk_fids:
+        call_vtk_modeler(vtk_fid=vtkf, src_fid=src_fid, rcv_fid=rcv_fid,
+                         coast_fid=coast_fid, path_out=path_out, show=show,
+                         slices=slices, depths=depths, make_pdf=True
+                         )
+
 if __name__ == "__main__":
+    single()
+    a=1/0
     if len(sys.argv) > 1:
         if sys.argv[1] == "pdf":
-            make_pdfs()
+            pdf(fid=sys.argv[2])
         elif sys.argv[1] == "one":
-            make_single()
+            single()
         elif sys.argv[1] == "4banger":
-            make_four_banger()
+            four_banger()
         else:
             raise NotImplementedError
     else:
-        print("Argument needed: [one, pdf, 4banger]")
+        make_all()
 

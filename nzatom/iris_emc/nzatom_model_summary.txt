@@ -1,0 +1,69 @@
+NAME:  
+	nz_atom_north_chow_etal_2021_vp+vs
+TITLE: 
+	New Zealand Adjoint TOMography velocity model (North Island)
+TYPE:  
+	3-D Tomography Earth Model
+SUB TYPE: 
+	Shear-wave velocity (km/s) and Compressional-wave velocity (km/s)
+YEAR: 
+	2021
+SHORT DESCRIPTION:
+	This is a 3D velocity model of the North Island of New Zealand derived using
+	earthquake-based adjoint tomography. The starting model is defined as the 
+	ray-based NZ-Wide2.2 Velocity Model from Eberhart-Phillips et al. (2021).
+ 	To derive this velocity model, we iteratively improve fits between earthquake 
+	observations from New Zealand-based broadband seismometers and synthetically
+	generated waveforms from spectral element simulations. The waveform bandpass
+	of interest is 4-30s. 
+	This velocity model defines the following quantities: 
+	Vp (km/s), Vs (km/s), density (kg/m^3), Qp and Qs, however only Vp and Vs 
+	are updated during our inversion. The remaining quantities are defined by 
+	the starting velocity model. 
+AUTHORS: 
+	Bryant Chow, Yoshihiro Kaneko, Carl Tape, Ryan Modrak, John Townend
+REFERENCE MODEL:
+	NZ-Wide2.2 Velocity Model (https://zenodo.org/record/3779523#.YPi7ClMzbHo)
+	Eberhart-Phillips et al. (2021)
+	Note the provided reference model has been rotated and interpolated from its
+	original format for use in our tomographic inversion.
+DEPTH COVERAGE:
+	-3.0 to 400.0 km (below earth surface)
+AREA:
+	North Island of New Zealand and the Hikurangi subduction zone
+	Coordinate system: UTM 60S
+		x-axis 17000,635000, y-axis 5286000, 5905000	
+	Coordinate system: WGS84
+		latitude -42.5,-37.0, longitude 173.0,178.5
+DATA SET DESCRIPTION:
+	Dataset includes seismic waveforms filtered at 4-30s period.
+	Waveforms from 60 earthquakes recorded on up to 88 broadboad three-component 
+	seisimic stations, resulting in 1800 unique source-receiver pairs.
+	Broadband stations include the following networks:
+		-GeoNet Permanent Seismic Network (https://www.geonet.org.nz/)
+		-Broadband East Coast Network (http://www.fdsn.org/networks/detail/2P_2017/)
+		-Seismic Analysis of the Hikurangi Experiment (https://www.fdsn.org/networks/detail/X2_2009/)
+		-Deep Geothermal HADES Seismic Array (http://www.fdsn.org/networks/detail/Z8_2009/)
+		-Gisborne-Mahia Seismic Tremor Array (http://www.fdsn.org/networks/detail/ZX_2011/)
+DATA FILES DESCRIPTION:
+	The velocity model is separated into three files covering overlapping 
+	depth ranges and with differing grid spacing. 
+		'shallow' defines depths -3 to 9 km (BSL)
+		'crust' defines depths 7 to 47 km (BSL)
+		'mantle' defines depths 44 to 400 km (BSL)
+CONTACT:
+	Bryant Chow (bryant.chow@vuw.ac.nz)
+
+MODEL REFERENCE:
+	Chow, Bryant, Yoshihiro Kaneko, Carl Tape, Ryan Modrak, Nick Mortimer, Stephen Bannister, and John Townend. "Strong upper-plate heterogeneity at the Hikurangi subduction margin (North Island, New Zealand) imaged by adjoint tomography." Journal of Geophysical Research: Solid Earth, in review.
+
+RELATED REFERENCES:
+	Chow, Bryant, Yoshihiro Kaneko, and John Townend. "Evidence for deeply-subducted lower-plate seamounts at the Hikurangi subduction margin: implications for seismic and aseismic behavior." Journal of Geophysical Research: Solid Earth, in review.
+
+	Chow, Bryant, Yoshihiro Kaneko, Carl Tape, Ryan Modrak, and John Townend. "An automated workflow for adjoint tomography—waveform misfits and synthetic inversions for the North Island, New Zealand." Geophysical Journal International 223, no. 3 (2020): 1461-1480.
+
+	Eberhart-Phillips, Donna, Bannister, Stephen, Reyners, Martin, & Henrys, Stuart. (2020). New Zealand Wide model 2.2 seismic velocity and Qs and Qp models for New Zealand [Data set]. Zenodo. https://doi.org/10.5281/zenodo.3779523
+
+	
+	
+	

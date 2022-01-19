@@ -9,7 +9,8 @@ import matplotlib.pyplot as plt
 from obspy import UTCDateTime, Catalog, read_events
 from obspy.clients.fdsn import Client
 from obspy.geodetics import gps2dist_azimuth
-from pyatoa.plugins.new_zealand.gather import geonet_focal_mechanism
+from obspy.clients.fdsn.header import FDSNNoDataException
+from pyatoa.plugins.new_zealand.gather import geonet_mt
 
 
 def cut_cat(cat, indices=None, method="remove"):
@@ -223,8 +224,8 @@ def append_mt(cat, csv_fid=None):
     events = []
     for event in cat:
         event_id = event.resource_id.id.split('/')[1]
-        event_out, _ = geonet_focal_mechanism(event_id=event_id, units="dynecm",
-                                              event=event, csv_fid=csv_fid)
+        event_out, _ = geonet_mt(event_id=event_id, units="dynecm",
+                                 event=event, csv_fid=csv_fid)
         events.append(event_out)
 
     cat_out.extend(events)
@@ -316,6 +317,18 @@ def event_trials(choice, csv_file, sep_km=None, desired_length=None):
             "maxlatitude": -37.0,  # URC
             "maxlongitude": 178.5,  # URC
             "maxdepth": 60.
+          },
+        "south": {
+            "name": "south",
+            "starttime": UTCDateTime("2003-08-20T00:00:00"),  # GeoNet MT cat
+            "endtime": UTCDateTime(),
+            "minmagnitude": 4.5,
+            "maxmagnitude": 6.,
+            "minlatitude": -48,  # LLC
+            "minlongitude": 165,  # LLC
+            "maxlatitude": -40.0,  # URC
+            "maxlongitude": 175,  # URC
+            "maxdepth": 60.
           }
     }
 
@@ -377,6 +390,26 @@ def event_trials(choice, csv_file, sep_km=None, desired_length=None):
     cat_out_w_mt.write(f"{cat_name}_w_mt.xml", format="QUAKEML")
 
 
+def cat_from_event_ids(cat_name, event_ids, csv_file):
+    """
+    Create an ObsPy catalog with moment tensors from a list of event ids
+    """
+    c = Client("GEONET")
+    cat = Catalog()
+    for eventid in event_ids:
+        try:
+            cat += c.get_events(eventid=eventid)[0]
+        except FDSNNoDataException:
+            print(f"No event for {eventid}")
+
+    new_cat = check_moment_tensor(csv_file, cat)
+    print("catalog has {} events".format(len(new_cat)))
+
+    cat_w_mt = append_mt(new_cat, csv_file)
+    cat_w_mt.write(f"{cat_name}_w_mt.xml", format="QUAKEML")
+
+
+
 if __name__ == "__main__":
     # Use GeoNet moment tensors
     geonet_path = "geonet/data/moment-tensor/GeoNet_CMT_solutions.csv"
@@ -390,8 +423,17 @@ if __name__ == "__main__":
         csv_file = None
         print("No GeoNet .csv file found")
 
-    # USER PARAMETERS
-    cat_name = "aspen"
 
-    # Get the catalog and its name, based on the functions
-    event_trials(cat_name, csv_file=csv_file)
+    # USER PARAMETERS
+    cat_name = "south"
+
+    if True:
+        # Get the catalog and its name, based on the functions
+        event_trials(cat_name, csv_file=csv_file)
+    else:
+        # Get catalog from list of event ids
+        fid = ("/Users/Chow/Documents/academic/vuw/forest/posthoc/"
+               "ristau_starred_events.txt")
+        event_ids = np.loadtxt(fid, dtype=str)
+        cat_from_event_ids(cat_name, event_ids, csv_file)
+

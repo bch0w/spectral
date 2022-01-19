@@ -89,8 +89,8 @@ def daily_did(fid):
 
         # Determine where you're working
         if in_or_out == "IN":
-            where = input("where? 0-VUW, 1-GNS, 2-HOME, 3-OTHER: ")
-            where_list = ["VUW", "GNS", "HOME"]
+            where = input("where? 0-UAF, 1-HOME, 3-OTHER: ")
+            where_list = ["UAF", "HOME"]
             try:
                 where = where_list[int(where)]
             except IndexError:
@@ -106,6 +106,7 @@ def daily_did(fid):
                 f.write(f"TODO: {to_do} \n")
         # Leaving for the day, only track time and tasks accomplshed
         if in_or_out == "OUT":
+
             while True:
                 done = input("accomplished today?: ")
                 if not done:
@@ -118,8 +119,8 @@ def daily_did(fid):
 
 if __name__ == "__main__":
     # Ensure the file exists
-    txtfile = ("/Users/Chow/Documents/academic/vuw/packages/spectral/"
-               "general/dailydids.txt")
+    # TERN UAF
+    txtfile = "/home/bchow/work/repos/spectral/general/dailydids.txt"
     if not os.path.exists(txtfile):
         raise FileNotFoundError(f"No such file {txtfile}")
 
