@@ -33,9 +33,7 @@ for tag in ["mantle", "crust", "shallow"]:
     # Grab the tomo model value and plot on a 2D plane
     v_idx = val_list.index(choice)
     xyv = values[:, [0, 1, v_idx]][point]  # Vs
-    x, y, v = xyz.T
-    plt.scatter(x, y, c=v)
+    np.save(tag, xyv)
 
-plt.colorbar()
-plt.show()
+
 
