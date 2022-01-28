@@ -4,7 +4,6 @@ The catalog used for initial testing purposes for Pyatoa + Seisflows
 """
 import os
 import csv
-import requests
 import numpy as np
 import matplotlib.pyplot as plt
 from obspy import UTCDateTime, Catalog, read_events
@@ -12,44 +11,6 @@ from obspy.clients.fdsn import Client
 from obspy.geodetics import gps2dist_azimuth
 from obspy.clients.fdsn.header import FDSNNoDataException
 from pyatoa.plugins.new_zealand.gather import geonet_mt
-
-
-def get_cat(link=None, path_out="./GeoNet_CMT_solutions.csv"):
-    """
-    Get John Ristau's Moment Tensor catalog from GeoNet's GitHub page and
-    save to disk for quick access
-    
-    :type link: str
-    :param link: link to the .csv file, defaults to GeoNet's github page
-        last accessed Jan 28 2022.
-    :rtype:
-    :return:
-    """
-    # Avoid over writing existing catalog
-    if os.path.exists(path_out):
-        print(f"{path_out} exists, will not fetch from github. If you think "
-              f"this file is out of date, please delete and re-run this script "
-              f"to download the latest version of this catalog")
-    else:
-        if link is None:
-            geonet_mt_csv = (                                                     
-                "https://raw.githubusercontent.com/GeoNet/data/master/"   
-                "moment-tensor/GeoNet_CMT_solutions.csv"
-                )   
-        else:
-            geonet_mt_csv = link
-
-        response = requests.get(geonet_mt_csv)
-        if not response.ok:
-            raise FileNotFoundError(f"Response from {geonet_mt_csv} not ok, "
-                                    f"check that this file exists, or download "
-                                    f"manually from GeoNet's GitHub page")
-
-        else:
-            with open(path_out, "w") as f:
-                f.write(response.text)
-
-    return path_out
 
 
 def cut_cat(cat, indices=None, method="remove"):
@@ -388,7 +349,7 @@ def event_trials(choice, csv_file, sep_km=None, desired_length=None):
                                     maxdepth=evnts['maxdepth'],
                                     orderby="magnitude-asc"
                                     )
-        print("original catalog has {} events".format(len(original_cat)))
+        print("catalog has {} events".format(len(original_cat)))
         # Delete unncessary attributes to save space
         for attr in ["picks", "amplitudes", "station_magnitudes"]:
             for event in original_cat:
@@ -396,14 +357,13 @@ def event_trials(choice, csv_file, sep_km=None, desired_length=None):
                     delattr(event, attr)
                 except KeyError:
                     continue
-        print(f"writing original catalog to: {original_cat_fid}")
         original_cat.write(original_cat_fid, format="QUAKEML")
     else:
         original_cat = read_events(original_cat_fid)
 
     # Remove if no GeoNet moment tensors
     new_cat = check_moment_tensor(csv_file, original_cat)
-    print("moment tensor catalog has {} events".format(len(new_cat)))
+    print("catalog has {} events".format(len(new_cat)))
 
     if sep_km is not None and desired_length is not None:
         cat_out = remove_groupings(new_cat, sep_km=sep_km)
@@ -420,15 +380,14 @@ def event_trials(choice, csv_file, sep_km=None, desired_length=None):
                     sep_km = float(sep_km)
 
             cat_out = remove_groupings(new_cat, sep_km=sep_km)
-            print("ungrouped catalog has {} events".format(len(cat_out)))
+            print("catalog has {} events".format(len(cat_out)))
     else:
         cat_out = new_cat
 
     # add moment tensor information to all events
     cat_out_w_mt = append_mt(cat_out, csv_file)
-    fid_cat_out = f"{cat_name}_w_mt.xml"
-    print(f"writing final catalog to: {fid_cat_out}")
-    cat_out_w_mt.write(f"{fid_cat_out}", format="QUAKEML")
+
+    cat_out_w_mt.write(f"{cat_name}_w_mt.xml", format="QUAKEML")
 
 
 def cat_from_event_ids(cat_name, event_ids, csv_file):
@@ -452,16 +411,27 @@ def cat_from_event_ids(cat_name, event_ids, csv_file):
 
 
 if __name__ == "__main__":
+    # Use GeoNet moment tensors
+    geonet_path = "geonet/data/moment-tensor/GeoNet_CMT_solutions.csv"
+    for path_to in ["/Users/chowbr/Documents/subduction/data",
+                    "/Users/Chow/Documents/academic/vuw/data",
+                    "/seis/prj/fwi/bchow/data"]:
+        if os.path.exists(os.path.join(path_to, geonet_path)):
+            csv_file = os.path.join(path_to, geonet_path)
+            break
+    else:
+        csv_file = None
+        print("No GeoNet .csv file found")
+
+
     # USER PARAMETERS
     cat_name = "south"
 
     if True:
-        # Fetch a catalog of moment tensors from John Ristau's MT catalog
-        # based on event parameters
-        csv_file = get_cat()
+        # Get the catalog and its name, based on the functions
         event_trials(cat_name, csv_file=csv_file)
     else:
-        # Fetch a catalog of moment tensors based on a list of event IDs only
+        # Get catalog from list of event ids
         fid = ("/Users/Chow/Documents/academic/vuw/forest/posthoc/"
                "ristau_starred_events.txt")
         event_ids = np.loadtxt(fid, dtype=str)

@@ -120,7 +120,7 @@ def daily_did(fid):
 if __name__ == "__main__":
     # Ensure the file exists
     # TERN UAF
-    txtfile = "/home/bchow/work/repos/spectral/general/dailydids.txt"
+    txtfile = "/home/bchow/REPOSITORIES/spectral/general/dailydids.txt"
     if not os.path.exists(txtfile):
         raise FileNotFoundError(f"No such file {txtfile}")
 

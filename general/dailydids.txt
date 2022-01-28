@@ -75,3 +75,42 @@ TODO:  nsf interim report
 OUT : 2021-11-16 15:48:32
 DONE: not really sure 
 
+IN  : 2022-01-18 10:18:39
+WORK: UAF
+TODO: email responses 
+TODO: cube2sphere 
+TODO: alaska meshing 
+TODO: pyatoa docs 
+
+OUT : 2022-01-18 18:12:11
+DONE: emails 
+DONE: responded tianshi cube2sph, spent a lot of time trying to figure out what was going on, but ultimately could not sort myself 
+DONE: setting myself up on chinook, got xmeshfem3d to submit on debug partition with NZ 1node_10s mesh. great success! 
+
+IN  : 2022-01-19 10:00:23
+WORK: UAF
+TODO: try to finish cube2sph install and use 
+TODO: waveform simulations on chinook 
+TODO: pyatoa docs page 
+
+OUT : 2022-01-19 14:30:06
+DONE: further in cube2sph 
+
+IN  : 2022-01-26 10:02:25
+WORK: UAF
+TODO: respond emails 
+TODO: cube2sph updated src code 
+TODO: pyatoa docs 
+
+OUT : 2022-01-26 17:59:06
+DONE: cube2sph 
+DONE: thats it 
+
+IN  : 2022-01-28 08:37:14
+WORK: UAF
+TODO: respond yoshi, manoch, who else? 
+TODO: meeting with carl 
+TODO: implement topography in meshfem 
+TODO: try multi interface mesh in meshfem 
+TODO: temp data? 
+

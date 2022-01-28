@@ -620,20 +620,20 @@ if __name__ == "__main__":
     # Parameters
     level = "channel"  # channel, station
     write_to = None
-    export_to_specfem = True
-    export_to_seed_fmt = False
+    export_to_specfem = False
+    export_to_seed_fmt = True
     plot = False
 
     # Create the Inventory
     master_inventory = Inventory(
         networks=[
-            geonet_south_island(level=level),
+            # geonet_south_island(level=level),
             # geonet_north_island(level=level),
             # hobitss(level=level),
             # sahke(level=level),
             # bannister(network_code="ZX", level=level),
             # bannister(network_code="Z8", level=level),
-            # beacon(level=level)
+            beacon(level=level)
         ], source="PYATOA")
     # Export to various output formats
     if write_to:
