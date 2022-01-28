@@ -119,5 +119,9 @@ def generate_cmtsolutions(catalog, convert=1E7, path="./"):
 
 
 if __name__ == "__main__":
-    cat = read_events(sys.argv[1])
-    generate_cmtsolutions(catalog=cat, convert=1, path="./")
+    try:
+        cat = read_events(sys.argv[1])
+        generate_cmtsolutions(catalog=cat, convert=1, path="./")
+    except IndexError:
+        print(f"\n\tERROR: first argument must be the name of the QuakeML file "
+              f"\n\tcontaining the moment tensors that should be converted\n")
