@@ -114,3 +114,40 @@ TODO: implement topography in meshfem
 TODO: try multi interface mesh in meshfem 
 TODO: temp data? 
 
+OUT : 2022-01-28 18:19:55
+DONE: responded to yoshi, manoch 
+DONE: emailed vuw library 
+DONE: met with carl 
+DONE: tried to read mcclelland paper 
+DONE: working on pyatoa docs 
+
+IN  : 2022-01-31 09:39:23
+WORK: UAF
+TODO: cube2sph 
+TODO: respond emails vuw library, yoshi 
+TODO: temp data to maui 
+
+OUT : 2022-01-31 12:39:23
+DONE: nada 
+
+IN  : 2022-02-02 11:10:31
+WORK: UAF
+TODO: continue cube2sph 
+TODO: respond manoch 
+TODO: read higham paper 
+TODO: find bannister data 
+
+OUT : 2022-02-02 19:38:33
+DONE: cube2sphered most of the day, no progress but email away 
+DONE: met with Aakash for ~1hr to discuss coding + adj tomo 
+DONE: responded manoch 
+DONE: testing mesh decomposition  
+DONE: started file transfer nz temp data 
+
+IN  : 2022-02-09 09:29:08
+WORK: UAF
+TODO: alaska mesh chinook 
+TODO: convert bannister data 
+TODO: pyatoa docs 
+TODO: print some papers to read at home 
+

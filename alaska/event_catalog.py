@@ -292,7 +292,8 @@ def event_trials(choice, csv_file, sep_km=None, desired_length=None):
             "minlongitude": 173.5,  # LLC
             "maxlatitude": -37.25,  # URC
             "maxlongitude": 178.5,  # URC
-            "maxdepth": 60.
+            "maxdepth": 60.,
+            "client": "GEONET",
             },
         "fullscale": {
             "name": "fullscale",
@@ -304,7 +305,8 @@ def event_trials(choice, csv_file, sep_km=None, desired_length=None):
             "minlongitude": 173.5,  # LLC
             "maxlatitude": -37.25,  # URC
             "maxlongitude": 178.5,  # URC
-            "maxdepth": 60.
+            "maxdepth": 60.,
+            "client": "GEONET",
           },
         "aspen": {
             "name": "aspen",
@@ -316,7 +318,8 @@ def event_trials(choice, csv_file, sep_km=None, desired_length=None):
             "minlongitude": 173.5,  # LLC
             "maxlatitude": -37.0,  # URC
             "maxlongitude": 178.5,  # URC
-            "maxdepth": 60.
+            "maxdepth": 60.,
+            "client": "GEONET",
           },
         "south": {
             "name": "south",
@@ -328,7 +331,21 @@ def event_trials(choice, csv_file, sep_km=None, desired_length=None):
             "minlongitude": 165,  # LLC
             "maxlatitude": -40.0,  # URC
             "maxlongitude": 175,  # URC
-            "maxdepth": 60.
+            "maxdepth": 60.m
+            "client": "GEONET",
+          }
+        "nalaska": {
+            "name": "nalaska",
+            "starttime": UTCDateTime("2000-01-01T00:00:00"), 
+            "endtime": UTCDateTime(),
+            "minmagnitude": 4.5,
+            "maxmagnitude": 6.,
+            "minlatitude": 64,  # LLC
+            "minlongitude": -169,  # LLC
+            "maxlatitude": 72,  # URC
+            "maxlongitude": -140,  # URC
+            "maxdepth": 100.,
+            "client": "IRIS",
           }
     }
 
@@ -337,7 +354,7 @@ def event_trials(choice, csv_file, sep_km=None, desired_length=None):
     # Create the catalog and plot the raw event catalog
     original_cat_fid = f"{cat_name}_original.xml"
     if not os.path.exists(original_cat_fid):
-        c = Client("GEONET")
+        c = Client(evnts["client"])
         original_cat = c.get_events(starttime=evnts['starttime'],
                                     endtime=evnts['endtime'],
                                     minmagnitude=evnts['minmagnitude'],
@@ -361,9 +378,12 @@ def event_trials(choice, csv_file, sep_km=None, desired_length=None):
     else:
         original_cat = read_events(original_cat_fid)
 
-    # Remove if no GeoNet moment tensors
-    new_cat = check_moment_tensor(csv_file, original_cat)
-    print("catalog has {} events".format(len(new_cat)))
+    # Remove if no GeoNet moment tensors (only NZ event catalogs)
+    if evnts["client"] == "GEONET":
+        new_cat = check_moment_tensor(csv_file, original_cat)
+        print("catalog has {} events".format(len(new_cat)))
+    else:
+        new_cat = original_cat
 
     if sep_km is not None and desired_length is not None:
         cat_out = remove_groupings(new_cat, sep_km=sep_km)
@@ -384,8 +404,9 @@ def event_trials(choice, csv_file, sep_km=None, desired_length=None):
     else:
         cat_out = new_cat
 
-    # add moment tensor information to all events
-    cat_out_w_mt = append_mt(cat_out, csv_file)
+    # add moment tensor information to all events if GeoNet catalog
+    if evnts["client"] == "GEONET":
+        cat_out_w_mt = append_mt(cat_out, csv_file)
 
     cat_out_w_mt.write(f"{cat_name}_w_mt.xml", format="QUAKEML")
 
