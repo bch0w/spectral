@@ -11,7 +11,7 @@ from obspy import read, UTCDateTime, read_events
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
-mpl.rcParams['font.size'] = 10
+mpl.rcParams['font.size'] = 15
 
 
 def myround(x, base=5, choice='near'):
@@ -52,15 +52,19 @@ def plot_availability(path="./", cat=None):
         earliest, latest = 1E3, 0
         netstas = []
         filled_years = None
-        networks = glob.glob(os.path.join(year, "*"))
+        # networks = glob.glob(os.path.join(year, "*"))
+        networks = glob.glob(os.path.join(year, "XX"))
+        if not networks:        
+            continue
         networks.sort()
         for network in networks:
-            stations = glob.glob(os.path.join(network, "*"))
-            stations.sort()
+            # stations = glob.glob(os.path.join(network, "*"))
+            # stations.sort()
+            stations = [os.path.join(network, f"RD{_:0>2}") for _ in range(1, 23)]
             for station in stations:
                 channels = glob.glob(os.path.join(station, '*'))
                 channels.sort()
-                station_full_year = np.zeros(367)
+                station_full_year = np.zeros(366)
                 for channel in channels:
                     fileids = glob.glob(os.path.join(channel, "*"))
                     fileids.sort()
@@ -81,15 +85,26 @@ def plot_availability(path="./", cat=None):
                 else:
                     filled_years = np.vstack([filled_years, station_full_year])
 
-        # reduce data to the available bound
-        filled_years = filled_years[:, earliest:latest]
+        np.savez(f"{year.split('/')[1]}", filled_years) 
+        if "2019" in year:
+            a = 1/0 
+        else:
+            continue
 
-        fig, ax = plt.subplots(figsize=(20,10)) 
+        # reduce data to the available bound
+        # filled_years = filled_years[:, earliest:latest]
+        cmap = mpl.colors.LinearSegmentedColormap.from_list("", ["white", 
+                                                                 "red",
+                                                                 "yellow",
+                                                                 "green"])
+        fig, ax = plt.subplots(figsize=(12,4),dpi=400) 
         im = ax.imshow(filled_years, 
-                       extent=(earliest, latest, len(netstas), 0),
-                       aspect="auto", cmap="Oranges")
+                       extent=(1, 365, len(netstas), 0),
+                       # extent=(earliest, latest, len(netstas), 0),
+                       aspect="auto", cmap=cmap) #aspect='auto'
+
         year_ = os.path.basename(year)
-        ax.set_title(f"{year_} STATION DATA AVAILABILITY")
+        ax.set_title(f"{year_}")
         ax.set_xlabel(f"Julian Day ({year_})")
         ax.set_ylabel("Station Code")
 
@@ -99,19 +114,23 @@ def plot_availability(path="./", cat=None):
         cbar = fig.colorbar(im, cax=cax, orientation='vertical', 
                             values=[0,1,2,3], ticks=[0,1,2,3])
         cbar.set_label('number of available channels', rotation=90, 
-                       labelpad=-15)
+                       labelpad=-12, fontsize=12)
         
         # grid
-        ax.grid(True, which='major', linestyle='-', c="k", linewidth=1.25)
-        ax.grid(True, which='minor', linestyle='-', c="k", linewidth=0.5, 
+        ax.grid(True, which='major', linestyle='-', c="k", linewidth=.6, 
+                alpha=.5)
+        ax.grid(True, which='minor', linestyle='-', c="k", linewidth=0.3, 
                 alpha=0.5)
-        ax.set_xticks(np.arange(myround(earliest, 5, 'near'), latest, 5))
-        ax.set_xticks(np.arange(myround(earliest, 5, 'near'), latest, 1), 
-                      minor=True)
+        ax.set_xticks(np.arange(-.5, 365.5, 10))
+        ax.set_xticks(np.arange(-.5, 365.5, 1), minor=True)
+        ax.set_xticklabels(labels=[1] + [str(_) for _ in np.arange(10, 366, 10)])
+        # ax.set_xticks(np.arange(myround(earliest, 10, 'near'), latest, 10))
+        # ax.set_xticks(np.arange(myround(earliest, 10, 'near'), latest, 1), 
+        #               minor=True)
         ax.set_yticks(np.arange(len(netstas)))
         ax.set_yticklabels(netstas)
-        plt.setp(ax.get_xticklabels(), rotation=45, fontsize=13)
-        plt.setp(ax.get_yticklabels(), rotation=45, fontsize=13)
+        plt.setp(ax.get_xticklabels(), rotation=45, fontsize=13, ha="center")
+        plt.setp(ax.get_yticklabels(), rotation=0, fontsize=13, va="top")
 
         
         # plot catalog
@@ -147,11 +166,12 @@ def plot_catalog(ax, cat, year):
             ymin, ymax = ax.get_ybound()
             y_text = (ymax - ymin) / (days.count(event_time.julday) + 1)
 
-            ax.axvline(x=event_time.julday, ymin=0, ymax=1, color="gold")
+            ax.axvline(x=event_time.julday, ymin=0, ymax=1, color="k",
+                       linestyle="--", linewidth=2)
             ax.text(x=event_time.julday, 
                     y=(ax.get_ybound()[1] - ax.get_ybound()[0]) / 2,
                     s=event.resource_id.id.split('/')[1], 
-                    color="aqua", rotation=90)
+                    color="k", rotation=90)
 
 
 def check_availability(origintime, path="./",  return_time=False):
@@ -199,6 +219,7 @@ def check_availability(origintime, path="./",  return_time=False):
         
 
 if __name__ == "__main__":
-    cat = read_events("./fullscale_w_mt.xml")
+    # cat = read_events("./fullscale_w_mt.xml")
+    cat = None
     plot_availability("../", cat=cat)
 

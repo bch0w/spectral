@@ -22,7 +22,7 @@ from obspy.core.inventory.station import Station
 from obspy.core.inventory.channel import Channel
 from obspy.core.inventory.util import Site
 
-from pyatoa.utils.srcrcv import merge_inventories
+# from pyatoa.utils.srcrcv import merge_inventories
 
 
 def get_from_iris(level="station"):
@@ -38,8 +38,8 @@ def get_from_iris(level="station"):
     # A whole-Alaska bounding box including western Canada and Aleutians
     lat_min = 52.17  # South
     lat_max = 72.23  # North
-    lon_min = -121.04    # West
-    lon_max = -178.04  # East
+    lon_min = -178.04    # West
+    lon_max = -121.04  # East
 
     starttime = UTCDateTime("2000-01-01")
     networks = ["AK",  # Alaska Regional Network
@@ -53,18 +53,18 @@ def get_from_iris(level="station"):
                 "US",  # United States National Seismic Network
                 "YO",  # Yukon Observatory
                 ]
+    channels = ["BH?", "BL?", "HH?", "HL?"]
 
-    # Grab all available stations, channel conventions are as follows:
-    # B??: Broadband; H??: High Sample-Rate Broadband
-    # ?H?: High gain seismometer; ?L?: Low gain seismometer
-    inv_alaska = c.get_stations(network=networks, station="*", 
-                                channel="[BH][HL]?",
+    # ObsPy doesnt accept lists or bracketed wildcards, must be comma separated
+    networks = ",".join(networks)
+    channels = ",".join(channels)
+
+    inv_alaska = c.get_stations(network=networks, station="*", channel=channels,
                                 minlatitude=lat_min, maxlatitude=lat_max,
                                 minlongitude=lon_min, maxlongitude=lon_max,
                                 level=level, starttime=starttime,
                                 endtime=UTCDateTime()
                                 )
-
 
     return inv_alaska
 
@@ -142,18 +142,14 @@ def export_seed_fmt(inv):
 if __name__ == "__main__":
     # Parameters
     level = "channel"  # channel, station
-    write_to = None
+    write_to = "alaska_bb_stations.xml"  # Name of output .xml file
     export_to_specfem = True
     export_to_seed_fmt = False
     plot = False
 
     # Create the Inventory
-    master_inventory = Inventory(
-        networks=[
-            get_from_iris(level=level),
-        ], source="PYATOA")
+    master_inventory = get_from_iris(level=level)
 
-    import ipdb;ipdb.set_trace()
 
     # Export to various output formats
     if write_to:
