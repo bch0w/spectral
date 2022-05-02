@@ -1,14 +1,17 @@
-# Pyatoa + SeisFlows3 demo: Install and run examples
-# These are example instructions for installing Pyatoa and SeisFlows3, and 
-# running an example problem. Please change the paths to where you see fit
+# Pyatoa + SeisFlows3 demo: Install and run example problem
+#
+# Please change the paths REPO_DIR and WORK_DIR to directories you see fit
 
 # Adjust paths here
-REPO_DIR="~/REPOSITORIES_scratch"  # Wherever you install Python repositories
-WORK_DIR="~/Work/sf3_pyatoa_demo"  # An empty directory where we can run the ex.
+REPO_DIR="$HOME/demo_REPOSITORIES"  # Where you install GitHub repos
+WORK_DIR="$HOME/Work/pyatoa_seisflows3_demo"  # Empty directory to run the ex.
+
+# Exit if any command fails so that we don't continue 
+set -e  
 
 # Conda create environment, will fail if you don't have Conda installed
-conda create -n seisflows3 python=3.7
-conda activate seisflows3
+conda create -n seisflows python=3.7 -y
+source activate seisflows
 
 # Download Pyatoa and SeisFlows3 from GitHub
 mkdir $REPO_DIR
