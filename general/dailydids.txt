@@ -151,3 +151,16 @@ TODO: convert bannister data
 TODO: pyatoa docs 
 TODO: print some papers to read at home 
 
+OUT : 2022-02-09 18:08:24
+DONE: got nalaska mesh working with c2s bounds 
+DONE: watched a from UC volcano guy 
+DONE: talked to Aakash and Carl about moving forward with Pyatoa 
+DONE: looked into SSA stuff but no booking 
+DONE: bought a vr headset for 'work' 
+
+IN  : 2022-02-10 09:48:30
+WORK: UAF
+TODO: nalaska mesh cube2sph 
+TODO: source and station coordinate transforms 
+TODO: try to run forward simulation 
+
