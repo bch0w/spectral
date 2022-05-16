@@ -31,13 +31,14 @@ source activate seisflows
 
 # Download SeisFlows3 and Pyatoa from GitHub, install in developer mode
 cd $REPO_DIR
-git clone --branch devel https://github.com/bch0w/seisflows3.git
+git clone --branch devel https://github.com/adjtomo/seisflows3.git
 cd seisflows3
 pip install -e .
 
 cd $REPO_DIR
-git clone --branch devel https://github.com/bch0w/pyatoa.git
+git clone --branch devel https://github.com/adjtomo/pyatoa.git
 cd pyatoa
+git checkout 47e152d  # working commit on May 3, 2022
 conda install basemap -y  
 pip install -e .
 
