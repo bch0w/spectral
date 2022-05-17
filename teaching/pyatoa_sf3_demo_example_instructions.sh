@@ -33,6 +33,7 @@ source activate seisflows
 cd $REPO_DIR
 git clone --branch devel https://github.com/adjtomo/seisflows3.git
 cd seisflows3
+git checkout 87c407c  # working commit on May 2, 2022
 pip install -e .
 
 cd $REPO_DIR
