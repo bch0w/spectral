@@ -20,7 +20,7 @@ from obspy import Inventory, UTCDateTime
 from obspy.core.inventory.network import Network
 from obspy.core.inventory.station import Station
 from obspy.core.inventory.channel import Channel
-from obspy.core.inventory.util import Site
+from obspy.core.inventory.util import Site, Equipment
 
 from pyatoa.utils.srcrcv import merge_inventories
 
@@ -400,7 +400,7 @@ def bannister(network_code="ZX", level="station", comp_list=["N", "E", "Z"]):
     return network
 
 
-def beacon(network_code="XX", level="station", comp_list=["N", "E", "Z"]):
+def beacon(network_code="2P", level="station", comp_list=["N", "E", "Z"]):
     """
     Create Beacon network data from scratch.
     Station information taken from the Site and Sensor field deployment notes
@@ -509,19 +509,27 @@ def beacon(network_code="XX", level="station", comp_list=["N", "E", "Z"]):
         longitude = float(stalist[4])
         start_date = UTCDateTime(stalist[5])
         end_date = UTCDateTime(stalist[6])
+        sensor_type = stalist[7]
 
         # Create channel level objects if required
         if level == "channel":
             channels = []
             for comp in comp_list:
+                sensor = Equipment(type="sensor", manufacturer="Guralp",
+                                   model=f"CMG-40T {sensor_type}",
+                                   description="broadband seismoemter")
+                data_logger = Equipment(type="data_logger", 
+                                        manufacturer="Nanometrics",
+                                        model=f"Taurus")
                 cha = Channel(code=f"HH{comp}", location_code="10",
                               start_date=start_date, end_date=end_date,
                               latitude=latitude, longitude=longitude,
                               elevation=default_elevation, depth=default_depth,
-                              azimuth=0.0, dip=-90.0, sample_rate=100
+                              azimuth=0.0, dip=-90.0, sample_rate=100,
+                              sensor=sensor, data_logger=data_logger
                               )
                 # Attach the response
-                cha.response = responses[stalist[7]]
+                cha.response = responses[sensor_type]
                 channels.append(cha)
         else:
             channels = None
@@ -619,9 +627,9 @@ def export_seed_fmt(inv):
 if __name__ == "__main__":
     # Parameters
     level = "channel"  # channel, station
-    write_to = None
+    write_to = "2P_BEACON_Dataless.xml"
     export_to_specfem = False
-    export_to_seed_fmt = True
+    export_to_seed_fmt = False
     plot = False
 
     # Create the Inventory
