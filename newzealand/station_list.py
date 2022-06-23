@@ -406,7 +406,10 @@ def beacon(network_code="2P", level="station", comp_list=["N", "E", "Z"]):
     Station information taken from the Site and Sensor field deployment notes
     kept on a shared Google Drive with Yoshi, Jonathan and myself.
 
-    Updated 1.5.2020
+    Updated Jun 23, 2022
+
+    .. note::
+        Start and end times are based on the MiniSEED data files
 
     :type network_code: str
     :param network_code: chosen two value code used for the network
@@ -420,49 +423,71 @@ def beacon(network_code="2P", level="station", comp_list=["N", "E", "Z"]):
     # Station name, Abbreviation, Code, Lat, Lon, Start, End, Instrument type
     station_info = np.array([
         ["Pori Rd", "PORI", "RD01", "-40.55475083", "175.9710354",
-         "2017-07-19", "2019-04-04", "60s"],
+            "2017-07-18T02:46:10.400000Z", 
+            "2019-01-19T04:34:31.600000Z", "60s"],
         ["Angora Rd", "ANGR", "RD02", "-40.45974293", "176.4750588",
-         "2017-07-19", "2019-04-04", "60s"],
+            "2017-07-18T00:06:19.090000Z", 
+            "2019-01-19T13:36:37.970000Z", "60s"],
         ["Te Uri Rd", "TURI", "RD03", "-40.2656269", "176.3828498",
-         "2017-07-20", "2019-04-04", "30s"],
+            "2017-07-18T00:10:35.140000Z", 
+            "2019-02-22T05:19:15.270000Z", "30s"],
         ["Porangahau", "PORA", "RD04", "-40.2667317", "176.6344719",
-         "2017-07-20", "2019-04-04", "60s"],
+            "2017-07-18T00:18:51.410000Z", 
+            "2019-02-05T03:12:25.860000Z", "60s"],
         ["Manuhara Rd", "MNHR", "RD05", "-40.4689786", "176.2231874",
-         "2017-07-20", "2019-04-05", "30s"],
+            "2017-07-18T04:08:06.500000Z", 
+            "2019-02-22T02:45:06.830000Z", "30s"],
         ["Dannevirke", "DNVK", "RD06", "-40.2971794", "176.1663731",
-         "2017-07-24", "2019-04-02", "30s"],
+            "2017-07-18T02:45:58.130000Z", 
+            "2019-03-08T13:03:23.340000Z", "30s"],
         ["Waipawa", "WPAW", "RD07", "-39.9017124", "176.5370861",
-         "2017-07-24", "2019-04-02", "60s"],
+            "2017-07-18T00:01:13.990000Z", 
+            "2019-02-28T08:49:42.780000Z", "60s"],
         ["Raukawa", "RAKW", "RD08", "-39.7460611", "176.6205577",
-         "2017-07-24", "2019-04-02", "60s"],
+            "2017-07-21T04:54:37.466100Z", 
+            "2019-02-06T17:43:41.150000Z", "60s"],
         ["McNeill Hill", "MCNL", "RD09", "-39.4447675", "176.6974385",
-         "2017-07-25", "2019-04-03", "60s"],
+            "2017-07-21T03:51:49.360000Z", 
+            "2019-02-11T13:46:27.440000Z", "60s"],
         ["Cape Kidnappers", "CPKN", "RD10", "-39.64661592", "177.0765055",
-         "2017-07-25", "2018-03-13", "60s"],
+            "2017-07-23T01:15:24.490000Z", 
+            "2018-03-04T14:37:40.050000Z", "60s"],
         ["Kahuranaki", "KAHU", "RD11", "-39.78731589", "176.8624521",
-         "2017-07-25", "2018-03-13", "60s"],
+            "2017-07-21T04:12:48.360000Z", 
+            "2018-03-06T05:22:32.170000Z", "60s"],
         ["Kaweka Forest", "KWKA", "RD12", "-39.425214", "176.4228",
-         "2017-07-26", "2019-05-03", "30s"],
+            "2017-07-21T04:22:08.830000Z", 
+            "2019-02-04T18:04:08.470000Z", "30s"],
         ["Kereru", "KERE", "RD13", "-39.643259", "176.3768865",
-         "2017-07-26", "2019-04-03", "60s"],
+            "2017-07-21T05:43:56.610000Z", 
+            "2019-03-09T00:14:02.930000Z", "60s"],
         ["Pukenui", "PNUI", "RD14", "-39.9129963", "176.2001869",
-         "2017-07-26", "2018-09-08", "60s"],
+            "2017-07-23T00:16:18.150000Z", 
+            "2018-06-13T18:27:00.980000Z", "60s"],
         ["Waipukarau", "WPUK", "RD15", "-40.0627107", "176.4391311",
-         "2017-07-27", "2019-04-02", "60s"],
+            "2017-07-23T00:10:44.120000Z", 
+            "2019-02-11T00:09:50.690000Z", "60s"],
         ["Omakere", "OROA", "RD16", "-40.105341", "176.6804449",
-         "2017-07-27", "2019-04-04", "60s"],
+            "2017-07-23T00:08:12.220000Z", 
+            "2019-02-05T22:59:39.980000Z", "60s"],
         ["Te Apiti Rd", "TEAC", "RD17", "-39.90868978", "176.9561896",
-         "2017-09-25", "2018-03-14", "30s"],  # no sensor number, no instr type
+            "2017-09-25T02:10:21.585100Z", 
+            "2018-03-02T05:51:56.420000Z", "30s"],  # no sensor number, no instr type
         ["River Rd", "RANC", "RD18", "-39.929775", "176.7039773",
-         "2017-09-25", "2019-04-03", "30s"],
+            "2017-09-25T04:55:05.610000Z", 
+            "2019-01-18T20:12:29.850000Z", "30s"],
         ["Matapiro Rd", "MATT", "RD19", "-39.5796128", "176.6449024",
-         "2018-03-14", "2018-06-25", "30s"],  # same instr. as RD10
+            "2018-03-13T20:31:38.610000Z", 
+            "2018-06-23T16:11:59.100000Z", "30s"],  # same instr. as RD10
         ["Kahuranaki", "KAHU2", "RD20", "-39.79385769", "176.8758813",
-         "2018-03-13", "2018-09-03", "30s"],  # same instr. as RD11
+            "2018-03-13T04:39:43.610000Z", 
+            "2018-08-26T19:00:36.390000Z", "30s"],  # same instr. as RD11
         ["Te Apiti Rd", "TEAC2", "RD21", "-39.913152", "176.946881",
-         "2018-03-14", "2019-04-03", "30s"],  # same instr. as RD17
+            "2018-03-10T09:22:33.610000Z", 
+            "2019-01-22T22:57:49.770000Z", "30s"],  # same instr. as RD17
         ["Castlepoint", "CAPT", "RD22", "-40.910278", "176.199167",
-         "2018-07-20", "2019-05-05", "60s"],  # unknown sensor number
+            "2019-01-01T00:00:00.000000Z", 
+            "2019-01-09T00:41:31.120000Z", "60s"],  # unknown sensor number
     ])
 
     # For setting the network timing
@@ -497,6 +522,18 @@ def beacon(network_code="2P", level="station", comp_list=["N", "E", "Z"]):
                                  "Low (default)", "Off", "100"]
             )
         }
+        sensors = {
+            "30s": Equipment(type="sensor", manufacturer="Guralp",
+                             model="CMG-40T", 
+                             description=f"30s (Broadband) 30s-50Hz 800 V/m/s"),
+            "60s": Equipment(type="sensor", manufacturer="Guralp",
+                             model="CMG-40T",
+                             description=f"60s (Broadband) 60s-50Hz 800 V/m/s"),
+            }
+        data_logger = Equipment(type="data_logger", manufacturer="Nanometrics",
+                                model=f"Taurus",
+                                description="16 Vpp (gain 1), 100 sps, low "
+                                            "impedance, DC removal filter off")
 
     # Add stations to objects
     stations = []
@@ -515,18 +552,13 @@ def beacon(network_code="2P", level="station", comp_list=["N", "E", "Z"]):
         if level == "channel":
             channels = []
             for comp in comp_list:
-                sensor = Equipment(type="sensor", manufacturer="Guralp",
-                                   model=f"CMG-40T {sensor_type}",
-                                   description="broadband seismoemter")
-                data_logger = Equipment(type="data_logger", 
-                                        manufacturer="Nanometrics",
-                                        model=f"Taurus")
                 cha = Channel(code=f"HH{comp}", location_code="10",
                               start_date=start_date, end_date=end_date,
                               latitude=latitude, longitude=longitude,
                               elevation=default_elevation, depth=default_depth,
                               azimuth=0.0, dip=-90.0, sample_rate=100,
-                              sensor=sensor, data_logger=data_logger
+                              sensor=sensors[sensor_type], 
+                              data_logger=data_logger
                               )
                 # Attach the response
                 cha.response = responses[sensor_type]
