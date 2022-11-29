@@ -19,3 +19,6 @@ RIGHT: 836 km
 - NEX_XI = 128 (1000 / 128 = 7.8 km / element)
 - NEX_ETA = 112 (836 / 112 = 7.4 km / element)
 
+## RELEVANT
+https://earthquake.alaska.edu/finding-faults-northeast-alaska
+https://earthquake.alaska.edu/m65-kaktovik-earthquake-largest-ever-north-slope

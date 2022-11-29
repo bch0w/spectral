@@ -10,7 +10,6 @@ from obspy import UTCDateTime, Catalog, read_events
 from obspy.clients.fdsn import Client
 from obspy.geodetics import gps2dist_azimuth
 from obspy.clients.fdsn.header import FDSNNoDataException
-from pyatoa.plugins.new_zealand.gather import geonet_mt
 
 
 def cut_cat(cat, indices=None, method="remove"):

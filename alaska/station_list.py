@@ -36,10 +36,10 @@ def get_from_iris(level="station"):
     c = Client("IRIS")
 
     # A whole-Alaska bounding box including western Canada and Aleutians
-    lat_min = 52.17  # South
-    lat_max = 72.23  # North
-    lon_min = -178.04    # West
-    lon_max = -121.04  # East
+    lat_min = 64.5  # South
+    lat_max = 72.  # North
+    lon_min = -168.    # West
+    lon_max = -140.  # East
 
     starttime = UTCDateTime("2000-01-01")
     networks = ["AK",  # Alaska Regional Network
@@ -145,7 +145,7 @@ if __name__ == "__main__":
     write_to = "alaska_bb_stations.xml"  # Name of output .xml file
     export_to_specfem = True
     export_to_seed_fmt = False
-    plot = False
+    plot = True
 
     # Create the Inventory
     master_inventory = get_from_iris(level=level)
@@ -162,5 +162,5 @@ if __name__ == "__main__":
         master_inventory.plot(projection="local", resolution="l",
                               continent_fill_color="w", water_fill_color="w",
                               label=True, color_per_network=True,
-                              outfile="./master_inventory.png"
+                              outfile="./nalaska.png"
                               )
