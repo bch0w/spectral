@@ -31,7 +31,8 @@ kwargs = {
         "minlongitude": 192,
         "maxlongitude": 222,
         "maxdepth": 200,
-        "minmagnitude": 3,
+        "minmagnitude": 5.,
+        "maxmagnitude": 6.,
         "includeallorigins": True,  # Required to get focal mechanism returns
         }
 
