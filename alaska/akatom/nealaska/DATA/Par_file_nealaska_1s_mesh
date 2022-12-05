@@ -17,8 +17,8 @@ SAVE_FORWARD                    = .false.   # save last frame of forward simulat
 NCHUNKS                         = 1
 
 # angular width of the first chunk (not used if full sphere with six chunks)
-ANGULAR_WIDTH_XI_IN_DEGREES     = 4.d0  
-ANGULAR_WIDTH_ETA_IN_DEGREES    = 5.d0
+ANGULAR_WIDTH_XI_IN_DEGREES     = 5.d0  
+ANGULAR_WIDTH_ETA_IN_DEGREES    = 5.5d0
 CENTER_LATITUDE_IN_DEGREES      = 68.5d0
 CENTER_LONGITUDE_IN_DEGREES     = -145.5d0
 GAMMA_ROTATION_AZIMUTH          = 0.d0
