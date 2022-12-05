@@ -1,7 +1,7 @@
 # AKATOM 
-General project notes for Northern Alaska
+General project notes for orthern Alaska and northeastern Alaska
 
-## REGION
+## REGION (NALASKA)
 LAT: 64.5, 72 (7.5)
 LON: -168, -140 (-28)
 
@@ -12,6 +12,13 @@ TOP: 957 km
 BOT: 1334 km
 LEFT: 836 km
 RIGHT: 836 km
+
+## REGION (NEALASKA)
+LAT: 66, 71 (5)
+LON: -151, -140 (11)
+
+LAT_CENTER: 68.5 
+LON_CENTER: -145.5
 
 ## CHINOOK
 - T1SMALL 28 CORES/NODE
