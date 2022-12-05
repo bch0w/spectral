@@ -78,7 +78,7 @@ ROTATION                        = .true.
 ATTENUATION                     = .true.
 
 # record length in minutes
-RECORD_LENGTH_IN_MINUTES        = 2.5d0
+RECORD_LENGTH_IN_MINUTES        = 10.d0
 
 #-----------------------------------------------------------
 #
@@ -201,7 +201,7 @@ RATIO_BY_WHICH_TO_INCREASE_IT   = 1.5d0
 # save AVS or OpenDX movies
 #MOVIE_COARSE saves movie only at corners of elements (SURFACE OR VOLUME)
 #MOVIE_COARSE does not work with create_movie_AVS_DX
-MOVIE_SURFACE                   = .false.
+MOVIE_SURFACE                   = .true.
 MOVIE_VOLUME                    = .false.
 MOVIE_COARSE                    = .true.
 NTSTEP_BETWEEN_FRAMES           = 50
