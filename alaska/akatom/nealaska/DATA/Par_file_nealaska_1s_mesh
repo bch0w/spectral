@@ -17,20 +17,20 @@ SAVE_FORWARD                    = .false.   # save last frame of forward simulat
 NCHUNKS                         = 1
 
 # angular width of the first chunk (not used if full sphere with six chunks)
-ANGULAR_WIDTH_XI_IN_DEGREES     = 5.d0  
-ANGULAR_WIDTH_ETA_IN_DEGREES    = 5.5d0
+ANGULAR_WIDTH_XI_IN_DEGREES     = 4.d0  
+ANGULAR_WIDTH_ETA_IN_DEGREES    = 5.d0
 CENTER_LATITUDE_IN_DEGREES      = 68.5d0
 CENTER_LONGITUDE_IN_DEGREES     = -145.5d0
 GAMMA_ROTATION_AZIMUTH          = 0.d0
 
 # number of elements at the surface along the two sides of the first chunk
 # (must be multiple of 16 and 8 * multiple of NPROC below)
-NEX_XI                          = 64
-NEX_ETA                         = 80
+NEX_XI                          = 128
+NEX_ETA                         = 112
 
 # number of MPI processors along the two sides of the first chunk
-NPROC_XI                        = 4
-NPROC_ETA                       = 5
+NPROC_XI                        = 8
+NPROC_ETA                       = 7
 
 #-----------------------------------------------------------
 #
