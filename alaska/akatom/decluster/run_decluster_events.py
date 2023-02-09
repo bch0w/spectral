@@ -13,6 +13,8 @@ inv = read_inventory("../metadata/nalaska_stations.xml")
 zedges = [0, 10, 35, 100]
 
 declust = Declust(cat=cat, inv=inv)
+weights = declust.calculate_srcrcv_weights()
+a=1/0
 
 # Plot the original event catalog
 declust.plot(cat=cat, inv=inv, color_by="depth", vmin=0, vmax=30, 
