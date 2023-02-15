@@ -38,3 +38,9 @@ MESH BOTTOM: 400 km
 ## RELEVANT
 https://earthquake.alaska.edu/finding-faults-northeast-alaska
 https://earthquake.alaska.edu/m65-kaktovik-earthquake-largest-ever-north-slope
+
+## ANAT
+- Point forces at the surface (Wang et al. 2018, 2019)
+- 3-station EGF are valid for 8-50s
+
+
