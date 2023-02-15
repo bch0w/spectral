@@ -39,7 +39,7 @@ for stack_path in sorted(glob("EGF/*_stack")):
 
         # Find matching SGF
         sgf_path = os.path.join(f"{comp}{comp}_SGF", 
-                                f"{sta}.{net}.BX{comp}.sem.ascii")
+                                f"{net}.{sta}.BX{comp}.sem.ascii")
         # Not all SGF exist based on the smaller synthetic domain
         if not os.path.exists(sgf_path):
             continue
@@ -60,9 +60,10 @@ for stack_path in sorted(glob("EGF/*_stack")):
         st_sgf[0].data /= st_sgf[0].data.max()
 
         # Start Pyatoa workflow
-        cfg = Config(min_period=8, max_period=80, st_obs_type="syn", 
+        cfg = Config(min_period=30, max_period=50, st_obs_type="syn", 
                      st_syn_type="syn", component_list=[comp],
-                     adj_src_type="cc_traveltime")
+                     adj_src_type="multitaper", stalta_waterlevel=0.12,
+                     tshift_acceptance_level=25.)
 
         mgmt = Manager(config=cfg, st_obs=st_egf, st_syn=st_sgf)
         try:
@@ -72,6 +73,7 @@ for stack_path in sorted(glob("EGF/*_stack")):
             mgmt.measure()
             mgmt.plot(show=False, 
                       save=f"pyatoa_figures/{net}_{sta}_{phase.lower()}_{type_}.png")
+            mgmt.write_adjsrcs(path="./adjsrcs", write_blanks=True)
         except ManagerError:
             continue
 
