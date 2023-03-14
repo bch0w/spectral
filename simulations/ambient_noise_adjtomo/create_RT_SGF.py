@@ -67,7 +67,7 @@ for net in inv:
                 +1 * np.cos(theta) * np.cos(theta_p) * u_nn)
 
 
-        np.savetxt(f"T/{s}.{n}.BXT.sem.ascii", np.vstack((t_arr, u_tt)).T, 
+        np.savetxt(f"T/{n}.{s}.BXT.sem.ascii", np.vstack((t_arr, u_tt)).T, 
                    fmt="%11.6f%21.7E")
-        np.savetxt(f"R/{s}.{n}.BXR.sem.ascii", np.vstack((t_arr, u_rr)).T,
+        np.savetxt(f"R/{n}.{s}.BXR.sem.ascii", np.vstack((t_arr, u_rr)).T,
                    fmt="%11.6f%21.7E")
