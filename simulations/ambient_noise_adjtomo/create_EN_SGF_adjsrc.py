@@ -36,8 +36,7 @@ for net in inv:
 
         # Time and amplitude for adjoint source (u_tt)
         try:
-            t_arr, u_tt = np.loadtxt(glob(f"T/{n}.{s}.BXT.adj")[0], 
-                                     usecols=[0, 1])
+            t_arr, u_tt = np.loadtxt(f"T/{n}.{s}.BXT.adj", usecols=[0, 1]).T
         except FileNotFoundError:
             continue
 
@@ -61,12 +60,12 @@ for net in inv:
         u_nn = +1 * np.sin(theta) * np.sin(theta_p) * u_tt 
 
 
-        np.savetxt(f"EE/{n}.{s}.BXE.sem.ascii", np.vstack((t_arr, u_ee)).T, 
+        np.savetxt(f"EE/{n}.{s}.BXE.adj", np.vstack((t_arr, u_ee)).T, 
                    fmt="%11.6f%21.7E")
-        np.savetxt(f"EN/{n}.{s}.BXE.sem.ascii", np.vstack((t_arr, u_en)).T, 
+        np.savetxt(f"EN/{n}.{s}.BXE.adj", np.vstack((t_arr, u_en)).T, 
                    fmt="%11.6f%21.7E")
-        np.savetxt(f"NE/{n}.{s}.BXN.sem.ascii", np.vstack((t_arr, u_ne)).T, 
+        np.savetxt(f"NE/{n}.{s}.BXN.adj", np.vstack((t_arr, u_ne)).T, 
                    fmt="%11.6f%21.7E")
-        np.savetxt(f"NN/{n}.{s}.BXN.sem.ascii", np.vstack((t_arr, u_nn)).T, 
+        np.savetxt(f"NN/{n}.{s}.BXN.adj", np.vstack((t_arr, u_nn)).T, 
                    fmt="%11.6f%21.7E")
 
