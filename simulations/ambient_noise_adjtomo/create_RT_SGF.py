@@ -9,19 +9,23 @@ from pysep.utils.io import read_stations
 
 
 # Set parameters here 
-stations_file = "/import/c1/ERTHQUAK/bhchow/work/anat_trial_run/DATA/STATIONS"
+stations_file = "../DATA/STATIONS"
 
 # Used to grab station coordinates
 inv = read_stations(stations_file)
 
 # Find information for master station
-station_a = inv.select(network="IU", station="COLA")
-lat_a = station_a[0][0].latitude
-lon_a = station_a[0][0].longitude
+# Hardcode location of: IU.COLA
+lat_a = 64.8736
+lon_a = -147.8616
+
+if not lat_a:
+    station_a = inv.select(network="IU", station="COLA")
+    lat_a = station_a[0][0].latitude
+    lon_a = station_a[0][0].longitude
 
 # Dummy station to grab time axis for. Assumed all will have same t-axis
-t_arr = u_nn = np.loadtxt(f"N_SGF/COLA.IU.BXN.sem.ascii", usecols=0)
-
+t_arr = np.loadtxt(glob(f"N/*.ascii")[0], usecols=0)
 for net in inv:
     for sta in net:
         n = net.code
@@ -30,10 +34,10 @@ for net in inv:
         # Some combinations don't exist. Ignore these
         # 1st letter = point source direction; 2nd letter = recorded component
         try:
-            u_nn = np.loadtxt(f"N_SGF/{s}.{n}.BXN.sem.ascii", usecols=1)
-            u_ne = np.loadtxt(f"N_SGF/{s}.{n}.BXE.sem.ascii", usecols=1)
-            u_ee = np.loadtxt(f"E_SGF/{s}.{n}.BXE.sem.ascii", usecols=1)
-            u_en = np.loadtxt(f"E_SGF/{s}.{n}.BXN.sem.ascii", usecols=1)
+            u_nn = np.loadtxt(f"N/{n}.{s}.BXN.sem.ascii", usecols=1)
+            u_ne = np.loadtxt(f"N/{n}.{s}.BXE.sem.ascii", usecols=1)
+            u_ee = np.loadtxt(f"E/{n}.{s}.BXE.sem.ascii", usecols=1)
+            u_en = np.loadtxt(f"E/{n}.{s}.BXN.sem.ascii", usecols=1)
         except FileNotFoundError:
             continue
 
@@ -63,7 +67,7 @@ for net in inv:
                 +1 * np.cos(theta) * np.cos(theta_p) * u_nn)
 
 
-        np.savetxt(f"T_SGF/{s}.{n}.BXT.sem.ascii", np.vstack((t_arr, u_tt)).T, 
+        np.savetxt(f"T/{n}.{s}.BXT.sem.ascii", np.vstack((t_arr, u_tt)).T, 
                    fmt="%11.6f%21.7E")
-        np.savetxt(f"R_SGF/{s}.{n}.BXR.sem.ascii", np.vstack((t_arr, u_rr)).T,
+        np.savetxt(f"R/{n}.{s}.BXR.sem.ascii", np.vstack((t_arr, u_rr)).T,
                    fmt="%11.6f%21.7E")

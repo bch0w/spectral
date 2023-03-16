@@ -2,11 +2,14 @@
 General project notes for orthern Alaska and northeastern Alaska
 
 ## REGION (NALASKA)
-LAT: 64.5, 72 (7.5)
-LON: -168, -140 (-28)
+LAT: 61.8, 71.4 (~10)
+LON: -172, -166 (~8)
+LON: -141, -135 (~6)
 
-LAT_CENTER: 68.25
+LAT_CENTER: 67.25 (old: 68.25)
 LON_CENTER: -154.0
+LAT_WIDTH (ETA): 10
+LON_WIDTH (XI): 13
 
 TOP: 957 km
 BOT: 1334 km
@@ -38,3 +41,9 @@ MESH BOTTOM: 400 km
 ## RELEVANT
 https://earthquake.alaska.edu/finding-faults-northeast-alaska
 https://earthquake.alaska.edu/m65-kaktovik-earthquake-largest-ever-north-slope
+
+## ANAT
+- Point forces at the surface (Wang et al. 2018, 2019)
+- 3-station EGF are valid for 8-50s
+
+
