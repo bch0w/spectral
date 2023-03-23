@@ -1,6 +1,8 @@
-# 12/30/22 SPECFEM3D_GLOBE 97193db
+# 3/23/23 SPECFEM3D_GLOBE v8.0.0
 # AKTOMO NORTHERN ALASKA PAR FILE
 # EDITED FROM MAIN DIRECTORY PAR_FILE
+#
+# Coarse mesh designed for SeisFlows testing for large-N simulation runs
 #
 #-----------------------------------------------------------
 #
@@ -17,8 +19,8 @@ SAVE_FORWARD                    = .true.   # save last frame of forward simulati
 NCHUNKS                         = 1
 
 # angular width of the first chunk (not used if full sphere with six chunks)
-ANGULAR_WIDTH_XI_IN_DEGREES     = 12.75d0  # LONGITUDE
-ANGULAR_WIDTH_ETA_IN_DEGREES    = 7.25d0    # LATITUDE
+ANGULAR_WIDTH_XI_IN_DEGREES     = 14.d0  # LONGITUDE
+ANGULAR_WIDTH_ETA_IN_DEGREES    = 9.0d0    # LATITUDE
 CENTER_LATITUDE_IN_DEGREES      = 68.25d0
 CENTER_LONGITUDE_IN_DEGREES     = -154.d0
 GAMMA_ROTATION_AZIMUTH          = 0.d0
@@ -39,7 +41,7 @@ NPROC_ETA                       = 1
 #-----------------------------------------------------------
 
 # 1D models with real structure:
-# 1D_isotropic_prem, 1D_transversely_isotropic_prem, 1D_iasp91, 1D_1066a, 1D_ak135f_no_mud, 1D_ref, 1D_ref_iso, 1D_jp3d,1D_sea99
+# 1D_isotropic_prem, 1D_transversely_isotropic_prem, 1D_iasp91, 1D_1066a, 1D_ak135f_no_mud, 1D_ref, 1D_ref_iso, 1D_jp3d,1D_sea100
 #
 # 1D models with only one fictitious averaged crustal layer:
 # 1D_isotropic_prem_onecrust, 1D_transversely_isotropic_prem_onecrust, 1D_iasp91_onecrust, 1D_1066a_onecrust, 1D_ak135f_no_mud_onecrust
