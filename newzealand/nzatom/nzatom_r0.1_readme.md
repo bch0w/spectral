@@ -12,8 +12,10 @@ on the IRIS EMC. The following sections describe the issue and our solution.
 
 The New Zealand Adjoint TOmography Model (NZATOM) is a 3D velocity model 
 derived from a full waveform inversion using the numerical solver SPECFEM3D
-Cartesian (SPECFEM3D). SPECFEM3D is a spectral-element solver, which solves 
-the seismic wave equation on unstructured hexahedral meshes (deformed cubes). 
+Cartesian (SPECFEM3D). 
+
+SPECFEM3D is a spectral-element solver, which solves the seismic wave equation on 
+unstructured hexahedral meshes (deformed cubes). 
 These *GLL* (Gauss-Lobatto-Legendre) models stretch and skew cubic elements to
 conform to interface boundaries (e.g., topography, moho topography), or 
 *coarsening* layers, where elements increase in vertical or lateral size. These
@@ -30,10 +32,6 @@ Due to decreasing resolution with depth, the final NZATOM model published on
 IRIS EMC is split into three overlapping blocks: shallow (-3--8km), 
 crust (7--50km), mantle (44--400km)
 
-![gll_model](https://user-images.githubusercontent.com/23055374/243476592-4078655a-1bef-48de-9341-9b6e1de34b37.png)
-*Fig. 1: Side-on view (Y-Z plane) of the NZATOM fine-resolution GLL model showing coarsening layers at approximately 25km and 90km depths.
-These coarsening layers lead to artefacts from nearest-neighbor interpolation of the original NZATOM model. Depths are shown in units of meters.*
-
 ## Problem
 
 > TL;DR: Original model shows obvious numerical artefacts due to the 
@@ -49,7 +47,7 @@ program would find the nearest GLL point and assign that to point **r**.
 
 This method worked nominally for regular elements, but for skewed elements 
 related to coarsening layers the nearest neighbor algorithm tended to create
-artefacts as certain points **r** began to show preference for certain element
+artefacts as certain points **r** began to show outlines of element
 boundaries as they passed through skewed elements.
 
 During the inversion, this approach was also used to transfer our tomography 
@@ -58,12 +56,16 @@ of the coarse mesh were imparted onto the fine mesh. Similarly, extracting the
 final velocity model imparted the coarsening layers of the *fine* mesh onto 
 the published version of NZATOM.
 
+![gll_model](https://user-images.githubusercontent.com/23055374/243476592-4078655a-1bef-48de-9341-9b6e1de34b37.png)
+*Fig. 1: Side-on view (Y-Z plane) of the NZATOM fine-resolution GLL model showing coarsening layers at approximately 25km and 90km depths.
+These coarsening layers lead to artefacts from nearest-neighbor interpolation of the original NZATOM model. Depths are shown in units of meters.*
+
 ### Artefact Locations
 
 Artefacts correspond to the coarsening layers of both the coarse and fine mesh:
 
-Coarse Mesh Coarsening Layers: ~15--35km, ~75--125km
-Fine Mesh Coarsening Layers: ~14--25km, ~65--100km
+- Coarse Mesh Coarsening Layers: ~15--35km, ~75--125km  
+- Fine Mesh Coarsening Layers: ~14--25km, ~65--100km  
 
 ## Solution
 
@@ -103,17 +105,17 @@ significant affect on future applications of the model.
 
 ### Smoothing Coefficients
 
-**Shallow** model (-2.25--8km depth):
-- Horizontal Half-Width = .5km
-- Vertical Half-width = .5km
+**Shallow** model (-2.25--8km depth):  
+- Horizontal Half-Width = .5km  
+- Vertical Half-width = .5km  
 
-**Crustal** model (7--50km depth):
-- Horizontal Half-Width = 3km
-- Vertical Half-width = 1km
+**Crustal** model (7--50km depth):  
+- Horizontal Half-Width = 3km  
+- Vertical Half-width = 1km  
 
-**Mantle** model (44--400km depth):
-- Horizontal Half-Width = 4km
-- Vertical Half-width = 2km
+**Mantle** model (44--400km depth):  
+- Horizontal Half-Width = 4km  
+- Vertical Half-width = 2km  
 
 **Note**: All parameters (vp, vs, rho, qp, qs) are smoothed
 
