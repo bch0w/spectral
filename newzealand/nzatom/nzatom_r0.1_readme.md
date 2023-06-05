@@ -1,9 +1,10 @@
 # NZATOM r0.1
 
-June 1, 2023 
-Bryant Chow *(bhchow@alaska.edu)*
+June 5, 2023 
+Bryant Chow *(bhchow@alaska.edu)*  
+[doi.org/10.17611/dp/emc.2021.nzatomnnorthvpvs.1](https://doi.org/10.17611/dp/emc.2021.nzatomnnorthvpvs.1)
 
-This document describes an update to the NZATOM model (revision 1.0) that 
+This document describes an update to the NZATOM model (revision 0.1) that 
 attempts to address numerical artefacts present in the original model available
 on the IRIS EMC. The following sections describe the issue and our solution.
 
@@ -29,6 +30,9 @@ Due to decreasing resolution with depth, the final NZATOM model published on
 IRIS EMC is split into three overlapping blocks: shallow (-3--8km), 
 crust (7--50km), mantle (44--400km)
 
+![gll_model](https://user-images.githubusercontent.com/23055374/243476592-4078655a-1bef-48de-9341-9b6e1de34b37.png)
+*Fig. 1: Side-on view (Y-Z plane) of the NZATOM fine-resolution GLL model showing coarsening layers at approximately 25km and 90km depths.
+These coarsening layers lead to artefacts from nearest-neighbor interpolation of the original NZATOM model. Depths are shown in units of meters.*
 
 ## Problem
 
@@ -61,7 +65,6 @@ Artefacts correspond to the coarsening layers of both the coarse and fine mesh:
 Coarse Mesh Coarsening Layers: ~15--35km, ~75--125km
 Fine Mesh Coarsening Layers: ~14--25km, ~65--100km
 
-
 ## Solution
 
 > TL;DR: We interpolate affected model onto a regular mesh, smooth away 
@@ -93,7 +96,7 @@ significant affect on future applications of the model.
 
 1. Generate regular GLL models with SPECFEM for: A) shallow, B) crust, C) mantle
 2. Interpolate NZATOM XYZ model from IRIS EMC onto meshes from (1)
-3. Smooth SPECFEM GLL models created in (2)
+3. Smooth SPECFEM GLL models created in (2) using smoothing coefficients listed below
 4. Use nearest-neighbor to extract XYZ files from smoothed models of (3)
 5. Convert .xyz files to IRIS EMC netCDF format
 
@@ -112,6 +115,7 @@ significant affect on future applications of the model.
 - Horizontal Half-Width = 4km
 - Vertical Half-width = 2km
 
+**Note**: All parameters (vp, vs, rho, qp, qs) are smoothed
 
 ## Revised Model
 
@@ -120,10 +124,26 @@ on a regular grid for each of the sub-models. Now that the underlying GLL model
 is regular, there are no artefacts that arise from this approach and the 
 resulting XYZ models show smoothly varying values and no artefacting. 
 
+![](https://user-images.githubusercontent.com/23055374/243476681-43106c92-1742-4274-ba4b-2b60f9b4a308.png)
+*Fig. 2: Artefact removal, slice through Crust tomography model at X~=171km (Y-Z plane) for Vs in km/s.  
+Left: Original NZATOM model showing visible artefacts. Right: Revised (r0.1) NZATOM model smoothed with a 2D Gaussian 
+w/ a horizontal half-width of 3km, and a vertical half-width of 1km*
+
+![](https://user-images.githubusercontent.com/23055374/243476805-b3c5fe04-0ca2-4bb1-aa22-b4bfe5950441.png)
+*Fig 3: Same as Fig. 2 but for Y=5286km (X-Z plane)*
+
+![](https://user-images.githubusercontent.com/23055374/243476867-11fed8bd-b85b-4501-9bd6-bfc245923d64.png)
+*Fig. 4: Same as Fig. 2 but for Z=15km BSL (X-Y plane)*
+
+![](https://user-images.githubusercontent.com/23055374/243477033-7363b743-3cc4-4f57-b173-4996926922c2.png)
+*Fig. 5: Same as Fig. 2 but for Z=25km BSL (X-Y plane)*
+
+
 ### Amplitudes
 
 The smoothing procedure will have damped the largest amplitudes of the 
-underlying model, resulting in less 
+underlying model, resulting in slightly lower minimum and maximum amplitudes for 
+all parameters.
 
 ### Domain Bounds
 
