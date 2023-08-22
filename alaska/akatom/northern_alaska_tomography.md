@@ -140,4 +140,9 @@ write_cat_to_event_list(cat=gcmt_cat, fid_out="event_input.txt")
 - We'll throw in a large buffer here just incase we have some slower or non-
   direct surface waves and gather 500s seismogram time.
 
+### Misc. Notes:
+Largest station distance in dataset is AK.TNA -> TA.E29M which is 1334km. For 
+the ZZ component, the main signal tapers out by 15m which sets the 
+simulation time.
 
+For a 40core mesh ~120000 elements, a 20m simulation time takes ~22m on Chinook
