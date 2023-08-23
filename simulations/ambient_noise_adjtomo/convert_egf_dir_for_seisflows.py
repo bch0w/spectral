@@ -7,9 +7,12 @@ from glob import glob
 from pysep.utils.io import read_stations
 
 
-input_dir = "/import/c1/ERTHQUAK/bhchow/data/egfs/SAC_I3_stack_4_Zendo"
-output_dir = "/import/c1/ERTHQUAK/bhchow/data/egfs/NALASKA_EGF"
-stations_file = "/import/c1/ERTHQUAK/bhchow/work/akatom/northern_alaska/SFDATA/STATIONS"
+# input_dir = "/import/c1/ERTHQUAK/bhchow/data/egfs/SAC_I3_stack_4_Zendo"
+# output_dir = "/import/c1/ERTHQUAK/bhchow/data/egfs/NALASKA_EGF"
+# stations_file = "/import/c1/ERTHQUAK/bhchow/work/akatom/northern_alaska/SFDATA/STATIONS"
+input_dir = "/home/bchow/Work/data/egfs/SAC_I3_stack_4_Zendo/"
+output_dir = "/home/bchow/Work/data/egfs/NALASKA_EGF"
+stations_file = "/home/bchow/Work/work/seisflows/anat_trial/workdir/DATA/STATIONS"
 
 # Used for cutting out stations that are not in the domain
 inv = read_stations(stations_file)
