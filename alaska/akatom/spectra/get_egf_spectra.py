@@ -41,13 +41,13 @@ def wf_fft(wf, fNyq):
 
 i = 0
 path = "/home/bchow/Work/data/egfs/NALASKA_EGF/hyp"
-amp_arr = None
 
 for src in glob(os.path.join(path, "*")):
     src_name = os.path.basename(src)
     for kernel in glob(os.path.join(src, "*")):
         kernel_name = os.path.basename(kernel)
         i = 0
+        amp_arr = None
         for fid in glob(os.path.join(kernel, "*")):
             st = read(fid)
             tr = st[0]  # assuming only one trace per stream
