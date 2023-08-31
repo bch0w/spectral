@@ -33,51 +33,37 @@ from pysep.utils.io import read_stations, write_stations_file
 
 # SET PARAMETERS HERE
 INPUT_DIR = "/home/bchow/Work/data/egfs/SAC_I3_stack_4_Zendo/"
-OUTPUT_DIR = "/home/bchow/Work/data/egfs/NALASKA_EGF/hyp"  # !!!
-SOURCES_FILE = "FINAL/SOURCES_NALASKA"
-STATIONS_FILE = "FINAL/STATIONS_NALASKA"
-STATIONS_ALL = "FINAL/ORIGINAL_STATIONS_NALASKA"
-NEW_STARTTIME = UTCDateTime("2000-01-01T00:00:00")
-NEW_LENGTH_S = 60 * 10  # 10 minutes
+OUTPUT_DIR = "/home/bchow/Work/data/egfs/LIU22_EGF"  # !!!
+SOURCES_FILE = "SOURCES_FINAL_NALASKA"
+STATIONS_FILE = "STATIONS_FINAL_NALASKA"
+STATIONS_ALL = "data/ORIGINAL_STATIONS_NALASKA"
 
 
 def restructure_directory():
     """
-    Creates copies of each of the default SAC files that is renamed and
-    re-organized to fit the directory structure. The resulting directories will
-    be formatted:
+    Creates symlinks of each of the default SAC files that is renamed and
+    re-organized to fit the directory structure. Does NOT touch the original
+    data at all. The resulting directories will be formatted:
 
     <ELL_OR_HYP>/<SOURCE_STATION>/<ZZ_OR_TT>/<RECEIVER_STATION>
 
     <RECEIVER_STATION> will be formatted NN.SSS.CXC.SAC
     """
-    inv = read_stations(STATIONS_FILE)
-
     for stack in glob(os.path.join(INPUT_DIR, "*")):
         # e.g., Lov_I3_hyp_stack
         phase, _, type_, _ = os.path.basename(stack).split("_")
-        # !!! Hyp data has higher SNR so we are using that for the inversion
-        if type_ == "ell":
-            continue
+
         kernel = {"Lov": "TT", "Ray": "ZZ"}[phase]                
         comp = kernel[-1]                                        
-        for src in glob(os.path.join(stack, "*")):                     
-            # Source station needs to be in the simulation domain
-            net_src, sta_src = os.path.basename(src).split("_")                   
-            if not bool(inv.select(network=net_src, station=sta_src)):            
-                continue                                                         
-
+        for src in glob(os.path.join(stack, "*")):
             for fid in glob(os.path.join(src, "*")):                      
                 # Separate out the station names from rest of file name       
                 _fid = os.path.splitext(os.path.basename(fid))[0]           
                 _, net_src, sta_src, net_rcv, sta_rcv = _fid.split("_")       
 
-                # Rcv station need to be in the simulation domain
-                if not bool(inv.select(network=net_rcv, station=sta_rcv)):  
-                    continue                                                      
                 # Determine the correct save location                              
-                path_out = os.path.join(OUTPUT_DIR, f"{net_src}_{sta_src}",
-                                        kernel)
+                path_out = os.path.join(OUTPUT_DIR, type_.lower(),
+                                        f"{net_src}_{sta_src}", kernel)
                 if not os.path.exists(path_out):                                    
                     os.makedirs(path_out)                                          
 
@@ -86,43 +72,10 @@ def restructure_directory():
                 filename_out = f"{net_rcv}.{sta_rcv}.LX{comp}.SAC"                
                 fid_out = os.path.join(path_out, filename_out)                     
                 if not os.path.exists(fid_out):                                  
-                    shutil.copyfile(fid, fid_out)   
+                    os.symlink(fid, fid_out)
 
 
-def overwrite_metadata_and_trim_length():
-    """
-    Set a new starttime and fix some wonky SAC headers that are present in the
-    default data. Also trim the waveforms to a specified time duration
-    """
-    for src_dir in glob(os.path.join(OUTPUT_DIR, "*")):
-        for kernel in glob(os.path.join(src_dir, "*")):
-            for rcv_fid in glob(os.path.join(kernel, "*")):
-                fid = os.path.basename(rcv_fid)
-                try:
-                    net, sta, cha, sac = fid.split(".")
-                    st = read(fid)
-                    if len(st) != 1:
-                        print(f"ERROR: {fid} too many traces")
-                        continue
-                    for tr in st:
-                        # Set the correct stats attribute
-                        tr.stats.network = net
-                        tr.stats.station = sta
-                        tr.stats.channel = cha
-                        # Set the correct SAC header
-                        tr.stats.starttime = NEW_STARTTIME
-                        tr.stats.sac.nzyear = NEW_STARTTIME.year
-                        tr.stats.sac.evdp = 0.
-                        # Trim data
-                        tr.trim(NEW_STARTTIME, NEW_STARTTIME + NEW_LENGTH_S)
-                    st.write(fid, format="SAC")
-                    print(f"SUCCESS: {fid}")
-                except Exception as e:
-                    print(f"ERROR: {fid} {e}")
-                    continue
-
-
-def count_source_receiver_hits(src_threshold=55, rcv_threshold=5):
+def count_source_receiver_hits(src_threshold=86, rcv_threshold=5):
     """
     Count the number of data for each source and each receiver station as a way
     of determining which ones to keep and which to kick. Sets a threshold for
@@ -182,11 +135,40 @@ def count_source_receiver_hits(src_threshold=55, rcv_threshold=5):
     return src_count_out, rcv_count_out
 
 
-def plot_source_receiver_hits():
+def write_source_station_files_with_thresholded_counts():
+    """Write out stations files"""
+    src_count, rcv_count = count_source_receiver_hits()
+
+    inv = read_stations(STATIONS_ALL)
+    src_inv = read_stations(SOURCES_FILE)
+    rcv_inv = read_stations(STATIONS_FILE)
+    print(f"SRC: {len(src_inv.get_contents()['stations'])}")
+    print(f"RCV: {len(rcv_inv.get_contents()['stations'])}")
+
+    for net in inv:
+        for sta in net:
+            if f"{net.code}_{sta.code}" in src_count:
+                pass
+            else:
+                src_inv = src_inv.remove(network=net.code, station=sta.code)
+            if f"{net.code}_{sta.code}" in rcv_count:
+                pass
+            else:
+                rcv_inv = rcv_inv.remove(network=net.code, station=sta.code)
+
+    print(f"SRC: {len(src_inv.get_contents()['stations'])}")
+    print(f"RCV: {len(rcv_inv.get_contents()['stations'])}")
+
+    write_stations_file(src_inv, "SOURCES_FINAL_NALASKA")
+    write_stations_file(rcv_inv, "STATIONS_FINAL_NALASKA")
+
+
+def plot_source_receiver_hits(src_threshold=86, rcv_threshold=5):
     """
     Plot src_count and rcv_count to get a map of coverage at each station loc.
     """
-    src_count, rcv_count = count_source_receiver_hits()
+    src_count, rcv_count = count_source_receiver_hits(src_threshold,
+                                                      rcv_threshold)
 
     inv = read_stations(STATIONS_ALL)
 
@@ -203,7 +185,7 @@ def plot_source_receiver_hits():
             cnts.append(count)
             codes.append(code)
 
-        f = plt.figure(figsize=(20, 10))
+        f = plt.figure(figsize=(20, 10), dpi=200)
         plt.scatter(lons, lats, c=cnts, marker="o",
                     zorder=6, s=40, ec="k", lw=1)
         for lon, lat, code in zip(lons, lats, codes):
@@ -364,62 +346,139 @@ def plot_receiver_coverage():
     Creates very simple scatter plots showing each receiver station and the
     corresponding source stations which have data.
     """
-    inv = read_stations(STATIONS_FILE)
+    inv_srcs = read_stations(SOURCES_FILE)
+    inv_rcvs = read_stations(STATIONS_FILE)
 
+    rcv_dict = {}
     for src_dir in glob(os.path.join(OUTPUT_DIR, "*")):
         src_net, src_sta = os.path.basename(src_dir).split("_")
-        src_inv = inv.select(network=src_net, station=src_sta)
+        src_inv = inv_srcs.select(network=src_net, station=src_sta)
         if not src_inv:
             print(f"SRC ERROR: {src_net}.{src_sta}")
             continue
         src_lat = src_inv[0][0].latitude
         src_lon = src_inv[0][0].longitude
 
-        z_rcv_lats, z_rcv_lons = [], []
-        t_rcv_lats, t_rcv_lons = [], []
         for kernel in glob(os.path.join(src_dir, "*")):
-            kernel_name = os.path.basename(kernel)
             for rcv_fid in glob(os.path.join(kernel, "*")):
                 rcv_net, rcv_sta, *_ = os.path.basename(rcv_fid).split(".")
-                rcv_inv = inv.select(network=rcv_net, station=rcv_sta)
+                rcv_inv = inv_rcvs.select(network=rcv_net, station=rcv_sta)
                 if not rcv_inv:
                     print(f"RCV ERROR: {rcv_net}.{rcv_sta}")
                     continue
-                if kernel_name == "ZZ":
-                    z_rcv_lats.append(rcv_inv[0][0].latitude)
-                    z_rcv_lons.append(rcv_inv[0][0].longitude)
-                elif kernel_name == "TT":
-                    t_rcv_lats.append(rcv_inv[0][0].latitude)
-                    t_rcv_lons.append(rcv_inv[0][0].longitude)
+                if f"{rcv_net}_{rcv_sta}" not in rcv_dict:
+                    rcv_dict[f"{rcv_net}_{rcv_sta}"] = {"lats": [src_lat],
+                                                        "lons": [src_lon]
+                                                        }
+                else:
+                    rcv_dict[f"{rcv_net}_{rcv_sta}"]["lats"].append(src_lat)
+                    rcv_dict[f"{rcv_net}_{rcv_sta}"]["lons"].append(src_lon)
 
-        n = len(z_rcv_lats) + len(t_rcv_lats)
-        plt.scatter(src_lon, src_lat, c="r", marker="o", zorder=6)
-        plt.scatter(z_rcv_lons, z_rcv_lats, c="b", marker="v", zorder=5)
-        plt.scatter(t_rcv_lons, t_rcv_lats, c="g", marker="^", zorder=5)
-        for rcv_lon, rcv_lat in zip(z_rcv_lons, z_rcv_lats):
+    for rcv, vals in rcv_dict.items():
+        rcv_net, rcv_sta = rcv.split("_")
+        rcv_inv = inv_rcvs.select(network=rcv_net, station=rcv_sta)
+        rcv_lat = rcv_inv[0][0].latitude
+        rcv_lon = rcv_inv[0][0].longitude
+
+        plt.scatter(rcv_lon, rcv_lat, c="r", marker="v", zorder=6)
+        plt.scatter(vals["lons"], vals["lats"], c="g", marker="o", zorder=5)
+
+        for src_lon, src_lat in zip(vals["lons"], vals["lats"]):
             plt.plot([src_lon, rcv_lon], [src_lat, rcv_lat], c="k",
                      ls="-", alpha=0.25, zorder=4)
-        for rcv_lon, rcv_lat in zip(t_rcv_lons, t_rcv_lats):
-            plt.plot([src_lon, rcv_lon], [src_lat, rcv_lat], c="k",
-                     ls="-", alpha=0.25, zorder=4)
-
-        # Plot all stations for refernce
-        for net in inv:
-            for sta in net:
-                plt.scatter(sta.longitude, sta.latitude, c="k", marker="s",
-                            zorder=3, alpha=0.25)
 
         plt.xlim([-168, -140])
         plt.ylim([64.5, 72.])
         plt.xlabel("Longitude")
         plt.ylabel("Latitude")
-        plt.title(f"{src_net}.{src_sta}; {kernel_name}; N={n}")
-        plt.savefig(f"coverage_figures/{n}_{src_net}_{src_sta}_{kernel_name}.png")
+        n = len(vals['lons'])
+        plt.title(f"{rcv_net}.{rcv_sta}; N={n}")
+        plt.savefig(f"{n}_{rcv_net}_{rcv_sta}_rcv.png")
         plt.close("all")
 
 
-if __name__ == "__main__":
-    count_source_receiver_hits()
-    restructure_directory()
-    overwrite_metadata_and_trim_length()
-    plot_measurement_coverage()
+def copy_trimmed_directory():
+    """
+    Creates copies of each of the default SAC files but only for the chosen
+    SOURCE and STATION files and type (ELL or HYP). Files are copied because
+    their data and metadata will be modified later and we don't want to affect
+    the original dataset
+
+    <ELL_OR_HYP>/<SOURCE_STATION>/<ZZ_OR_TT>/<RECEIVER_STATION>
+
+    <RECEIVER_STATION> will be formatted NN.SSS.CXC.SAC
+    """
+    # OVERWRITE OUTPUT_DIR
+    OUTPUT_DIR = "/home/bchow/Work/data/egfs/NAKANAT_EGF"
+    inv_srcs = read_stations(SOURCES_FILE)
+    inv_rcvs = read_stations(STATIONS_FILE)
+
+    for stack in glob(os.path.join(INPUT_DIR, "*")):
+        # e.g., Lov_I3_hyp_stack
+        phase, _, type_, _ = os.path.basename(stack).split("_")
+        # We use hyp data because it has higher SNR (from paper)
+        if type_.lower() == "ell":
+            continue
+
+        kernel = {"Lov": "TT", "Ray": "ZZ"}[phase]
+        comp = kernel[-1]
+        for src in glob(os.path.join(stack, "*")):
+            # Source station needs to be in the simulation domain
+            net_src, sta_src = os.path.basename(src).split("_")
+            if not bool(inv_srcs.select(network=net_src, station=sta_src)):
+                continue
+
+            for fid in glob(os.path.join(src, "*")):
+                # Separate out the station names from rest of file name
+                _fid = os.path.splitext(os.path.basename(fid))[0]
+                _, net_src, sta_src, net_rcv, sta_rcv = _fid.split("_")
+
+                # Rcv station need to be in the simulation domain
+                if not bool(inv_rcvs.select(network=net_rcv, station=sta_rcv)):
+                    continue
+                # Determine the correct save location
+                path_out = os.path.join(OUTPUT_DIR, f"{net_src}_{sta_src}",
+                                        kernel)
+                if not os.path.exists(path_out):
+                    os.makedirs(path_out)
+
+                # Label the station correctly, L because it's 1Hz data, X
+                # because it's a time series derived from observational data
+                filename_out = f"{net_rcv}.{sta_rcv}.LX{comp}.SAC"
+                fid_out = os.path.join(path_out, filename_out)
+                if not os.path.exists(fid_out):
+                    shutil.copy(fid, fid_out)
+                    _overwrite_metadata_and_trim_length(fid_out)
+
+
+def _overwrite_metadata_and_trim_length(
+        fid, new_starttime="2000-01-01T00:00:00", new_length_s=60*20):
+    """
+    Set a new starttime and fix some wonky SAC headers that are present in the
+    default data. Also trim the waveforms to a specified time duration
+    """
+    new_starttime = UTCDateTime(new_starttime)
+    try:
+        basename = os.path.basename(fid)
+        net, sta, cha, sac = basename.split(".")
+        st = read(fid)
+        if len(st) != 1:
+            print(f"ERROR: {basename} too many traces")
+            return
+        for tr in st:
+            # Set the correct stats attribute
+            tr.stats.network = net
+            tr.stats.station = sta
+            tr.stats.channel = cha
+            # Set the correct SAC header
+            tr.stats.starttime = new_starttime
+            tr.stats.sac.nzyear = new_starttime.year
+            tr.stats.sac.evdp = 0.
+            # Trim data
+            tr.trim(new_starttime, new_starttime + new_length_s)
+        st.write(fid, format="SAC")
+        print(f"SUCCESS: {basename}")
+    except Exception as e:
+        print(f"ERROR: {basename} {e}")
+        return
+
