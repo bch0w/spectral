@@ -75,6 +75,99 @@ def restructure_directory():
                     os.symlink(fid, fid_out)
 
 
+def fix_restructured_directory():
+    """
+    Goes back through restructured directory to fix SAC headers and rename files
+    """
+    for type_ in glob(os.path.join(INPUT_DIR, "*")):
+        for src_sta in glob(os.path.join(type_, "*")):
+            for kernel in glob(os.path.join(src_sta, "*")):
+                for fid in glob(os.path.join(kernel, "*")):
+                    # Separate out the station names from rest of file name       
+                    _fid = os.path.splitext(os.path.basename(fid))[0]           
+                    net, sta, cha = _fid.split(".")
+
+                    fid_out = fid.replace(".SAC", ".sac")
+                    os.rename(fid, fid_out)  # .SAC -> .sac
+                    # Correct the SAC header
+                    try:
+                        st = read(fid_out)
+                        if len(st) != 1:
+                            print(f"ERROR: {_fid} too many traces")
+                            continue
+                        if st[0].stats.station == sta:
+                            continue
+
+                        for tr in st:
+                            tr.stats.network = net
+                            tr.stats.station = sta
+                            tr.stats.channel = cha
+                            tr.stats.sac.evdp = 0.
+                        st.write(fid_out, format="SAC")
+                        print(f"SUCCESS: {fid}")
+                    except Exception as e:
+                        print(f"ERROR: {fid} {e}")
+                        continue
+
+                    a=1/0
+
+
+def restructure_directory_mulligan():
+    """
+    If you have to do it again, edit SAC headers at the same time
+
+    Creates symlinks of each of the default SAC files that is renamed and
+    re-organized to fit the directory structure. Does NOT touch the original
+    data at all. The resulting directories will be formatted:
+
+    <ELL_OR_HYP>/<SOURCE_STATION>/<ZZ_OR_TT>/<RECEIVER_STATION>
+
+    <RECEIVER_STATION> will be formatted NN.SSS.CXC.SAC
+    """
+    for stack in glob(os.path.join(INPUT_DIR, "*")):
+        # e.g., Lov_I3_hyp_stack
+        phase, _, type_, _ = os.path.basename(stack).split("_")
+
+        kernel = {"Lov": "TT", "Ray": "ZZ"}[phase]                
+        comp = kernel[-1]                                        
+        for src in glob(os.path.join(stack, "*")):
+            for fid in glob(os.path.join(src, "*")):                      
+                # Separate out the station names from rest of file name       
+                _fid = os.path.splitext(os.path.basename(fid))[0]           
+                _, net_src, sta_src, net_rcv, sta_rcv = _fid.split("_")       
+
+                # Determine the correct save location                              
+                path_out = os.path.join(OUTPUT_DIR, type_.lower(),
+                                        f"{net_src}_{sta_src}", kernel)
+                if not os.path.exists(path_out):                                    
+                    os.makedirs(path_out)                                          
+
+                # Label the station correctly, L because it's 1Hz data, X 
+                # because it's a time series derived from observational data
+                filename_out = f"{net_rcv}.{sta_rcv}.LX{comp}.SAC"                
+                fid_out = os.path.join(path_out, filename_out)                     
+                if not os.path.exists(fid_out):                                  
+                    os.symlink(fid, fid_out)
+                    # Correct the SAC header
+                    try:
+                        net, sta, cha, sac = basename.split(".")
+                        st = read(fid_out)
+                        if len(st) != 1:
+                            print(f"ERROR: {basename} too many traces")
+                            return
+                        for tr in st:
+                            # Correct the SAC header
+                            tr.stats.network = net_rcv
+                            tr.stats.station = sta_rcv
+                            tr.stats.channel = f"LX{comp}"
+                            tr.stats.sac.evdp = 0.
+                        st.write(fid, format="SAC")
+                        print(f"SUCCESS: {basename}")
+                    except Exception as e:
+                        print(f"ERROR: {basename} {e}")
+                        return
+
+
 def count_source_receiver_hits(src_threshold=86, rcv_threshold=5):
     """
     Count the number of data for each source and each receiver station as a way
@@ -409,7 +502,7 @@ def copy_trimmed_directory():
     <RECEIVER_STATION> will be formatted NN.SSS.CXC.SAC
     """
     # OVERWRITE OUTPUT_DIR
-    OUTPUT_DIR = "/home/bchow/Work/data/egfs/NAKANAT_EGF"
+    # OUTPUT_DIR = "/home/bchow/Work/data/egfs/NAKANAT_EGF"
     inv_srcs = read_stations(SOURCES_FILE)
     inv_rcvs = read_stations(STATIONS_FILE)
 
@@ -482,3 +575,38 @@ def _overwrite_metadata_and_trim_length(
         print(f"ERROR: {basename} {e}")
         return
 
+
+def reoverwrite_data(new_starttime="2000-01-01T00:00:00",
+                     new_length_s=60*20):
+    """Second pass because the first run didn't catch all the data"""
+    new_starttime = UTCDateTime(new_starttime)
+
+    for src_sta in glob("*"):
+        for kernel in glob(os.path.join(src_sta, "*")):
+            for fid in glob(os.path.join(kernel, "*")):
+                try:
+                    basename = os.path.basename(fid)
+                    net, sta, cha, sac = basename.split(".")
+                    st = read(fid)
+                    if len(st) != 1:
+                        print(f"ERROR: {basename} too many traces")
+                        return
+                    if st[0].stats.station == sta:
+                        continue
+
+                    for tr in st:
+                        # Set the correct stats attribute
+                        tr.stats.network = net
+                        tr.stats.station = sta
+                        tr.stats.channel = cha
+                        # Set the correct SAC header
+                        tr.stats.starttime = new_starttime
+                        tr.stats.sac.nzyear = new_starttime.year
+                        tr.stats.sac.evdp = 0.
+                        # Trim data
+                        tr.trim(new_starttime, new_starttime + new_length_s)
+                    st.write(fid, format="SAC")
+                    print(f"SUCCESS: {basename}")
+                except Exception as e:
+                    print(f"ERROR: {basename} {e}")
+                    continue
