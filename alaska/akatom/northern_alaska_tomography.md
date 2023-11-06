@@ -31,6 +31,11 @@ elif domain == "northern_alaska":
 	lat_max = 72.
 	lon_min = -168.
 	lon_max = -140.
+    # Stats of bounding box
+    lat_center = 68.25
+    lat_diff = 5
+    lon_center = -154.
+    lon_diff = 28
 ```
 
 #### 2. Generate hexahedral mesh [meshfem3D]
