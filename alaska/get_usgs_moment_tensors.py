@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from obspy import read_events, UTCDateTime, Catalog
 from obspy.clients.fdsn import Client
 from obspy.imaging.beachball import beach
+from obspy.core.event.resourceid import ResourceIdentifier
 
 
 def parse_event_id(event):
@@ -26,13 +27,13 @@ exclude_ak = False  # Don't consider any events tagged with AK (i.e., from AEC)
 kwargs = {
         "starttime": UTCDateTime("2000-01-01T00:00:00"),
         "endtime": UTCDateTime(),  # Present time
-        "minlatitude": 56,
-        "maxlatitude": 72,
-        "minlongitude": 192,
-        "maxlongitude": 222,
-        "maxdepth": 200,
-        "minmagnitude": 5.,
-        "maxmagnitude": 6.,
+        "minlatitude": 64.,  # LLC
+        "minlongitude": -169.,  # LLC
+        "maxlatitude": 72.,  # URC
+        "maxlongitude": -140.,  # URC
+        "maxdepth": 50.,
+        "minmagnitude": 4.,
+        "maxmagnitude": 9.,
         "includeallorigins": True,  # Required to get focal mechanism returns
         }
 
@@ -50,7 +51,6 @@ if not os.path.exists(fm_save_fid):
     if not os.path.exists(save_fid):
         c = Client("USGS")
         cat = c.get_events(**kwargs)
-        cat.write(filename=save_fid, format="QUAKEML")
     else:
         print(f"reading catalog from {save_fid}")
         cat = read_events(save_fid)
@@ -60,19 +60,36 @@ if not os.path.exists(fm_save_fid):
     # Not all events return focal mechanisms, kick those out
     events_with_fm = []
     for event in cat[:]:
-        if event.focal_mechanisms and \
-                   event.preferred_focal_mechanism().moment_tensor:
-            if exclude_ak and ("ak" in parse_event_id(event)):
-                continue
-            events_with_fm.append(event)
+        # Number of checks to make sure we have FMs
+        try:
+            assert(hasattr(event, "focal_mechanisms"))
+            assert(bool(event.focal_mechanisms))
+            for fm in event.focal_mechanisms:
+                assert(hasattr(fm, "moment_tensor"))
+                assert(hasattr(fm.moment_tensor, "resource_id"))
+        except AssertionError:
+            continue
+
+        # Exclude AK events if requested
+        if exclude_ak and ("ak" in parse_event_id(event)):
+            continue
+
+        # Add in missing resource IDs, because if we don't have them we
+        # cannot write to QuakeML
+        for fm in event.focal_mechanisms:
+            if fm.moment_tensor.resource_id is None:
+                fm.moment_tensor.resource_id = ResourceIdentifier(
+                        prefix="moment_tensor")
+        events_with_fm.append(event)
 
     # Make the slimmed down catalog that only contains earthquakes with foc mecs
     cat = Catalog(events=events_with_fm)
-    cat.write(filename=fm_save_fid, format="QUAKEML")
 else:
     print(f"reading fm catalog from {fm_save_fid}")
     cat = read_events(fm_save_fid)
 print(f"Catalog w/ focal mechanisms has {len(cat)} events")
+
+cat.write(filename=fm_save_fid, format="QUAKEML")
 
 # Plot moment tensors, colored by depth, scaled by magnitude
 if plot:

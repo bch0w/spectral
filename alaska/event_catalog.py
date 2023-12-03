@@ -87,17 +87,17 @@ def event_trials(choice, sep_km=None, desired_length=None):
     :return:
     """
     trials = {
-        "nalaska": {
-            "name": "nalaska",
-            "starttime": UTCDateTime("2020-01-01T00:00:00"), 
-            "endtime": UTCDateTime(),
-            "minmagnitude": 4.5,
-            "maxmagnitude": 6.,
+        "nalaska_eq_Mgt2": {
+            "name": "nalaska_earthquakes_Mgt2",
+            "starttime": UTCDateTime("1990-01-01T00:00:00"), 
+            "endtime": UTCDateTime("2023-01-01T00:00:00"),
+            "minmagnitude": 2.,
+            "maxmagnitude": 9.,
             "minlatitude": 64,  # LLC
             "minlongitude": -169,  # LLC
             "maxlatitude": 72,  # URC
             "maxlongitude": -140,  # URC
-            "maxdepth": 100.,
+            "maxdepth": 50.,
             "client": "IRIS",
           }
     }
@@ -131,6 +131,6 @@ def event_trials(choice, sep_km=None, desired_length=None):
 
 
 if __name__ == "__main__":
-    cat_name = "nalaska"
+    cat_name = "nalaska_eq_Mgt2"
     event_trials(cat_name)
 
