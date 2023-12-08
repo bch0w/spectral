@@ -9,7 +9,7 @@ submit: more simple 'scattergun' approach, just submit all jobs without a worry
 map: slightly more complex 'boomerang' approach, submit jobs but expect returns,
     cancel after timeout time, raise exceptions
 """
-from concurrent.futures import ProcessPoolExceutor, wait, as_completed
+from concurrent.futures import ProcessPoolExecutor, wait, as_completed
 
 
 def task(x, break_on=5):
@@ -34,11 +34,15 @@ def map_example():
 
 def submit_example():
     X = range(0, 11, 1)
-    Y = {}
     with ProcessPoolExecutor() as executor:
-        for x, y in 
-            futures = [executor.submit(x, run_call, task_id)
-                       for task_id in range(ntasks)]
-            wait(futures)
+        futures = [executor.submit(task, x) for x in X]
+    done, not_done = wait(futures, timeout=1, return_when="FIRST_EXCEPTION")
+
+    for future in futures:
+        print(future.result())  # EXCEPTION
+
+if __name__ == "__main__":
+    submit_example()
+
 
 
