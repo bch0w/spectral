@@ -38,6 +38,13 @@ elif domain == "northern_alaska":
     lon_diff = 28
 ```
 
+Distances:
+bottom/south (lat~=63.05): 1550km  # ETA
+top/north (lat~=71.55):    1550km
+right/east (lon~=130):     1000km  # XI
+left/west (lon~=170):      1000km
+
+
 #### 2. Generate hexahedral mesh [meshfem3D]
 - Due to the scale of the problem (continental) we choose to use SPECFEM3D_GLOBE 
 - We use the SPECFEM internal mesher (Meshfem3D) to generate our truncated one chunk mesh
