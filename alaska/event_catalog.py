@@ -96,7 +96,7 @@ def event_trials(choice, sep_km=None, desired_length=None):
             "minlatitude": 64,  # LLC
             "minlongitude": -169,  # LLC
             "maxlatitude": 72,  # URC
-            "maxlongitude": -140,  # URC
+            "maxlongitude": -137,  # URC
             "maxdepth": 50.,
             "client": "IRIS",
           }

@@ -32,7 +32,7 @@ for line in lines:
         srcrcvdict[src].append(line.strip())
 
 # Initiate map
-f = plt.figure(figsize=(11, 8), dpi=200)
+f = plt.figure(figsize=(11, 8), dpi=150)
 ax = plt.axes(projection=ccrs.LambertConformal(central_latitude=(71.5+64.)/2, 
                                                central_longitude=(-169.5-137.5)/2)
               )
@@ -43,17 +43,20 @@ ax.spines["geo"].set_visible(False)
 
 # Loop through all source stations, plot
 sources = np.loadtxt("SOURCES", dtype=str)
-# sta_plotted = [f"{_[1]}.{_[0]}" for _ in sources]
-sta_plotted = []
+sta_plotted = [f"{_[1]}.{_[0]}" for _ in sources]
+n = 0
 for source in sources:
     src = f"{source[1]}.{source[0]}"
-    # if src != "TA.A21K":
-    #     continue
-    print(src)
+
     src_lat, src_lon = coords[src]
-    ax.scatter(src_lon, src_lat, marker="o", edgecolor="k", linewidth=2, 
-               c="salmon",
-               s=60, zorder=20, transform=ccrs.PlateCarree())
+    if src == "AK.D20K":
+        ax.scatter(src_lon, src_lat, marker="o", edgecolor="k", linewidth=2, 
+                   c="cyan",
+                   s=90, zorder=20, transform=ccrs.PlateCarree())
+    else:
+        ax.scatter(src_lon, src_lat, marker="o", edgecolor="k", linewidth=2, 
+                   c="salmon",
+                   s=60, zorder=20, transform=ccrs.PlateCarree())
     if False:
         ax.text(src_lon-.15, src_lat+.175, src, transform=ccrs.PlateCarree(),
                 c="k", fontsize=10, zorder=20, ha="right")
@@ -72,23 +75,32 @@ for source in sources:
 
         # Plot the station marker if it hasn't shown up yet
         if sta not in sta_plotted:
-            print(f"plotting {sta}")
-            ax.scatter(sta_lon, sta_lat, marker="v", c="paleturquoise", 
+            ax.scatter(sta_lon, sta_lat, marker="v", c="gold", 
                        linewidth=2, edgecolor="k",
                        s=60, zorder=19, transform=ccrs.PlateCarree())
             sta_plotted.append(sta)
         
         # Plot connecting lines between source and receiver
-        ax.plot([src_lon, sta_lon], [src_lat, sta_lat], zorder=18,
-                 c="k", linewidth=0.5, alpha=0.1, transform=ccrs.Geodetic()
-                 )
 
+        if src == "AK.D20K":
+            ax.plot([src_lon, sta_lon], [src_lat, sta_lat],
+                    c="cyan", linewidth=2., alpha=0.5, transform=ccrs.Geodetic(),
+                    zorder=19
+                     )
+        ax.plot([src_lon, sta_lon], [src_lat, sta_lat], 
+                 c="k", linewidth=8., alpha=0.01, transform=ccrs.Geodetic(),
+                 zorder=18
+                 )
+        n += 1
+
+# plt.title(f"NSRC={len(sources)}; NRCV={len(stations)}; NPAIR={n}")
 gl = ax.gridlines(draw_labels=True, dms=True, x_inline=False, y_inline=False,
                   zorder=10, linewidth=.5, alpha=0.2, color="k")
 gl.xlabel_style= {"size": 12}
 gl.ylabel_style= {"size": 12}
 gl.top_labels=False
 gl.right_labels=False
+plt.savefig("srcrcv_pairs.png")
 plt.show()
 
         
