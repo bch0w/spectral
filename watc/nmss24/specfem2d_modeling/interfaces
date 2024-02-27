@@ -1,0 +1,21 @@
+# Number of interfaces, determines number of entries in section below
+ 3
+
+# For each interface below, we give the number of points and then x,z for each point
+# Interface 1 (bottom of the mesh)
+ 2
+ 0 -1000
+ 5000 -1000
+# Interface 2
+ 2
+ 0 0
+ 5000 0
+# Interface 3 (top of the mesh)
+ 2
+ 0 1000
+ 5000 1000
+
+# For each layer, we give the number of spectral elements in the vertical 
+# Starting from layer number 1 (bottom layer)
+ 110
+ 110
