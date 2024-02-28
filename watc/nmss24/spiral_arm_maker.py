@@ -37,7 +37,7 @@ radial_aperture_km = 20
 number_spiral_arms = 3
 number_station_rings = 4
 angular_arm_span_deg = 120
-rotation_constant = np.pi / 6
+rotation_constant_deg = 0
 include_central_station = False
 central_station_location = (0, 0)
 
@@ -52,7 +52,7 @@ else:
 nsta = 0
 for arm_number in range(1, number_spiral_arms + 1):
     print(f"ARM NUMBER {arm_number}")
-    initial_angle_deg = get_initial_angle(rotation_constant, arm_number,
+    initial_angle_deg = get_initial_angle(rotation_constant_deg, arm_number,
                                           number_spiral_arms)
     for ring_number in range(start_idx, number_station_rings + 1):
         ring_radius_km = get_ring_radius(radial_aperture_km, ring_number,
