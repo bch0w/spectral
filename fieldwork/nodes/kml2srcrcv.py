@@ -2,6 +2,17 @@
 Generates rcv.txt and src.txt files for a nodal deployment, required by
 the Fairfield HarvestManager software. Either take .kml files exported from
 Google Earth or input lat/lon coordinates directly. 
+
+.. note::
+
+    To get .KML from Google Earth, create a directory, place points 
+    (placemark) on the map geographically labelled with station names, and 
+    then right click -> Save Place As... -> KML
+
+.. rubric::
+
+    python kml2srcrcv.py --file mar24_test.kml --line 1 --job_name mar24_test \
+        --output rps
 """
 import os
 import argparse
@@ -73,12 +84,6 @@ def read_kml_file(fid):
     Read a .kml file exported from Google Earth with point coordinates 
     specifying station locations. This function is super simple and just looks
     for line headers so it may not be very reliable.
-
-    .. note::
-
-        To get .KML from Google Earth, create a directory, place points 
-        (placemark) on the map geographically labelled with station names, and 
-        then right click -> Save Place As... -> KML
 
     :type fid: str
     :param fid: name of the .kml file to read. See note for how to generate
@@ -197,7 +202,7 @@ if __name__ == "__main__":
                         help="List of .kml files to convert")
     parser.add_argument("-l", "--line", type=int, default=1,
                         help="Line number to assign to the given stations")
-    parser.add_argument("-j", "--job", type=str, default=None,
+    parser.add_argument("-j", "--job_name", type=str, default=None,
                         help="Job name used to name the output files")
     parser.add_argument("-o", "--output", type=str, default="rps",
                         help="Output file format, choose one of 'rps' or 'txt'")
@@ -205,8 +210,8 @@ if __name__ == "__main__":
 
     stations = read_kml_file(args.file)
     if args.output == "txt":
-        write_src_rcv_txt(stations, job=args.job, line=args.line)
+        write_src_rcv_txt(stations, job=args.job_name, line=args.line)
     elif args.output == "rps":
-        write_src_rcv_rps(stations, job=args.job, line=args.line)
+        write_src_rcv_rps(stations, job=args.job_name, line=args.line)
     else:
         raise NotImplementedError(f"Output format {args.output} not recognized")
