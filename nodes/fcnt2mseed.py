@@ -11,8 +11,6 @@ https://docs.obspy.org/packages/obspy.io.rg16.html
     python fcnt2ms.py --files *.fcnt --network XX 
 """
 import argparse
-import os
-from glob import glob
 from obspy import read, Stream, UTCDateTime
 
 
