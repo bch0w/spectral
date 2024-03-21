@@ -145,12 +145,13 @@ def write_src_rcv_txt(stations, job=None, rcv_fid_out="rcv.txt",
         f.write(f"S{line} {line}{i:0>2} {x_utm:.2f} {y_utm:.2f} 0\n")
 
 
-def write_src_rcv_rps(stations, job=None, rcv_fid_out="rcv.txt", 
-                      src_fid_out="src.txt", line=1, path_out="./"):
+def write_src_rcv_rps(stations, job=None, rcv_fid_out="rcv.rps", 
+                      src_fid_out="src.rps", line=1, path_out="./"):
     """
     Write a tab-delimited SEG .rps file that can be used to import into
     the Fairfield software. See ZLAND quick start presentation for an example
-    of what the file looks like
+    of what the file looks like. This method is preferred because it requires
+    the least amount of mouse clicks to actually get the file to sync.
 
     :type stations: dict of tuples
     :param stations: output of `read_kml_file`
@@ -161,20 +162,33 @@ def write_src_rcv_rps(stations, job=None, rcv_fid_out="rcv.txt",
     :type line: int
     :param line: line number used for marking line and station
     """
+    line_format = "{prefix}{line:<16}{sta:<29}{x_utm:8.1f} {y_utm:8.1f} 0\n"
+
     if job is not None:
-        rcv_path_out = os.path.join(path_out, f"{job}_rcv.txt")
-        src_path_out = os.path.join(path_out, f"{job}_src.txt")
+        rcv_path_out = os.path.join(path_out, f"{job}_{rcv_fid_out}")
+        src_path_out = os.path.join(path_out, f"{job}_{src_fid_out}")
+    else:
+        rcv_path_out = os.path.join(path_out, rcv_fid_out)
+        src_path_out = os.path.join(path_out, src_fid_out)
     
     with open(rcv_path_out, "w") as f:
         f.write("Line Station UTMEast UTMNorth ElevMeters\n")  # header
         for i, (sta, coords) in enumerate(stations.items()):
             lat, lon = coords
             x_utm, y_utm, utm_zone = latlon2utm(lat, lon)
-            print(f"{sta}: ({lat:.2f}, {lon:.2f}) -> "
-                  f"({x_utm:.2f}, {y_utm:.2f}) UTM={utm_zone}")
-            f.write(
-                f"R{line:<17}{line}{i:>7} {x_utm:.2f} {y_utm:.2f} 0  # {sta}\n"
-                )
+            f.write(line_format.format(prefix="R", line=line, 
+                                       sta=f"{line}{i:0>2}", x_utm=x_utm, 
+                                       y_utm=y_utm)
+                                       )
+
+    with open(src_path_out, "w") as f:
+        f.write("Line Station UTMEast UTMNorth ElevMeters\n")  # header
+        sta = list(stations.keys())[0]
+        lat, lon = stations[sta]
+        x_utm, y_utm, utm_zone = latlon2utm(lat, lon)
+        f.write(line_format.format(prefix="R", line=line, sta=f"{line}{i:0>2}", 
+                                   x_utm=x_utm, y_utm=y_utm)
+                                   )
 
 
 if __name__ == "__main__":
@@ -185,12 +199,14 @@ if __name__ == "__main__":
                         help="Line number to assign to the given stations")
     parser.add_argument("-j", "--job", type=str, default=None,
                         help="Job name used to name the output files")
+    parser.add_argument("-o", "--output", type=str, default="rps",
+                        help="Output file format, choose one of 'rps' or 'txt'")
     args = parser.parse_args()
 
-    file_ = args.file
-    line = args.line
-    job = args.job
-
-    stations = read_kml_file(file_)
-    write_src_rcv_txt(stations, job=job, line=line)
-    write_src_rcv_rps(stations, job=job, line=line)
+    stations = read_kml_file(args.file)
+    if args.output == "txt":
+        write_src_rcv_txt(stations, job=args.job, line=args.line)
+    elif args.output == "rps":
+        write_src_rcv_rps(stations, job=args.job, line=args.line)
+    else:
+        raise NotImplementedError(f"Output format {args.output} not recognized")
