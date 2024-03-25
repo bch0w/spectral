@@ -16,7 +16,7 @@ Google Earth or input lat/lon coordinates directly.
 """
 import os
 import argparse
-import numpy as np
+import math
 from pyproj import Proj
 
 
@@ -40,7 +40,7 @@ def utm_zone_from_lat_lon(lat, lon):
         sign = lat / abs(lat)  # silly way to figure out if lat is +/-
     except ZeroDivisionError as e:
         raise Exception("latitude is 0, UTM zone is ambigious") from e
-    return int(sign * np.ceil((lon + 180) / 6))
+    return int(sign * math.ceil((lon + 180) / 6))
 
 
 def latlon2utm(lat, lon):
