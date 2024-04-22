@@ -96,7 +96,7 @@ def read_kml_file(fid):
 
     record = False
     for line in lines:
-        if "<Placemark>" in line:
+        if "<Placemark" in line:
             record = True
         elif "</Placemark>" in line:
             record = False
@@ -108,7 +108,7 @@ def read_kml_file(fid):
                 lat = float(line.split("<coordinates>")[1].split(",")[1])
                 lon = float(line.split("<coordinates>")[1].split(",")[0])
                 stations[name] = (lat, lon)
-    
+
     return stations
 
 
