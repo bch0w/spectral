@@ -17,6 +17,7 @@ from obspy import read, Stream, UTCDateTime
 def channel_code(dt):
     """
     Match sampling rate with SEED format channel code
+    https://ds.iris.edu/ds/nodes/dmc/data/formats/seed-channel-naming/
 
     :type dt: float
     :param dt: sampling rate of the data in seconds
@@ -40,83 +41,90 @@ def channel_code(dt):
         raise KeyError("Channel code does not exist for this value of 'dt'")
 
 
-def read_data(fid, network=None, instrument_code="H"):
-    """
-    Read a single .fcnt file and return a formatted Stream object
-    https://ds.iris.edu/ds/nodes/dmc/data/formats/seed-channel-naming/
-
-    :type fid: str
-    :param fid: File path to .fcnt file
-    :type network: str
-    :param network: overwrite default network code. usually this is desired
-        because the network codes will be the number of the line
-    :type instrument_code: str
-    :param instrument_code: instrument code as specified by IRIS, default is
-        broadband high gain seismometer 'H'
-    :rtype: obspy.core.stream.Stream
-    :return: Stream object with metadata and data filled in
-    """
-    st = read(fid, format="rg16", contacts_north=True)
-    st.merge()  # merge 30-second chunks into continous waveforms
-
-    for tr in st:
-        # overwrite network code
-        if network:
-            tr.stats.network = network
-        # change channel code to match standard SEED formatting
-        dt = tr.stats.delta
-        component = tr.stats.component
-        # e.g., HHZ, HHN, HHE
-        tr.stats.channel = channel_code(dt) + instrument_code + component
-
-        # strip location code, not required
-        tr.stats.location = ""
-
-    return st
-        
-
-def split_st_on_jdays(st):
-    """
-    Split a continuous Stream into day long sections for writing to mseed files
-    
-    .. warning::
-
-        No safeguard for deployments that cross over New Years. I'm assuming
-        were not out in the field at that time anyway
-    """
-    year = st[0].stats.starttime.year
-    jday_start = st[0].stats.starttime.julday
-    jday_end = st[0].stats.endtime.julday
-
-    st_out = Stream()
-    for jday in range(jday_start, jday_end + 1):
-        starttime = UTCDateTime(f"{year}-{jday:0>3}T00:00:00Z")
-        endtime = UTCDateTime(f"{year}-{jday+1:0>3}T00:00:00Z")
-        st_out.extend(st.slice(starttime, endtime))
-
-    return st_out
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Convert .fcnt files to mseed")
     parser.add_argument("-f", "--files", type=str, nargs="+", 
                         help="List of .fcnt files to convert")
-    parser.add_argument("-n", "--network", type=str, help="Network code to use")
+    parser.add_argument("-n", "--network", type=str, help="Network code to use",
+                        default="XX")
+    parser.add_argument("-s", "--station", type=str, default="Z",
+                        help="Station prefix, e.g., 'Z' for Z01, Z02...")
+    parser.add_argument("-c", "--components", type=str, default="ZNE")
     args = parser.parse_args()
 
     fids = args.files
     network = args.network
+    station = args.station
+    components = args.components
 
     # Read in the .fcnt files
     for fid in fids:
-        print(fid)
-        st = read_data(fid, network=network)
-        st = split_st_on_jdays(st)
+        print(f"reading {fid}")
+        st = read(fid, format="rg16", contacts_north=True)
 
-        # Write out the Stream to mseed files
-        for tr in st:
-            # Generate file name based on metatdata and timing
-            filename = (f"{tr.stats.network}.{tr.stats.station}."
-                        f"{tr.stats.channel}.{tr.stats.starttime.year}."
-                        f"{tr.stats.starttime.julday:0>3}")
-            tr.write(filename, format="MSEED")
+        # Sort by components, default are Z, N, E
+        for component in components:
+            st_comp = st.select(component=component)
+
+            # Sort by time so we can just loop through and trim off days
+            st_comp.sort(keys=["starttime"])
+
+            # I'm too lazy to figure out how to span a year, assuming we will 
+            # not have christmas + NY deployments
+            year = st_comp[0].stats.starttime.year
+            year_end = st_comp[-1].stats.endtime.year
+            if year != year_end:
+                print("deployment spans a new year and this script is not "
+                      "designed to handle, exiting")
+                a = 1/0
+
+            # Used to range over all available days
+            jday_start = st_comp[0].stats.starttime.julday
+            jday_end = st_comp[-1].stats.endtime.julday
+
+            # Loop over days, extract data and write, then delete data
+            jday = jday_start
+            st_out = Stream()
+            for i, tr in enumerate(st_comp):
+                st_out.append(tr)
+                if tr.stats.endtime.julday == jday:
+                    continue
+                # When we get to the Trace that starts on the next day, break
+                else:
+                    # Merge the files and trim on a full day
+                    starttime = UTCDateTime(f"{year}-{jday:0>3}T00:00:00Z")
+                    endtime = UTCDateTime(f"{year}-{jday:0>3}T23:59:59.99999Z")
+                    st_out.merge()
+                    st_out.trim(starttime, endtime)
+
+                    # Overwrite some metadata to be more conforming with SEED
+                    for tr_ in st_out:
+                        tr_.stats.network = network
+                        tr_.stats.station = f"{station}{tr_.stats.station[1:]}"
+                        tr_.stats.location = ""
+
+                        # Change channel code to match standard SEED format
+                        # Assuming instr_ument code H for high gain seismometer
+                        component = tr_.stats.component
+                        tr_.stats.channel = \
+                            channel_code(tr_.stats.delta) + "H" + component
+
+                        # Generate file name based on metadata and timing
+                        filename = (
+                            f"{tr_.stats.network}.{tr_.stats.station}."
+                            f"{tr_.stats.channel}.{tr_.stats.starttime.year}."
+                            f"{tr_.stats.starttime.julday:0>3}"
+                            )
+                    st_out.write(filename, format="MSEED")
+                    print(filename)
+
+                    # Reset stream and increment julian day
+                    st_out = Stream()
+
+                    # If the current trace contains data from next day, we
+                    # want to include it
+                    if tr.stats.endtime.julday != jday:
+                        st_out.append(tr)
+                    
+                    jday += 1
+
