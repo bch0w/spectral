@@ -1,5 +1,5 @@
 """
-Gather metadata for IMS stations for reference and maps
+Gather metadata for IMS stations for reference, maps and simulation work
 """
 from obspy import Inventory
 from obspy.clients.fdsn import Client
@@ -159,13 +159,15 @@ inv = Inventory()
 for code in to_plot:
     net, sta = code.split(".")
     try:        
-        inv_single = c.get_stations(network=net, station=sta, channel="BH?,HH?", 
-                                        level="station")
+        inv_single = c.get_stations(network=net, station=sta, 
+                                    channel="BH?,HH?,SH?", level="station"
+                                    )
     except Exception as e:
         print(f"Error with {code}")
         continue
     inv.extend(inv_single)
 
+inv.write("inv.xml", format="stationxml")
 inv.plot()
     
     
