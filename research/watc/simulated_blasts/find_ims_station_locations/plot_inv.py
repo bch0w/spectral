@@ -1,7 +1,8 @@
 """
 Basic Cartopy plotter for ObsPy Inventory objects
 """
-import sys
+import os
+import argparse
 import cartopy
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
@@ -10,6 +11,21 @@ from obspy import read_inventory
 
 # Used for coordinate transforms
 REF_PROJ = ccrs.PlateCarree()
+
+
+def parse_args():
+    """
+    arg parsarg arg arg!
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-f", "--files", type=str, nargs="+")
+    parser.add_argument("-s", "--stations", type=str, nargs="+")
+    parser.add_argument("-d", "--dpi", type=float, default=300)
+    parser.add_argument("-l", "--event_latlon", type=tuple, 
+                        default=(43.3430, 129.0360), help="network.station")
+    parser.add_argument("-o", "--output", type=str, default="figures/map.png")
+
+    return parser.parse_args()
 
 
 def setup(proj_str="Stereographic", central_longitude=0, central_latitude=0,
@@ -73,11 +89,14 @@ def setup(proj_str="Stereographic", central_longitude=0, central_latitude=0,
     # Axis linewidth is set differently than in Matplotlib, see:
     ax.spines["geo"].set_linewidth(lw_axis)
 
+    # Remove whitespace
+    plt.tight_layout()
+
     return fig, ax
 
 
 def plot_inventory(inv, ax, color="r", marker="v", size=15, alpha=1, fontsize=5,
-                   fontcolor="k", text=True):
+                   fontcolor="k", text=True, stations=None):
     """
     Plot the stations in an ObsPy Inventory object
     """
@@ -87,6 +106,11 @@ def plot_inventory(inv, ax, color="r", marker="v", size=15, alpha=1, fontsize=5,
             lat = station.latitude
             ax.scatter(lon, lat, color=color, marker=marker, 
                        s=size, alpha=alpha, transform=REF_PROJ, zorder=10)
+            # Highlight requested stations
+            if f"{network.code}.{station.code}" in stations:
+                ax.scatter(lon, lat, color=color, marker=marker, ec="k", 
+                           lw=1.1, s=size + 2, alpha=alpha, transform=REF_PROJ, 
+                           zorder=10)
             if text:
                 ax.text(lon, lat, s=f"   {network.code}.{station.code}", 
                         transform=REF_PROJ, fontsize=fontsize, c=fontcolor, 
@@ -95,10 +119,21 @@ def plot_inventory(inv, ax, color="r", marker="v", size=15, alpha=1, fontsize=5,
     return ax
 
 
+def plot_event(ev_lat, ev_lon, ax, color="y", marker="*", size=40, alpha=1):
+    """
+    Plot an event as a yellow star or whatever
+    """
+    ax.scatter(ev_lon, ev_lat, ec="k", lw=0.5, color=color, marker=marker, 
+               s=size, alpha=alpha, transform=REF_PROJ)
+
+
 if __name__ == "__main__":
-    files = sys.argv[1:]
+    args = parse_args()
+    ev_lat, ev_lon = args.event_latlon
+
+    # Setting kwargs
     inv_dict = {}
-    for i, f in enumerate(files):
+    for i, f in enumerate(args.files):
         inv_dict[f] = {"inv": read_inventory(f),
                        "color": f"C{i}",
                        "marker": "s",
@@ -116,16 +151,23 @@ if __name__ == "__main__":
             inv_dict[f]["color"] = "magenta"
             inv_dict[f]["marker"] = "o"
             inv_dict[f]["size"] = 10
-            inv_dict[f]["text"] = False
+            # inv_dict[f]["text"] = False
         elif "AUXILIARY" in f:
             inv_dict[f]["color"] = "powderblue"
             inv_dict[f]["marker"] = "o"
-            inv_dict[f]["text"] = False
             inv_dict[f]["size"] = 10
+            # inv_dict[f]["text"] = False
 
-    fig, ax = setup(proj_str="Robinson")
+    # Plotting
+    fig, ax = setup(proj_str="Robinson", dpi=args.dpi)
     for key, vals in inv_dict.items():
         inv = vals.pop("inv")
-        plot_inventory(inv=inv, ax=ax, **vals)
-    plt.savefig("figures/ims_station_list.png", dpi=400)
-    # plt.show()
+        plot_inventory(inv=inv, ax=ax, stations=args.stations, **vals)
+
+    plot_event(ev_lat=ev_lat, ev_lon=ev_lon, ax=ax)
+
+    # Finalize
+    if not os.path.exists(os.path.dirname(args.output)):
+        os.mkdir(os.path.dirname(args.output))
+    plt.savefig(args.output, dpi=args.dpi)
+    plt.show()
