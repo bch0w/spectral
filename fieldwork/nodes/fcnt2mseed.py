@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 Read in .fcnt data from the ZLand node and convert to MSEED data split on
 full julian days with modified header values.
@@ -20,6 +21,7 @@ Arguments:
     -f/--files <str>      # .fcnt files to read, wildcards okay
     -n/--network <str>    # two character network code for naming, defaults 'XX'
     -o/--output <str>     # output directory to save files, defaults to ./
+    -c/--components <str> # optional list of components to select
     -b/--band_code <str>  # optional 'band' code if the guess function fails
     -i/--instrument_code <str>  # optional instrument code if not 'H'
 """
@@ -69,10 +71,14 @@ if __name__ == "__main__":
                         help="List of .fcnt files to convert")
     parser.add_argument("-n", "--network", type=str, help="Network code to use",
                         default="XX")
+    parser.add_argument("-c", "--components", type=str, default=None,
+                         help="(OPTIONAL) only write out certain components, "
+                              "e.g., 'ZN' will only write Z and N component. "
+                              "If not provided, writes all available in data")
     parser.add_argument("-o", "--output", type=str, default=os.getcwd(),
                          help="output directory to save MSEED files. Defaults "
                               "to the current working directory")
-    parser.add_argument("-O", "--overwrite", type=bool, default=False,
+    parser.add_argument("-O", "--overwrite", action="store_true", default=False,
                         help= "If data matching filename already exists, do "
                               "not overwrite it. If set to True, will "
                               "overwrite data")
@@ -94,6 +100,7 @@ if __name__ == "__main__":
     output = args.output
     overwrite = args.overwrite
     network = args.network
+    components = args.components
     band_code = args.band_code
     instrument_code = args.instrument_code
 
@@ -103,74 +110,76 @@ if __name__ == "__main__":
     # Read in the .fcnt files
     print(f"READING {len(fids)} FILES FROM {fids[0]} -> {fids[-1]}")
     print(f"{'=' * 80}")
-
     for fid in fids:
         print(f"READING/WRITING FILE: {fid}")
         st = read(fid, format="rg16", contacts_north=True)
 
         # Determine all unique station names and components in this file 
         station_names = list(set(tr.stats.station for tr in st))
-        components = list(set(tr.stats.component for tr in st))
+        if components:
+            comp_list = list(components)
+        else:
+            comp_list = list(set(tr.stats.component for tr in st))
 
-        # Print out some metadata for confirmation
+        # Get start and end times of the file to ensure we know what time 
+        # range the data covered. Times will be in UTC
+        tmin = min([tr.stats.starttime for tr in st])
+        tmax = max([tr.stats.endtime for tr in st])
+        julday_start = tmin.julday  # Julian day
+        julday_end = tmax.julday  
+        if tmin.year != tmax.year:
+            raise Exception("Data spans multiple years, not supported")
+        year = tmin.year
+
+        # Calculate how many files we expect to be written
+        n_files = (julday_end - julday_start + 1) * len(components)
+
+        # Print out some metadata for visual confirmation
         print(f"    {len(st)} traces in Stream")
         print(f"    stations: {station_names}")
         print(f"    components: {components}")
-        print(f"    min starttime: {min([tr.stats.starttime for tr in st])}")
-        print(f"    max endttime:  {max([tr.stats.endtime for tr in st])}")
-        print(f"    begin parsing data...")
+        print(f"    min starttime: {tmin}")
+        print(f"    max endttime:  {tmax}")
+        print(f"    julian days range: {tmin.julday} -> {tmax.julday}")
+        print(f"    output files expected: {n_files}\n")
 
         # Sort by components, default are Z, N, E
         for component in components:
             st_comp = st.select(component=component)
-
-            # Sort by time so we can just loop through and trim off days
             st_comp.sort(keys=["starttime"])
 
-            # WARNING: I'm too lazy to figure out how to span a year, assuming 
-            # we will not have deployments spanning New Years, which would 
-            # increment the year value and break this code
-            year = st_comp[0].stats.starttime.year
-            year_end = st_comp[-1].stats.endtime.year
-            if year != year_end:
-                print("deployment spans a new year and this script is not "
-                      "designed to handle, exiting")
-                a = 1/0
-
-            # Used to range over all available days
-            jday_start = st_comp[0].stats.starttime.julday
-            jday_end = st_comp[-1].stats.endtime.julday
-
             # Loop over days, extract data and write file for a given julian day
-            jday = jday_start
+            jday = julday_start
             st_out = Stream()
             for i, tr in enumerate(st_comp):
                 st_out.append(tr)
-                if tr.stats.endtime.julday == jday:
+
+                # Keep appending data until the next day is hit, or until we 
+                # reach the end of the Stream 
+                if (tr.stats.endtime.julday == jday) and (i != len(st_comp)-1):
                     continue
-                # When we get to the Trace that starts on the next day, break
+                # When we get to the Trace that starts on the next day OR if
+                # we hit the end of the Stream, write the data out to file
                 else:
-                    # Merge the files and trim on a full day
-                    starttime = UTCDateTime(f"{year}-{jday:0>3}T00:00:00Z")
-                    endtime = UTCDateTime(f"{year}-{jday:0>3}T23:59:59.99999Z")
                     st_out.merge()
 
-                    # Trim away data that does not fall within this julian day
+                    # Trim away data that does not fall within this julian day,
                     # do not use `nearest_sample` because that may pick up
                     # data from outside the specified bounds
+                    starttime = UTCDateTime(f"{year}-{jday:0>3}T00:00:00Z")
+                    endtime = UTCDateTime(f"{year}-{jday:0>3}T23:59:59.99999Z")
                     st_out.trim(starttime, endtime, nearest_sample=False)
 
                     # Overwrite some metadata to be more SEED conforming
                     for tr_ in st_out:
                         # Change channel code to match standard SEED format
-                        component = tr_.stats.component
                         if band_code is not None:
                             band_ = band_code
                         else:
                             band_ = get_band_code(tr_.stats.sampling_rate)
 
                         tr_.stats.network = network
-                        tr_.stats.location = ""  # drop location code
+                        tr_.stats.location = ""  # drop default location code
                         tr_.stats.channel = \
                                 f"{band_}{instrument_code}{component}"
 
@@ -187,17 +196,15 @@ if __name__ == "__main__":
                         continue
 
                     # Write in MSEED Format
-                    print(f"    writing mseed file: {filename}")
+                    print(f"    writing file: {filename}")
                     st_out.write(os.path.join(output, filename), format="MSEED")
 
-                    # Reset stream and increment Julian day
+                    # Reset stream to collect data for next julian day
                     st_out = Stream()
 
-                    # If the current trace contains data from next day, we
-                    # want to include it
+                    # The current trace may contain data from next day, we want 
+                    # to include it in the next file
                     if tr.stats.endtime.julday != jday:
                         st_out.append(tr)
                     
                     jday += 1
-
-
