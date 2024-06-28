@@ -27,7 +27,7 @@ Arguments:
 """
 import argparse
 import os
-from obspy import read, Stream, UTCDateTime
+from obspy import read, UTCDateTime
 
 
 def get_band_code(sampling_rate_hz):
@@ -63,6 +63,51 @@ def get_band_code(sampling_rate_hz):
                        "please consult the IRIS SEED channel naming document "
                        "and input channel code through argument -b/--band_code"
                        )
+    
+def print_stream_info(st):
+    """
+    Print some information about a given Stream (read in from a single .fcnt 
+    file) that may be useful for verifying the data is being read in correctly
+    """
+    # Determine all unique station names and components in this file 
+    station_names = list(set(tr.stats.station for tr in st))
+
+    # Get start and end times of the file to ensure we know what time 
+    # range the data covered. Times will be in UTC
+    tmin = min([tr.stats.starttime for tr in st])
+    tmax = max([tr.stats.endtime for tr in st])
+    julday_start = tmin.julday  # Julian day
+    julday_end = tmax.julday  
+    if tmin.year != tmax.year:
+        raise Exception("Data spans multiple years, not supported, sorry!")
+
+    # Print out some metadata for visual confirmation
+    print(f"\t{len(st)} traces in Stream")
+    print(f"\tstations: {station_names}")
+    print(f"\tmin starttime: {tmin}")
+    print(f"\tmax endttime:  {tmax}")
+    print(f"\tjulian days range: {tmin.julday} -> {tmax.julday}")
+
+def parse_st_for_jday_and_comp(st, jday, component):
+    """
+    Given a Stream object, return a new Stream object that contains only the
+    traces that fall within the given julian day
+
+    :type st: obspy.core.stream.Stream
+    :param st: raw Stream object read in from .fcnt file
+    :type jday: int
+    :param jday: julian day to extract data for, e.g., 123
+    :type component: str
+    :param component: component to extract data for, e.g., 'Z'
+    """
+    st_out = st.select(component=component).copy()
+    st_out.trim(starttime=UTCDateTime(f"{year}-{jday:0>3}T00:00:00Z"),
+                endtime=UTCDateTime(f"{year}-{jday:0>3}T23:59:59.99999Z"),
+                nearest_sample=False)
+    
+    st_out.merge()
+    
+    return st_out
 
 
 if __name__ == "__main__":
@@ -113,98 +158,50 @@ if __name__ == "__main__":
     for fid in fids:
         print(f"READING/WRITING FILE: {fid}")
         st = read(fid, format="rg16", contacts_north=True)
+        print_stream_info(st)
 
-        # Determine all unique station names and components in this file 
-        station_names = list(set(tr.stats.station for tr in st))
+        # Figure out what components we need to write files for
         if components:
             comp_list = list(components)
         else:
             comp_list = list(set(tr.stats.component for tr in st))
 
-        # Get start and end times of the file to ensure we know what time 
-        # range the data covered. Times will be in UTC
-        tmin = min([tr.stats.starttime for tr in st])
-        tmax = max([tr.stats.endtime for tr in st])
-        julday_start = tmin.julday  # Julian day
-        julday_end = tmax.julday  
-        if tmin.year != tmax.year:
-            raise Exception("Data spans multiple years, not supported")
-        year = tmin.year
+        # Figure out what julian days we need to write files for
+        year = st[0].stats.starttime.year
+        jday_start = st[0].stats.starttime.julday
+        jday_end = st[-1].stats.endtime.julday
+        
+        # Small check to make sure we don't cross a year boundary
+        year_stop = st[-1].stats.endtime.year
+        if year != year_stop:
+            raise Exception("Data spans multiple years, not supported, sorry!")
 
-        # Calculate how many files we expect to be written
-        n_files = (julday_end - julday_start + 1) * len(components)
+        # Sampling rate used to determine the band code, assuming same for all
+        if band_code is not None:
+            band_ = band_code
+        else:
+            band_ = get_band_code(st[0].stats.sampling_rate)
+        
+        station = st[0].stats.station
 
-        # Print out some metadata for visual confirmation
-        print(f"    {len(st)} traces in Stream")
-        print(f"    stations: {station_names}")
-        print(f"    components: {components}")
-        print(f"    min starttime: {tmin}")
-        print(f"    max endttime:  {tmax}")
-        print(f"    julian days range: {tmin.julday} -> {tmax.julday}")
-        print(f"    output files expected: {n_files}\n")
-
-        # Sort by components, default are Z, N, E
-        for component in components:
-            st_comp = st.select(component=component)
-            st_comp.sort(keys=["starttime"])
-
-            # Loop over days, extract data and write file for a given julian day
-            jday = julday_start
-            st_out = Stream()
-            for i, tr in enumerate(st_comp):
-                st_out.append(tr)
-
-                # Keep appending data until the next day is hit, or until we 
-                # reach the end of the Stream 
-                if (tr.stats.endtime.julday == jday) and (i != len(st_comp)-1):
+        for component in comp_list:
+            channel = f"{band_}{instrument_code}{component}"  # e.g., GHZ
+            for jday in range(jday_start, jday_end + 1):
+                # Build the filename before doing any data manipulation so that
+                # if we have already created the file we can skip right over
+                filename = f"{network}.{station}.{channel}.{year}.{jday:0>3}"
+                outfile = os.path.join(output, filename)
+                if os.path.exists(outfile):
+                    print(f"\tfile '{filename}' exists in 'output', skipping")
                     continue
-                # When we get to the Trace that starts on the next day OR if
-                # we hit the end of the Stream, write the data out to file
-                else:
-                    st_out.merge()
 
-                    # Trim away data that does not fall within this julian day,
-                    # do not use `nearest_sample` because that may pick up
-                    # data from outside the specified bounds
-                    starttime = UTCDateTime(f"{year}-{jday:0>3}T00:00:00Z")
-                    endtime = UTCDateTime(f"{year}-{jday:0>3}T23:59:59.99999Z")
-                    st_out.trim(starttime, endtime, nearest_sample=False)
+                st_out = parse_st_for_jday_and_comp(st, jday=jday, 
+                                                    component=component)
+                for tr in st_out:
+                    tr.stats.network = network
+                    tr.stats.location = ""  # drop default location code
+                    tr.stats.channel = f"{band_}{instrument_code}{component}"
 
-                    # Overwrite some metadata to be more SEED conforming
-                    for tr_ in st_out:
-                        # Change channel code to match standard SEED format
-                        if band_code is not None:
-                            band_ = band_code
-                        else:
-                            band_ = get_band_code(tr_.stats.sampling_rate)
-
-                        tr_.stats.network = network
-                        tr_.stats.location = ""  # drop default location code
-                        tr_.stats.channel = \
-                                f"{band_}{instrument_code}{component}"
-
-                        # Generate file name based on metadata and timing
-                        filename = (
-                            f"{tr_.stats.network}.{tr_.stats.station}."
-                            f"{tr_.stats.channel}.{tr_.stats.starttime.year}."
-                            f"{tr_.stats.starttime.julday:0>3}"
-                            )
-
-                    # Optional overwriting command
-                    if os.path.exists(filename) and not overwrite:
-                        print(f"    file exists, won't overwrite: {filename}")
-                        continue
-
-                    # Write in MSEED Format
-                    print(f"    writing file: {filename}")
-                    st_out.write(os.path.join(output, filename), format="MSEED")
-
-                    # Reset stream to collect data for next julian day
-                    st_out = Stream()
-
-                    # The current trace may contain data from next day, we want 
-                    # to include it in the next file
-                    if tr.stats.endtime.julday != jday:
-                        st_out.append(tr)
-                    
-                    jday += 1
+                print(f"\twriting file: {filename}")
+                st_out.write(outfile, format="MSEED")
+                
