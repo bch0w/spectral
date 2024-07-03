@@ -1,0 +1,13 @@
+ PDE 2016  1  6  1 30 0.96 41.3001 129.068 1.0 4.25 4.25 NK4
+event name:     NK4
+time shift:     00.0000
+half duration:  00.0000
+latitude:       41.3001
+longitude:     129.0680
+depth:           1.0000
+Mrr:       2.167523e+22 
+Mtt:       2.617275e+22 
+Mpp:       1.895281e+22 
+Mrt:      -1.118303e+22 
+Mrp:       2.858598e+21 
+Mtp:      -1.000143e+21

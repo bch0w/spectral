@@ -1,0 +1,13 @@
+ PDE 2006  10  9  1 35 28.00 41.2874 129.1083 1.0 3.84 3.84 NK1
+event name:     NK1
+time shift:     00.0000
+half duration:  00.0000
+latitude:       41.2874
+longitude:     129.1083
+depth:           1.0000
+Mrr:       6.058168e+21 
+Mtt:       3.177106e+21 
+Mpp:       4.948433e+21 
+Mrt:       1.315247e+21 
+Mrp:       3.868968e+21 
+Mtp:       3.751792e+20

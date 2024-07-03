@@ -1,0 +1,13 @@
+ PDE 2009  5  25  0 54 43.12 41.2943 129.0778 1.0 4.38 4.38 NK2
+event name:     NK2
+time shift:     00.0000
+half duration:  00.0000
+latitude:       41.2943
+longitude:     129.0778
+depth:           1.0000
+Mrr:       4.742109e+22 
+Mtt:       2.377001e+22 
+Mpp:       2.692787e+22 
+Mrt:      -7.831240e+21 
+Mrp:       1.877480e+22 
+Mtp:       2.120960e+21
