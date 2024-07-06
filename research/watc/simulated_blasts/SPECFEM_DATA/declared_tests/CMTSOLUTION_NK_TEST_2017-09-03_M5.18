@@ -1,0 +1,13 @@
+ PDE 2017  9  3  3 30 01.00 41.3324  129.0297 637.0 6.3 6.3 NORTH KOREA
+event name:     NK_2017
+time shift:     00.0000
+half duration:  00.0000
+latitude:       41.3324
+longitude:     129.0297
+depth:         001.0000
+Mrr:       5.395000e+23
+Mtt:       5.395000e+23
+Mpp:       5.395000e+23
+Mrt:       0.000000e+00
+Mrp:       0.000000e+00
+Mtp:       0.000000e+00
