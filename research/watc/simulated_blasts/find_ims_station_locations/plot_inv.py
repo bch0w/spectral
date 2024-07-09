@@ -72,7 +72,7 @@ def setup(proj_str="Stereographic", central_longitude=0, central_latitude=0,
     fig = plt.figure(figsize=figsize, dpi=dpi)
     ax = plt.axes(projection=projection)
 
-    ax.coastlines(lw=lw_coast, zorder=1)
+    ax.coastlines(lw=lw_coast, color="darkgray", zorder=1)
     ax.add_feature(cartopy.feature.OCEAN, zorder=0)
     ax.add_feature(cartopy.feature.LAND, zorder=0)
 
@@ -107,14 +107,20 @@ def plot_inventory(inv, ax, color="r", marker="v", size=15, alpha=1, fontsize=5,
             ax.scatter(lon, lat, color=color, marker=marker, 
                        s=size, alpha=alpha, transform=REF_PROJ, zorder=10)
             # Highlight requested stations
-            if f"{network.code}.{station.code}" in stations:
+            if stations and f"{network.code}.{station.code}" in stations:
                 ax.scatter(lon, lat, color=color, marker=marker, ec="k", 
                            lw=1.1, s=size + 2, alpha=alpha, transform=REF_PROJ, 
                            zorder=10)
             if text:
+                # Right edge of the map, keep text in the map
+                if lon >= 165. and lon < 180.:
+                    horizontalalignment = "right"
+                else:
+                    horizontalalignment = "left"
                 ax.text(lon, lat, s=f"   {network.code}.{station.code}", 
                         transform=REF_PROJ, fontsize=fontsize, c=fontcolor, 
                         # bbox=dict(facecolor="w", edgecolor="k", pad=0.5),
+                        horizontalalignment=horizontalalignment,
                         zorder=11)
     return ax
 
@@ -125,6 +131,41 @@ def plot_event(ev_lat, ev_lon, ax, color="y", marker="*", size=40, alpha=1):
     """
     ax.scatter(ev_lon, ev_lat, ec="k", lw=0.5, color=color, marker=marker, 
                s=size, alpha=alpha, transform=REF_PROJ)
+
+
+def plot_test_sites(ax):
+    """
+    Plot some test site locations on the map
+    """
+    sites = {
+            "Lop Nur": (40.778373, 89.264008),
+            "NK": (41.343, 129.036),
+            "Novaya Zemlya": (73.4, 54.9),
+            "Semey": (50.433333, 80.266667),
+            "Moruroa": (-21.833333, -138.833333),
+            "Pokhran": (27.078889, 71.722500),
+            "Mushaf": (32.048611, 72.665278),
+            "Ras Koh": (28.828531, 65.194953),
+            "NNSS": (37.116667, -116.050000),
+            "Amchitka": (51.542222, 178.983333),
+            "Kiritimati": (1.788280, -157.403378),
+            "Emu": (-29.88980, 131.64670),
+            "In Ekker": (4.74000, 23.93000),
+
+            }
+    for name, loc in sites.items():
+        lat, lon = loc
+        ax.scatter(lon, lat, color="yellow", marker="d", ec="k",
+                   lw=.75, s=12, transform=REF_PROJ, zorder=10)
+        # Right edge of the map, keep text in the map
+        if lon >= 165. and lon < 180.:
+            horizontalalignment = "right"
+        else:
+            horizontalalignment = "left"
+        ax.text(lon, lat, s=f"  {name}", transform=REF_PROJ, fontsize=3,
+                c="k", zorder=11, horizontalalignment=horizontalalignment
+                )
+
 
 
 if __name__ == "__main__":
@@ -164,7 +205,8 @@ if __name__ == "__main__":
         inv = vals.pop("inv")
         plot_inventory(inv=inv, ax=ax, stations=args.stations, **vals)
 
-    plot_event(ev_lat=ev_lat, ev_lon=ev_lon, ax=ax)
+    # plot_event(ev_lat=ev_lat, ev_lon=ev_lon, ax=ax)
+    plot_test_sites(ax)
 
     # Finalize
     if not os.path.exists(os.path.dirname(args.output)):
