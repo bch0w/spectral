@@ -10,19 +10,19 @@ from glob import glob
 from obspy import read
 
 
-
 def wf_fft(wf, fNyq):
-    """ Python adaptation of wf_fft.m by Michael West
-        Necessary for GEOS626 work
+    """ 
+    Python adaptation of wf_fft.m by Michael West
+    Necessary for GEOS626 work
 
-        INPUT:
-            wf - Numpy array of the data points in your trace
-            fNyq - the Nyquist frequency
+    INPUT:
+        wf - Numpy array of the data points in your trace
+        fNyq - the Nyquist frequency
 
-        OUTPUT:
-            fft_amp - Numpy array of spectral amplitudes
-            fft_phase - Numpy array of phases
-            fft_freq - Numpy array of frequencies"""
+    OUTPUT:
+        fft_amp - Numpy array of spectral amplitudes
+        fft_phase - Numpy array of phases
+        fft_freq - Numpy array of frequencies"""
 
     NFFT = int(2 ** (np.ceil(np.log(len(wf)) / np.log(2))))  # Next highest power of 2
     FFTX = np.fft.fft(wf, n=NFFT)  # Take fft, padding with zeros.
@@ -39,47 +39,50 @@ def wf_fft(wf, fNyq):
 
     return fft_amp, fft_phase, fft_freq
 
-i = 0
-path = "/home/bchow/Work/data/egfs/NALASKA_EGF/hyp"
 
-for src in glob(os.path.join(path, "*")):
-    src_name = os.path.basename(src)
-    for kernel in glob(os.path.join(src, "*")):
-        kernel_name = os.path.basename(kernel)
-        i = 0
-        amp_arr = None
-        for fid in glob(os.path.join(kernel, "*")):
-            st = read(fid)
-            tr = st[0]  # assuming only one trace per stream
+if __name__ == "__main__":
+    i = 0
+    # File structure path/to/<src_station>/ZZ/*.SAC 
+    path = "./"
 
-            start = tr.stats.starttime
-            end = start + (10 * 60)  # 10 minutes max given longest src-rcv distance
-            tr.trim(start, end)
+    for kernel_name in ["ZZ", "TT"]:
+        for src in glob(os.path.join(path, "*")):
+            src_name = os.path.basename(src)
+            amp_arr = None
+            for fid in glob(os.path.join(kernel, "*")):
+                st = read(fid)
+                tr = st[0]  # assuming only one trace per stream
 
-            nyquist = tr.stats.sampling_rate / 2
-            
-            amp, phase, freq = wf_fft(tr.data, nyquist)
-            if amp_arr is None:
-                amp_arr = amp
-            else:
-                amp_arr += amp
+                start = tr.stats.starttime
+                # 10 minutes max given longest src-rcv distance
+                end = start + (10 * 60)  
+                tr.trim(start, end)
 
-            i += 1
+                nyquist = tr.stats.sampling_rate / 2
+                
+                amp, phase, freq = wf_fft(tr.data, nyquist)
+                if amp_arr is None:
+                    amp_arr = amp
+                else:
+                    amp_arr += amp
 
-        plt.plot(freq, amp_arr / i, c="k", lw=1.5)
+                i += 1
 
-        for period in [5, 8, 10, 20, 50]:
-            plt.axvline(1/period, c="r", ls="--")
-            plt.text(s=f" {period}s", x=1/period, y=0.5, c="r")
+            plt.plot(freq, amp_arr / i, c="k", lw=1.5)
 
-        plt.xlim([0, 0.3])
+            for period in [1, 5, 8, 10, 20, 50, 100]:
+                plt.axvline(1/period, c="r", ls="--")
+                plt.text(s=f" {period}s", x=1/period, y=0.5, c="r")
+            plt.axhline(0, c="gray", ls="--")
 
-        plt.xlabel("Freq [Hz]")
-        plt.ylabel("Amplitude")
-        plt.title(f"{src_name} {kernel_name} {i} Stations")
-        plt.savefig(f"{src_name}_{kernel_name}.png")
-        plt.close("all")
+            plt.xlim([0, 0.3])
+
+            plt.xlabel("Freq [Hz]")
+            plt.ylabel("Amplitude")
+            plt.title(f"{src_name} {kernel_name} {i} Stations")
+            plt.savefig(f"{src_name}_{kernel_name}.png")
+            plt.close("all")
 
 
-            
+                
 
