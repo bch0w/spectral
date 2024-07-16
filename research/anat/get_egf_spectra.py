@@ -41,15 +41,16 @@ def wf_fft(wf, fNyq):
 
 
 if __name__ == "__main__":
-    i = 0
+    j = 0
     # File structure path/to/<src_station>/ZZ/*.SAC 
     path = "./"
 
-    for kernel_name in ["ZZ", "TT"]:
-        for src in glob(os.path.join(path, "*")):
-            src_name = os.path.basename(src)
-            amp_arr = None
-            for fid in glob(os.path.join(kernel, "*")):
+    for src in glob(os.path.join(path, "*")):
+        src_name = os.path.basename(src)
+
+        for kernel_name in ["ZZ", "TT"]:
+            amp_arr = []
+            for fid in glob(os.path.join(src, kernel_name, "*")):
                 st = read(fid)
                 tr = st[0]  # assuming only one trace per stream
 
@@ -61,28 +62,36 @@ if __name__ == "__main__":
                 nyquist = tr.stats.sampling_rate / 2
                 
                 amp, phase, freq = wf_fft(tr.data, nyquist)
-                if amp_arr is None:
-                    amp_arr = amp
-                else:
-                    amp_arr += amp
+                amp_arr.append(amp)
 
-                i += 1
+            # Get mean and 1std from the amp array
+            amp_arr = np.array(amp_arr)
+            mean_arr = amp_arr.T.mean(axis=1)
+            std_arr = amp_arr.T.std(axis=1)
 
-            plt.plot(freq, amp_arr / i, c="k", lw=1.5)
+            # Plot the data
+            f, ax = plt.subplots(dpi=200)
 
-            for period in [1, 5, 8, 10, 20, 50, 100]:
-                plt.axvline(1/period, c="r", ls="--")
-                plt.text(s=f" {period}s", x=1/period, y=0.5, c="r")
-            plt.axhline(0, c="gray", ls="--")
+            for amp in amp_arr:
+                plt.plot(freq, amp, c="k", alpha=0.05, zorder=3)
 
+            plt.plot(freq, mean_arr, c="k", lw=1.5, zorder=8)
+            # plt.plot(freq, mean_arr + std_arr, c="k", lw=1, ls="--", alpha=0.75)
+            # plt.plot(freq, mean_arr - std_arr, c="k", lw=1, ls="--", alpha=0.75)
+
+            for period in [1, 5, 8, 10, 20, 30, 100]:
+                plt.axvline(1/period, c="r", ls="-", alpha=0.5, zorder=5)
+                plt.text(s=f" {period}s", x=1/period, y=0.5, c="r", 
+                        fontsize=8, zorder=10)
+
+            # plt.yscale("log")
             plt.xlim([0, 0.3])
+            plt.ylim([0, mean_arr.max()])
 
             plt.xlabel("Freq [Hz]")
             plt.ylabel("Amplitude")
-            plt.title(f"{src_name} {kernel_name} {i} Stations")
-            plt.savefig(f"{src_name}_{kernel_name}.png")
+            plt.title(f"{src_name} {kernel_name} {len(amp_arr)} Stations")
+            plt.savefig(f"figures/{src_name}_{kernel_name}.png")
+
             plt.close("all")
-
-
-                
 
