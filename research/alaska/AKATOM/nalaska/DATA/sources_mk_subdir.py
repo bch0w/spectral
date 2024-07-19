@@ -12,6 +12,8 @@ for fid in glob("sources_*.txt"):
     lines = open(fid).readlines()
     name = os.path.splitext(fid)[0][8:].upper()
     dir_ = f"FORCESOLUTIONS_{name}"
+    if os.path.exists(dir_):
+        continue
     os.makedirs(dir_)
     for line in lines:
         if line.startswith("#"):
