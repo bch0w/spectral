@@ -191,7 +191,7 @@ def write_src_rcv_rps(stations, job=None, rcv_fid_out="rcv.rps",
         sta = list(stations.keys())[0]
         lat, lon = stations[sta]
         x_utm, y_utm, utm_zone = latlon2utm(lat, lon)
-        f.write(line_format.format(prefix="R", line=line, sta=f"{line}{i:0>2}", 
+        f.write(line_format.format(prefix="S", line=line, sta=f"{line}{i:0>2}", 
                                    x_utm=x_utm, y_utm=y_utm)
                                    )
 
