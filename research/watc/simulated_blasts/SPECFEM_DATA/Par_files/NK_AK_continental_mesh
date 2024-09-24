@@ -22,12 +22,12 @@ GAMMA_ROTATION_AZIMUTH          = 35.d0  # 22.5
 
 # number of elements at the surface along the two sides of the first chunk
 # (must be multiple of 16 and 8 * multiple of NPROC below)
-NEX_XI                          = 160
-NEX_ETA                         = 160
+NEX_XI                          = 128    # EW
+NEX_ETA                         = 96	 # NS
 
 # number of MPI processors along the two sides of the first chunk
-NPROC_XI                        = 4
-NPROC_ETA                       = 4
+NPROC_XI                        = 8
+NPROC_ETA                       = 6
 
 #-----------------------------------------------------------
 #
@@ -64,15 +64,15 @@ NPROC_ETA                       = 4
 #                          associated reference model rather than the default 3D crustal model
 #                          e.g. s20rts_1Dcrust, s362ani_1Dcrust, etc.
 #
-MODEL                           = s20rts_crust1.0
+MODEL                           = 1d_isotropic_prem_onecrust
 
 # parameters describing the Earth model
-OCEANS                          = .true.
-ELLIPTICITY                     = .true.
-TOPOGRAPHY                      = .true.
-GRAVITY                         = .true.
-ROTATION                        = .true.
-ATTENUATION                     = .true.
+OCEANS                          = .false.
+ELLIPTICITY                     = .false.
+TOPOGRAPHY                      = .false.
+GRAVITY                         = .false.
+ROTATION                        = .false.
+ATTENUATION                     = .false.
 
 # full gravity calculation by solving Poisson's equation for gravity potential instead of using a Cowling approximation
 # (must have also GRAVITY flag set to .true. to become active)
@@ -82,7 +82,8 @@ FULL_GRAVITY                    = .false.
 POISSON_SOLVER                  = 0
 
 # record length in minutes
-RECORD_LENGTH_IN_MINUTES        = 90.0d0  # need 90m to get to antipode
+RECORD_LENGTH_IN_MINUTES        = 5.0d0  # need 90m to get to antipode
+DT								= 0.1    # OG=0.1
 
 #-----------------------------------------------------------
 #
@@ -111,7 +112,7 @@ REGIONAL_MESH_ADD_2ND_DOUBLING  = .false.
 #-----------------------------------------------------------
 
 # absorbing boundary conditions for a regional simulation
-ABSORBING_CONDITIONS            = .false.
+ABSORBING_CONDITIONS            = .true.
 
 # run global simulation for a circular region and apply high attenuation for the rest of the model
 # this creates an absorbing boundary with less reflection than stacey at a cost of 6x the computational cost
@@ -207,9 +208,9 @@ RATIO_BY_WHICH_TO_INCREASE_IT   = 1.5d0
 #MOVIE_COARSE does not work with create_movie_AVS_DX
 MOVIE_SURFACE                   = .true.
 MOVIE_VOLUME                    = .false.
-MOVIE_COARSE                    = .true.
-NTSTEP_BETWEEN_FRAMES           = 25
-HDUR_MOVIE                      = 0.d0
+MOVIE_COARSE                    = .false.
+NTSTEP_BETWEEN_FRAMES           = 30
+HDUR_MOVIE                      = 29.d0
 
 # save movie in volume.  Will save element if center of element is in prescribed volume
 # top/bottom: depth in KM, use MOVIE_TOP = -100 to make sure the surface is stored.
@@ -217,7 +218,7 @@ HDUR_MOVIE                      = 0.d0
 # start/stop: frames will be stored at MOVIE_START + i*NSTEP_BETWEEN_FRAMES, where i=(0,1,2..) and iNSTEP_BETWEEN_FRAMES <= MOVIE_STOP
 # movie_volume_type: 1=strain, 2=time integral of strain, 3=\mu*time integral of strain
 # type 4 saves the trace and deviatoric stress in the whole volume, 5=displacement, 6=velocity
-MOVIE_VOLUME_TYPE               = 2
+MOVIE_VOLUME_TYPE               = 6
 MOVIE_TOP_KM                    = -100.0
 MOVIE_BOTTOM_KM                 = 1000.0
 MOVIE_WEST_DEG                  = -90.0
@@ -268,7 +269,7 @@ USE_FORCE_POINT_SOURCE          = .false.
 USE_MONOCHROMATIC_CMT_SOURCE    = .false.
 
 # print source time function
-PRINT_SOURCE_TIME_FUNCTION      = .false.
+PRINT_SOURCE_TIME_FUNCTION      = .true.
 
 #-----------------------------------------------------------
 #
@@ -300,7 +301,7 @@ OUTPUT_SEISMOS_ASDF             = .false.
 OUTPUT_SEISMOS_3D_ARRAY         = .false.
 
 # rotate seismograms to Radial-Transverse-Z or use default North-East-Z reference frame
-ROTATE_SEISMOGRAMS_RT           = .false.
+ROTATE_SEISMOGRAMS_RT           = .true.
 
 # decide if main process writes all the seismograms or if all processes do it in parallel
 WRITE_SEISMOGRAMS_BY_MAIN       = .false.
