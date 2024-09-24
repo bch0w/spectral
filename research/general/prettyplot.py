@@ -1,5 +1,6 @@
 """
-Pretty plotting of ObsPy Streams
+Pretty plotting of ObsPy Streams, can either be ObsPy 'read'able format or
+two-column ASCII output for SPECFEM synthetics. Most things controlled by parser
 """
 import argparse
 import sys
@@ -11,23 +12,34 @@ from pysep import read_sem
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("fid", nargs=1)
-    parser.add_argument("--xlim", nargs="+", type=int, default=None)
-    parser.add_argument("--taper", nargs="?", type=float, default=0)
-    parser.add_argument("--fmin", nargs="?", type=int, default=None)
-    parser.add_argument("--fmax", nargs="?", type=int, default=None)
-    parser.add_argument("--t0", nargs="?", type=float, default=0)
+    parser.add_argument("fid", nargs="?", help="required, file ID")
+    parser.add_argument("--xlim", nargs="+", type=int, default=None,
+                        help="time axis limits in s")
+    parser.add_argument("--taper", nargs="?", type=float, default=0,
+                        help="optional taper percentange")
+    parser.add_argument("--fmin", nargs="?", type=int, default=None,
+                        help="optional filtering freqmin in Hz")
+    parser.add_argument("--fmax", nargs="?", type=int, default=None,
+                        help="optional filtering freqmax in Hz")
+    parser.add_argument("--t0", nargs="?", type=float, default=0,
+                        help="SPECFEM USER_T0 if synthetics")
 
-    parser.add_argument("--c", nargs="?", type=str, default="k")
-    parser.add_argument("--lw", nargs="?", type=float, default=1)
+    parser.add_argument("--c", nargs="?", type=str, default="k",
+                        help="color of the time series line")
+    parser.add_argument("--lw", nargs="?", type=float, default=1,
+                        help="linewidth of the time series line")
+    parser.add_argument("--ylabel", nargs="?", type=str, default=None,
+                        help="label for units, defaults to displacement")
+    parser.add_argument("--title", nargs="?", type=str, default=None,
+                        help="title of the figure, defaults to ID and fmin/max")
 
-    return parser
+    return parser.parse_args()
 
 def set_plot_aesthetic(
-        ax, ytick_fontsize=8., xtick_fontsize=12., tick_linewidth=1.5,
+        ax, ytick_fontsize=9., xtick_fontsize=9., tick_linewidth=1.5,
         tick_length=5., tick_direction="in", xlabel_fontsize=10.,
         ylabel_fontsize=10., axis_linewidth=2., spine_zorder=8, spine_top=True,
-        spine_bot=True, spine_left=True, spine_right=True, title_fontsize=10.,
+        spine_bot=True, spine_left=True, spine_right=True, title_fontsize=12.,
         xtick_minor=None, xtick_major=None, ytick_minor=None, ytick_major=None,
         xgrid_major=True, xgrid_minor=True, ygrid_major=True, ygrid_minor=True,
         **kwargs):
@@ -55,6 +67,9 @@ def set_plot_aesthetic(
     for spine in ax.spines.values():
         spine.set_zorder(spine_zorder)
 
+    # Scientific format for Y-axis
+    plt.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
+
     # Set xtick label major and minor which is assumed to be a time series
     if xtick_major:
         ax.xaxis.set_major_locator(MultipleLocator(float(xtick_major)))
@@ -67,11 +82,11 @@ def set_plot_aesthetic(
 
     plt.sca(ax)
     if xgrid_major:
-        plt.grid(visible=True, which="major", axis="x", alpha=0.5, linewidth=1)
+        plt.grid(visible=True, which="major", axis="x", alpha=0.2, linewidth=1)
     if xgrid_minor:
         plt.grid(visible=True, which="minor", axis="x", alpha=0.2, linewidth=.5)
     if ygrid_major:
-        plt.grid(visible=True, which="major", axis="y", alpha=0.5, linewidth=1)
+        plt.grid(visible=True, which="major", axis="y", alpha=0.2, linewidth=1)
     if ygrid_minor:
         plt.grid(visible=True, which="minor", axis="y", alpha=0.2, linewidth=.5)
 
@@ -84,16 +99,24 @@ if __name__ == "__main__":
     except TypeError:
         st = read_sem(args.fid)
 
-    f, ax = plt.subplot()
+    f, ax = plt.subplots(figsize=(8, 4), dpi=200)
 
     if args.taper:
         st.taper(args.taper)
-    if fmin:
+    if args.fmin:
         st.filter("bandpass", freqmin=fmin, freqmax=fmax)
 
-    plt.plot(st[0].times - args.t0, st[0].data, c=args.c, lw=args.lw)
+    xvals = st[0].times() - args.t0
+    plt.plot(xvals, st[0].data, c=args.c, lw=args.lw)
+    plt.xlabel("Time [s]")
+    plt.ylabel(args.ylabel or "Displacement [m]")
+
     if args.xlim:
-        plt.set_xlim(args.xlim)
+        plt.xlim(args.xlim)
+    else:
+        plt.xlim(xvals.min(), xvals.max())
+
+    plt.title(args.title or f"{st[0].get_id()} [{args.fmin}, {args.fmax}]Hz")
 
     set_plot_aesthetic(ax)
     plt.show()
