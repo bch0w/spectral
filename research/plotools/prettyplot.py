@@ -43,6 +43,8 @@ def parse_args():
                         help="apply zerophase filter or not")
     parser.add_argument("-t0", "--t0", nargs="?", type=float, default=0,
                         help="SPECFEM USER_T0 if synthetics")
+    parser.add_argument("-ts", "--tstart", nargs="?", type=float, default=0,
+                        help="for relative time axis, set t0 value, defaults 0")
     parser.add_argument("--integrate", nargs="?", type=int, default=0,
                         help="Integrate the time series, will demean and taper,"
                              " value for integrate will be the number of times")
@@ -64,7 +66,10 @@ def parse_args():
     parser.add_argument("-x", "--xlim", nargs="+", type=float, default=None,
                         help="time axis limits in s")
     parser.add_argument("-y", "--ylim", nargs="+", type=float, default=None,
-                        help="time axis limits in s")
+                        help="amplitude axis limits in s")
+    parser.add_argument("-t", "--time", nargs="?", type=str, default="s",
+                        help="units for x-axis/time axis. choice: 's'econds "
+                             "(default), 'm'inutes, 'h'ours, 'a'bsolute (wip)")
     parser.add_argument("-c", "--color", nargs="?", type=str, default="k",
                         help="color of the time series line")
     parser.add_argument("-lw", "--linewidth", nargs="?", type=float, default=0.5,
@@ -75,6 +80,8 @@ def parse_args():
                         help="title of the figure, defaults to ID and fmin/max")
     parser.add_argument("-ta", "--title_append", nargs="?", type=str, 
                         default="", help="append to default title")
+    parser.add_argument("-tm", "--tmarks", nargs="+", type=float,
+                        help="plot vertical lines at given relative times")
 
     # Misc
     parser.add_argument("-s", "--save", type=str, default=None,
@@ -231,7 +238,23 @@ if __name__ == "__main__":
 
     # Main plotting start
     f, ax = plt.subplots(figsize=(8, 4), dpi=200)
-    xvals = st[0].times() - args.t0
+    xvals = st[0].times() 
+
+    # Set time axis
+    if args.time == "s":
+        xvals /= 1  # not necessary but for consistency
+    elif args.time == "m":
+        xvals /= 60
+    elif args.time == "h": 
+        xvals /= 60 ** 2
+    else:
+        print("unknown time axis choice, default to 's'econds")
+        xvals /= 1
+
+    # Offset time axis based on user defined criteria
+    xvals -= args.t0
+    xvals += args.tstart
+
     plt.plot(xvals, st[0].data, c=args.color, lw=args.linewidth, zorder=6)
 
     # Plot phases from TauP
@@ -246,7 +269,7 @@ if __name__ == "__main__":
         plt.legend(fontsize=8, loc="upper left", frameon=False)
 
     # Set plot aesthetics
-    plt.xlabel("Time [s]")
+    plt.xlabel(f"Time [{args.time}]")
     plt.ylabel(args.ylabel or "Displacement [m]")
 
     if args.xlim:
@@ -255,7 +278,16 @@ if __name__ == "__main__":
         plt.xlim(xvals.min(), xvals.max())
 
     if args.ylim:
-        plt.ylim(args.ylim)
+        # Allow for one entry to set min/max if they're the same
+        if len(args.ylim) == 1:
+            ylim = [-1 * args.ylim[0], args.ylim[0]]
+        else:
+            ylim = args.ylim
+        plt.ylim(ylim)
+
+    if args.tmarks:
+        for tmark in args.tmarks:
+            plt.axvline(tmark, c="r", lw=0.5)
 
     if not args.title:
         title = f"{st[0].get_id()} [{args.fmin}, {args.fmax}]Hz"

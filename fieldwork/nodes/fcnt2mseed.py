@@ -28,6 +28,7 @@ Arguments:
 import argparse
 import os
 from obspy import read, UTCDateTime
+from obspy.clients.nrl import NRL
 
 
 def get_band_code(sampling_rate_hz):
@@ -137,6 +138,17 @@ if __name__ == "__main__":
                              "related to the type of instrument. We assume "
                              "Fairfield nodes are 'H' for high gain "
                              "seismometer")
+    parser.add_argument("-R", "--remove_response", action="store_true", 
+                        default=False, 
+                        help="(OPTIONAL) remove instrument response based on "
+                             "nominal response library for fairfield nodes")
+    parser.add_argument("--sensor_keys", type="str", default=None,
+                        help="(OPTIONAL) for response removal, overwrites "
+                             "default NRL sensor keys")
+    parser.add_argument("--datalogger_keys", type="str", default=None,
+                        help="(OPTIONAL) for response removal, overwrites "
+                             "default NRL datalogger keys")
+
 
 
     # Get command line arguments ready
@@ -151,6 +163,23 @@ if __name__ == "__main__":
 
     # Make sure the output directory exists
     os.makedirs(output, exist_ok=True)
+
+    # Get response information if requested
+    response = None
+    if args.remove_response:
+        nrl = NRL()
+        sensor_keys = args.sensor_keys or \
+                ["Magseis Fairfield", "Generation 2", "5 Hz"]
+        datalogger_keys = args.datalogger_keys or \
+                ["Magseis Fairfield", "Zland 1C or 3C", "18 dB (8)", "250", 
+                 "Linear Phase", "Off"]
+
+        print(f"RESPONSE REMOVAL SENSOR KEYS: {sensor_keys}")
+        print(f"RESPONSE REMOVAL DATALOGGER KEYS: {datalogger_keys}")
+
+        response = nrl.get_response(sensor_keys=sensor_keys,
+                                    datalogger_keys=datalogger_keys)
+        print(response)
 
     # Read in the .fcnt files
     print(f"READING {len(fids)} FILES FROM {fids[0]} -> {fids[-1]}")
@@ -201,6 +230,11 @@ if __name__ == "__main__":
                     tr.stats.network = network
                     tr.stats.location = ""  # drop default location code
                     tr.stats.channel = f"{band_}{instrument_code}{component}"
+
+                # Remove response if requested
+                if response is not None:
+                    st_out.remove_response
+
 
                 print(f"\twriting file: {filename}")
                 st_out.write(outfile, format="MSEED")

@@ -93,8 +93,6 @@ if __name__ == "__main__":
 
     if args.ylim:
         plt.ylim(args.ylim)
-    else:
-        
 
     if not args.title:
         title = f"{st[0].get_id()} Amplitude Spectra"
