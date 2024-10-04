@@ -21,10 +21,16 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
-from obspy import read
+from matplotlib.dates import date2num
+from obspy import read, UTCDateTime
 from obspy.taup import TauPyModel
 from obspy.geodetics import kilometers2degrees
+from obspy.imaging.util import _set_xaxis_obspy_dates
+
 from pysep import read_sem
+
+
+SECONDS_PER_DAY = 3600.0 * 24.0
 
 
 def parse_args():
@@ -63,8 +69,9 @@ def parse_args():
                         help="TauP source depth km")
 
     # Plot Aesthetics
-    parser.add_argument("-x", "--xlim", nargs="+", type=float, default=None,
-                        help="time axis limits in s")
+    parser.add_argument("-x", "--xlim", nargs="+", default=None,
+                        help="time axis limits in s or if `time`=='a' then "
+                             "values should be in datetime, see tmarks")
     parser.add_argument("-y", "--ylim", nargs="+", type=float, default=None,
                         help="amplitude axis limits in s")
     parser.add_argument("-t", "--time", nargs="?", type=str, default="s",
@@ -80,14 +87,17 @@ def parse_args():
                         help="title of the figure, defaults to ID and fmin/max")
     parser.add_argument("-ta", "--title_append", nargs="?", type=str, 
                         default="", help="append to default title")
-    parser.add_argument("-tm", "--tmarks", nargs="+", type=float,
-                        help="plot vertical lines at given relative times")
+    parser.add_argument("-tm", "--tmarks", nargs="+", 
+                        help="plot vertical lines at given relative times, "
+                             "should match the units of `time`. If `time`=='a' "
+                             "then each tmark should be a datetime "
+                             "YYYY-MM-DDTHH:MM:SS")
 
     # Misc
     parser.add_argument("-s", "--save", type=str, default=None,
                         help="filename to save figure")
-    parser.add_argument("-S", "--spectra", action="store_true", default=False,
-                        help="plot spectra of the raw trace")
+    parser.add_argument("--noshow", action="store_true", default=False,
+                        help="dont show the figure, default behavior will show")
 
     return parser.parse_args()
 
@@ -147,31 +157,6 @@ def set_plot_aesthetic(
         plt.grid(visible=True, which="minor", axis="y", alpha=0.2, linewidth=.5)
 
 
-def plot_spectrum(tr):
-    """
-    Create a sepearte plot of amplitude spectrum for an ObsPy trace
-    """
-    from scipy.fftpack import fft, fftfreq, next_fast_len
-
-    f, ax = plt.subplots(figsize=(4, 4), dpi=200)
-
-    tr.detrend("demean")
-    sr = tr.stats.sampling_rate
-    nfft = next_fast_len(tr.stats.npts)  # pad data with zeros for fast FT
-    pos_freq = (nfft + 1) // 2  # index for positive frequencies
-    spec = fft(tr.data, nfft)[:pos_freq]
-    freq = fftfreq(nfft, 1 / sr)[:pos_freq]  # get freqs of DFT bin
-
-    plt.plot(freq, np.abs(spec), c="k", lw=-.25)  
-    plt.xlim([0.01, 5])
-    set_plot_aesthetic(ax)
-    f.tight_layout()
-    plt.show()
-    plt.savefig("spectra")
-    plt.close("all")
-
-
-
 if __name__ == "__main__":
     args = parse_args()
 
@@ -182,10 +167,6 @@ if __name__ == "__main__":
         st = read(args.fid)
     except TypeError:
         st = read_sem(args.fid)
-
-    # Separate figures
-    if args.spectra:
-        plot_spectrum(st[0])
 
     # Get phase arrivals from TauP if requested
     arrivals = None
@@ -238,22 +219,31 @@ if __name__ == "__main__":
 
     # Main plotting start
     f, ax = plt.subplots(figsize=(8, 4), dpi=200)
-    xvals = st[0].times() 
 
-    # Set time axis
-    if args.time == "s":
-        xvals /= 1  # not necessary but for consistency
-    elif args.time == "m":
-        xvals /= 60
-    elif args.time == "h": 
-        xvals /= 60 ** 2
+    if args.time == "a":
+        # convert seconds of relative sample times to days and add
+        # start time of trace.
+        xvals = ((st[0].times() / SECONDS_PER_DAY) +
+                        date2num(st[0].stats.starttime.datetime))
+        _set_xaxis_obspy_dates(ax)
     else:
-        print("unknown time axis choice, default to 's'econds")
-        xvals /= 1
+        xvals = st[0].times() 
 
-    # Offset time axis based on user defined criteria
-    xvals -= args.t0
-    xvals += args.tstart
+        # Set time axis
+        if args.time == "s":
+            xvals /= 1  # not necessary but for consistency
+        elif args.time == "m":
+            xvals /= 60
+        elif args.time == "h": 
+            xvals /= 60 ** 2
+        else:
+            print("unknown time axis choice, default to 's'econds")
+            xvals /= 1
+
+        # Offset time axis based on user defined criteria
+        xvals -= args.t0
+        xvals += args.tstart
+
 
     plt.plot(xvals, st[0].data, c=args.color, lw=args.linewidth, zorder=6)
 
@@ -269,26 +259,50 @@ if __name__ == "__main__":
         plt.legend(fontsize=8, loc="upper left", frameon=False)
 
     # Set plot aesthetics
-    plt.xlabel(f"Time [{args.time}]")
+    if args.time == "a":
+        plt.xlabel(f"Time")
+    else:
+        plt.xlabel(f"Time [{args.time}]")
     plt.ylabel(args.ylabel or "Displacement [m]")
 
+    # Subset x axis
+    xstart, xend = xvals.min(), xvals.max()
     if args.xlim:
-        plt.xlim(args.xlim)
-    else:
-        plt.xlim(xvals.min(), xvals.max())
+        if args.time == "a":
+            xstart = date2num(UTCDateTime(args.xlim[0]).datetime)
+            xend = date2num(UTCDateTime(args.xlim[1]).datetime)
+        else:
+            xstart, xend = args.xlim
+    plt.xlim(xstart, xend)
 
+    # Subset y axis
+    ymax = np.amax([st[0].data.min(), st[0].data.max()])
+    ymin = -1 * ymax
     if args.ylim:
         # Allow for one entry to set min/max if they're the same
         if len(args.ylim) == 1:
-            ylim = [-1 * args.ylim[0], args.ylim[0]]
+            ymin, ymax = [-1 * args.ylim[0], args.ylim[0]]
         else:
-            ylim = args.ylim
-        plt.ylim(ylim)
+            ymin, ymax = args.ylim
+    else:
+        # Need to rescale y-axis based on the subset x-axis, hacky
+        idx_start = (np.abs(xvals - xstart)).argmin()
+        idx_end = (np.abs(xvals - xend)).argmin()
+        yvals = st[0].data[idx_start: idx_end]
+        ymax = np.amax([yvals.min(), yvals.max()])
+        ymin = -1 * ymax
 
+    plt.ylim(ymin, ymax)
+
+    # Add vertical lies at certain times
     if args.tmarks:
         for tmark in args.tmarks:
+            if args.time == "a":
+                tmark = date2num(UTCDateTime(tmark).datetime)
+                # date2num(st[0].stats.starttime.datetime) + tmark
             plt.axvline(tmark, c="r", lw=0.5)
 
+    # Finish off by setting plot aesthetics
     if not args.title:
         title = f"{st[0].get_id()} [{args.fmin}, {args.fmax}]Hz"
 
@@ -307,9 +321,12 @@ if __name__ == "__main__":
     f.tight_layout()
 
     # Finalize Plot
-    if args.save:
+    if args.save == "auto":
+        plt.savefig(f"{args.fid}.png")
+    elif args.save is not None:
         plt.savefig(args.save)
 
-    plt.show()
+    if not args.noshow:
+        plt.show()
     plt.close("all")
 

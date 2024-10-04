@@ -74,21 +74,29 @@ if __name__ == "__main__":
                                phase_type=args.phase_type,
                                low_cut=args.low_cut) 
 
-    # Dummy values to be used for Inventory, they are not actually important
-    lat = 63.26495
-    lon = -145.415472
-    elevation=0
-    depth=0
+    # Dummy values to be used for Inventory, these are not actually important
+    # for the response removal
+    lat = 0.
+    lon = 0.
+    elevation = 0.
+    depth = 0.
     start_date = UTCDateTime("1990-01-01")
     end_date = UTCDateTime()
 
-
     # Apply, remove and save
     for fid in args.fids:
+        # Set up output file name and check existence
+        fidout = os.path.basename(fid)
+        pathout = os.path.join(args.output, fidout)
+        if os.path.exists(pathout):
+            print(f"{pathout} exists, skipping")
+            continue
+        else:
+            print(fidout)
+
         st = read(fid)
         channels = []
         for tr in st:
-            print(tr.get_id())
             channel = Channel(code=tr.stats.channel, 
                               location_code=tr.stats.location, latitude=lat, 
                               longitude=lon, elevation=elevation, depth=depth,
@@ -101,10 +109,9 @@ if __name__ == "__main__":
         network = Network(code=tr.stats.network, stations=[station]) 
         inv = Inventory(networks=[network])
 
-        print("removing response")
+        print("\tremoving response")
         st.remove_response(inv)
 
-        fidout = os.path.basename(fid)
-        pathout = os.path.join(args.output, fidout)
+        print("\twriting file")
         st.write(pathout, format="MSEED")
 

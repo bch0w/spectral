@@ -1,19 +1,5 @@
 """
-Pretty plotting of ObsPy Streams, can either be ObsPy 'read'able format or
-two-column ASCII output for SPECFEM synthetics. Most things controlled by parser
-
-.. rubric
-
-    pplot <STA> --xlim 0 200 --fmin 1 --fmax 4 --taper 0.5 --c k --lw 0.5
-
-    pplot NK6_IC.MDJ.CXZ.sem.ascii --differentiate 1 --ylabel 'Velocity [m/s]' \
-            -t0 50 --fmin 2 --fmax 4 --save NK6.png --xlim 0 200 \
-            --taup Pn Pg Sn Sg --dist 378 --depth 0
-
-    pplot EQ2_IC.MDJ.CXZ.sem.ascii --differentiate 1 --ylabel 'Velocity [m/s]' \
-            -t0 50 --fmin 2 --fmax 4 --save EQ2.png --xlim 0 200 \
-            --taup Pn Pg Sn Sg --dist 378 --depth 3 --ylim -.0004 .0004 \
-            -ta 'SPECFEM3D_GLOBE s20rts_crust1'
+Plot frequency vs. amplitude spectra for a 
 """
 from prettyplot import set_plot_aesthetic
 
