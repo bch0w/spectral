@@ -148,6 +148,7 @@ if __name__ == "__main__":
     components = args.components
     band_code = args.band_code
     instrument_code = args.instrument_code
+    location = ""  # force to be empty but can be used if desired
 
     # Make sure the output directory exists
     os.makedirs(output, exist_ok=True)
@@ -189,7 +190,8 @@ if __name__ == "__main__":
             for jday in range(jday_start, jday_end + 1):
                 # Build the filename before doing any data manipulation so that
                 # if we have already created the file we can skip right over
-                filename = f"{network}.{station}.{channel}.{year}.{jday:0>3}"
+                filename = \
+                   f"{network}.{station}.{location}.{channel}.{year}.{jday:0>3}"
                 outfile = os.path.join(output, filename)
                 if os.path.exists(outfile):
                     print(f"\tfile '{filename}' exists in 'output', skipping")
@@ -199,7 +201,7 @@ if __name__ == "__main__":
                                                     component=component)
                 for tr in st_out:
                     tr.stats.network = network
-                    tr.stats.location = ""  # drop default location code
+                    tr.stats.location = location  # drops default location code
                     tr.stats.channel = f"{band_}{instrument_code}{component}"
 
                 print(f"\twriting file: {filename}")
