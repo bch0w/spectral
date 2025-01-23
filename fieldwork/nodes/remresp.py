@@ -1,6 +1,10 @@
 """
 Remove response from Fairfield nodal data. Builds Node inventory with response 
 information from Nominal Response Library
+
+.. rubric::
+        
+    python remresp.py <files> --output ./
 """
 import os
 import argparse
