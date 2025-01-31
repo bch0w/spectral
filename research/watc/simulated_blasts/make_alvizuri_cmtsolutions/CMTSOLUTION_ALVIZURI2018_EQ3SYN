@@ -1,0 +1,13 @@
+ PDE 2017  11  15  5 29 32.82 36.0735 129.28 3.0 5.2 5.2 EQ3
+event name:     EQ3
+time shift:     00.0000
+half duration:  00.0000
+latitude:       41.3324
+longitude:     129.0297
+depth:           3.0000
+Mrr:       2.962945e+23 
+Mtt:       2.834051e+23 
+Mpp:      -6.907862e+23 
+Mrt:      -4.599846e+23 
+Mrp:      -2.735922e+23 
+Mtp:      -1.478905e+23
