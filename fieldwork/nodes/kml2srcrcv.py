@@ -149,6 +149,7 @@ def write_src_rcv_txt(stations, job=None, rcv_fid_out="rcv.txt",
         x_utm, y_utm, utm_zone = latlon2utm(lat, lon)
         f.write(f"S{line} {line}{i:0>2} {x_utm:.2f} {y_utm:.2f} 0\n")
 
+    print(f"UTM Zone: {utm_zone}")
 
 def write_src_rcv_rps(stations, job=None, rcv_fid_out="rcv.rps", 
                       src_fid_out="src.rps", line=1, path_out="./"):
@@ -195,6 +196,8 @@ def write_src_rcv_rps(stations, job=None, rcv_fid_out="rcv.rps",
         f.write(line_format.format(prefix="S", line=line, sta=f"{line}{i:0>2}", 
                                    x_utm=x_utm, y_utm=y_utm)
                                    )
+
+    print(f"UTM Zone: {utm_zone}")
 
 
 if __name__ == "__main__":
