@@ -121,6 +121,10 @@ if __name__ == "__main__":
                          help="(OPTIONAL) only write out certain components, "
                               "e.g., 'ZN' will only write Z and N component. "
                               "If not provided, writes all available in data")
+    parser.add_argument("-j", "--jdays", type=int, nargs="+",
+                         help="(OPTIONAL) only write out certain julian days. "
+                              "This will involve knowing the days of interest "
+                              "or running without this option to see printout")
     parser.add_argument("-o", "--output", type=str, default=os.getcwd(),
                          help="output directory to save MSEED files. Defaults "
                               "to the current working directory")
@@ -138,6 +142,10 @@ if __name__ == "__main__":
                              "related to the type of instrument. We assume "
                              "Fairfield nodes are 'H' for high gain "
                              "seismometer")
+    parser.add_argument("-p", "--print_only", action="store_true", 
+                        default=False,
+                        help="(OPTIONAL) only read the data and print stream "
+                             "info but do not do any data writing")
 
     # Get command line arguments ready
     args = parser.parse_args()
@@ -147,7 +155,9 @@ if __name__ == "__main__":
     network = args.network
     components = args.components
     band_code = args.band_code
+    jdays = args.jdays
     instrument_code = args.instrument_code
+    print_only = args.print_only
     location = ""  # force to be empty but can be used if desired
 
     # Make sure the output directory exists
@@ -160,6 +170,8 @@ if __name__ == "__main__":
         print(f"READING/WRITING FILE: {fid}")
         st = read(fid, format="rg16", contacts_north=True)
         print_stream_info(st)
+        if print_only:
+            continue
 
         # Figure out what components we need to write files for
         if components:
@@ -188,6 +200,9 @@ if __name__ == "__main__":
         for component in comp_list:
             channel = f"{band_}{instrument_code}{component}"  # e.g., GHZ
             for jday in range(jday_start, jday_end + 1):
+                # Allow User to select days
+                if jdays and (jday not in jdays):
+                    continue
                 # Build the filename before doing any data manipulation so that
                 # if we have already created the file we can skip right over
                 filename = \
