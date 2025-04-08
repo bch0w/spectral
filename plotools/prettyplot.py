@@ -76,7 +76,10 @@ def parse_args():
                         help="amplitude axis limits in s")
     parser.add_argument("-t", "--time", nargs="?", type=str, default="s",
                         help="units for x-axis/time axis. choice: 's'econds "
-                             "(default), 'm'inutes, 'h'ours, 'a'bsolute (wip)")
+                             "(default), 'm'inutes, 'h'ours, 'a'bsolute (wip)."
+                             "If using 'a' you may add '+i' or '-i' to "
+                             "time shift the array, e.g., to go from UTC to "
+                             "local time. E.g., 'a-7' will subtract 7 hours.")
     parser.add_argument("-c", "--color", nargs="?", type=str, default="k",
                         help="color of the time series line")
     parser.add_argument("-lw", "--linewidth", nargs="?", type=float, default=0.5,
@@ -220,9 +223,17 @@ if __name__ == "__main__":
     # Main plotting start
     f, ax = plt.subplots(figsize=(8, 4), dpi=200)
 
-    if args.time == "a":
+    if args.time.startswith("a"):
         # convert seconds of relative sample times to days and add
         # start time of trace.
+        # Allow time shift a+i or a-i where i is time in hours
+        sign = ""; shift = ""
+        if len(args.time) > 1:
+            sign = args.time[1]
+            shift = args.time[2:]
+            int_sign = {"+": 1, "-": -1}[sign]
+            shift = int(shift)
+            st[0].stats.starttime += int_sign * 60 * 60 * shift
         xvals = ((st[0].times() / SECONDS_PER_DAY) +
                         date2num(st[0].stats.starttime.datetime))
         _set_xaxis_obspy_dates(ax)
@@ -259,8 +270,8 @@ if __name__ == "__main__":
         plt.legend(fontsize=8, loc="upper left", frameon=False)
 
     # Set plot aesthetics
-    if args.time == "a":
-        plt.xlabel(f"Time")
+    if args.time.startswith("a"):
+        plt.xlabel(f"Time [UTC{sign}{shift}]")
     else:
         plt.xlabel(f"Time [{args.time}]")
     plt.ylabel(args.ylabel or "Displacement [m]")
