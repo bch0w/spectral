@@ -2,9 +2,9 @@
 from obspy.taup import TauPyModel 
 import matplotlib.pyplot as plt
 
-phase_list = ["ttbasic"]
+phase_list = ["P"]
 model = TauPyModel(model="prem")
-for distance in range(0, 180, 1):
+for distance in range(0, 90, 1):
     arrivals = model.get_ray_paths(source_depth_in_km=0, 
                                    distance_in_degree=distance,
                                    phase_list=phase_list)

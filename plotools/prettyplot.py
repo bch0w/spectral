@@ -22,7 +22,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from matplotlib.dates import date2num
-from obspy import read, UTCDateTime
+from obspy import read, UTCDateTime, Stream
 from obspy.taup import TauPyModel
 from obspy.geodetics import kilometers2degrees
 from obspy.imaging.util import _set_xaxis_obspy_dates
@@ -33,12 +33,21 @@ from pysep import read_sem
 SECONDS_PER_DAY = 3600.0 * 24.0
 
 
+def find_nearest(array, value):
+    """
+    Find the nearest index in a consecutive (time) array given a chosen value
+    """
+    array = np.asarray(array)
+    idx = (np.abs(array - value)).argmin()
+    return idx
+
+
 def parse_args():
     """All modifications are accomplished with command line arguments"""
     parser = argparse.ArgumentParser()
 
     # Waveform Processing
-    parser.add_argument("fid", nargs="?", help="required, file ID")
+    parser.add_argument("fid", nargs="+", help="required, file ID(s)")
     parser.add_argument("-tp", "--taper", nargs="?", type=float, default=0,
                         help="optional taper percentange")
     parser.add_argument("-f1", "--fmin", nargs="?", type=float, default=None,
@@ -80,8 +89,11 @@ def parse_args():
                              "If using 'a' you may add '+i' or '-i' to "
                              "time shift the array, e.g., to go from UTC to "
                              "local time. E.g., 'a-7' will subtract 7 hours.")
-    parser.add_argument("-c", "--color", nargs="?", type=str, default="k",
-                        help="color of the time series line")
+    parser.add_argument("-c", "--colors", nargs="+", type=str, default=None,
+                        help="color of the time series line, number of inputs "
+                             "must match the length of `fid`")
+    parser.add_argument("-l", "--labels", nargs="+", type=str, default=None,
+                        help="optional labels legend, must match len of `fid`")
     parser.add_argument("-lw", "--linewidth", nargs="?", type=float, default=0.5,
                         help="linewidth of the time series line")
     parser.add_argument("--ylabel", nargs="?", type=str, default=None,
@@ -99,6 +111,8 @@ def parse_args():
     # Misc
     parser.add_argument("-s", "--save", type=str, default=None,
                         help="filename to save figure")
+    parser.add_argument("-o", "--output", type=str, default=None,
+                        help="optional path to output processed seismograms")
     parser.add_argument("--noshow", action="store_true", default=False,
                         help="dont show the figure, default behavior will show")
 
@@ -166,10 +180,13 @@ if __name__ == "__main__":
     if not args.fid:
         sys.exit("positional argument `fid` required")
 
-    try:
-        st = read(args.fid)
-    except TypeError:
-        st = read_sem(args.fid)
+    # Populate Stream object
+    st = Stream()
+    for fid in args.fid:
+        try:
+            st += read(fid)
+        except TypeError:
+            st += read_sem(fid)
 
     # Get phase arrivals from TauP if requested
     arrivals = None
@@ -177,7 +194,7 @@ if __name__ == "__main__":
         assert(args.tp_dist is not None)
         assert(args.tp_depth is not None)
         dist_deg = kilometers2degrees(args.tp_dist)
-        model = TauPyModel(model="iasp91")
+        model = TauPyModel(model=args.tp_model)
         tp_arrivals = model.get_travel_times(source_depth_in_km=args.tp_depth,
                                              distance_in_degree=dist_deg,
                                              phase_list=args.tp_phases)
@@ -187,6 +204,11 @@ if __name__ == "__main__":
         arrivals = {arrival.name: [] for arrival in tp_arrivals}
         for i, arrival in enumerate(tp_arrivals):
             arrivals[arrival.name].append(arrival.time)
+            print(f"{arrival.name} = {arrival.time} s")
+
+        if not arrivals:
+            print(f"No arrivals found for given depth={args.tp_depth}km and "
+                  f"distance {dist_deg:.2f}deg")
 
     # Preprocess waveforms
     taper = args.taper
@@ -255,18 +277,34 @@ if __name__ == "__main__":
         xvals -= args.t0
         xvals += args.tstart
 
+    for i, tr in enumerate(st):
+        if args.colors:
+            c = args.colors[i]
+        else:
+            c = f"C{i}"
+        if args.labels:
+            l = args.labels[i]
+        else:
+            l = None
+        plt.plot(xvals, tr.data, c=c, lw=args.linewidth, zorder=6, label=l)
 
-    plt.plot(xvals, st[0].data, c=args.color, lw=args.linewidth, zorder=6)
-
-    # Plot phases from TauP
+    # Plot phases from TauP and figure out max amplitude in the window
+    arrival_dict = {}
     if arrivals:
         for i, (name, times) in enumerate(arrivals.items()):
             if times[0] == times[-1]:
                 alpha = 1
             else: 
                 alpha = 0.3
-            plt.axvspan(times[0], times[-1], label=name, color=f"C{i}", 
-                        alpha=alpha, zorder=7)
+
+            # Figure out the maximum amplitude in this time window 
+            win_start = find_nearest(xvals, times[0])
+            win_end = find_nearest(xvals, times[-1]) + 1
+            max_amp = np.amax(st[0].data[win_start:win_end])
+            arrival_dict[name] = max_amp
+
+            plt.axvspan(times[0], times[-1], label=f"{name} ({max_amp:.2E})", 
+                        color=f"C{i}", alpha=alpha, zorder=7)
         plt.legend(fontsize=8, loc="upper left", frameon=False)
 
     # Set plot aesthetics
@@ -283,7 +321,7 @@ if __name__ == "__main__":
             xstart = date2num(UTCDateTime(args.xlim[0]).datetime)
             xend = date2num(UTCDateTime(args.xlim[1]).datetime)
         else:
-            xstart, xend = args.xlim
+            xstart, xend = [float(_) for _ in args.xlim]
     plt.xlim(xstart, xend)
 
     # Subset y axis
@@ -328,6 +366,8 @@ if __name__ == "__main__":
         title = args.title
     plt.title(title)
 
+    if args.labels:
+        plt.legend()
     set_plot_aesthetic(ax)
     f.tight_layout()
 
@@ -340,4 +380,10 @@ if __name__ == "__main__":
     if not args.noshow:
         plt.show()
     plt.close("all")
+
+    # Output waveforms 
+    if args.output:
+        if not os.path.exists(args.output):
+            os.makedirs(args.output)
+        st.write(os.path.join(args.output, args.fid), format="MSEED")
 

@@ -12,23 +12,25 @@ from obspy import read_inventory
 # Used for coordinate transforms
 REF_PROJ = ccrs.PlateCarree()
 
-
 def parse_args():
     """
     arg parsarg arg arg!
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument("-f", "--files", type=str, nargs="+")
-    parser.add_argument("-s", "--stations", type=str, nargs="+")
+    parser.add_argument("-f", "--files", type=str, nargs="+",
+                        help="Inventory files to plot")
+    parser.add_argument("-s", "--highlight", type=str, nargs="+",
+                        help="Plot certain stations with different traits")
     parser.add_argument("-d", "--dpi", type=float, default=300)
     parser.add_argument("-l", "--event_latlon", type=tuple, 
-                        default=(43.3430, 129.0360), help="network.station")
+                        default=(43.3430, 129.0360), 
+                        help="Put an event location, fmt = (network.station)")
     parser.add_argument("-o", "--output", type=str, default="figures/map.png")
 
     return parser.parse_args()
 
 
-def setup(proj_str="Stereographic", central_longitude=0, central_latitude=0,
+def setup(proj_str="Stereographic", central_longitude=-147, central_latitude=0,
           figsize=None, dpi=None, lw_axis=1.5, lw_coast=0.5,
           default_proj_str="Stereographic"):
     """
@@ -79,10 +81,10 @@ def setup(proj_str="Stereographic", central_longitude=0, central_latitude=0,
     gl = ax.gridlines(draw_labels=True, dms=True, x_inline=False,
                       y_inline=False, linewidth=.25, alpha=0.25, color="k")
 
-    gl.top_labels = False
+    gl.top_labels = True
     gl.right_labels = False
-    # gl.left_labels = False
-    # gl.bot_labels = False
+    gl.left_labels = True
+    gl.bottom_labels = False
     gl.xlabel_style = {"fontsize": 5, "rotation": 0}
     gl.ylabel_style = {"fontsize": 5, "rotation": 0}
 
@@ -95,22 +97,35 @@ def setup(proj_str="Stereographic", central_longitude=0, central_latitude=0,
     return fig, ax
 
 
-def plot_inventory(inv, ax, color="r", marker="v", size=15, alpha=1, fontsize=5,
-                   fontcolor="k", text=True, stations=None):
+def plot_inventory(inv, ax, color="r", marker="v", size=10., alpha=1, 
+                   fontsize=2.75, fontcolor="k", text=True, zorder=1, 
+                   highlight=None, plotted=None):
     """
     Plot the stations in an ObsPy Inventory object
     """
+    # We will use this to make sure we don't double plot stations
+    if not plotted:
+        plotted = []
+
     for network in inv:
         for station in network:
             lon = station.longitude
             lat = station.latitude
-            ax.scatter(lon, lat, color=color, marker=marker, 
-                       s=size, alpha=alpha, transform=REF_PROJ, zorder=10)
+            code = f"{network.code}.{station.code}"
+
             # Highlight requested stations
-            if stations and f"{network.code}.{station.code}" in stations:
+            if highlight and code in highlight:
                 ax.scatter(lon, lat, color=color, marker=marker, ec="k", 
                            lw=1.1, s=size + 2, alpha=alpha, transform=REF_PROJ, 
-                           zorder=10)
+                           zorder=zorder)
+                plotted.append(code)
+
+            if code not in plotted:
+                ax.scatter(lon, lat, color=color, marker=marker, 
+                           s=size, alpha=alpha, transform=REF_PROJ, 
+                           zorder=zorder, ec="k", lw=0.25)
+                plotted.append(code)
+
             if text:
                 # Right edge of the map, keep text in the map
                 if lon >= 165. and lon < 180.:
@@ -121,8 +136,8 @@ def plot_inventory(inv, ax, color="r", marker="v", size=15, alpha=1, fontsize=5,
                         transform=REF_PROJ, fontsize=fontsize, c=fontcolor, 
                         # bbox=dict(facecolor="w", edgecolor="k", pad=0.5),
                         horizontalalignment=horizontalalignment,
-                        zorder=11)
-    return ax
+                        zorder=zorder + 1)
+    return ax, plotted
 
 
 def plot_event(ev_lat, ev_lon, ax, color="y", marker="*", size=40, alpha=1):
@@ -155,8 +170,8 @@ def plot_test_sites(ax):
             }
     for name, loc in sites.items():
         lat, lon = loc
-        ax.scatter(lon, lat, color="yellow", marker="d", ec="k",
-                   lw=.75, s=12, transform=REF_PROJ, zorder=10)
+        ax.scatter(lon, lat, color="yellow", marker="*", ec="k",
+                   lw=.25, s=13, transform=REF_PROJ, zorder=10)
         # Right edge of the map, keep text in the map
         if lon >= 165. and lon < 180.:
             horizontalalignment = "right"
@@ -178,32 +193,36 @@ if __name__ == "__main__":
         inv_dict[f] = {"inv": read_inventory(f),
                        "color": f"C{i}",
                        "marker": "s",
-                       "size": 12.5,
+                       "size": 10.,
                        "fontsize": 2.75,
-                       "fontcolor": "k"
+                       "fontcolor": "k",
                        }
         if "primary" in f:
             inv_dict[f]["color"] = "darkviolet"
         elif "auxiliary" in f:
             inv_dict[f]["color"] = "dodgerblue"
-        elif "watc" in f:
+        elif "WATC" in f:
             inv_dict[f]["color"] = "red"
+            inv_dict[f]["marker"] = "v"
+            inv_dict[f]["zorder"] = 10
         elif "PRIMARY" in f:
             inv_dict[f]["color"] = "magenta"
-            inv_dict[f]["marker"] = "o"
+            inv_dict[f]["marker"] = "^"
             inv_dict[f]["size"] = 10
             # inv_dict[f]["text"] = False
         elif "AUXILIARY" in f:
             inv_dict[f]["color"] = "powderblue"
-            inv_dict[f]["marker"] = "o"
+            inv_dict[f]["marker"] = "^"
             inv_dict[f]["size"] = 10
             # inv_dict[f]["text"] = False
 
     # Plotting
+    plotted = []
     fig, ax = setup(proj_str="Robinson", dpi=args.dpi)
     for key, vals in inv_dict.items():
         inv = vals.pop("inv")
-        plot_inventory(inv=inv, ax=ax, stations=args.stations, **vals)
+        ax, plotted = plot_inventory(inv=inv, ax=ax, highlight=args.highlight, 
+                                     plotted=plotted, **vals)
 
     # plot_event(ev_lat=ev_lat, ev_lon=ev_lon, ax=ax)
     plot_test_sites(ax)
