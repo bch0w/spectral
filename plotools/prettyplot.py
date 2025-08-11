@@ -56,6 +56,8 @@ def parse_args():
                         help="optional filtering freqmax in Hz")
     parser.add_argument("-z", "--zerophase", action="store_true", default=False,
                         help="apply zerophase filter or not")
+    parser.add_argument("-C", "--corners", type=int, default=4,
+                        help="number of corners to apply on ")
     parser.add_argument("-t0", "--t0", nargs="?", type=float, default=0,
                         help="SPECFEM USER_T0 if synthetics")
     parser.add_argument("-ts", "--tstart", nargs="?", type=float, default=0,
@@ -232,15 +234,18 @@ if __name__ == "__main__":
     if args.fmin and args.fmax:
         print(f"bandpass {args.fmin}-{args.fmax}hz")
         st.filter("bandpass", freqmin=args.fmin, freqmax=args.fmax, 
-                  zerophase=args.zerophase)
+                  zerophase=args.zerophase, corners=args.corners)
     elif args.fmin and not args.fmax:
         print(f"highpass {args.fmin}hz")
-        st.filter("highpass", freq=args.fmin, zerophase=args.zerophase)
+        st.filter("highpass", freq=args.fmin, zerophase=args.zerophase,
+                  corners=args.corners)
     elif args.fmax and args.fmin is None:
         print(f"lowpass {args.fmax}hz")
-        st.filter("lowpass", freq=args.fmax, zerophase=args.zerophase)
+        st.filter("lowpass", freq=args.fmax, zerophase=args.zerophase,
+                  corners=args.corners)
     if args.fmin or args.fmax:
         print(f"zerophase={args.zerophase}")
+        print(f"corners={args.corners}")
 
     # Main plotting start
     f, ax = plt.subplots(figsize=(8, 4), dpi=200)
@@ -340,7 +345,7 @@ if __name__ == "__main__":
         yvals = st[0].data[idx_start: idx_end]
         ymax = np.amax([yvals.min(), yvals.max()])
         ymin = -1 * ymax
-
+    
     plt.ylim(ymin, ymax)
 
     # Add vertical lies at certain times
@@ -352,7 +357,7 @@ if __name__ == "__main__":
             plt.axvline(tmark, c="r", lw=0.5)
 
     # Finish off by setting plot aesthetics
-    if not args.title:
+    if args.title is None:
         title = f"{st[0].get_id()} [{args.fmin}, {args.fmax}]Hz"
 
         # Append some information on the TauP arrivals
@@ -373,9 +378,9 @@ if __name__ == "__main__":
 
     # Finalize Plot
     if args.save == "auto":
-        plt.savefig(f"{args.fid}.png")
+        plt.savefig(f"{args.fid}.png", transparent=True)
     elif args.save is not None:
-        plt.savefig(args.save)
+        plt.savefig(args.save, transparent=True)
 
     if not args.noshow:
         plt.show()
