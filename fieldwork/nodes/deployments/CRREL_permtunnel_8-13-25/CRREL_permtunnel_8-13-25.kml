@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom">
 <Document>
-	<name>CRREL_permtunnel_8-13-25.kml</name>
+	<name>Sites.kml</name>
 	<StyleMap id="m_ylw-pushpin">
 		<Pair>
 			<key>normal</key>
-			<styleUrl>#s_ylw-pushpin1</styleUrl>
+			<styleUrl>#s_ylw-pushpin</styleUrl>
 		</Pair>
 		<Pair>
 			<key>highlight</key>
@@ -22,14 +22,34 @@
 			<styleUrl>#s_ylw-pushpin_hl11</styleUrl>
 		</Pair>
 	</StyleMap>
-	<StyleMap id="m_ylw-pushpin2">
+	<StyleMap id="msn_triangle">
 		<Pair>
 			<key>normal</key>
-			<styleUrl>#s_ylw-pushpin</styleUrl>
+			<styleUrl>#sn_triangle1</styleUrl>
 		</Pair>
 		<Pair>
 			<key>highlight</key>
-			<styleUrl>#s_ylw-pushpin_hl1</styleUrl>
+			<styleUrl>#sh_triangle0</styleUrl>
+		</Pair>
+	</StyleMap>
+	<StyleMap id="msn_triangle0">
+		<Pair>
+			<key>normal</key>
+			<styleUrl>#sn_triangle0</styleUrl>
+		</Pair>
+		<Pair>
+			<key>highlight</key>
+			<styleUrl>#sh_triangle</styleUrl>
+		</Pair>
+	</StyleMap>
+	<StyleMap id="msn_triangle1">
+		<Pair>
+			<key>normal</key>
+			<styleUrl>#sn_triangle2</styleUrl>
+		</Pair>
+		<Pair>
+			<key>highlight</key>
+			<styleUrl>#sh_triangle1</styleUrl>
 		</Pair>
 	</StyleMap>
 	<StyleMap id="msn_triangle2">
@@ -39,18 +59,10 @@
 		</Pair>
 		<Pair>
 			<key>highlight</key>
-			<styleUrl>#sh_triangle</styleUrl>
+			<styleUrl>#sh_triangle2</styleUrl>
 		</Pair>
 	</StyleMap>
 	<Style id="s_ylw-pushpin">
-		<IconStyle>
-			<scale>1.2</scale>
-			<Icon>
-				<href>http://maps.google.com/mapfiles/kml/shapes/triangle.png</href>
-			</Icon>
-		</IconStyle>
-	</Style>
-	<Style id="s_ylw-pushpin1">
 		<IconStyle>
 			<color>ff0000ff</color>
 			<scale>1.2</scale>
@@ -80,14 +92,6 @@
 		<ListStyle>
 		</ListStyle>
 	</Style>
-	<Style id="s_ylw-pushpin_hl1">
-		<IconStyle>
-			<scale>1.4</scale>
-			<Icon>
-				<href>http://maps.google.com/mapfiles/kml/shapes/triangle.png</href>
-			</Icon>
-		</IconStyle>
-	</Style>
 	<Style id="s_ylw-pushpin_hl11">
 		<IconStyle>
 			<scale>1.4</scale>
@@ -97,6 +101,39 @@
 		</IconStyle>
 	</Style>
 	<Style id="sh_triangle">
+		<IconStyle>
+			<color>ff0000ff</color>
+			<scale>1.4</scale>
+			<Icon>
+				<href>http://maps.google.com/mapfiles/kml/shapes/triangle.png</href>
+			</Icon>
+		</IconStyle>
+		<BalloonStyle>
+		</BalloonStyle>
+		<ListStyle>
+		</ListStyle>
+	</Style>
+	<Style id="sh_triangle0">
+		<IconStyle>
+			<scale>1.4</scale>
+			<Icon>
+				<href>http://maps.google.com/mapfiles/kml/shapes/triangle.png</href>
+			</Icon>
+		</IconStyle>
+		<BalloonStyle>
+		</BalloonStyle>
+	</Style>
+	<Style id="sh_triangle1">
+		<IconStyle>
+			<scale>1.4</scale>
+			<Icon>
+				<href>http://maps.google.com/mapfiles/kml/shapes/triangle.png</href>
+			</Icon>
+		</IconStyle>
+		<BalloonStyle>
+		</BalloonStyle>
+	</Style>
+	<Style id="sh_triangle2">
 		<IconStyle>
 			<scale>1.4</scale>
 			<Icon>
@@ -112,11 +149,44 @@
 			</Icon>
 		</IconStyle>
 	</Style>
+	<Style id="sn_triangle0">
+		<IconStyle>
+			<color>ff0000ff</color>
+			<scale>1.2</scale>
+			<Icon>
+				<href>http://maps.google.com/mapfiles/kml/shapes/triangle.png</href>
+			</Icon>
+		</IconStyle>
+		<BalloonStyle>
+		</BalloonStyle>
+		<ListStyle>
+		</ListStyle>
+	</Style>
+	<Style id="sn_triangle1">
+		<IconStyle>
+			<scale>1.2</scale>
+			<Icon>
+				<href>http://maps.google.com/mapfiles/kml/shapes/triangle.png</href>
+			</Icon>
+		</IconStyle>
+		<BalloonStyle>
+		</BalloonStyle>
+	</Style>
+	<Style id="sn_triangle2">
+		<IconStyle>
+			<scale>1.2</scale>
+			<Icon>
+				<href>http://maps.google.com/mapfiles/kml/shapes/triangle.png</href>
+			</Icon>
+		</IconStyle>
+		<BalloonStyle>
+		</BalloonStyle>
+	</Style>
 	<Folder>
 		<name>Sites</name>
 		<open>1</open>
 		<Placemark>
-			<name>IS01</name>
+			<name>IS01A</name>
 			<LookAt>
 				<longitude>-147.6125629839821</longitude>
 				<latitude>64.95182816667848</latitude>
@@ -130,6 +200,23 @@
 			<Point>
 				<gx:drawOrder>1</gx:drawOrder>
 				<coordinates>-147.6132481374237,64.95065479932138,0</coordinates>
+			</Point>
+		</Placemark>
+		<Placemark>
+			<name>IS01B</name>
+			<LookAt>
+				<longitude>-147.6126060299859</longitude>
+				<latitude>64.95114062833206</latitude>
+				<altitude>0</altitude>
+				<heading>4.072914060892315</heading>
+				<tilt>30.00106675954946</tilt>
+				<range>237.420470503879</range>
+				<gx:altitudeMode>relativeToSeaFloor</gx:altitudeMode>
+			</LookAt>
+			<styleUrl>#m_ylw-pushpin</styleUrl>
+			<Point>
+				<gx:drawOrder>1</gx:drawOrder>
+				<coordinates>-147.613227204847,64.95065195202748,0</coordinates>
 			</Point>
 		</Placemark>
 		<Placemark>
@@ -184,23 +271,6 @@
 			</Point>
 		</Placemark>
 		<Placemark>
-			<name>SN01</name>
-			<LookAt>
-				<longitude>-147.6085431298957</longitude>
-				<latitude>64.95049138208823</latitude>
-				<altitude>0</altitude>
-				<heading>1.441772350165815</heading>
-				<tilt>9.210365779073424</tilt>
-				<range>755.9251092504287</range>
-				<gx:altitudeMode>relativeToSeaFloor</gx:altitudeMode>
-			</LookAt>
-			<styleUrl>#m_ylw-pushpin</styleUrl>
-			<Point>
-				<gx:drawOrder>1</gx:drawOrder>
-				<coordinates>-147.6119760617066,64.95055619302326,0</coordinates>
-			</Point>
-		</Placemark>
-		<Placemark>
 			<name>IS05</name>
 			<LookAt>
 				<longitude>-147.6075817998464</longitude>
@@ -215,23 +285,6 @@
 			<Point>
 				<gx:drawOrder>1</gx:drawOrder>
 				<coordinates>-147.6113649646936,64.95047756980233,0</coordinates>
-			</Point>
-		</Placemark>
-		<Placemark>
-			<name>SN02</name>
-			<LookAt>
-				<longitude>-147.6096866541371</longitude>
-				<latitude>64.95033848795953</latitude>
-				<altitude>0</altitude>
-				<heading>1.440696894659759</heading>
-				<tilt>12.91867927133365</tilt>
-				<range>552.1350062709384</range>
-				<gx:altitudeMode>relativeToSeaFloor</gx:altitudeMode>
-			</LookAt>
-			<styleUrl>#m_ylw-pushpin</styleUrl>
-			<Point>
-				<gx:drawOrder>1</gx:drawOrder>
-				<coordinates>-147.6106088961921,64.95038490745623,0</coordinates>
 			</Point>
 		</Placemark>
 		<Placemark>
@@ -252,24 +305,7 @@
 			</Point>
 		</Placemark>
 		<Placemark>
-			<name>SN03</name>
-			<LookAt>
-				<longitude>-147.6067133101469</longitude>
-				<latitude>64.95023093461074</latitude>
-				<altitude>0</altitude>
-				<heading>1.44339441438491</heading>
-				<tilt>12.91933451418649</tilt>
-				<range>878.0400881097248</range>
-				<gx:altitudeMode>relativeToSeaFloor</gx:altitudeMode>
-			</LookAt>
-			<styleUrl>#m_ylw-pushpin</styleUrl>
-			<Point>
-				<gx:drawOrder>1</gx:drawOrder>
-				<coordinates>-147.6084615920366,64.95009529383766,0</coordinates>
-			</Point>
-		</Placemark>
-		<Placemark>
-			<name>IS07</name>
+			<name>IS07A</name>
 			<LookAt>
 				<longitude>-147.6113290064152</longitude>
 				<latitude>64.95025549168506</latitude>
@@ -279,14 +315,31 @@
 				<range>859.5219749674915</range>
 				<gx:altitudeMode>relativeToSeaFloor</gx:altitudeMode>
 			</LookAt>
-			<styleUrl>#msn_triangle2</styleUrl>
+			<styleUrl>#msn_triangle</styleUrl>
 			<Point>
 				<gx:drawOrder>1</gx:drawOrder>
 				<coordinates>-147.6068828535836,64.9499017441308,0</coordinates>
 			</Point>
 		</Placemark>
 		<Placemark>
-			<name>IS08 </name>
+			<name>IS07B</name>
+			<LookAt>
+				<longitude>-147.6063442222305</longitude>
+				<latitude>64.95041093609738</latitude>
+				<altitude>0</altitude>
+				<heading>4.078587104269586</heading>
+				<tilt>30.00276217774144</tilt>
+				<range>614.9104858860478</range>
+				<gx:altitudeMode>relativeToSeaFloor</gx:altitudeMode>
+			</LookAt>
+			<styleUrl>#m_ylw-pushpin</styleUrl>
+			<Point>
+				<gx:drawOrder>1</gx:drawOrder>
+				<coordinates>-147.606859300456,64.94988812044274,0</coordinates>
+			</Point>
+		</Placemark>
+		<Placemark>
+			<name>IS08</name>
 			<LookAt>
 				<longitude>-147.6065668681109</longitude>
 				<latitude>64.94974228769328</latitude>
@@ -303,7 +356,7 @@
 			</Point>
 		</Placemark>
 		<Placemark>
-			<name>IS09 </name>
+			<name>IS09A</name>
 			<LookAt>
 				<longitude>-147.6015545228962</longitude>
 				<latitude>64.94958614998224</latitude>
@@ -313,10 +366,27 @@
 				<range>195.9959285935409</range>
 				<gx:altitudeMode>relativeToSeaFloor</gx:altitudeMode>
 			</LookAt>
-			<styleUrl>#m_ylw-pushpin2</styleUrl>
+			<styleUrl>#msn_triangle1</styleUrl>
 			<Point>
 				<gx:drawOrder>1</gx:drawOrder>
 				<coordinates>-147.6010438696964,64.94892259067477,0</coordinates>
+			</Point>
+		</Placemark>
+		<Placemark>
+			<name>IS09B</name>
+			<LookAt>
+				<longitude>-147.6063442222305</longitude>
+				<latitude>64.95041093609738</latitude>
+				<altitude>0</altitude>
+				<heading>4.078587104269586</heading>
+				<tilt>30.00276217774144</tilt>
+				<range>614.9104858860478</range>
+				<gx:altitudeMode>relativeToSeaFloor</gx:altitudeMode>
+			</LookAt>
+			<styleUrl>#msn_triangle0</styleUrl>
+			<Point>
+				<gx:drawOrder>1</gx:drawOrder>
+				<coordinates>-147.601019582476,64.94891015559534,0</coordinates>
 			</Point>
 		</Placemark>
 		<atom:link rel="app" href="https://www.google.com/earth/about/versions/#earth-pro" title="Google Earth Pro 7.3.6.10201"></atom:link>
