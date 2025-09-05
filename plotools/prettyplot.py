@@ -18,28 +18,27 @@ two-column ASCII output for SPECFEM synthetics. Most things controlled by parser
 import argparse
 import sys
 import os
+import math
 import matplotlib.pyplot as plt
 import numpy as np
 
-from matplotlib.dates import date2num
+from dateutil.rrule import MINUTELY, SECONDLY
+from matplotlib import mlab
+from matplotlib.colors import Normalize
+from matplotlib.dates import date2num, AutoDateLocator
+from matplotlib.ticker import MultipleLocator
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
 from obspy import read, UTCDateTime, Stream
 from obspy.taup import TauPyModel
 from obspy.geodetics import kilometers2degrees
-from obspy.imaging.util import _set_xaxis_obspy_dates
+from obspy.imaging.cm import obspy_sequential
+from obspy.imaging.util import ObsPyAutoDateFormatter
 
 from pysep import read_sem
 
 
 SECONDS_PER_DAY = 3600.0 * 24.0
-
-
-def find_nearest(array, value):
-    """
-    Find the nearest index in a consecutive (time) array given a chosen value
-    """
-    array = np.asarray(array)
-    idx = (np.abs(array - value)).argmin()
-    return idx
 
 
 def parse_args():
@@ -58,6 +57,8 @@ def parse_args():
                         help="apply zerophase filter or not")
     parser.add_argument("-C", "--corners", type=int, default=4,
                         help="number of corners to apply on ")
+    parser.add_argument("-r", "--resample", type=float, default=None,
+                        help="resample the data prior to processing")
     parser.add_argument("-t0", "--t0", nargs="?", type=float, default=0,
                         help="SPECFEM USER_T0 if synthetics")
     parser.add_argument("-ts", "--tstart", nargs="?", type=float, default=0,
@@ -78,6 +79,26 @@ def parse_args():
                         help="TauP source receiver distance in km")
     parser.add_argument("--tp_depth", nargs="?", type=float, default=None,
                         help="TauP source depth km")
+    
+    # Spectrogram (all parameters end with _s)
+    parser.add_argument("-S", "--spectrogram", action="store_true", default=False,
+                        help="plot spectrogram of the raw trace. See all '*_s' "
+                             "parameters to control the look")
+    parser.add_argument("--cmap_s", nargs="?", type=str, 
+                        default="nipy_spectral_r",
+                        help="colormap of the spectrogram")
+    parser.add_argument("-nc_s", "--ncolors_s", nargs="?", type=int, default=256,
+                        help="number of colors in colormap of the spectrogram")
+    parser.add_argument("--log_s", action="store_true",
+                        help="turn on log scale for spectrogram y-axis")
+    parser.add_argument( "--ylim_s", nargs="+", type=float, default=None,
+                        help="y-axis limits for the spectrogram plot")
+    
+    # Stream Gauge (VERY CUSTOM, ONLY FOR GULKANA EXPERIEMENT)
+    parser.add_argument("--stream_gauge", action="store_true", default=False,
+                        help="For GULKANASEIS data only, plots stream gauge " 
+                             "data at the bottom of the waveform plot with a " 
+                             "twin X axis")
 
     # Plot Aesthetics
     parser.add_argument("-x", "--xlim", nargs="+", default=None,
@@ -91,24 +112,30 @@ def parse_args():
                              "If using 'a' you may add '+i' or '-i' to "
                              "time shift the array, e.g., to go from UTC to "
                              "local time. E.g., 'a-7' will subtract 7 hours.")
-    parser.add_argument("-c", "--colors", nargs="+", type=str, default=None,
+    parser.add_argument("-c", "--colors", nargs="+", type=str, default="k",
                         help="color of the time series line, number of inputs "
                              "must match the length of `fid`")
     parser.add_argument("-l", "--labels", nargs="+", type=str, default=None,
                         help="optional labels legend, must match len of `fid`")
-    parser.add_argument("-lw", "--linewidth", nargs="?", type=float, default=0.5,
-                        help="linewidth of the time series line")
+    parser.add_argument("-lw", "--linewidth", nargs="?", type=float, 
+                        default=0.5, help="linewidth of the time series line")
     parser.add_argument("--ylabel", nargs="?", type=str, default=None,
                         help="label for units, defaults to displacement")
     parser.add_argument("--title", nargs="?", type=str, default=None,
                         help="title of the figure, defaults to ID and fmin/max")
     parser.add_argument("-ta", "--title_append", nargs="?", type=str, 
                         default="", help="append to default title")
+    
+    # Time Marks
     parser.add_argument("-tm", "--tmarks", nargs="+", 
                         help="plot vertical lines at given relative times, "
                              "should match the units of `time`. If `time`=='a' "
                              "then each tmark should be a datetime "
                              "YYYY-MM-DDTHH:MM:SS")
+    parser.add_argument("--tmarks_c", nargs="+", default="k",
+                        help="colors for each of the time marks, should "
+                             "either be single letter for all marks or match " 
+                             "length of tmarks for individual colors")
 
     # Misc
     parser.add_argument("-s", "--save", type=str, default=None,
@@ -120,11 +147,206 @@ def parse_args():
 
     return parser.parse_args()
 
+
+def find_nearest(array, value):
+    """
+    Find the nearest index in a consecutive (time) array given a chosen value
+    """
+    array = np.asarray(array)
+    idx = (np.abs(array - value)).argmin()
+    return idx
+
+
+def _nearest_pow_2(x):
+    """
+    Find power of two nearest to x
+
+    >>> _nearest_pow_2(3)
+    2.0
+    >>> _nearest_pow_2(15)
+    16.0
+
+    :type x: float
+    :param x: Number
+    :rtype: int
+    :return: Nearest power of 2 to x
+    """
+    a = math.pow(2, math.ceil(np.log2(x)))
+    b = math.pow(2, math.floor(np.log2(x)))
+    if abs(a - x) < abs(b - x):
+        return a
+    else:
+        return b
+
+
+def convert_timezone(code, st):
+    """
+    When plotting in absolute time (args.time == "a*"), we allow time shifting 
+    by time zone to get to the correct time local time. Returns streams that
+
+    :type code: str
+    :param code: e.g., +08 to shift forward by 8 hours
+    """
+    assert(len(code) == 3), "must be +?? or -??"
+    assert(code[0] in ["+", "-"])
+    starttime = str(st[0].stats.starttime)[:-1]  # Dropping the 'Z' repr. UTC
+    new_starttime = UTCDateTime(f"{starttime}{code}")  # e.g., T00:00:00+01
+    for tr in st:
+        tr.stats.starttime = new_starttime
+
+    return st
+
+
+def spectrogram(f, ax, data, samp_rate, per_lap=0.9, wlen=None, log=False,
+                outfile=None, fmt=None, dbscale=False,
+                mult=8.0, cmap=None, ncolors=256, zorder=None, title=None,
+                show=True, clip=[0.0, 1.0]):
+    """
+    Modified from ObsPys Spectrogram function
+    https://docs.obspy.org/_modules/obspy/imaging/spectrogram.html#spectrogram
+
+    Computes and plots spectrogram of the input data.
+
+    :param data: Input data
+    :type samp_rate: float
+    :param samp_rate: Samplerate in Hz
+    :type per_lap: float
+    :param per_lap: Percentage of overlap of sliding window, ranging from 0
+        to 1. High overlaps take a long time to compute.
+    :type wlen: int or float
+    :param wlen: Window length for fft in seconds. If this parameter is too
+        small, the calculation will take forever. If None, it defaults to a
+        window length matching 128 samples.
+    :type log: bool
+    :param log: Logarithmic frequency axis if True, linear frequency axis
+        otherwise.
+    :type outfile: str
+    :param outfile: String for the filename of output file, if None
+        interactive plotting is activated.
+    :type fmt: str
+    :param fmt: Format of image to save
+    :type axes: :class:`matplotlib.axes.Axes`
+    :param axes: Plot into given axes, this deactivates the fmt and
+        outfile option.
+    :type dbscale: bool
+    :param dbscale: If True 10 * log10 of color values is taken, if False the
+        sqrt is taken.
+    :type mult: float
+    :param mult: Pad zeros to length mult * wlen. This will make the
+        spectrogram smoother.
+    :type cmap: :class:`matplotlib.colors.Colormap`
+    :param cmap: Specify a custom colormap instance. If not specified, then the
+        default ObsPy sequential colormap is used.
+    :type zorder: float
+    :param zorder: Specify the zorder of the plot. Only of importance if other
+        plots in the same axes are executed.
+    :type title: str
+    :param title: Set the plot title
+    :type show: bool
+    :param show: Do not call `plt.show()` at end of routine. That way, further
+        modifications can be done to the figure before showing it.
+    :type clip: [float, float]
+    :param clip: adjust colormap to clip at lower and/or upper end. The given
+        percentages of the amplitude range (linear or logarithmic depending
+        on option `dbscale`) are clipped.
+    """
+    if not cmap:
+        cmap = obspy_sequential
+    else:
+        cmap = plt.get_cmap(cmap, ncolors)
+
+    # enforce float for samp_rate
+    samp_rate = float(samp_rate)
+
+    # set wlen from samp_rate if not specified otherwise
+    if not wlen:
+        wlen = 128 / samp_rate
+
+    npts = len(data)
+
+    # nfft needs to be an integer, otherwise a deprecation will be raised
+    # XXX add condition for too many windows => calculation takes for ever
+    nfft = int(_nearest_pow_2(wlen * samp_rate))
+
+    if npts < nfft:
+        msg = (f'Input signal too short ({npts} samples, window length '
+               f'{wlen} seconds, nfft {nfft} samples, sampling rate '
+               f'{samp_rate} Hz)')
+        raise ValueError(msg)
+
+    if mult is not None:
+        mult = int(_nearest_pow_2(mult))
+        mult = mult * nfft
+    nlap = int(nfft * float(per_lap))
+
+    data = data - data.mean()
+    end = npts / samp_rate
+
+    # Here we call not plt.specgram as this already produces a plot
+    # matplotlib.mlab.specgram should be faster as it computes only the
+    # arrays
+    # XXX mlab.specgram uses fft, would be better and faster use rfft
+    specgram, freq, time = mlab.specgram(data, Fs=samp_rate, NFFT=nfft,
+                                         pad_to=mult, noverlap=nlap)
+
+    if len(time) < 2:
+        msg = (f'Input signal too short ({npts} samples, window length '
+               f'{wlen} seconds, nfft {nfft} samples, {nlap} samples window '
+               f'overlap, sampling rate {samp_rate} Hz)')
+        raise ValueError(msg)
+
+    # db scale and remove zero/offset for amplitude
+    if dbscale:
+        specgram = 10 * np.log10(specgram[1:, :])
+    else:
+        specgram = np.sqrt(specgram[1:, :])
+    freq = freq[1:]
+
+    vmin, vmax = clip
+    if vmin < 0 or vmax > 1 or vmin >= vmax:
+        msg = "Invalid parameters for clip option."
+        raise ValueError(msg)
+    _range = float(specgram.max() - specgram.min())
+    vmin = specgram.min() + vmin * _range
+    vmax = specgram.min() + vmax * _range
+    norm = Normalize(vmin, vmax, clip=True)
+
+    # calculate half bin width
+    halfbin_time = (time[1] - time[0]) / 2.0
+    halfbin_freq = (freq[1] - freq[0]) / 2.0
+
+    kwargs = {'cmap': cmap, 'zorder': zorder}
+    if log:
+        # pcolor expects one bin more at the right end
+        freq = np.concatenate((freq, [freq[-1] + 2 * halfbin_freq]))
+        time = np.concatenate((time, [time[-1] + 2 * halfbin_time]))
+        # center bin
+        time -= halfbin_time
+        freq -= halfbin_freq
+        # Log scaling for frequency values (y-axis)
+        ax.set_yscale('log')
+        # Plot times
+        im = ax.pcolormesh(time, freq, specgram, norm=norm, **kwargs)
+        n = len(time)  # for later axis change
+    else:
+        # this method is much much faster!
+        specgram = np.flipud(specgram)
+        # center bin
+        extent = (time[0] - halfbin_time, time[-1] + halfbin_time,
+                  freq[0] - halfbin_freq, freq[-1] + halfbin_freq)
+        im = ax.imshow(specgram, interpolation="nearest", extent=extent, 
+                       **kwargs)
+        n = len(specgram)  # for later axis change
+    
+    return n
+
+
 def set_plot_aesthetic(
         ax, ytick_fontsize=9., xtick_fontsize=9., tick_linewidth=1.5,
-        tick_length=5., tick_direction="in", xlabel_fontsize=10.,
-        ylabel_fontsize=10., axis_linewidth=1.5, spine_zorder=8, spine_top=True,
-        spine_bot=True, spine_left=True, spine_right=True, title_fontsize=10.,
+        tick_length=5., tick_direction="in", ytick_format="sci",
+        xlabel_fontsize=10., ylabel_fontsize=10., axis_linewidth=1.5, 
+        spine_zorder=8, title_fontsize=10.,
+        spine_top=True, spine_bot=True, spine_left=True, spine_right=True, 
         xtick_minor=None, xtick_major=None, ytick_minor=None, ytick_major=None,
         xgrid_major=True, xgrid_minor=True, ygrid_major=True, ygrid_minor=True,
         **kwargs):
@@ -153,7 +375,14 @@ def set_plot_aesthetic(
         spine.set_zorder(spine_zorder)
 
     # Scientific format for Y-axis
-    plt.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
+    if ytick_format == "sci":
+        try:
+            ax.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
+        except AttributeError:
+            # If we are in log format axis this will not work
+            pass
+    else:
+        ax.ticklabel_format(axis="y", style=ytick_format)
 
     # Set xtick label major and minor which is assumed to be a time series
     if xtick_major:
@@ -176,6 +405,37 @@ def set_plot_aesthetic(
         plt.grid(visible=True, which="minor", axis="y", alpha=0.2, linewidth=.5)
 
 
+    # !!! Colorbar works but it pushes the figure over which is not wanted 
+    # !!! Because it misaligns the two subplots
+    # divider = make_axes_locatable(ax)
+    # cax = divider.append_axes('right', size='1%', pad=0.05)
+    # f.colorbar(im, cax=cax, orientation="vertical")
+
+def _set_xaxis_obspy_dates(ax, ticklabels_small=True, minticks=3, maxticks=6):
+    """
+    Set Formatter/Locator of x-Axis to use ObsPyAutoDateFormatter and do some
+    other tweaking.
+
+    In contrast to normal matplotlib ``AutoDateFormatter`` e.g. shows full
+    timestamp on first tick when zoomed in so far that matplotlib would only
+    show hours or minutes on all ticks (making it impossible to tell the date
+    from the axis labels) and also shows full timestamp in matplotlib figures
+    info line (mouse-over info of current cursor position).
+
+    :type ax: :class:`matplotlib.axes.Axes`
+    :rtype: None
+    """
+    ax.xaxis_date()
+    locator = AutoDateLocator(minticks=minticks, maxticks=maxticks)
+    locator.intervald[MINUTELY] = [1, 2, 5, 10, 15, 30]
+    locator.intervald[SECONDLY] = [1, 2, 5, 10, 15, 30]
+    ax.xaxis.set_major_formatter(ObsPyAutoDateFormatter(locator))
+    ax.xaxis.set_major_locator(locator)
+    if ticklabels_small:
+        plt.setp(ax.get_xticklabels(), fontsize='small')
+
+
+
 if __name__ == "__main__":
     args = parse_args()
 
@@ -189,28 +449,31 @@ if __name__ == "__main__":
             st += read(fid)
         except TypeError:
             st += read_sem(fid)
+        print(fid)
 
-    # Get phase arrivals from TauP if requested
-    arrivals = None
-    if args.tp_phases:
-        assert(args.tp_dist is not None)
-        assert(args.tp_depth is not None)
-        dist_deg = kilometers2degrees(args.tp_dist)
-        model = TauPyModel(model=args.tp_model)
-        tp_arrivals = model.get_travel_times(source_depth_in_km=args.tp_depth,
-                                             distance_in_degree=dist_deg,
-                                             phase_list=args.tp_phases)
+    # ==========================================================================
+    #                           PROCESS WAVEFORMS
+    # ==========================================================================
+    if args.resample:
+        print(f"resampling to {args.resample}")
+        st.resample(sampling_rate=args.resample)
 
-        # If some arrivals have multiple entires, only take first and last to 
-        # get a range which we will plot with a window
-        arrivals = {arrival.name: [] for arrival in tp_arrivals}
-        for i, arrival in enumerate(tp_arrivals):
-            arrivals[arrival.name].append(arrival.time)
-            print(f"{arrival.name} = {arrival.time} s")
+    # Time shift by requested amount
+    if args.time.startswith("a"):
+        st = convert_timezone(code=args.time[1:], st=st)
 
-        if not arrivals:
-            print(f"No arrivals found for given depth={args.tp_depth}km and "
-                  f"distance {dist_deg:.2f}deg")
+    # Trim data shorter so we don't process the entire waveform but add some
+    # buffer so that preprocessing on the tails of the data doesn't show up
+    if args.xlim:    
+        _buffer = 100  # seconds
+        if args.time.startswith("a"):
+            st.trim(starttime=UTCDateTime(args.xlim[0]) - _buffer, 
+                    endtime=UTCDateTime(args.xlim[1]) + _buffer
+                    )
+        else:
+            starttime = st[0].stats.starttime
+            st.trim(starttime=starttime + float(args.xlim[0]) - _buffer,
+                    endtime=starttime + float(args.xlim[1]) + _buffer)
 
     # Preprocess waveforms
     taper = args.taper
@@ -247,20 +510,34 @@ if __name__ == "__main__":
         print(f"zerophase={args.zerophase}")
         print(f"corners={args.corners}")
 
-    # Main plotting start
-    f, ax = plt.subplots(figsize=(8, 4), dpi=200)
+    # Final trim after processing to cut off the tails of the processed data
+    # which might have some weird filtering artefacts
+    if args.xlim:    
+        if args.time.startswith("a"):
+            st.trim(starttime=UTCDateTime(args.xlim[0]),
+                    endtime=UTCDateTime(args.xlim[1]))
+        else:
+            starttime = st[0].stats.starttime
+            st.trim(starttime=starttime + float(args.xlim[0]),
+                    endtime=starttime + float(args.xlim[1]))
 
+    # ==========================================================================
+    #                           SET UP FIGURE
+    # ==========================================================================
+    if not args.spectrogram:
+        f, ax = plt.subplots(figsize=(8, 4), dpi=200)
+        axs = [ax]  # To play nice with some loops
+        ax_spectra = None
+    else:
+        f, axs = plt.subplots(2, dpi=200, figsize=(8, 6), sharex=False)
+        f.subplots_adjust(hspace=0)
+        ax_spectra, ax = axs  # waveform on the bottom
+
+    # ==========================================================================
+    #                           PLOT WAVEFORM
+    # ==========================================================================
     if args.time.startswith("a"):
-        # convert seconds of relative sample times to days and add
-        # start time of trace.
-        # Allow time shift a+i or a-i where i is time in hours
-        sign = ""; shift = ""
-        if len(args.time) > 1:
-            sign = args.time[1]
-            shift = args.time[2:]
-            int_sign = {"+": 1, "-": -1}[sign]
-            shift = int(shift)
-            st[0].stats.starttime += int_sign * 60 * 60 * shift
+        # Set xvalues to datetime objects
         xvals = ((st[0].times() / SECONDS_PER_DAY) +
                         date2num(st[0].stats.starttime.datetime))
         _set_xaxis_obspy_dates(ax)
@@ -281,21 +558,92 @@ if __name__ == "__main__":
         # Offset time axis based on user defined criteria
         xvals -= args.t0
         xvals += args.tstart
-
+   
     for i, tr in enumerate(st):
-        if args.colors:
+        # Input a list of colors
+        if len(args.colors) > 1:
             c = args.colors[i]
-        else:
-            c = f"C{i}"
+        # Input only a single color
+        elif len(args.colors) == 1:
+            # Allow C coloring
+            if args.colors[0] == "C?":
+                c = f"C{i}"
+            else:
+                c = args.colors[0]
         if args.labels:
             l = args.labels[i]
         else:
             l = None
-        plt.plot(xvals, tr.data, c=c, lw=args.linewidth, zorder=6, label=l)
+        ax.plot(xvals, tr.data, c=c, lw=args.linewidth, zorder=6+i, label=l)
 
-    # Plot phases from TauP and figure out max amplitude in the window
-    arrival_dict = {}
-    if arrivals:
+    # ==========================================================================
+    #                   PLOT STREAM GAUGE (SUPER CUSTOM)
+    # ==========================================================================
+    if args.stream_gauge:
+        assert args.time == "a-08", f"currently only works in AK local"
+
+        # Read data from text file
+        path = ("/Users/chow/Work/research/gulkanaseis24/data/USGS_data/"
+                "phelan_creek_stream_guage_2024-09-07_to_2024-09-14.txt")
+        assert(os.path.exists(path))
+
+        data = np.loadtxt(path, skiprows=28, usecols=[2,4], delimiter="\t", 
+                          dtype=str)
+        times, height_ft = data.T  # time in AK local
+
+        # Time is already in AK Local so we don't need to shift. If we did have
+        # to then we would need to convert to UTC then shift by user request
+        times = np.array([date2num(UTCDateTime(_).datetime) for _ in times])
+        height_m = np.array([_ * 0.3048 for _ in height_ft.astype(float)])
+
+        # Plot on the same axis as the waveform
+        twax = ax.twinx()
+        twax.plot(times, height_m, lw=1, c="C1", label="Phelan Creek")
+        twax.set_ylabel("Stream Height [m]")
+
+    # ==========================================================================
+    #                           PLOT SPECTROGRAM
+    # ==========================================================================
+    if args.spectrogram:
+        n = spectrogram(f, ax_spectra, st[0].data, st[0].stats.sampling_rate, 
+                    log=args.log_s, cmap=args.cmap_s, ncolors=args.ncolors_s) 
+        ax_spectra.set_ylabel("Freq. [Hz]")
+        ax_spectra.axis("tight")
+        ax_spectra.grid(False)
+
+        # Change X-axis to match 'ax'
+        if args.time.startswith("a"):
+            xvals_spectra = np.linspace(xvals.min(), xvals.max(), n)
+
+        # mappable = ax_spectra.images[0]
+        # plt.colorbar(mappable=mappable, ax=ax_spectra)
+
+    # ==========================================================================
+    #                           PLOT TAUP ARRIVALS
+    # ==========================================================================
+    # Get phase arrivals from TauP if requested
+    arrivals = None
+    if args.tp_phases:
+        assert(args.tp_dist is not None)
+        assert(args.tp_depth is not None)
+        dist_deg = kilometers2degrees(args.tp_dist)
+        model = TauPyModel(model=args.tp_model)
+        tp_arrivals = model.get_travel_times(source_depth_in_km=args.tp_depth,
+                                             distance_in_degree=dist_deg,
+                                             phase_list=args.tp_phases)
+
+        # If some arrivals have multiple entires, only take first and last to 
+        # get a range which we will plot with a window
+        arrivals = {arrival.name: [] for arrival in tp_arrivals}
+        for i, arrival in enumerate(tp_arrivals):
+            arrivals[arrival.name].append(arrival.time)
+            print(f"{arrival.name} = {arrival.time} s")
+
+        if not arrivals:
+            print(f"No arrivals found for given depth={args.tp_depth}km and "
+                  f"distance {dist_deg:.2f}deg")
+            
+        arrival_dict = {}        
         for i, (name, times) in enumerate(arrivals.items()):
             if times[0] == times[-1]:
                 alpha = 1
@@ -312,24 +660,40 @@ if __name__ == "__main__":
                         color=f"C{i}", alpha=alpha, zorder=7)
         plt.legend(fontsize=8, loc="upper left", frameon=False)
 
-    # Set plot aesthetics
+    # ==========================================================================
+    #                           PLOT TMARKS
+    # ==========================================================================
+    if args.tmarks:
+        if len(args.tmarks_c) == 1:
+            colors = args.tmarks_c * len(args.tmarks)
+        else:
+            colors = args.tmarks_c
+        for tmark, c in zip(args.tmarks, colors):
+            if args.time.startswith("a"):
+                tmark = date2num(UTCDateTime(tmark).datetime)
+                # date2num(st[0].stats.starttime.datetime) + tmark
+            ax.axvline(tmark, c=c, lw=0.5)
+
+    # ==========================================================================
+    #                           PLOT AESTHETICS
+    # ==========================================================================
     if args.time.startswith("a"):
-        plt.xlabel(f"Time [UTC{sign}{shift}]")
+        ax.set_xlabel(f"Time [UTC{args.time[1:]}]")
     else:
-        plt.xlabel(f"Time [{args.time}]")
-    plt.ylabel(args.ylabel or "Displacement [m]")
+        ax.set_xlabel(f"Time [{args.time}]")
+    ax.set_ylabel(args.ylabel or "Displacement [m]")
 
     # Subset x axis
     xstart, xend = xvals.min(), xvals.max()
     if args.xlim:
-        if args.time == "a":
+        if args.time.startswith("a"):
             xstart = date2num(UTCDateTime(args.xlim[0]).datetime)
             xend = date2num(UTCDateTime(args.xlim[1]).datetime)
         else:
             xstart, xend = [float(_) for _ in args.xlim]
-    plt.xlim(xstart, xend)
+    ax.set_xlim(xstart, xend)
 
-    # Subset y axis
+    # Subset y axis for waveform plot
     ymax = np.amax([st[0].data.min(), st[0].data.max()])
     ymin = -1 * ymax
     if args.ylim:
@@ -339,26 +703,16 @@ if __name__ == "__main__":
         else:
             ymin, ymax = args.ylim
     else:
-        # Need to rescale y-axis based on the subset x-axis, hacky
-        idx_start = (np.abs(xvals - xstart)).argmin()
-        idx_end = (np.abs(xvals - xend)).argmin()
-        yvals = st[0].data[idx_start: idx_end]
-        ymax = np.amax([yvals.min(), yvals.max()])
+        ymax = np.amax([st[0].data.min(), st[0].data.max()])
         ymin = -1 * ymax
     
-    plt.ylim(ymin, ymax)
-
-    # Add vertical lies at certain times
-    if args.tmarks:
-        for tmark in args.tmarks:
-            if args.time == "a":
-                tmark = date2num(UTCDateTime(tmark).datetime)
-                # date2num(st[0].stats.starttime.datetime) + tmark
-            plt.axvline(tmark, c="r", lw=0.5)
+    ax.set_ylim(ymin, ymax)
 
     # Finish off by setting plot aesthetics
     if args.title is None:
-        title = f"{st[0].get_id()} [{args.fmin}, {args.fmax}]Hz"
+        title = f"{st[0].get_id()}"
+        if args.fmin or args.fmax:
+            title += f" [{args.fmin}, {args.fmax}]Hz"
 
         # Append some information on the TauP arrivals
         if arrivals:
@@ -366,27 +720,34 @@ if __name__ == "__main__":
                       f"Z={args.tp_depth}km)")
 
         title += f"\n{args.title_append}"
-
     else:
         title = args.title
-    plt.title(title)
+    plt.suptitle(title)
 
+    # Final plotting touches
     if args.labels:
         plt.legend()
     set_plot_aesthetic(ax)
+    if ax_spectra:
+        set_plot_aesthetic(ax_spectra, ytick_format="plain")
     f.tight_layout()
 
-    # Finalize Plot
+    # ==========================================================================
+    #                           FINALIZE PLOT
+    # ==========================================================================
+    _transparent = False  # toggle for transparency in the background
     if args.save == "auto":
-        plt.savefig(f"{args.fid}.png", transparent=True)
+        plt.savefig(f"{args.fid}.png", transparent=_transparent)
     elif args.save is not None:
-        plt.savefig(args.save, transparent=True)
+        plt.savefig(args.save, transparent=_transparent)
 
     if not args.noshow:
         plt.show()
     plt.close("all")
 
-    # Output waveforms 
+    # ==========================================================================
+    #                               OUTPUT
+    # ==========================================================================
     if args.output:
         if not os.path.exists(args.output):
             os.makedirs(args.output)
