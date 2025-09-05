@@ -182,17 +182,37 @@ def _nearest_pow_2(x):
 def convert_timezone(code, st):
     """
     When plotting in absolute time (args.time == "a*"), we allow time shifting 
-    by time zone to get to the correct time local time. Returns streams that
+    by time zone to get to the correct time local time. Returns streams with 
+    converted time
+
+    .. note::
+
+        Confusingly, trying to input time zones in UTCDateTime like
+        UTCDateTime("YYYY-MM-DDTHH:MM:SS-09) 
+        assumes that the given date is in local time, and that the modifier -09
+        is the conversion to UTC. But since seismic data is IN UTC, we cannot
+        use this because it shifts us in the wrong way.
 
     :type code: str
     :param code: e.g., +08 to shift forward by 8 hours
     """
     assert(len(code) == 3), "must be +?? or -??"
     assert(code[0] in ["+", "-"])
-    starttime = str(st[0].stats.starttime)[:-1]  # Dropping the 'Z' repr. UTC
-    new_starttime = UTCDateTime(f"{starttime}{code}")  # e.g., T00:00:00+01
+    starttime = st[0].stats.starttime  # Dropping the 'Z' repr. UTC
+
+    sign = code[0]
+    shift = int(code[1:]) * 60 * 60  # hours
+
+    if sign == "+":
+        starttime += shift
+    elif sign == "-":
+        starttime -= shift
+
     for tr in st:
-        tr.stats.starttime = new_starttime
+        if sign == "+":
+            tr.stats.starttime += shift
+        elif sign == "-":
+            tr.stats.starttime -= shift
 
     return st
 
@@ -577,7 +597,7 @@ if __name__ == "__main__":
         ax.plot(xvals, tr.data, c=c, lw=args.linewidth, zorder=6+i, label=l)
 
     # ==========================================================================
-    #                   PLOT STREAM GAUGE (SUPER CUSTOM)
+    #                  PLOT STREAM GAUGE (WARNING: SUPER CUSTOM)
     # ==========================================================================
     if args.stream_gauge:
         assert args.time == "a-08", f"currently only works in AK local"
@@ -596,15 +616,21 @@ if __name__ == "__main__":
         times = np.array([date2num(UTCDateTime(_).datetime) for _ in times])
         height_m = np.array([_ * 0.3048 for _ in height_ft.astype(float)])
 
+        # Subset data where we are plotting waveforms to get the correct ylims
+        idx = np.where((times > xvals.min()) & (times < xvals.max()))
+
         # Plot on the same axis as the waveform
         twax = ax.twinx()
-        twax.plot(times, height_m, lw=1, c="C1", label="Phelan Creek")
+        twax.plot(times[idx], height_m[idx], "o-", lw=1, c="C0", 
+                  label="Phelan Creek", zorder=5, markersize=2.5, 
+                  alpha=0.75)
         twax.set_ylabel("Stream Height [m]")
 
     # ==========================================================================
     #                           PLOT SPECTROGRAM
     # ==========================================================================
-    if args.spectrogram:
+    # Don't plot spectrogram if we're plotting full data because it's too much
+    if args.spectrogram and args.xlim:
         n = spectrogram(f, ax_spectra, st[0].data, st[0].stats.sampling_rate, 
                     log=args.log_s, cmap=args.cmap_s, ncolors=args.ncolors_s) 
         ax_spectra.set_ylabel("Freq. [Hz]")
