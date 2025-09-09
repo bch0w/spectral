@@ -81,24 +81,30 @@ def parse_args():
                         help="TauP source depth km")
     
     # Spectrogram (all parameters end with _s)
-    parser.add_argument("-S", "--spectrogram", action="store_true", default=False,
-                        help="plot spectrogram of the raw trace. See all '*_s' "
-                             "parameters to control the look")
-    parser.add_argument("--cmap_s", nargs="?", type=str, 
+    parser.add_argument("--spectrogram", action="store_true", default=False,
+                        help="plot spectrogram of the raw trace. See all " 
+                             "'sp_*' parameters to control the look")
+    parser.add_argument("--sp_cmap", nargs="?", type=str, 
                         default="nipy_spectral_r",
                         help="colormap of the spectrogram")
-    parser.add_argument("-nc_s", "--ncolors_s", nargs="?", type=int, default=256,
+    parser.add_argument("--sp_numcol", nargs="?", type=int, default=256,
                         help="number of colors in colormap of the spectrogram")
-    parser.add_argument("--log_s", action="store_true",
+    parser.add_argument("--sp_logscale", action="store_true",
                         help="turn on log scale for spectrogram y-axis")
-    parser.add_argument( "--ylim_s", nargs="+", type=float, default=None,
+    parser.add_argument( "--sp_ylim", nargs="+", type=float, default=None,
                         help="y-axis limits for the spectrogram plot")
     
     # Stream Gauge (VERY CUSTOM, ONLY FOR GULKANA EXPERIEMENT)
-    parser.add_argument("--stream_gauge", action="store_true", default=False,
+    parser.add_argument("--stream_gage", action="store_true", default=False,
                         help="For GULKANASEIS data only, plots stream gauge " 
                              "data at the bottom of the waveform plot with a " 
                              "twin X axis")
+    parser.add_argument("--sg_rel", action="store_true", default=False,
+                        help="For GULKANASEIS data only, make y-axis relative "
+                            "so that the lowest plotted value is 0.")
+    parser.add_argument("--sg_units", type=str, default="m",
+                        help="For GULKANASEIS data only, choose units to plot " 
+                             "stream gage data. Options: ft, in, m, cm")
 
     # Plot Aesthetics
     parser.add_argument("-x", "--xlim", nargs="+", default=None,
@@ -125,6 +131,8 @@ def parse_args():
                         help="title of the figure, defaults to ID and fmin/max")
     parser.add_argument("-ta", "--title_append", nargs="?", type=str, 
                         default="", help="append to default title")
+    parser.add_argument("--maxticks", type=int, default=6, 
+                        help="max ticks if --time='a'")
     
     # Time Marks
     parser.add_argument("-tm", "--tmarks", nargs="+", 
@@ -217,15 +225,22 @@ def convert_timezone(code, st):
     return st
 
 
-def spectrogram(f, ax, data, samp_rate, per_lap=0.9, wlen=None, log=False,
-                outfile=None, fmt=None, dbscale=False,
-                mult=8.0, cmap=None, ncolors=256, zorder=None, title=None,
-                show=True, clip=[0.0, 1.0]):
+def spectrogram(ax, xvals, data, samp_rate, per_lap=0.9, wlen=None, log=False,
+                dbscale=False, mult=8., cmap=None, ncolors=256, zorder=None, 
+                clip=[0.0, 1.0]):
     """
-    Modified from ObsPys Spectrogram function
-    https://docs.obspy.org/_modules/obspy/imaging/spectrogram.html#spectrogram
-
     Computes and plots spectrogram of the input data.
+
+    .. note::
+        Modified from ObsPys Spectrogram function
+        https://docs.obspy.org/_modules/obspy/imaging/spectrogram.html\
+            #spectrogram
+    
+        I also removed the non-log plotting option which uses imshow because I 
+        didn't want to figure out how to change the x-axis values to match
+        the waveform for sharex=True to work. So this might be a little slower
+        when using non-log spectrogram y-scale but hopefully not significantly.
+
 
     :param data: Input data
     :type samp_rate: float
@@ -336,29 +351,23 @@ def spectrogram(f, ax, data, samp_rate, per_lap=0.9, wlen=None, log=False,
     halfbin_freq = (freq[1] - freq[0]) / 2.0
 
     kwargs = {'cmap': cmap, 'zorder': zorder}
+    # pcolor expects one bin more at the right end
+    freq = np.concatenate((freq, [freq[-1] + 2 * halfbin_freq]))
+    time = np.concatenate((time, [time[-1] + 2 * halfbin_time]))
+    # center bin by shifting over by one half
+    time -= halfbin_time
+    freq -= halfbin_freq
+
+    # Hijack and change the time axis to match the waveforms so we can use
+    # sharex, otherwise they are on separate x axes
+    new_time = np.linspace(xvals.min(), xvals.max(), len(time))
+
+    # Plot times
+    ax.pcolormesh(new_time, freq, specgram, norm=norm, **kwargs)
+
+    # Log scaling for frequency values (y-axis)
     if log:
-        # pcolor expects one bin more at the right end
-        freq = np.concatenate((freq, [freq[-1] + 2 * halfbin_freq]))
-        time = np.concatenate((time, [time[-1] + 2 * halfbin_time]))
-        # center bin
-        time -= halfbin_time
-        freq -= halfbin_freq
-        # Log scaling for frequency values (y-axis)
         ax.set_yscale('log')
-        # Plot times
-        im = ax.pcolormesh(time, freq, specgram, norm=norm, **kwargs)
-        n = len(time)  # for later axis change
-    else:
-        # this method is much much faster!
-        specgram = np.flipud(specgram)
-        # center bin
-        extent = (time[0] - halfbin_time, time[-1] + halfbin_time,
-                  freq[0] - halfbin_freq, freq[-1] + halfbin_freq)
-        im = ax.imshow(specgram, interpolation="nearest", extent=extent, 
-                       **kwargs)
-        n = len(specgram)  # for later axis change
-    
-    return n
 
 
 def set_plot_aesthetic(
@@ -402,7 +411,10 @@ def set_plot_aesthetic(
             # If we are in log format axis this will not work
             pass
     else:
-        ax.ticklabel_format(axis="y", style=ytick_format)
+        try:
+            ax.ticklabel_format(axis="y", style=ytick_format)
+        except AttributeError:
+            pass
 
     # Set xtick label major and minor which is assumed to be a time series
     if xtick_major:
@@ -470,6 +482,7 @@ if __name__ == "__main__":
         except TypeError:
             st += read_sem(fid)
         print(fid)
+    st.merge()
 
     # ==========================================================================
     #                           PROCESS WAVEFORMS
@@ -492,6 +505,7 @@ if __name__ == "__main__":
                     )
         else:
             starttime = st[0].stats.starttime
+            breakpoint()
             st.trim(starttime=starttime + float(args.xlim[0]) - _buffer,
                     endtime=starttime + float(args.xlim[1]) + _buffer)
 
@@ -549,7 +563,7 @@ if __name__ == "__main__":
         axs = [ax]  # To play nice with some loops
         ax_spectra = None
     else:
-        f, axs = plt.subplots(2, dpi=200, figsize=(8, 6), sharex=False)
+        f, axs = plt.subplots(2, dpi=200, figsize=(8, 6), sharex=True)
         f.subplots_adjust(hspace=0)
         ax_spectra, ax = axs  # waveform on the bottom
 
@@ -560,7 +574,7 @@ if __name__ == "__main__":
         # Set xvalues to datetime objects
         xvals = ((st[0].times() / SECONDS_PER_DAY) +
                         date2num(st[0].stats.starttime.datetime))
-        _set_xaxis_obspy_dates(ax)
+        _set_xaxis_obspy_dates(ax, maxticks=args.maxticks)
     else:
         xvals = st[0].times() 
 
@@ -593,13 +607,13 @@ if __name__ == "__main__":
         if args.labels:
             l = args.labels[i]
         else:
-            l = None
+            l = tr.get_id()
         ax.plot(xvals, tr.data, c=c, lw=args.linewidth, zorder=6+i, label=l)
 
     # ==========================================================================
     #                  PLOT STREAM GAUGE (WARNING: SUPER CUSTOM)
     # ==========================================================================
-    if args.stream_gauge:
+    if args.stream_gage:
         assert args.time == "a-08", f"currently only works in AK local"
 
         # Read data from text file
@@ -614,32 +628,49 @@ if __name__ == "__main__":
         # Time is already in AK Local so we don't need to shift. If we did have
         # to then we would need to convert to UTC then shift by user request
         times = np.array([date2num(UTCDateTime(_).datetime) for _ in times])
-        height_m = np.array([_ * 0.3048 for _ in height_ft.astype(float)])
+        height_ft = np.array(height_ft, dtype=float)
 
+        # Convert units
+        if args.sg_units == "ft":
+            height = height_ft
+        elif args.sg_units == "in":
+            height = height_ft * 12
+        elif args.sg_units == "m":
+            height = np.array([_ * 0.3048 for _ in height_ft.astype(float)])
+        elif args.sg_units == "cm":
+            height = np.array([_ * 30.48 for _ in height_ft.astype(float)])
+        else:
+            print("stream gage units `sg_units` should be in: ft, in, m, cm")
+            sys.exit()
+        
         # Subset data where we are plotting waveforms to get the correct ylims
         idx = np.where((times > xvals.min()) & (times < xvals.max()))
 
+        if args.sg_rel:
+            height -= height[idx].min()
+
         # Plot on the same axis as the waveform
         twax = ax.twinx()
-        twax.plot(times[idx], height_m[idx], "o-", lw=1, c="C0", 
-                  label="Phelan Creek", zorder=5, markersize=2.5, 
-                  alpha=0.75)
-        twax.set_ylabel("Stream Height [m]")
+        twax.plot(times[idx], height[idx], "o-", lw=1, c="C0", 
+                  label="Phelan Cr. Gage", zorder=5, markersize=1.25, 
+                  alpha=0.5)
+
+        _ylabel = f"Stream Height [{args.sg_units}]"
+        if args.sg_rel:
+            _ylabel = f"Relative {_ylabel}"
+        twax.set_ylabel(_ylabel, rotation=-90, labelpad=20)
 
     # ==========================================================================
     #                           PLOT SPECTROGRAM
     # ==========================================================================
     # Don't plot spectrogram if we're plotting full data because it's too much
     if args.spectrogram and args.xlim:
-        n = spectrogram(f, ax_spectra, st[0].data, st[0].stats.sampling_rate, 
-                    log=args.log_s, cmap=args.cmap_s, ncolors=args.ncolors_s) 
+        n = spectrogram(ax_spectra, xvals, st[0].data, st[0].stats.sampling_rate, 
+                        log=args.sp_logscale, dbscale=False, cmap=args.sp_cmap, 
+                        ncolors=args.sp_numcol) 
         ax_spectra.set_ylabel("Freq. [Hz]")
         ax_spectra.axis("tight")
         ax_spectra.grid(False)
-
-        # Change X-axis to match 'ax'
-        if args.time.startswith("a"):
-            xvals_spectra = np.linspace(xvals.min(), xvals.max(), n)
 
         # mappable = ax_spectra.images[0]
         # plt.colorbar(mappable=mappable, ax=ax_spectra)
@@ -703,6 +734,10 @@ if __name__ == "__main__":
     # ==========================================================================
     #                           PLOT AESTHETICS
     # ==========================================================================
+    # Legend
+    f.legend(loc="upper right", bbox_to_anchor=(1,1), 
+             bbox_transform=ax.transAxes, prop={"size": 6})
+
     if args.time.startswith("a"):
         ax.set_xlabel(f"Time [UTC{args.time[1:]}]")
     else:
@@ -736,7 +771,10 @@ if __name__ == "__main__":
 
     # Finish off by setting plot aesthetics
     if args.title is None:
-        title = f"{st[0].get_id()}"
+        title = f"{st[0].stats.starttime.year}.{st[0].stats.starttime.julday}"
+        if st[0].stats.starttime.julday != st[0].stats.endtime.julday:
+            title += f"-{st[0].stats.endtime.julday}"
+
         if args.fmin or args.fmax:
             title += f" [{args.fmin}, {args.fmax}]Hz"
 
@@ -744,8 +782,8 @@ if __name__ == "__main__":
         if arrivals:
             title += (f"\n(TauP={args.tp_model}; $\\Delta$={args.tp_dist}km; "
                       f"Z={args.tp_depth}km)")
-
-        title += f"\n{args.title_append}"
+        if args.title_append:
+            title += f"\n{args.title_append}"
     else:
         title = args.title
     plt.suptitle(title)
