@@ -93,6 +93,10 @@ def parse_args():
                         help="use dB scaling for colors/amplitudes in spectro")    
     parser.add_argument("--sp_logscale", action="store_true",
                         help="turn on log scale for spectrogram y-axis")
+    parser.add_argument("--sp_idx", type=int, default=0,
+                        help="Iff multiple waveforms plotted, choose which of "
+                             "them to use for the spectrogram. Defaults to 0. " 
+                             "order is alphabetical")
     
     # Stream Gauge (VERY CUSTOM, ONLY FOR GULKANA EXPERIEMENT)
     parser.add_argument("--stream_gage", action="store_true", default=False,
@@ -105,6 +109,7 @@ def parse_args():
     parser.add_argument("--sg_units", type=str, default="m",
                         help="For GULKANASEIS data only, choose units to plot " 
                              "stream gage data. Options: ft, in, m, cm")
+
 
     # Plot Aesthetics
     parser.add_argument("-x", "--xlim", nargs="+", default=None,
@@ -225,7 +230,7 @@ def convert_timezone(code, st):
     return st
 
 
-def spectrogram(ax, xvals, data, samp_rate, per_lap=0.9, wlen=None, log=False,
+def spectrogram(ax, xvals, tr, per_lap=0.9, wlen=None, log=False,
                 dbscale=False, mult=8., cmap=None, ncolors=256, zorder=None, 
                 clip=[0.0, 1.0]):
     """
@@ -242,9 +247,8 @@ def spectrogram(ax, xvals, data, samp_rate, per_lap=0.9, wlen=None, log=False,
         when using non-log spectrogram y-scale but hopefully not significantly.
 
 
-    :param data: Input data
-    :type samp_rate: float
-    :param samp_rate: Samplerate in Hz
+    :type tr: obspy Trace
+    :param tr: Trace object to get data and sampling rate from
     :type per_lap: float
     :param per_lap: Percentage of overlap of sliding window, ranging from 0
         to 1. High overlaps take a long time to compute.
@@ -291,13 +295,13 @@ def spectrogram(ax, xvals, data, samp_rate, per_lap=0.9, wlen=None, log=False,
         cmap = plt.get_cmap(cmap, ncolors)
 
     # enforce float for samp_rate
-    samp_rate = float(samp_rate)
+    samp_rate = float(tr.stats.sampling_rate)
 
     # set wlen from samp_rate if not specified otherwise
     if not wlen:
         wlen = 128 / samp_rate
 
-    npts = len(data)
+    npts = tr.stats.npts
 
     # nfft needs to be an integer, otherwise a deprecation will be raised
     # XXX add condition for too many windows => calculation takes for ever
@@ -314,7 +318,7 @@ def spectrogram(ax, xvals, data, samp_rate, per_lap=0.9, wlen=None, log=False,
         mult = mult * nfft
     nlap = int(nfft * float(per_lap))
 
-    data = data - data.mean()
+    data = tr.data - tr.data.mean()
     end = npts / samp_rate
 
     # Here we call not plt.specgram as this already produces a plot
@@ -502,7 +506,7 @@ if __name__ == "__main__":
     # the tail data will stay there but we will set the xlim of the plot to not
     # show it
     if args.xlim:    
-        _trim_pct = 0.5
+        _trim_pct = 1
         if args.time.startswith("a"):
             start = UTCDateTime(args.xlim[0])
             end = UTCDateTime(args.xlim[1])
@@ -665,10 +669,10 @@ if __name__ == "__main__":
     # ==========================================================================
     # Don't plot spectrogram if we're plotting full data because it's too much
     if args.spectrogram and args.xlim:
-        im = spectrogram(ax_spectra, xvals, st[0].data, 
-                         st[0].stats.sampling_rate,  log=args.sp_logscale, 
-                         dbscale=args.sp_dbscale, cmap=args.sp_cmap, 
-                         ncolors=args.sp_numcol) 
+        im = spectrogram(ax=ax_spectra, xvals=xvals, tr=st[args.sp_idx], 
+                         log=args.sp_logscale, dbscale=args.sp_dbscale, 
+                         cmap=args.sp_cmap, ncolors=args.sp_numcol
+                         ) 
         ax_spectra.set_ylabel("Freq. [Hz]")
         ax_spectra.axis("tight")
         ax_spectra.grid(False)
@@ -795,6 +799,12 @@ if __name__ == "__main__":
         ymin = -1 * ymax
     
     ax.set_ylim(ymin, ymax)
+
+    # Spectrogram annotation if there are multiple waveforms plotted
+    if args.spectrogram and len(st) > 1:
+        ax_spectra.text(0.99, 0.99, st[args.sp_idx].get_id(), 
+                        horizontalalignment="right", verticalalignment="top", 
+                        transform=ax_spectra.transAxes, fontsize=8)
 
     # Finish off by setting plot aesthetics
     if args.title is None:
