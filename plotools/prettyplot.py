@@ -35,8 +35,12 @@ from obspy.geodetics import kilometers2degrees
 from obspy.imaging.cm import obspy_sequential
 from obspy.imaging.util import ObsPyAutoDateFormatter
 
-from pysep import read_sem
-
+# Only needed for SPECFEM synthetics, ignore if not installed
+try:
+    from pysep import read_sem
+except ImportError:
+    read_sem = None
+    pass
 
 SECONDS_PER_DAY = 3600.0 * 24.0
 
@@ -491,8 +495,11 @@ if __name__ == "__main__":
     for fid in args.fid:
         try:
             st += read(fid)
-        except TypeError:
+        except TypeError and read_sem:
             st += read_sem(fid)
+        else:
+            print(f"cannot read data in {fid}")
+            sys.exit()
         print(fid)
     st.merge()
 
