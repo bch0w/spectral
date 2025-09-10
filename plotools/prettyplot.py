@@ -69,6 +69,13 @@ def parse_args():
     parser.add_argument("--differentiate", nargs="?", type=int, default=0,
                         help="Diff. the time series, will demean and taper,"
                              " value for integrate will be the number of times")
+    parser.add_argument("--trim_pct", nargs="?", type=float, default=1.0,
+                        help="Buffer amount in time to trim the data if using " 
+                             "`xlim` to prevent processing the tails of the " 
+                             "cut data, given in percentage. That is if the " 
+                             "requested cut length is 30s, an additional 30s " 
+                             "on either side of the trace will be cut and " 
+                             "processed")
 
     # TauP Phase Arrivals
     parser.add_argument("--tp_phases", nargs="+", type=str, default=None,
@@ -110,7 +117,6 @@ def parse_args():
                         help="For GULKANASEIS data only, choose units to plot " 
                              "stream gage data. Options: ft, in, m, cm")
 
-
     # Plot Aesthetics
     parser.add_argument("-x", "--xlim", nargs="+", default=None,
                         help="time axis limits in s or if `time`=='a' then "
@@ -130,7 +136,7 @@ def parse_args():
                         help="optional labels legend, must match len of `fid`")
     parser.add_argument("-lw", "--linewidth", nargs="?", type=float, 
                         default=0.5, help="linewidth of the time series line")
-    parser.add_argument("--ylabel", nargs="?", type=str, default=None,
+    parser.add_argument("--ylabel", nargs="?", type=str, default="Vel. [m/s]",
                         help="label for units, defaults to displacement")
     parser.add_argument("--title", nargs="?", type=str, default=None,
                         help="title of the figure, defaults to ID and fmin/max")
@@ -209,7 +215,7 @@ def convert_timezone(code, st):
     :type code: str
     :param code: e.g., +08 to shift forward by 8 hours
     """
-    assert(len(code) == 3), "must be +?? or -??"
+    assert(len(code) == 3), f"must be +?? or -??, not {code}"
     assert(code[0] in ["+", "-"])
     starttime = st[0].stats.starttime  # Dropping the 'Z' repr. UTC
 
@@ -498,7 +504,7 @@ if __name__ == "__main__":
         st.resample(sampling_rate=args.resample)
 
     # Time shift by requested amount
-    if args.time.startswith("a"):
+    if args.time.startswith("a") and len(args.time) > 1:
         st = convert_timezone(code=args.time[1:], st=st)
 
     # Trim data shorter so we don't process the entire waveform but add some
@@ -506,15 +512,14 @@ if __name__ == "__main__":
     # the tail data will stay there but we will set the xlim of the plot to not
     # show it
     if args.xlim:    
-        _trim_pct = 1
         if args.time.startswith("a"):
             start = UTCDateTime(args.xlim[0])
             end = UTCDateTime(args.xlim[1])
-            buffer = (end - start) * _trim_pct  # some percentage of the record
+            buffer = (end - start) * args.trim_pct  # some percentage of the record
             st.trim(starttime=start - buffer, endtime=end + buffer)
         else:
             starttime = st[0].stats.starttime
-            buffer = (args.xlim[1] - args.xlim[0]) * _trim_pct
+            buffer = (args.xlim[1] - args.xlim[0]) * args.trim_pct
             st.trim(starttime=starttime + float(args.xlim[0]) - buffer,
                     endtime=starttime + float(args.xlim[1]) + buffer)
         print(f"trimming with {buffer}s buffer on either end")
@@ -655,6 +660,14 @@ if __name__ == "__main__":
 
         # Plot on the same axis as the waveform
         twax = ax.twinx()
+
+        # # Plot the gradient, not very helpful
+        # dx = (times[1] - times[0]) * 86400
+        # grad_height = np.gradient(height[idx], dx)
+        # twax.plot(times[idx], grad_height, "o-", lw=1, c="C0", 
+        #         label="Phelan Cr. Gage", zorder=5, markersize=1.25, 
+        #         alpha=0.5)
+
         twax.plot(times[idx], height[idx], "o-", lw=1, c="C0", 
                   label="Phelan Cr. Gage", zorder=5, markersize=1.25, 
                   alpha=0.5)
@@ -694,18 +707,26 @@ if __name__ == "__main__":
         cbar.ax.set_frame_on(True)
         # Padding was determined by trial and error
         if args.sp_dbscale:
-            _label = "Relative Power [dB]"
-            _labelpad = -27.5
+            # _label = r"Rel. PSD [$10\log_{10}((m/s^2)/Hz)$]"
+            _label = f"Rel. Power [dB]"
+
+            _labelpad = -27
         else:
-            _label = "Power/Freq. [dB/Hz]"
+            _label = r"Rel. PSD [$(m/s^2/Hz)$]"
             _labelpad = -25
-        cbar.ax.set_ylabel(_label, rotation=270, labelpad=_labelpad)
+        cbar.ax.set_ylabel(_label, rotation=270, labelpad=_labelpad, fontsize=8)
 
         # HACKY: pushes over the waveform plot over by the same amount but '
         # then turns the space invisible to preserve the shared x-axis
         div = make_axes_locatable(ax)
         cax = div.append_axes("right", size=f"{_size}%", pad=_pad)
         cax.set_axis_off()
+
+        # Have to do it for twax, too
+        if args.stream_gage:
+            div = make_axes_locatable(twax)
+            cax = div.append_axes("right", size=f"{_size}%", pad=_pad)
+            cax.set_axis_off()
 
     # ==========================================================================
     #                           PLOT TAUP ARRIVALS
@@ -773,7 +794,7 @@ if __name__ == "__main__":
         ax.set_xlabel(f"Time [UTC{args.time[1:]}]")
     else:
         ax.set_xlabel(f"Time [{args.time}]")
-    ax.set_ylabel(args.ylabel or "Displacement [m]")
+    ax.set_ylabel(args.ylabel)
 
     # Subset x axis
     xstart, xend = xvals.min(), xvals.max()
@@ -840,7 +861,7 @@ if __name__ == "__main__":
     # ==========================================================================
     _transparent = False  # toggle for transparency in the background
     if args.save == "auto":
-        plt.savefig(f"{args.fid}.png", transparent=_transparent)
+        plt.savefig(f"{args.fid[0]}.png", transparent=_transparent)
     elif args.save is not None:
         plt.savefig(args.save, transparent=_transparent)
 
