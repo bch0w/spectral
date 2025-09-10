@@ -85,14 +85,14 @@ def parse_args():
                         help="plot spectrogram of the raw trace. See all " 
                              "'sp_*' parameters to control the look")
     parser.add_argument("--sp_cmap", nargs="?", type=str, 
-                        default="nipy_spectral_r",
+                        default="nipy_spectral",
                         help="colormap of the spectrogram")
     parser.add_argument("--sp_numcol", nargs="?", type=int, default=256,
                         help="number of colors in colormap of the spectrogram")
+    parser.add_argument("--sp_dbscale", action="store_true",
+                        help="use dB scaling for colors/amplitudes in spectro")    
     parser.add_argument("--sp_logscale", action="store_true",
                         help="turn on log scale for spectrogram y-axis")
-    parser.add_argument( "--sp_ylim", nargs="+", type=float, default=None,
-                        help="y-axis limits for the spectrogram plot")
     
     # Stream Gauge (VERY CUSTOM, ONLY FOR GULKANA EXPERIEMENT)
     parser.add_argument("--stream_gage", action="store_true", default=False,
@@ -318,9 +318,8 @@ def spectrogram(ax, xvals, data, samp_rate, per_lap=0.9, wlen=None, log=False,
     end = npts / samp_rate
 
     # Here we call not plt.specgram as this already produces a plot
-    # matplotlib.mlab.specgram should be faster as it computes only the
+    # specgram should be faster as it computes only the
     # arrays
-    # XXX mlab.specgram uses fft, would be better and faster use rfft
     specgram, freq, time = mlab.specgram(data, Fs=samp_rate, NFFT=nfft,
                                          pad_to=mult, noverlap=nlap)
 
@@ -337,6 +336,10 @@ def spectrogram(ax, xvals, data, samp_rate, per_lap=0.9, wlen=None, log=False,
         specgram = np.sqrt(specgram[1:, :])
     freq = freq[1:]
 
+    # Normalize spectrogram so that lowest signal value is 0
+    # !!! BC Is this okay?
+    specgram -= specgram.min()
+
     vmin, vmax = clip
     if vmin < 0 or vmax > 1 or vmin >= vmax:
         msg = "Invalid parameters for clip option."
@@ -351,23 +354,29 @@ def spectrogram(ax, xvals, data, samp_rate, per_lap=0.9, wlen=None, log=False,
     halfbin_freq = (freq[1] - freq[0]) / 2.0
 
     kwargs = {'cmap': cmap, 'zorder': zorder}
-    # pcolor expects one bin more at the right end
+    # pcolor expects one bin more at the right end, and we must also shift
+    # our frequency bins to the center, currently they define the right edge
     freq = np.concatenate((freq, [freq[-1] + 2 * halfbin_freq]))
-    time = np.concatenate((time, [time[-1] + 2 * halfbin_time]))
-    # center bin by shifting over by one half
-    time -= halfbin_time
     freq -= halfbin_freq
 
+    # We do the same for the time axis (NOTE: This is not used, see below)
+    time = np.concatenate((time, [time[-1] + 2 * halfbin_time]))
+    time -= halfbin_time
+
     # Hijack and change the time axis to match the waveforms so we can use
-    # sharex, otherwise they are on separate x axes
+    # sharex, otherwise they are on separate x axes. 
+    # We apply the same time shifting as above to get proper t0
     new_time = np.linspace(xvals.min(), xvals.max(), len(time))
+    new_time += (time[0] + 2 * halfbin_time) / SECONDS_PER_DAY 
 
     # Plot times
-    ax.pcolormesh(new_time, freq, specgram, norm=norm, **kwargs)
+    im = ax.pcolormesh(new_time, freq, specgram, norm=norm, **kwargs)
 
     # Log scaling for frequency values (y-axis)
     if log:
         ax.set_yscale('log')
+
+    return im
 
 
 def set_plot_aesthetic(
@@ -437,12 +446,6 @@ def set_plot_aesthetic(
         plt.grid(visible=True, which="minor", axis="y", alpha=0.2, linewidth=.5)
 
 
-    # !!! Colorbar works but it pushes the figure over which is not wanted 
-    # !!! Because it misaligns the two subplots
-    # divider = make_axes_locatable(ax)
-    # cax = divider.append_axes('right', size='1%', pad=0.05)
-    # f.colorbar(im, cax=cax, orientation="vertical")
-
 def _set_xaxis_obspy_dates(ax, ticklabels_small=True, minticks=3, maxticks=6):
     """
     Set Formatter/Locator of x-Axis to use ObsPyAutoDateFormatter and do some
@@ -465,7 +468,6 @@ def _set_xaxis_obspy_dates(ax, ticklabels_small=True, minticks=3, maxticks=6):
     ax.xaxis.set_major_locator(locator)
     if ticklabels_small:
         plt.setp(ax.get_xticklabels(), fontsize='small')
-
 
 
 if __name__ == "__main__":
@@ -496,18 +498,26 @@ if __name__ == "__main__":
         st = convert_timezone(code=args.time[1:], st=st)
 
     # Trim data shorter so we don't process the entire waveform but add some
-    # buffer so that preprocessing on the tails of the data doesn't show up
+    # buffer so that preprocessing on the tails of the data doesn't show up.
+    # the tail data will stay there but we will set the xlim of the plot to not
+    # show it
     if args.xlim:    
-        _buffer = 100  # seconds
+        _trim_pct = 0.5
         if args.time.startswith("a"):
-            st.trim(starttime=UTCDateTime(args.xlim[0]) - _buffer, 
-                    endtime=UTCDateTime(args.xlim[1]) + _buffer
-                    )
+            start = UTCDateTime(args.xlim[0])
+            end = UTCDateTime(args.xlim[1])
+            buffer = (end - start) * _trim_pct  # some percentage of the record
+            st.trim(starttime=start - buffer, endtime=end + buffer)
         else:
             starttime = st[0].stats.starttime
-            breakpoint()
-            st.trim(starttime=starttime + float(args.xlim[0]) - _buffer,
-                    endtime=starttime + float(args.xlim[1]) + _buffer)
+            buffer = (args.xlim[1] - args.xlim[0]) * _trim_pct
+            st.trim(starttime=starttime + float(args.xlim[0]) - buffer,
+                    endtime=starttime + float(args.xlim[1]) + buffer)
+        print(f"trimming with {buffer}s buffer on either end")
+
+        if not st:
+            print("Trimming removed all data, please check `xlim` values")
+            sys.exit()
 
     # Preprocess waveforms
     taper = args.taper
@@ -544,17 +554,6 @@ if __name__ == "__main__":
         print(f"zerophase={args.zerophase}")
         print(f"corners={args.corners}")
 
-    # Final trim after processing to cut off the tails of the processed data
-    # which might have some weird filtering artefacts
-    if args.xlim:    
-        if args.time.startswith("a"):
-            st.trim(starttime=UTCDateTime(args.xlim[0]),
-                    endtime=UTCDateTime(args.xlim[1]))
-        else:
-            starttime = st[0].stats.starttime
-            st.trim(starttime=starttime + float(args.xlim[0]),
-                    endtime=starttime + float(args.xlim[1]))
-
     # ==========================================================================
     #                           SET UP FIGURE
     # ==========================================================================
@@ -570,6 +569,7 @@ if __name__ == "__main__":
     # ==========================================================================
     #                           PLOT WAVEFORM
     # ==========================================================================
+    # Custom time axis
     if args.time.startswith("a"):
         # Set xvalues to datetime objects
         xvals = ((st[0].times() / SECONDS_PER_DAY) +
@@ -665,15 +665,43 @@ if __name__ == "__main__":
     # ==========================================================================
     # Don't plot spectrogram if we're plotting full data because it's too much
     if args.spectrogram and args.xlim:
-        n = spectrogram(ax_spectra, xvals, st[0].data, st[0].stats.sampling_rate, 
-                        log=args.sp_logscale, dbscale=False, cmap=args.sp_cmap, 
-                        ncolors=args.sp_numcol) 
+        im = spectrogram(ax_spectra, xvals, st[0].data, 
+                         st[0].stats.sampling_rate,  log=args.sp_logscale, 
+                         dbscale=args.sp_dbscale, cmap=args.sp_cmap, 
+                         ncolors=args.sp_numcol) 
         ax_spectra.set_ylabel("Freq. [Hz]")
         ax_spectra.axis("tight")
         ax_spectra.grid(False)
 
-        # mappable = ax_spectra.images[0]
-        # plt.colorbar(mappable=mappable, ax=ax_spectra)
+        # SPECTROGRAM COLORBAR
+        #  Pushes over the spectrogram in the same axis 
+        # to make way for the colorbar
+        _size = 2.5
+        _pad = 0.05
+        div_spectra = make_axes_locatable(ax_spectra)
+        cax_spectra = div_spectra.append_axes("right", size=f"{_size}%", 
+                                              pad=_pad)
+        cbar = f.colorbar(im, cax=cax_spectra, orientation="vertical") 
+
+        # Change the plot aeshtetic of the colorbar, should actually be in
+        # set_plot_aesthetic() but I'm lazy
+        for spine in cbar.ax.spines.values():
+            spine.set_linewidth(1.5)
+        cbar.ax.set_frame_on(True)
+        # Padding was determined by trial and error
+        if args.sp_dbscale:
+            _label = "Relative Power [dB]"
+            _labelpad = -27.5
+        else:
+            _label = "Power/Freq. [dB/Hz]"
+            _labelpad = -25
+        cbar.ax.set_ylabel(_label, rotation=270, labelpad=_labelpad)
+
+        # HACKY: pushes over the waveform plot over by the same amount but '
+        # then turns the space invisible to preserve the shared x-axis
+        div = make_axes_locatable(ax)
+        cax = div.append_axes("right", size=f"{_size}%", pad=_pad)
+        cax.set_axis_off()
 
     # ==========================================================================
     #                           PLOT TAUP ARRIVALS
@@ -734,7 +762,6 @@ if __name__ == "__main__":
     # ==========================================================================
     #                           PLOT AESTHETICS
     # ==========================================================================
-    # Legend
     f.legend(loc="upper right", bbox_to_anchor=(1,1), 
              bbox_transform=ax.transAxes, prop={"size": 6})
 
@@ -776,7 +803,9 @@ if __name__ == "__main__":
             title += f"-{st[0].stats.endtime.julday}"
 
         if args.fmin or args.fmax:
-            title += f" [{args.fmin}, {args.fmax}]Hz"
+            _fmin = args.fmin or 0
+            _fmax = args.fmax or st[0].stats.sampling_rate / 2
+            title += f" [{_fmin}, {_fmax}]Hz"
 
         # Append some information on the TauP arrivals
         if arrivals:
