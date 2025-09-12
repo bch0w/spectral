@@ -497,9 +497,6 @@ if __name__ == "__main__":
             st += read(fid)
         except TypeError and read_sem:
             st += read_sem(fid)
-        else:
-            print(f"cannot read data in {fid}")
-            sys.exit()
         print(fid)
     st.merge()
 
