@@ -23,6 +23,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from dateutil.rrule import MINUTELY, SECONDLY
+from glob import glob
 from matplotlib import mlab
 from matplotlib.colors import Normalize
 from matplotlib.dates import date2num, AutoDateLocator
@@ -50,7 +51,8 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     # Waveform Processing
-    parser.add_argument("fid", nargs="+", help="required, file ID(s)")
+    parser.add_argument("fids", nargs="+", 
+                        help="required, file ID(s), wildcards accepted")
     parser.add_argument("-tp", "--taper", nargs="?", type=float, default=0,
                         help="optional taper percentange")
     parser.add_argument("-f1", "--fmin", nargs="?", type=float, default=None,
@@ -85,11 +87,59 @@ def parse_args():
     parser.add_argument("--wf_abs", action="store_true", 
                         help="plot the absolute value of the waveform, does" 
                              "not affect processing, just final plotting")
-    parser.add_argument("--wf_stack", action="store_true",
-                        help="If plotting multiple waveforms/fids, stack all " 
-                             "the traces in the plot and plot the mean of " 
-                             "the stack, all traces will be plot with low " 
-                             "alpha in the background")
+    parser.add_argument("--wf_type", type="str", default="default",
+                        help="Option for how to plot the waveforms:\n"
+                             "'default': plot all `fids` on top of each other " 
+                             "with absolute amplitudes.\n"
+                             "'stack': stack all `fids` on top of each other w " 
+                             "some transparency, and then plot the mean value " 
+                             "of all traces as a dark line on top of all\n"
+                             "'recsec': plot all waveforms with relative " 
+                             "amplitudes on a record section style plot so that" 
+                             "each waveform is visually distinct from the " 
+                             "others\n"
+                             "'recsec_stack', recsec but add stack",
+                        choices=["default", "stack", "recsec", "recsec_stack"]
+                             )
+    
+    # Plot Aesthetics for Waveforms
+    parser.add_argument("-c", "--colors", nargs="+", type=str, default="k",
+                        help="color of the time series line, number of inputs "
+                             "must match the length of `fid`")
+    parser.add_argument("--alphas", nargs="+", type=float, default=None,
+                        help="alpha of the time series line, number of inputs "
+                             "must match the length of `fid`")
+    parser.add_argument("-l", "--labels", nargs="+", type=str, default=None,
+                        help="optional labels legend, must match len of `fid`")
+    parser.add_argument("-lw", "--linewidth", nargs="?", type=float, 
+                        default=0.5, help="linewidth of the time series line")
+    parser.add_argument("--ylabel", nargs="?", type=str, default="Vel. [m/s]",
+                        help="label for units, defaults to displacement")
+    parser.add_argument("-y", "--ylim", nargs="+", type=float, default=None,
+                        help="amplitude axis limits in s")
+
+    
+    # Time axis (X-axis)
+    parser.add_argument("-t", "--time", nargs="?", type=str, default="s",
+                    help="units for x-axis/time axis. choice: 's'econds "
+                            "(default), 'm'inutes, 'h'ours, 'a'bsolute (wip)."
+                            "If using 'a' you may add '+i' or '-i' to "
+                            "time shift the array, e.g., to go from UTC to "
+                            "local time. E.g., 'a-7' will subtract 7 hours.")
+    parser.add_argument("--maxticks", type=int, default=6, 
+                        help="max ticks if --time='a'")
+    parser.add_argument("-x", "--xlim", nargs="+", default=None,
+                        help="time axis limits in s or if `time`=='a' then "
+                             "values should be in datetime, see tmarks")
+    parser.add_argument("-tm", "--tmarks", nargs="+", 
+                        help="plot vertical lines at given relative times, "
+                             "should match the units of `time`. If `time`=='a' "
+                             "then each tmark should be a datetime "
+                             "YYYY-MM-DDTHH:MM:SS")
+    parser.add_argument("--tmarks_c", nargs="+", default="k",
+                        help="colors for each of the time marks, should "
+                             "either be single letter for all marks or match " 
+                             "length of tmarks for individual colors")
 
     # TauP Phase Arrivals
     parser.add_argument("--tp_phases", nargs="+", type=str, default=None,
@@ -131,49 +181,11 @@ def parse_args():
                         help="For GULKANASEIS data only, choose units to plot " 
                              "stream gage data. Options: ft, in, m, cm")
 
-    # Plot Aesthetics
-    parser.add_argument("-x", "--xlim", nargs="+", default=None,
-                        help="time axis limits in s or if `time`=='a' then "
-                             "values should be in datetime, see tmarks")
-    parser.add_argument("-y", "--ylim", nargs="+", type=float, default=None,
-                        help="amplitude axis limits in s")
-    parser.add_argument("-t", "--time", nargs="?", type=str, default="s",
-                        help="units for x-axis/time axis. choice: 's'econds "
-                             "(default), 'm'inutes, 'h'ours, 'a'bsolute (wip)."
-                             "If using 'a' you may add '+i' or '-i' to "
-                             "time shift the array, e.g., to go from UTC to "
-                             "local time. E.g., 'a-7' will subtract 7 hours.")
-    parser.add_argument("-c", "--colors", nargs="+", type=str, default="k",
-                        help="color of the time series line, number of inputs "
-                             "must match the length of `fid`")
-    parser.add_argument("--alphas", nargs="+", type=float, default=None,
-                        help="alpha of the time series line, number of inputs "
-                             "must match the length of `fid`")
-    parser.add_argument("-l", "--labels", nargs="+", type=str, default=None,
-                        help="optional labels legend, must match len of `fid`")
-    parser.add_argument("-lw", "--linewidth", nargs="?", type=float, 
-                        default=0.5, help="linewidth of the time series line")
-    parser.add_argument("--ylabel", nargs="?", type=str, default="Vel. [m/s]",
-                        help="label for units, defaults to displacement")
+    # Misc plotting options
     parser.add_argument("--title", nargs="?", type=str, default=None,
                         help="title of the figure, defaults to ID and fmin/max")
     parser.add_argument("-ta", "--title_append", nargs="?", type=str, 
                         default="", help="append to default title")
-    parser.add_argument("--maxticks", type=int, default=6, 
-                        help="max ticks if --time='a'")
-    
-    # Time Marks
-    parser.add_argument("-tm", "--tmarks", nargs="+", 
-                        help="plot vertical lines at given relative times, "
-                             "should match the units of `time`. If `time`=='a' "
-                             "then each tmark should be a datetime "
-                             "YYYY-MM-DDTHH:MM:SS")
-    parser.add_argument("--tmarks_c", nargs="+", default="k",
-                        help="colors for each of the time marks, should "
-                             "either be single letter for all marks or match " 
-                             "length of tmarks for individual colors")
-
-    # Misc
     parser.add_argument("-s", "--save", type=str, default=None,
                         help="filename to save figure")
     parser.add_argument("-o", "--output", type=str, default=None,
@@ -501,12 +513,12 @@ def _set_xaxis_obspy_dates(ax, ticklabels_small=True, minticks=3, maxticks=6):
 if __name__ == "__main__":
     args = parse_args()
 
-    if not args.fid:
-        sys.exit("positional argument `fid` required")
+    if not args.fids:
+        sys.exit("positional argument `fids` required")
 
     # Populate Stream object
     st = Stream()
-    for fid in args.fid:
+    for fid in args.fids:
         try:
             st += read(fid)
         except TypeError and read_sem:
@@ -621,15 +633,18 @@ if __name__ == "__main__":
         xvals -= args.t0
         xvals += args.tstart
 
-    if not args.wf_stack:
+    # Set up the type of waveform
+    if args.wf_type == "stack":
+        print("waveform option `stack`")
+        print("overriding `alphas` and `colors` for action `stack`")
+        alphas = [0.5] * len(st)
+        stacked_data = np.zeros(st[0].stats.npts)
         if not args.alphas:
             alphas = [1] * len(st)
         else:
             alphas = args.alphas
     else:
-        print("overriding alphas for action `stack`")
-        alphas = [0.5] * len(st)
-        stacked_data = np.zeros(st[0].stats.npts)
+
    
     for i, tr in enumerate(st):
         # Input a list of colors
@@ -905,7 +920,7 @@ if __name__ == "__main__":
     # ==========================================================================
     _transparent = False  # toggle for transparency in the background
     if args.save == "auto":
-        plt.savefig(f"{args.fid[0]}.png", transparent=_transparent)
+        plt.savefig(f"{args.fids[0]}.png", transparent=_transparent)
     elif args.save is not None:
         plt.savefig(args.save, transparent=_transparent)
 
@@ -919,5 +934,5 @@ if __name__ == "__main__":
     if args.output:
         if not os.path.exists(args.output):
             os.makedirs(args.output)
-        st.write(os.path.join(args.output, args.fid), format="MSEED")
+        st.write(os.path.join(args.output, args.fids), format="MSEED")
 
