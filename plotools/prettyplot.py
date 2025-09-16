@@ -80,6 +80,16 @@ def parse_args():
                              "requested cut length is 30s, an additional 30s " 
                              "on either side of the trace will be cut and " 
                              "processed")
+    
+    # Waveform options
+    parser.add_argument("--wf_abs", action="store_true", 
+                        help="plot the absolute value of the waveform, does" 
+                             "not affect processing, just final plotting")
+    parser.add_argument("--wf_stack", action="store_true",
+                        help="If plotting multiple waveforms/fids, stack all " 
+                             "the traces in the plot and plot the mean of " 
+                             "the stack, all traces will be plot with low " 
+                             "alpha in the background")
 
     # TauP Phase Arrivals
     parser.add_argument("--tp_phases", nargs="+", type=str, default=None,
@@ -135,6 +145,9 @@ def parse_args():
                              "local time. E.g., 'a-7' will subtract 7 hours.")
     parser.add_argument("-c", "--colors", nargs="+", type=str, default="k",
                         help="color of the time series line, number of inputs "
+                             "must match the length of `fid`")
+    parser.add_argument("--alphas", nargs="+", type=float, default=None,
+                        help="alpha of the time series line, number of inputs "
                              "must match the length of `fid`")
     parser.add_argument("-l", "--labels", nargs="+", type=str, default=None,
                         help="optional labels legend, must match len of `fid`")
@@ -352,7 +365,7 @@ def spectrogram(ax, xvals, tr, per_lap=0.9, wlen=None, log=False,
 
     # Normalize spectrogram so that lowest signal value is 0
     # !!! BC Is this okay?
-    specgram -= specgram.min()
+    # specgram -= specgram.min()
 
     vmin, vmax = clip
     if vmin < 0 or vmax > 1 or vmin >= vmax:
@@ -361,6 +374,7 @@ def spectrogram(ax, xvals, tr, per_lap=0.9, wlen=None, log=False,
     _range = float(specgram.max() - specgram.min())
     vmin = specgram.min() + vmin * _range
     vmax = specgram.min() + vmax * _range
+
     norm = Normalize(vmin, vmax, clip=True)
 
     # calculate half bin width
@@ -498,7 +512,6 @@ if __name__ == "__main__":
         except TypeError and read_sem:
             st += read_sem(fid)
         print(fid)
-    st.merge()
 
     # ==========================================================================
     #                           PROCESS WAVEFORMS
@@ -567,6 +580,8 @@ if __name__ == "__main__":
         print(f"zerophase={args.zerophase}")
         print(f"corners={args.corners}")
 
+    st.merge()
+
     # ==========================================================================
     #                           SET UP FIGURE
     # ==========================================================================
@@ -605,6 +620,16 @@ if __name__ == "__main__":
         # Offset time axis based on user defined criteria
         xvals -= args.t0
         xvals += args.tstart
+
+    if not args.wf_stack:
+        if not args.alphas:
+            alphas = [1] * len(st)
+        else:
+            alphas = args.alphas
+    else:
+        print("overriding alphas for action `stack`")
+        alphas = [0.5] * len(st)
+        stacked_data = np.zeros(st[0].stats.npts)
    
     for i, tr in enumerate(st):
         # Input a list of colors
@@ -621,7 +646,22 @@ if __name__ == "__main__":
             l = args.labels[i]
         else:
             l = tr.get_id()
-        ax.plot(xvals, tr.data, c=c, lw=args.linewidth, zorder=6+i, label=l)
+        
+        if args.wf_abs:
+            data = np.abs(tr.data)
+            l = f"abs {l}"
+        else:
+            data = tr.data
+        
+        ax.plot(xvals, data, c=c, lw=args.linewidth, zorder=6+i, 
+                label=l, alpha=alphas[i])
+
+        if args.wf_stack:
+            stacked_data += data
+
+    if args.wf_stack:
+        ax.plot(xvals, stacked_data / len(st), c="k", lw=args.linewidth, 
+                zorder=7+i, label="Stacked Mean")
 
     # ==========================================================================
     #                  PLOT STREAM GAUGE (WARNING: SUPER CUSTOM)
