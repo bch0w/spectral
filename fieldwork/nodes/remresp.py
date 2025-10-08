@@ -16,22 +16,41 @@ from obspy.core.inventory.channel import Channel
 from obspy.clients.nrl import NRL
 
 
+ACCEPTABLE_SAMPLE_RATES = ["1000", "2000", "250", "500"]
+
+
 def parse_args():
     """All modifications are accomplished with command line arguments"""
     parser = argparse.ArgumentParser()
 
     # Waveform Processing
     parser.add_argument("fids", nargs="+", help="required, file ID")
-    parser.add_argument("--pre_amp_gain", nargs="?", type=str, 
-                        default="18 dB (8)", help="Pre amplifier gain")
-    parser.add_argument("--sample_rate", nargs="?", type=str, default="250",
-                        help="Sampling rate (Hz)")
-    parser.add_argument("--phase_type", nargs="?", type=str, 
-                        default="Linear Phase", help="Final phase type")
-    parser.add_argument("--low_cut", nargs="?", type=str, 
-                        default="Off", help="Low cut filter or not")
-    parser.add_argument("--output", nargs="?", type=str, default="./remresp",
-                        help="where to save new files")
+    parser.add_argument("-s", "--sample_rate", nargs="?", type=str, 
+                        help="Sampling rate (Hz). If not given, sampling rate"
+                             "will be taken from the first file, assuming that "
+                             "all traces have the same sample rate",
+                        choices=ACCEPTABLE_SAMPLE_RATES,
+                        )
+    parser.add_argument("-p", "--pre_amp_gain", nargs="?", type=str, 
+                        default="18 dB (8)", 
+                        help="Pre amplifier gain, typically '18 dB (8) but "
+                             "talk to PI as it was set during job creation",
+                        choices= ["0 dB (1)", "12 dB (4)", "18 dB (8)",
+                                  "24 dB (16)", "30 dB (32)", "36 dB (64)", 
+                                  "6 dB (2)"]
+                        )
+    parser.add_argument("-t", "--phase_type", nargs="?", type=str, 
+                        default="Linear Phase", 
+                        help="Final phase type. Typically 'Linear Phase'.", 
+                        choices=["Linear Phase", "Minimum Phase"]
+                        )
+    parser.add_argument("-l", "--low_cut", nargs="?", type=str, 
+                        default="Off", help="Low cut filter. Not usually used",
+                        choices=["1 Hz", "Off"]
+                        )
+    parser.add_argument("-o", "--output", nargs="?", type=str, 
+                        default="./response_removed",
+                        help="where to save the newly created files")
 
     return parser.parse_args()
 
@@ -69,12 +88,24 @@ def return_response(pre_amp_gain="18 dB (8)", sample_rate="250",
 if __name__ == "__main__":
     args = parse_args()
 
+    # Few set up tasks
     if not os.path.exists(args.output):
         os.makedirs(args.output)
 
+    assert(args.fids), f"{len(fids)} file IDs found"
+
+    if args.sample_rate is None:
+        print(f"no sample rate given, retrieving from: {args.fids[0]}")
+        st = read(args.fids[0])
+        sample_rate = str(int(st[0].stats.sampling_rate))
+        print(f"sample rate = {sample_rate}\n")
+        assert(sample_rate in ACCEPTABLE_SAMPLE_RATES)
+    else:
+        sample_rate = args.sample_rate
+
     # Get response information
     response = return_response(pre_amp_gain=args.pre_amp_gain,
-                               sample_rate=args.sample_rate,
+                               sample_rate=sample_rate,
                                phase_type=args.phase_type,
                                low_cut=args.low_cut) 
 

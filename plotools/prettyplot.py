@@ -19,11 +19,11 @@ import argparse
 import sys
 import os
 import math
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 
 from dateutil.rrule import MINUTELY, SECONDLY
-from glob import glob
 from matplotlib import mlab
 from matplotlib.colors import Normalize
 from matplotlib.dates import date2num, AutoDateLocator
@@ -44,7 +44,6 @@ except ImportError:
     pass
 
 SECONDS_PER_DAY = 3600.0 * 24.0
-
 
 def parse_args():
     """All modifications are accomplished with command line arguments"""
@@ -87,7 +86,7 @@ def parse_args():
     parser.add_argument("--wf_abs", action="store_true", 
                         help="plot the absolute value of the waveform, does" 
                              "not affect processing, just final plotting")
-    parser.add_argument("--wf_type", type="str", default="default",
+    parser.add_argument("--wf_type", nargs="?", type=str, default="default",
                         help="Option for how to plot the waveforms:\n"
                              "'default': plot all `fids` on top of each other " 
                              "with absolute amplitudes.\n"
@@ -101,11 +100,31 @@ def parse_args():
                              "'recsec_stack', recsec but add stack",
                         choices=["default", "stack", "recsec", "recsec_stack"]
                              )
+    parser.add_argument("--wf_norm", action="store_true", 
+                        help="normalize traces to their individual max")
+    parser.add_argument("--wf_recsec_spacing", nargs="?", type=float, default=1,
+                        help="if `wf_type` is some form of recsec, choose the " 
+                             "spacing modifier between each of the waveforms. " 
+                             "By default it matches the order of magnitude so " 
+                             "this modifier set to 1 is a good starting guess "
+                             "but you can move it up or down by steps of 0.1 " 
+                             "to get waveforms closer or further")
+    parser.add_argument("--wf_order", type=int, nargs="+", default=None,
+                        help="allow custom order when plotting waveforms, " \
+                             "based on the alphabetical index. First you need "
+                             "to plot the normal sorted one and then you can" \
+                             "rearrange based on that order")
     
     # Plot Aesthetics for Waveforms
     parser.add_argument("-c", "--colors", nargs="+", type=str, default="k",
-                        help="color of the time series line, number of inputs "
-                             "must match the length of `fid`")
+                        help="how to select color for waveforms:\n" 
+                             "'k': select one color for all waveforms\n" 
+                             "['k', 'r']: make a list of colors for each trace "
+                             "must match the length of traces\n" 
+                             "'CN': use CN colors, predefiend colors in MPL,\n" 
+                             "'viridis': use a colormap and plot discrete " 
+                             "colors from the map based on length of stream"
+                             )
     parser.add_argument("--alphas", nargs="+", type=float, default=None,
                         help="alpha of the time series line, number of inputs "
                              "must match the length of `fid`")
@@ -117,7 +136,6 @@ def parse_args():
                         help="label for units, defaults to displacement")
     parser.add_argument("-y", "--ylim", nargs="+", type=float, default=None,
                         help="amplitude axis limits in s")
-
     
     # Time axis (X-axis)
     parser.add_argument("-t", "--time", nargs="?", type=str, default="s",
@@ -164,10 +182,15 @@ def parse_args():
                         help="use dB scaling for colors/amplitudes in spectro")    
     parser.add_argument("--sp_logscale", action="store_true",
                         help="turn on log scale for spectrogram y-axis")
+    parser.add_argument("--sp_clip", default=[0., 1.], type=float, nargs="+",
+                        help=" adjust cmap to clip at lower and/or upper end")
+    parser.add_argument("--sp_vmax", default=None, type=float,
+                        help="maximum value threshold for spectrogram")
     parser.add_argument("--sp_idx", type=int, default=0,
                         help="Iff multiple waveforms plotted, choose which of "
                              "them to use for the spectrogram. Defaults to 0. " 
                              "order is alphabetical")
+
     
     # Stream Gauge (VERY CUSTOM, ONLY FOR GULKANA EXPERIEMENT)
     parser.add_argument("--stream_gage", action="store_true", default=False,
@@ -182,6 +205,8 @@ def parse_args():
                              "stream gage data. Options: ft, in, m, cm")
 
     # Misc plotting options
+    parser.add_argument("--no_legend", action="store_true",
+                        help="Turn off waveform legend")
     parser.add_argument("--title", nargs="?", type=str, default=None,
                         help="title of the figure, defaults to ID and fmin/max")
     parser.add_argument("-ta", "--title_append", nargs="?", type=str, 
@@ -265,9 +290,8 @@ def convert_timezone(code, st):
     return st
 
 
-def spectrogram(ax, xvals, tr, per_lap=0.9, wlen=None, log=False,
-                dbscale=False, mult=8., cmap=None, ncolors=256, zorder=None, 
-                clip=[0.0, 1.0]):
+def spectrogram(ax, xvals, tr, per_lap=0.9, wlen=None, log=False, dbscale=False, 
+                mult=8., cmap=None, ncolors=256, zorder=None, clip=[0.0, 1.0]):
     """
     Computes and plots spectrogram of the input data.
 
@@ -374,10 +398,6 @@ def spectrogram(ax, xvals, tr, per_lap=0.9, wlen=None, log=False,
     else:
         specgram = np.sqrt(specgram[1:, :])
     freq = freq[1:]
-
-    # Normalize spectrogram so that lowest signal value is 0
-    # !!! BC Is this okay?
-    # specgram -= specgram.min()
 
     vmin, vmax = clip
     if vmin < 0 or vmax > 1 or vmin >= vmax:
@@ -521,9 +541,14 @@ if __name__ == "__main__":
     for fid in args.fids:
         try:
             st += read(fid)
-        except TypeError and read_sem:
-            st += read_sem(fid)
+        except TypeError:
+            if bool(read_sem):
+                st += read_sem(fid)
+            else:
+                sys.exit("no function `read_sem()` from PySEP")
         print(fid)
+
+    print(f"\n{st.__str__(extended=True)}")
 
     # ==========================================================================
     #                           PROCESS WAVEFORMS
@@ -548,9 +573,9 @@ if __name__ == "__main__":
             st.trim(starttime=start - buffer, endtime=end + buffer)
         else:
             starttime = st[0].stats.starttime
-            buffer = (args.xlim[1] - args.xlim[0]) * args.trim_pct
-            st.trim(starttime=starttime + float(args.xlim[0]) - buffer,
-                    endtime=starttime + float(args.xlim[1]) + buffer)
+            buffer = (float(args.xlim[1]) - float(args.xlim[0])) * args.trim_pct
+            st.trim(starttime=starttime + (float(args.xlim[0]) - buffer),
+                    endtime=starttime + (float(args.xlim[1]) + buffer))
         print(f"trimming with {buffer}s buffer on either end")
 
         if not st:
@@ -598,7 +623,7 @@ if __name__ == "__main__":
     #                           SET UP FIGURE
     # ==========================================================================
     if not args.spectrogram:
-        f, ax = plt.subplots(figsize=(8, 4), dpi=200)
+        f, ax = plt.subplots(figsize=(6, 4), dpi=200)
         axs = [ax]  # To play nice with some loops
         ax_spectra = None
     else:
@@ -633,50 +658,90 @@ if __name__ == "__main__":
         xvals -= args.t0
         xvals += args.tstart
 
+    # Gather all the data arrays
+    if not args.wf_order:
+        data = np.array([tr.data for tr in st])
+        labels = [tr.get_id() for tr in st] 
+    else:
+        # Allow arbitrary order set by User
+        data, labels = [], []
+        for i in args.wf_order:
+            data.append(st[i].data)
+            labels.append(st[i].get_id())
+    n = len(data)     
+
+    # Overwrite waveform labels for the legend if User requests
+    if args.labels:
+        labels = args.labels
+
+    # Determine how many waveforms we will be plotting
+    if args.wf_type.endswith("stack"):
+        n += 1
+
     # Set up the type of waveform
-    if args.wf_type == "stack":
+    if args.wf_type == "stack":  # stack or recsec_stack
         print("waveform option `stack`")
         print("overriding `alphas` and `colors` for action `stack`")
-        alphas = [0.5] * len(st)
-        stacked_data = np.zeros(st[0].stats.npts)
+        # Adjust these if you want 
+        alphas = [0.5] * n
+        colors = [f"C{i}" for i in range(n)]
+    else:  
+        # Allow list of alpha values
         if not args.alphas:
-            alphas = [1] * len(st)
+            alphas = [1] * n
         else:
             alphas = args.alphas
-    else:
-
-   
-    for i, tr in enumerate(st):
-        # Input a list of colors
+        # Allow single color, list of colors, or C colors
         if len(args.colors) > 1:
-            c = args.colors[i]
-        # Input only a single color
+            colors = args.colors
         elif len(args.colors) == 1:
-            # Allow C coloring
             if args.colors[0] == "C?":
-                c = f"C{i}"
+                colors = [f"C{i}" for i in range(n)]
+            # Allow colormaps that we make into discrete colors
+            elif len(args.colors[0]) > 1:
+                cmap = mpl.colormaps[args.colors[0]]
+                colors = cmap(np.linspace(0.1, 1, n))
             else:
-                c = args.colors[0]
-        if args.labels:
-            l = args.labels[i]
-        else:
-            l = tr.get_id()
-        
-        if args.wf_abs:
-            data = np.abs(tr.data)
-            l = f"abs {l}"
-        else:
-            data = tr.data
-        
-        ax.plot(xvals, data, c=c, lw=args.linewidth, zorder=6+i, 
-                label=l, alpha=alphas[i])
+                colors = [args.colors[0]] * n
 
-        if args.wf_stack:
-            stacked_data += data
+    # Allow for absolute amplitudes
+    if args.wf_abs:
+        data = [np.abs(d) for d in data]
+        labels = [f"abs {l}" for l in labels]
 
-    if args.wf_stack:
-        ax.plot(xvals, stacked_data / len(st), c="k", lw=args.linewidth, 
-                zorder=7+i, label="Stacked Mean")
+    # Generate the stacked data (by default it takes the mean)
+    if args.wf_type.endswith("stack"):
+        wf_stack_type = "absmean"
+        # Determine how to stack
+        if wf_stack_type == "mean":
+            stacked_data = np.mean(data, axis=0)
+        # Pseudo envelope by meaning all abs values
+        elif wf_stack_type == "absmean":
+            stacked_data = np.abs(np.mean(np.abs(data), axis=0))
+        # Add stacked data to the list of plottable data
+        data = np.vstack((data, stacked_data))
+        labels.append("abs stacked mean")
+
+    # Normalize the dat arrays
+    if args.wf_norm:
+        for i, d in enumerate(data[:]):
+            data[i] = d / d.max()
+    
+    # Value shift the data array to make a record section
+    if args.wf_type.startswith("recsec"):
+        print("waveform option `recsec`, scaling y-axis")
+        # Set an arbitrary spacing based on the order of magnitude of the data
+        # Sorta hacky
+        oom = np.floor(np.log10(np.amax(st[0].data)))
+        spacing = args.wf_recsec_spacing* 10 ** oom
+        print(f"recsec spacing is {spacing}")
+        for i, d in enumerate(data[:]):
+            data[i] = d + (i * spacing)
+
+    # Plot the waveforms
+    for i, d in enumerate(data): 
+        ax.plot(xvals, d, c=colors[i], lw=args.linewidth, zorder=6+i, 
+                label=labels[i], alpha=alphas[i])
 
     # ==========================================================================
     #                  PLOT STREAM GAUGE (WARNING: SUPER CUSTOM)
@@ -743,7 +808,8 @@ if __name__ == "__main__":
     if args.spectrogram and args.xlim:
         im = spectrogram(ax=ax_spectra, xvals=xvals, tr=st[args.sp_idx], 
                          log=args.sp_logscale, dbscale=args.sp_dbscale, 
-                         cmap=args.sp_cmap, ncolors=args.sp_numcol
+                         cmap=args.sp_cmap, ncolors=args.sp_numcol,
+                         clip=args.sp_clip,
                          ) 
         ax_spectra.set_ylabel("Freq. [Hz]")
         ax_spectra.axis("tight")
@@ -767,11 +833,10 @@ if __name__ == "__main__":
         # Padding was determined by trial and error
         if args.sp_dbscale:
             # _label = r"Rel. PSD [$10\log_{10}((m/s^2)/Hz)$]"
-            _label = f"Rel. Power [dB]"
-
-            _labelpad = -27
+            _label = f"Power [dB]"
+            _labelpad = -37.5
         else:
-            _label = r"Rel. PSD [$(m/s^2/Hz)$]"
+            _label = r"PSD [$(m/s^2/Hz)$]"
             _labelpad = -25
         cbar.ax.set_ylabel(_label, rotation=270, labelpad=_labelpad, fontsize=8)
 
@@ -827,16 +892,17 @@ if __name__ == "__main__":
 
             plt.axvspan(times[0], times[-1], label=f"{name} ({max_amp:.2E})", 
                         color=f"C{i}", alpha=alpha, zorder=7)
-        plt.legend(fontsize=8, loc="upper left", frameon=False)
+        plt.legend(prop={"size": 2}, loc="upper left", frameon=False)
 
     # ==========================================================================
     #                           PLOT TMARKS
     # ==========================================================================
     if args.tmarks:
-        if len(args.tmarks_c) == 1:
-            colors = args.tmarks_c * len(args.tmarks)
-        else:
-            colors = args.tmarks_c
+        # if len(args.tmarks_c) == 1:
+        #     colors = args.tmarks_c * len(args.tmarks)
+        # else:
+        #     colors = args.tmarks_c
+
         for tmark, c in zip(args.tmarks, colors):
             if args.time.startswith("a"):
                 tmark = date2num(UTCDateTime(tmark).datetime)
@@ -846,8 +912,10 @@ if __name__ == "__main__":
     # ==========================================================================
     #                           PLOT AESTHETICS
     # ==========================================================================
-    f.legend(loc="upper right", bbox_to_anchor=(1,1), 
-             bbox_transform=ax.transAxes, prop={"size": 6})
+    if not args.no_legend:
+        f.legend(loc="upper right", bbox_to_anchor=(1,1), 
+                 bbox_transform=ax.transAxes, prop={"size": 5},
+                 ncol=2, fontsize='tiny')
 
     if args.time.startswith("a"):
         ax.set_xlabel(f"Time [UTC{args.time[1:]}]")
@@ -863,7 +931,7 @@ if __name__ == "__main__":
             xend = date2num(UTCDateTime(args.xlim[1]).datetime)
         else:
             xstart, xend = [float(_) for _ in args.xlim]
-    ax.set_xlim(xstart, xend)
+    ax.set_xlim(xstart, xend)  
 
     # Subset y axis for waveform plot
     ymax = np.amax([st[0].data.min(), st[0].data.max()])
@@ -877,13 +945,13 @@ if __name__ == "__main__":
     else:
         ymax = np.amax([st[0].data.min(), st[0].data.max()])
         ymin = -1 * ymax
-    
     ax.set_ylim(ymin, ymax)
 
     # Spectrogram annotation if there are multiple waveforms plotted
+    # put it outside the axis so it shows up on white background
     if args.spectrogram and len(st) > 1:
-        ax_spectra.text(0.99, 0.99, st[args.sp_idx].get_id(), 
-                        horizontalalignment="right", verticalalignment="top", 
+        ax_spectra.text(0.99, 1.01, st[args.sp_idx].get_id(), 
+                        horizontalalignment="right", verticalalignment="bottom", 
                         transform=ax_spectra.transAxes, fontsize=8)
 
     # Finish off by setting plot aesthetics
@@ -908,9 +976,8 @@ if __name__ == "__main__":
     plt.suptitle(title)
 
     # Final plotting touches
-    if args.labels:
-        plt.legend()
     set_plot_aesthetic(ax)
+
     if ax_spectra:
         set_plot_aesthetic(ax_spectra, ytick_format="plain")
     f.tight_layout()
