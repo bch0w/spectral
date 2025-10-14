@@ -898,10 +898,10 @@ if __name__ == "__main__":
     #                           PLOT TMARKS
     # ==========================================================================
     if args.tmarks:
-        # if len(args.tmarks_c) == 1:
-        #     colors = args.tmarks_c * len(args.tmarks)
-        # else:
-        #     colors = args.tmarks_c
+        if len(args.tmarks_c) == 1:
+            colors = args.tmarks_c * len(args.tmarks)
+        else:
+            colors = args.tmarks_c
 
         for tmark, c in zip(args.tmarks, colors):
             if args.time.startswith("a"):
@@ -986,10 +986,13 @@ if __name__ == "__main__":
     #                           FINALIZE PLOT
     # ==========================================================================
     _transparent = False  # toggle for transparency in the background
-    if args.save == "auto":
-        plt.savefig(f"{args.fids[0]}.png", transparent=_transparent)
-    elif args.save is not None:
-        plt.savefig(args.save, transparent=_transparent)
+    if args.save:
+        if args.save == "auto":
+            _fid_out = f"{args.fids[0]}.png"
+        else:
+            _fid_out = args.save
+        print(f"saving to {_fid_out}")
+        plt.savefig(_fid_out, transparent=_transparent)
 
     if not args.noshow:
         plt.show()

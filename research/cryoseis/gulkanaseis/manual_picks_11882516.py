@@ -88,7 +88,6 @@ for sta in stations:
     # Get P-S arrival time difference
     p_minus_s.append(s_picks[sta] - p_picks[sta])
 
-breakpoint()
-
+apparent_p
 
 
