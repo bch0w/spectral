@@ -68,6 +68,9 @@ def parse_args():
                         help="SPECFEM USER_T0 if synthetics")
     parser.add_argument("-ts", "--tstart", nargs="?", type=float, default=0,
                         help="for relative time axis, set t0 value, defaults 0")
+    parser.add_argument("--detrend", nargs="?", type=str, default=None,
+                        help="demean the data prior to other processing",
+                        choices=["simple", "linear", "demean"])
     parser.add_argument("--integrate", nargs="?", type=int, default=0,
                         help="Integrate the time series, will demean and taper,"
                              " value for integrate will be the number of times")
@@ -132,7 +135,7 @@ def parse_args():
                         help="optional labels legend, must match len of `fid`")
     parser.add_argument("-lw", "--linewidth", nargs="?", type=float, 
                         default=0.5, help="linewidth of the time series line")
-    parser.add_argument("--ylabel", nargs="?", type=str, default="Vel. [m/s]",
+    parser.add_argument("--ylabel", nargs="?", type=str, default="Amplitude",
                         help="label for units, defaults to displacement")
     parser.add_argument("-y", "--ylim", nargs="+", type=float, default=None,
                         help="amplitude axis limits in s")
@@ -174,7 +177,7 @@ def parse_args():
                         help="plot spectrogram of the raw trace. See all " 
                              "'sp_*' parameters to control the look")
     parser.add_argument("--sp_cmap", nargs="?", type=str, 
-                        default="nipy_spectral",
+                        default="viridis",
                         help="colormap of the spectrogram")
     parser.add_argument("--sp_numcol", nargs="?", type=int, default=256,
                         help="number of colors in colormap of the spectrogram")
@@ -583,6 +586,10 @@ if __name__ == "__main__":
             sys.exit()
 
     # Preprocess waveforms
+    if args.detrend:
+        print(f"detrending with '{args.detrend}'")
+        st.detrend(type=args.detrend)
+
     taper = args.taper
     if args.integrate or args.differentiate:
         if args.taper == 0:
@@ -591,6 +598,7 @@ if __name__ == "__main__":
     if taper:
         st.taper(args.taper)
         print(f"tapering trace {taper * 100}%")
+
     if args.integrate:
         for i in range(args.integrate):
             print("integrating trace")
