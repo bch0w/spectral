@@ -167,10 +167,16 @@ def parse_args():
                         help="taup phase arrivals, requires all 'tp_*' params")
     parser.add_argument("--tp_model", nargs="?", type=str, default="iasp91",
                         help="taup model, defaults to 'iasp91'")
-    parser.add_argument("--tp_dist", nargs="?", type=float, default=None,
+    parser.add_argument("--tp_dist_km", nargs="?", type=float, default=None,
                         help="TauP source receiver distance in km")
+    parser.add_argument("--tp_dist_deg", nargs="?", type=float, default=None,
+                        help="TauP source receiver distance in degrees")
     parser.add_argument("--tp_depth", nargs="?", type=float, default=None,
                         help="TauP source depth km")
+    parser.add_argument("--tp_start", nargs="?", type=str, default=None,
+                        help="origintime of the event, must match the format "
+                             "of --time. If not given, assumes first sample "
+                             "of --xlim defines origintime")
     
     # Spectrogram (all parameters end with _s)
     parser.add_argument("--spectrogram", action="store_true", default=False,
@@ -866,9 +872,13 @@ if __name__ == "__main__":
     # Get phase arrivals from TauP if requested
     arrivals = None
     if args.tp_phases:
-        assert(args.tp_dist is not None)
+        assert(args.tp_dist_km is not None or args.tp_dist_deg is not None)
         assert(args.tp_depth is not None)
-        dist_deg = kilometers2degrees(args.tp_dist)
+        if args.tp_dist_km:
+            dist_deg = kilometers2degrees(args.tp_dist_km)
+        else:
+            dist_deg = args.tp_dist_deg
+
         model = TauPyModel(model=args.tp_model)
         tp_arrivals = model.get_travel_times(source_depth_in_km=args.tp_depth,
                                              distance_in_degree=dist_deg,
@@ -877,20 +887,41 @@ if __name__ == "__main__":
         # If some arrivals have multiple entires, only take first and last to 
         # get a range which we will plot with a window
         arrivals = {arrival.name: [] for arrival in tp_arrivals}
+        print(f"TauP Arrivals for {args.tp_model}")
         for i, arrival in enumerate(tp_arrivals):
             arrivals[arrival.name].append(arrival.time)
-            print(f"{arrival.name} = {arrival.time} s")
+            print(f"\t{arrival.name} = {arrival.time:.2f} s")
 
         if not arrivals:
             print(f"No arrivals found for given depth={args.tp_depth}km and "
                   f"distance {dist_deg:.2f}deg")
-            
+           
+        # Determine the time series starttime of the event because the TauP
+        # times are relative to an origin time
+        if not args.tp_start: 
+            if args.time.startswith("a"):
+                tp_start = UTCDateTime(args.xlim[0])
+            else:
+                tp_start = float(args.xlim[0])
+        else:
+            if args.time.startswith("a"):
+                tp_start = UTCDateTime(args.tp_start)
+            else:
+                tp_start = float(args.tp_start)  # seconds
+
         arrival_dict = {}        
         for i, (name, times) in enumerate(arrivals.items()):
+            # Sometimes there are multiple arrival times for the same phase
             if times[0] == times[-1]:
                 alpha = 1
             else: 
                 alpha = 0.3
+
+            # Convert arrival times to time series reference
+            if args.time.startswith("a"):
+                times = [date2num((tp_start + time).datetime) for time in times]
+            else:
+                times = [tp_start + time for time in times]
 
             # Figure out the maximum amplitude in this time window 
             win_start = find_nearest(xvals, times[0])
@@ -898,9 +929,9 @@ if __name__ == "__main__":
             max_amp = np.amax(st[0].data[win_start:win_end])
             arrival_dict[name] = max_amp
 
-            plt.axvspan(times[0], times[-1], label=f"{name} ({max_amp:.2E})", 
+            ax.axvspan(times[0], times[-1], label=f"{name} ({max_amp:.2E})", 
                         color=f"C{i}", alpha=alpha, zorder=7)
-        plt.legend(prop={"size": 2}, loc="upper left", frameon=False)
+        # plt.legend(prop={"size": 2}, loc="upper left", frameon=False)
 
     # ==========================================================================
     #                           PLOT TMARKS
@@ -975,7 +1006,7 @@ if __name__ == "__main__":
 
         # Append some information on the TauP arrivals
         if arrivals:
-            title += (f"\n(TauP={args.tp_model}; $\\Delta$={args.tp_dist}km; "
+            title += (f"\n(TauP={args.tp_model}; $\\Delta$={dist_deg}deg; "
                       f"Z={args.tp_depth}km)")
         if args.title_append:
             title += f"\n{args.title_append}"
