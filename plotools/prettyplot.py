@@ -187,8 +187,9 @@ def parse_args():
                         help="colormap of the spectrogram")
     parser.add_argument("--sp_numcol", nargs="?", type=int, default=256,
                         help="number of colors in colormap of the spectrogram")
-    parser.add_argument("--sp_dbscale", action="store_true",
-                        help="use dB scaling for colors/amplitudes in spectro")    
+    parser.add_argument("--sp_dbscale_off", action="store_true",
+                        help="Turn off dB scaling for colors/amplitudes in " 
+                             "spectrogram")    
     parser.add_argument("--sp_logscale", action="store_true",
                         help="turn on log scale for spectrogram y-axis")
     parser.add_argument("--sp_clip", default=[0., 1.], type=float, nargs="+",
@@ -199,19 +200,23 @@ def parse_args():
                         help="Iff multiple waveforms plotted, choose which of "
                              "them to use for the spectrogram. Defaults to 0. " 
                              "order is alphabetical")
-
     
-    # Stream Gauge (VERY CUSTOM, ONLY FOR GULKANA EXPERIEMENT)
-    parser.add_argument("--stream_gage", action="store_true", default=False,
-                        help="For GULKANASEIS data only, plots stream gauge " 
-                             "data at the bottom of the waveform plot with a " 
-                             "twin X axis")
-    parser.add_argument("--sg_rel", action="store_true", default=False,
-                        help="For GULKANASEIS data only, make y-axis relative "
-                            "so that the lowest plotted value is 0.")
-    parser.add_argument("--sg_units", type=str, default="m",
-                        help="For GULKANASEIS data only, choose units to plot " 
-                             "stream gage data. Options: ft, in, m, cm")
+    # Plot additional time series
+    parser.add_argument("--add_trace", nargs="?", type=str, default=None,
+                        help="Path to plot an additional time series that does "
+                             "not have the same sampling rate . "
+                             "All --tr_* pars are associated. Data should be " 
+                             "in 2-column ASCII or an ObsPy readable format")
+    parser.add_argument("--tr_time", nargs="?", type=str, default="a",
+                        help="Time of the time series [a]bsolute (UTC) or " \
+                             "[r]elative to xlim[0] or start of main trace",
+                        choices=["a", "r"])
+    parser.add_argument("--tr_ylabel", type=str, default="",
+                        help="Y-label text")
+    parser.add_argument("--tr_label", type=str, default="",
+                        help="Label text for shared legend")
+    parser.add_argument("--tr_color", type=str, default="C0",
+                       help="color of the time series")
 
     # Misc plotting options
     parser.add_argument("--no_legend", action="store_true",
@@ -758,70 +763,57 @@ if __name__ == "__main__":
                 label=labels[i], alpha=alphas[i])
 
     # ==========================================================================
-    #                  PLOT STREAM GAUGE (WARNING: SUPER CUSTOM)
+    #                        PLOT ADDITIONAL TRACE DATA
     # ==========================================================================
-    if args.stream_gage:
-        assert args.time == "a-08", f"currently only works in AK local"
+    if args.add_trace:
+        twax = ax.twinx()
+        st_new = read(args.add_trace)
+        data_new = st_new[0].data
 
-        # Read data from text file
-        path = ("/Users/chow/Work/research/gulkanaseis24/data/USGS_data/"
-                "phelan_creek_stream_guage_2024-09-07_to_2024-09-14.txt")
-        assert(os.path.exists(path))
-
-        data = np.loadtxt(path, skiprows=28, usecols=[2,4], delimiter="\t", 
-                          dtype=str)
-        times, height_ft = data.T  # time in AK local
-
-        # Time is already in AK Local so we don't need to shift. If we did have
-        # to then we would need to convert to UTC then shift by user request
-        times = np.array([date2num(UTCDateTime(_).datetime) for _ in times])
-        height_ft = np.array(height_ft, dtype=float)
-
-        # Convert units
-        if args.sg_units == "ft":
-            height = height_ft
-        elif args.sg_units == "in":
-            height = height_ft * 12
-        elif args.sg_units == "m":
-            height = np.array([_ * 0.3048 for _ in height_ft.astype(float)])
-        elif args.sg_units == "cm":
-            height = np.array([_ * 30.48 for _ in height_ft.astype(float)])
+        # Custom time axis
+        if args.time.startswith("a"):
+            # Set xvalues to datetime objects
+            xvals = ((st_new[0].times() / SECONDS_PER_DAY) +
+                            date2num(st_new[0].stats.starttime.datetime))
+            _set_xaxis_obspy_dates(twax, maxticks=args.maxticks)
         else:
-            print("stream gage units `sg_units` should be in: ft, in, m, cm")
-            sys.exit()
-        
-        # Subset data where we are plotting waveforms to get the correct ylims
-        idx = np.where((times > xvals.min()) & (times < xvals.max()))
+            xvals = st_new[0].times() 
 
-        if args.sg_rel:
-            height -= height[idx].min()
+            # Set time axis
+            if args.time == "s":
+                xvals /= 1  # not necessary but for consistency
+            elif args.time == "m":
+                xvals /= 60
+            elif args.time == "h": 
+                xvals /= 60 ** 2
+            else:
+                print("unknown time axis choice, default to 's'econds")
+                xvals /= 1
+
+            # Offset time axis based on user defined criteria
+            xvals -= args.t0
+            xvals += args.tstart
 
         # Plot on the same axis as the waveform
-        twax = ax.twinx()
+        if args.tr_label:
+            tr_label = args.tr_label
+        else:
+            tr_label = st_new[0].get_id()
+        twax.plot(xvals, data_new, lw=1, c=args.tr_color, 
+                  label=tr_label, zorder=5, markersize=1.25, alpha=0.5)
 
-        # # Plot the gradient, not very helpful
-        # dx = (times[1] - times[0]) * 86400
-        # grad_height = np.gradient(height[idx], dx)
-        # twax.plot(times[idx], grad_height, "o-", lw=1, c="C0", 
-        #         label="Phelan Cr. Gage", zorder=5, markersize=1.25, 
-        #         alpha=0.5)
-
-        twax.plot(times[idx], height[idx], "o-", lw=1, c="C0", 
-                  label="Phelan Cr. Gage", zorder=5, markersize=1.25, 
-                  alpha=0.5)
-
-        _ylabel = f"Stream Height [{args.sg_units}]"
-        if args.sg_rel:
-            _ylabel = f"Relative {_ylabel}"
-        twax.set_ylabel(_ylabel, rotation=-90, labelpad=20)
+        twax.set_ylabel(args.tr_ylabel, rotation=-90, labelpad=20)
 
     # ==========================================================================
     #                           PLOT SPECTROGRAM
     # ==========================================================================
+    # dB scale on by default, but flag to turn off
+    sp_dbscale = not args.sp_dbscale_off  
+
     # Don't plot spectrogram if we're plotting full data because it's too much
     if args.spectrogram and args.xlim:
         im = spectrogram(ax=ax_spectra, xvals=xvals, tr=st[args.sp_idx], 
-                         log=args.sp_logscale, dbscale=args.sp_dbscale, 
+                         log=args.sp_logscale, dbscale=sp_dbscale, 
                          cmap=args.sp_cmap, ncolors=args.sp_numcol,
                          clip=args.sp_clip,
                          ) 
@@ -845,7 +837,7 @@ if __name__ == "__main__":
             spine.set_linewidth(1.5)
         cbar.ax.set_frame_on(True)
         # Padding was determined by trial and error
-        if args.sp_dbscale:
+        if sp_dbscale:
             # _label = r"Rel. PSD [$10\log_{10}((m/s^2)/Hz)$]"
             _label = f"Power [dB]"
             _labelpad = -37.5
@@ -861,7 +853,7 @@ if __name__ == "__main__":
         cax.set_axis_off()
 
         # Have to do it for twax, too
-        if args.stream_gage:
+        if args.add_trace:
             div = make_axes_locatable(twax)
             cax = div.append_axes("right", size=f"{_size}%", pad=_pad)
             cax.set_axis_off()
@@ -995,7 +987,7 @@ if __name__ == "__main__":
 
     # Finish off by setting plot aesthetics
     if args.title is None:
-        title = f"{st[0].stats.starttime.year}.{st[0].stats.starttime.julday}"
+        title = f"{st[0].stats.starttime.year}.{st[0].stats.starttime.julday:0>3}"
         if st[0].stats.starttime.julday != st[0].stats.endtime.julday:
             title += f"-{st[0].stats.endtime.julday}"
 

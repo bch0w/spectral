@@ -18,6 +18,11 @@ inv = read_inventory("https://service.iris.edu/irisws/nrl/1/combine?instconfig="
 path_out = "/Users/chow/Work/research/venusseis/HAVO_data_analysis/node_data/remresp"
 
 for fid in sys.argv[1:]:
+    fid_out = os.path.basename(fid)
+    full_out = os.path.join(path_out, fid_out)
+    if os.path.exists(full_out):
+        continue
+
     st = read(fid)
     net, sta, loc, cha = st[0].get_id().split(".")
 
@@ -28,11 +33,6 @@ for fid in sys.argv[1:]:
     inv[0][0][0].location_code = loc
 
     st.remove_response(inventory=inv)
-    fid_out = os.path.basename(fid)
     print(fid_out)
-    st.write(os.path.join(path_out, fid_out), format="MSEED")
-
-    
-
-
+    st.write(full_out, format="MSEED")
 
