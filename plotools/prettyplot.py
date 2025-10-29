@@ -217,10 +217,18 @@ def parse_args():
                         help="Label text for shared legend")
     parser.add_argument("--tr_color", type=str, default="C0",
                        help="color of the time series")
+    
+    # CUSTOM
+    parser.add_argument("--stream_gage", action="store_true", default=False,
+                        help="For GULKANASEIS data only, plots stream gauge " 
+                             "data at the bottom of the waveform plot with a " 
+                             "twin X axis")
 
     # Misc plotting options
     parser.add_argument("--no_legend", action="store_true",
                         help="Turn off waveform legend")
+    parser.add_argument("--ncol_legend", type=int, default=1,
+                        help="Number of columns in legend")
     parser.add_argument("--title", nargs="?", type=str, default=None,
                         help="title of the figure, defaults to ID and fmin/max")
     parser.add_argument("-ta", "--title_append", nargs="?", type=str, 
@@ -264,48 +272,11 @@ def _nearest_pow_2(x):
         return a
     else:
         return b
+    
 
-
-def convert_timezone(code, st):
-    """
-    When plotting in absolute time (args.time == "a*"), we allow time shifting 
-    by time zone to get to the correct time local time. Returns streams with 
-    converted time
-
-    .. note::
-
-        Confusingly, trying to input time zones in UTCDateTime like
-        UTCDateTime("YYYY-MM-DDTHH:MM:SS-09) 
-        assumes that the given date is in local time, and that the modifier -09
-        is the conversion to UTC. But since seismic data is IN UTC, we cannot
-        use this because it shifts us in the wrong way.
-
-    :type code: str
-    :param code: e.g., +08 to shift forward by 8 hours
-    """
-    assert(len(code) == 3), f"must be +?? or -??, not {code}"
-    assert(code[0] in ["+", "-"])
-    starttime = st[0].stats.starttime  # Dropping the 'Z' repr. UTC
-
-    sign = code[0]
-    shift = int(code[1:]) * 60 * 60  # hours
-
-    if sign == "+":
-        starttime += shift
-    elif sign == "-":
-        starttime -= shift
-
-    for tr in st:
-        if sign == "+":
-            tr.stats.starttime += shift
-        elif sign == "-":
-            tr.stats.starttime -= shift
-
-    return st
-
-
-def spectrogram(ax, xvals, tr, per_lap=0.9, wlen=None, log=False, dbscale=False, 
-                mult=8., cmap=None, ncolors=256, zorder=None, clip=[0.0, 1.0]):
+def spectrogram(ax, xvals, tr, per_lap=0.9, wlen=None, log=False, 
+                dbscale=False, mult=8., cmap=None, ncolors=256, zorder=None, 
+                clip=[0.0, 1.0]):
     """
     Computes and plots spectrogram of the input data.
 
@@ -382,8 +353,8 @@ def spectrogram(ax, xvals, tr, per_lap=0.9, wlen=None, log=False, dbscale=False,
 
     if npts < nfft:
         msg = (f'Input signal too short ({npts} samples, window length '
-               f'{wlen} seconds, nfft {nfft} samples, sampling rate '
-               f'{samp_rate} Hz)')
+            f'{wlen} seconds, nfft {nfft} samples, sampling rate '
+            f'{samp_rate} Hz)')
         raise ValueError(msg)
 
     if mult is not None:
@@ -398,12 +369,12 @@ def spectrogram(ax, xvals, tr, per_lap=0.9, wlen=None, log=False, dbscale=False,
     # specgram should be faster as it computes only the
     # arrays
     specgram, freq, time = mlab.specgram(data, Fs=samp_rate, NFFT=nfft,
-                                         pad_to=mult, noverlap=nlap)
+                                        pad_to=mult, noverlap=nlap)
 
     if len(time) < 2:
         msg = (f'Input signal too short ({npts} samples, window length '
-               f'{wlen} seconds, nfft {nfft} samples, {nlap} samples window '
-               f'overlap, sampling rate {samp_rate} Hz)')
+            f'{wlen} seconds, nfft {nfft} samples, {nlap} samples window '
+            f'overlap, sampling rate {samp_rate} Hz)')
         raise ValueError(msg)
 
     # db scale and remove zero/offset for amplitude
@@ -453,6 +424,44 @@ def spectrogram(ax, xvals, tr, per_lap=0.9, wlen=None, log=False, dbscale=False,
     return im
 
 
+def convert_timezone(code, st):
+    """
+    When plotting in absolute time (args.time == "a*"), we allow time 
+    shifting  by time zone to get to the correct time local time. Returns 
+    streams with converted time
+
+    .. note::
+
+        Confusingly, trying to input time zones in UTCDateTime like
+        UTCDateTime("YYYY-MM-DDTHH:MM:SS-09) 
+        assumes that the given date is in local time, and that the modifier -09
+        is the conversion to UTC. But since seismic data is IN UTC, we cannot
+        use this because it shifts us in the wrong way.
+
+    :type code: str
+    :param code: e.g., +08 to shift forward by 8 hours
+    """
+    assert(len(code) == 3), f"must be +?? or -??, not {code}"
+    assert(code[0] in ["+", "-"])
+    starttime = st[0].stats.starttime  # Dropping the 'Z' repr. UTC
+
+    sign = code[0]
+    shift = int(code[1:]) * 60 * 60  # hours
+
+    if sign == "+":
+        starttime += shift
+    elif sign == "-":
+        starttime -= shift
+
+    for tr in st:
+        if sign == "+":
+            tr.stats.starttime += shift
+        elif sign == "-":
+            tr.stats.starttime -= shift
+
+    return st
+
+    
 def set_plot_aesthetic(
         ax, ytick_fontsize=9., xtick_fontsize=9., tick_linewidth=1.5,
         tick_length=5., tick_direction="in", ytick_format="sci",
@@ -544,300 +553,442 @@ def _set_xaxis_obspy_dates(ax, ticklabels_small=True, minticks=3, maxticks=6):
         plt.setp(ax.get_xticklabels(), fontsize='small')
 
 
-if __name__ == "__main__":
-    args = parse_args()
+class PrettyPlot():
+    """
+    Command line and scriptable waveform and spectrogram plotter
+    """
+    def __init__(self, fids, 
+                 # Processing
+                 taper=0, fmin=None, fmax=None, zerophase=False, corners=4,
+                 resample=False, t0=0, tstart=0, detrend=False, integrate=0,
+                 differentiate=0, trim_pct=1.,
+                 # Waveform plotting
+                 wf_abs=False, wf_type="default", wf_norm=False, 
+                 wf_recsec_spacing=1, wf_order=None,
+                 # Plotting Aesthetics
+                 colors="k", alphas=None, labels=None, linewidth=0.5, 
+                 ylabel="amplitude", ylim=None,
+                 # Time Axis
+                 time="s", maxticks=6, xlim=6, tmarks=None, tmarks_c="k",
+                 # TauP 
+                 tp_phases=None, tp_model="iasp91", tp_dist_km=None,
+                 tp_dist_deg=None, tp_depth=None, tp_start=None,
+                 # Spectrogram
+                 spectrogram=False, sp_cmap="viridis", sp_numcol=256,
+                 sp_dbscale=True, sp_logscale=False, sp_clip=None,
+                 sp_vmax=None, sp_idx=0,
+                 # Additional Time Series
+                 add_trace=None, tr_time="a", tr_label="", tr_ylabel="", 
+                 tr_color="C0", 
+                 stream_gage=False,
+                 # Misc.
+                 legend=True, ncol_legend=1, title=None, title_append="",
+                 save=None, output=None, show=True,
+                 **kwargs
+                 ):
+        """Input parameters, see argparser for descriptions"""
+        self.fids = fids
+        self.taper = taper
+        self.fmin = fmin
+        self.fmax = fmax
+        self.zerophase = zerophase
+        self.corners = corners
+        self.resample = resample
+        self.t0 = t0
+        self.tstart = tstart
+        self.detrend = detrend
+        self.integrate = integrate
+        self.differentiate = differentiate
+        self.trim_pct = trim_pct
 
-    if not args.fids:
-        sys.exit("positional argument `fids` required")
+        self.wf_abs = wf_abs
+        self.wf_type = wf_type
+        self.wf_norm = wf_norm
+        self.wf_recsec_spacing = wf_recsec_spacing
+        self.wf_order = wf_order
 
-    # Populate Stream object
-    st = Stream()
-    for fid in args.fids:
-        try:
-            st += read(fid)
-        except TypeError:
-            if bool(read_sem):
-                st += read_sem(fid)
+        self.colors = colors
+        self.alphas = alphas
+        self.labels = labels
+        self.linewidth = linewidth
+        self.ylim = ylim
+        self.ylabel = ylabel
+
+        self.time = time
+        self.maxticks = maxticks
+        self.xlim = xlim
+        self.tmarks = tmarks
+        self.tmarks_c = tmarks_c
+
+        self.tp_phases = tp_phases
+        self.tp_model = tp_model
+        self.tp_dist_km = tp_dist_km
+        self.tp_dist_deg = tp_dist_deg
+        self.tp_depth = tp_depth
+        self.tp_start = tp_start
+        self.spectrogram = spectrogram
+        self.sp_cmap = sp_cmap
+        self.sp_numcol = sp_numcol
+        self.sp_dbscale = sp_dbscale
+        self.sp_logscale = sp_logscale
+        self.sp_clip = sp_clip or [0., 1.]
+        self.sp_vmax = sp_vmax
+        self.sp_idx = sp_idx
+
+        self.add_trace = add_trace
+        self.tr_time = tr_time
+        self.tr_label = tr_label
+        self.tr_ylabel = tr_ylabel
+        self.tr_color = tr_color
+
+        self.legend = legend
+        self.ncol_legend = ncol_legend
+        self.title = title
+        self.title_append = title_append
+        self.save = save
+        self.output = output
+        self.show = show
+
+        # Populate Stream object
+        self.st = Stream()
+        for fid in self.fids:
+            try:
+                self.st += read(fid)
+            except TypeError:
+                if bool(read_sem):
+                    self.st += read_sem(fid)
+                else:
+                    sys.exit("no function `read_sem()` from PySEP")
+            print(fid)
+        print(f"{self.st.__str__(extended=True)}")
+
+    def setup_plot(self, dpi=200, figsize=(8, 6)):
+        """
+        Set up the plot based on input parameters
+        """
+        if self.spectrogram:
+            print("\tsetting up waveform and spectrogram plot")
+            self.f, axs = plt.subplots(2, dpi=dpi, figsize=figsize, sharex=True)
+            self.f.subplots_adjust(hspace=0)
+            self.ax_spectra, self.ax = axs  # waveform on the bottom
+        else:
+            print("\tsetting up waveform plot")
+            self.f, self.ax = plt.subplots(dpi=dpi, figsize=figsize)
+
+    def trim_waveform(self):
+        """Trim the waveform data so we don't plot the whole thing"""         
+        if self.resample:
+            print(f"\tresampling to {self.resample}")
+            self.st.resample(sampling_rate=self.resample)
+       
+        # Shift to correct time axis
+        if self.time.startswith("a") and len(self.time) > 1:
+            self.st = convert_timezone(code=self.time[1:], st=self.st)
+
+        # Trim data shorter so we don't process the entire waveform but add some
+        # buffer so that preprocessing on the tails of the data doesn't show up.
+        # the tail data will stay there but we will set the xlim of the plot to 
+        # not show it
+        if self.xlim:    
+            if self.time.startswith("a"):
+                start = UTCDateTime(self.xlim[0])
+                end = UTCDateTime(self.xlim[1])
+                buffer = (end - start) * self.trim_pct  # some % of the record
+                self.st.trim(starttime=start - buffer, endtime=end + buffer)
             else:
-                sys.exit("no function `read_sem()` from PySEP")
-        print(fid)
+                starttime = self.st[0].stats.starttime
+                buffer = (float(self.xlim[1]) - float(self.xlim[0])) * \
+                                                                   self.trim_pct
+                self.st.trim(
+                    starttime=starttime + (float(self.xlim[0]) - buffer),
+                    endtime=starttime + (float(self.xlim[1]) + buffer)
+                    )
+            print(f"\ttrimming with {buffer}s buffer on either end")
 
-    print(f"\n{st.__str__(extended=True)}")
+            if not self.st:
+                print("Trimming removed all data, please check `xlim` values")
+                sys.exit()
 
-    # ==========================================================================
-    #                           PROCESS WAVEFORMS
-    # ==========================================================================
-    if args.resample:
-        print(f"resampling to {args.resample}")
-        st.resample(sampling_rate=args.resample)
+    def process_waveforms(self):
+        """
+        Process the waveforms based on input parameters
+        """
+        if self.detrend:
+            print(f"\tdetrending with '{self.detrend}'")
+            self.st.detrend(type=self.detrend)
+        taper = self.taper
+        if self.integrate or self.differentiate:
+            if self.taper == 0:
+                taper = 0.05
+                print(f"\tsetting taper pct {taper}")
+        if taper:
+            self.st.taper(taper)
+            print(f"\ttapering trace {taper * 100}%")
+        if self.integrate:
+            for i in range(self.integrate):
+                print("integrating trace")
+                self.st.integrate()
+        if self.differentiate:
+            for i in range(self.differentiate):
+                print("differentiating trace")
+                self.st.differentiate()
+        if self.fmin and self.fmax:
+            print(f"\tfiltering between {self.fmin} and {self.fmax} Hz, "
+                  f"zerophase={self.zerophase}, corners={self.corners}")
+            self.st.filter(
+                "bandpass", freqmin=self.fmin, freqmax=self.fmax,
+                zerophase=self.zerophase, corners=self.corners
+                )
+        elif self.fmin:
+            print(f"\thighpass filtering at {self.fmin} Hz, "
+                  f"zerophase={self.zerophase}, corners={self.corners}")
+            self.st.filter(
+                "highpass", freq=self.fmin, zerophase=self.zerophase,
+                corners=self.corners
+                )
+        elif self.fmax:
+            print(f"\tlowpass filtering at {self.fmax} Hz, "
+                  f"zerophase={self.zerophase}, corners={self.corners}")
+            self.st.filter(
+                "lowpass", freq=self.fmax, zerophase=self.zerophase,
+                corners=self.corners
+                )
+        
+        self.st.merge()
 
-    # Time shift by requested amount
-    if args.time.startswith("a") and len(args.time) > 1:
-        st = convert_timezone(code=args.time[1:], st=st)
-
-    # Trim data shorter so we don't process the entire waveform but add some
-    # buffer so that preprocessing on the tails of the data doesn't show up.
-    # the tail data will stay there but we will set the xlim of the plot to not
-    # show it
-    if args.xlim:    
-        if args.time.startswith("a"):
-            start = UTCDateTime(args.xlim[0])
-            end = UTCDateTime(args.xlim[1])
-            buffer = (end - start) * args.trim_pct  # some percentage of the record
-            st.trim(starttime=start - buffer, endtime=end + buffer)
-        else:
-            starttime = st[0].stats.starttime
-            buffer = (float(args.xlim[1]) - float(args.xlim[0])) * args.trim_pct
-            st.trim(starttime=starttime + (float(args.xlim[0]) - buffer),
-                    endtime=starttime + (float(args.xlim[1]) + buffer))
-        print(f"trimming with {buffer}s buffer on either end")
-
-        if not st:
-            print("Trimming removed all data, please check `xlim` values")
-            sys.exit()
-
-    # Preprocess waveforms
-    if args.detrend:
-        print(f"detrending with '{args.detrend}'")
-        st.detrend(type=args.detrend)
-
-    taper = args.taper
-    if args.integrate or args.differentiate:
-        if args.taper == 0:
-            taper = 0.05
-            print(f"setting taper pct {taper}")
-    if taper:
-        st.taper(args.taper)
-        print(f"tapering trace {taper * 100}%")
-
-    if args.integrate:
-        for i in range(args.integrate):
-            print("integrating trace")
-            st.integrate()
-    if args.differentiate:
-        for i in range(args.differentiate):
-            print("differentiating trace")
-            st.differentiate()
-
-    # Allow different filters depending on min and max values given
-    if args.fmin and args.fmax:
-        print(f"bandpass {args.fmin}-{args.fmax}hz")
-        st.filter("bandpass", freqmin=args.fmin, freqmax=args.fmax, 
-                  zerophase=args.zerophase, corners=args.corners)
-    elif args.fmin and not args.fmax:
-        print(f"highpass {args.fmin}hz")
-        st.filter("highpass", freq=args.fmin, zerophase=args.zerophase,
-                  corners=args.corners)
-    elif args.fmax and args.fmin is None:
-        print(f"lowpass {args.fmax}hz")
-        st.filter("lowpass", freq=args.fmax, zerophase=args.zerophase,
-                  corners=args.corners)
-    if args.fmin or args.fmax:
-        print(f"zerophase={args.zerophase}")
-        print(f"corners={args.corners}")
-
-    st.merge()
-
-    # ==========================================================================
-    #                           SET UP FIGURE
-    # ==========================================================================
-    if not args.spectrogram:
-        f, ax = plt.subplots(figsize=(6, 4), dpi=200)
-        axs = [ax]  # To play nice with some loops
-        ax_spectra = None
-    else:
-        f, axs = plt.subplots(2, dpi=200, figsize=(8, 6), sharex=True)
-        f.subplots_adjust(hspace=0)
-        ax_spectra, ax = axs  # waveform on the bottom
-
-    # ==========================================================================
-    #                           PLOT WAVEFORM
-    # ==========================================================================
-    # Custom time axis
-    if args.time.startswith("a"):
-        # Set xvalues to datetime objects
-        xvals = ((st[0].times() / SECONDS_PER_DAY) +
-                        date2num(st[0].stats.starttime.datetime))
-        _set_xaxis_obspy_dates(ax, maxticks=args.maxticks)
-    else:
-        xvals = st[0].times() 
-
-        # Set time axis
-        if args.time == "s":
-            xvals /= 1  # not necessary but for consistency
-        elif args.time == "m":
-            xvals /= 60
-        elif args.time == "h": 
-            xvals /= 60 ** 2
-        else:
-            print("unknown time axis choice, default to 's'econds")
-            xvals /= 1
-
-        # Offset time axis based on user defined criteria
-        xvals -= args.t0
-        xvals += args.tstart
-
-    # Gather all the data arrays
-    if not args.wf_order:
-        data = np.array([tr.data for tr in st])
-        labels = [tr.get_id() for tr in st] 
-    else:
-        # Allow arbitrary order set by User
-        data, labels = [], []
-        for i in args.wf_order:
-            data.append(st[i].data)
-            labels.append(st[i].get_id())
-    n = len(data)     
-
-    # Overwrite waveform labels for the legend if User requests
-    if args.labels:
-        labels = args.labels
-
-    # Determine how many waveforms we will be plotting
-    if args.wf_type.endswith("stack"):
-        n += 1
-
-    # Set up the type of waveform
-    if args.wf_type == "stack":  # stack or recsec_stack
-        print("waveform option `stack`")
-        print("overriding `alphas` and `colors` for action `stack`")
-        # Adjust these if you want 
-        alphas = [0.5] * n
-        colors = [f"C{i}" for i in range(n)]
-    else:  
-        # Allow list of alpha values
-        if not args.alphas:
-            alphas = [1] * n
-        else:
-            alphas = args.alphas
-        # Allow single color, list of colors, or C colors
-        if len(args.colors) > 1:
-            colors = args.colors
-        elif len(args.colors) == 1:
-            if args.colors[0] == "C?":
-                colors = [f"C{i}" for i in range(n)]
-            # Allow colormaps that we make into discrete colors
-            elif len(args.colors[0]) > 1:
-                cmap = mpl.colormaps[args.colors[0]]
-                colors = cmap(np.linspace(0.1, 1, n))
-            else:
-                colors = [args.colors[0]] * n
-
-    # Allow for absolute amplitudes
-    if args.wf_abs:
-        data = [np.abs(d) for d in data]
-        labels = [f"abs {l}" for l in labels]
-
-    # Generate the stacked data (by default it takes the mean)
-    if args.wf_type.endswith("stack"):
-        wf_stack_type = "absmean"
-        # Determine how to stack
-        if wf_stack_type == "mean":
-            stacked_data = np.mean(data, axis=0)
-        # Pseudo envelope by meaning all abs values
-        elif wf_stack_type == "absmean":
-            stacked_data = np.abs(np.mean(np.abs(data), axis=0))
-        # Add stacked data to the list of plottable data
-        data = np.vstack((data, stacked_data))
-        labels.append("abs stacked mean")
-
-    # Normalize the dat arrays
-    if args.wf_norm:
-        for i, d in enumerate(data[:]):
-            data[i] = d / d.max()
-    
-    # Value shift the data array to make a record section
-    if args.wf_type.startswith("recsec"):
-        print("waveform option `recsec`, scaling y-axis")
-        # Set an arbitrary spacing based on the order of magnitude of the data
-        # Sorta hacky
-        oom = np.floor(np.log10(np.amax(st[0].data)))
-        spacing = args.wf_recsec_spacing* 10 ** oom
-        print(f"recsec spacing is {spacing}")
-        for i, d in enumerate(data[:]):
-            data[i] = d + (i * spacing)
-
-    # Plot the waveforms
-    for i, d in enumerate(data): 
-        ax.plot(xvals, d, c=colors[i], lw=args.linewidth, zorder=6+i, 
-                label=labels[i], alpha=alphas[i])
-
-    # ==========================================================================
-    #                        PLOT ADDITIONAL TRACE DATA
-    # ==========================================================================
-    if args.add_trace:
-        twax = ax.twinx()
-        st_new = read(args.add_trace)
-        data_new = st_new[0].data
-
-        # Custom time axis
-        if args.time.startswith("a"):
+    def plot_waveforms(self):
+        """
+        Plot the waveforms based on input parameters
+        """
+        if self.time.startswith("a"):
             # Set xvalues to datetime objects
-            xvals = ((st_new[0].times() / SECONDS_PER_DAY) +
-                            date2num(st_new[0].stats.starttime.datetime))
-            _set_xaxis_obspy_dates(twax, maxticks=args.maxticks)
+            xvals = ((self.st[0].times() / SECONDS_PER_DAY) +
+                            date2num(self.st[0].stats.starttime.datetime))
+            _set_xaxis_obspy_dates(self.ax, maxticks=self.maxticks)
         else:
-            xvals = st_new[0].times() 
+            xvals = self.st[0].times() 
 
             # Set time axis
-            if args.time == "s":
+            if self.time == "s":
                 xvals /= 1  # not necessary but for consistency
-            elif args.time == "m":
+            elif self.time == "m":
                 xvals /= 60
-            elif args.time == "h": 
+            elif self.time == "h": 
                 xvals /= 60 ** 2
             else:
                 print("unknown time axis choice, default to 's'econds")
                 xvals /= 1
 
             # Offset time axis based on user defined criteria
-            xvals -= args.t0
-            xvals += args.tstart
+            xvals -= self.t0
+            xvals += self.tstart
+        
+        if not self.wf_order:
+            data = np.array([tr.data for tr in self.st])
+            labels = [tr.get_id() for tr in self.st]
+        else:
+            # Allow arbitrary order set by User
+            data, labels = [], []
+            for i in self.wf_order:
+                data.append(self.st[i].data)
+                labels.append(self.st[i].get_id())
+        n = len(data)
+        # Overwrite waveform labels for the legend if User requests
+        if self.labels:
+            labels = self.labels
+        # Determine how many waveforms we will be plotting
+        if self.wf_type.endswith("stack"):
+            n += 1
+        # Set up the type of waveform
+        if self.wf_type == "stack":  # stack or recsec_stack
+            print("waveform option `stack`")
+            print("overriding `alphas` and `colors` for action `stack`")
+            # Adjust these if you want 
+            alphas = [0.5] * n
+            colors = [f"C{i}" for i in range(n)]
+        else:
+            # Allow list of alpha values
+            if not self.alphas:
+                alphas = [1] * n
+            else:
+                alphas = self.alphas
+            # Allow single color, list of colors, or C colors
+            if len(self.colors) > 1:
+                colors = self.colors
+            elif len(self.colors) == 1:
+                if self.colors[0] == "C?":
+                    colors = [f"C{i}" for i in range(n)]
+                # Allow colormaps that we make into discrete colors
+                elif len(self.colors[0]) > 1:
+                    cmap = mpl.colormaps[self.colors[0]]
+                    colors = cmap(np.linspace(0.1, 1, n))
+                else:
+                    colors = [self.colors[0]] * n
+
+        # Allow for absolute amplitudes
+        if self.wf_abs:
+            data = [np.abs(d) for d in data]
+            labels = [f"abs {l}" for l in labels]
+        # Generate the stacked data (by default it takes the mean)
+        if self.wf_type.endswith("stack"):
+            wf_stack_type = "absmean"
+            # Determine how to stack
+            if wf_stack_type == "mean":
+                stacked_data = np.mean(data, axis=0)
+            # Pseudo envelope by meaning all abs values
+            elif wf_stack_type == "absmean":
+                stacked_data = np.abs(np.mean(np.abs(data), axis=0))
+            # Add stacked data to the list of plottable data
+            data = np.vstack((data, stacked_data))
+            labels.append("abs stacked mean")
+        # Normalize the dat arrays
+        if self.wf_norm:
+            for i, d in enumerate(data[:]):
+                data[i] = d / d.max()
+        # Value shift the data array to make a record section
+        if self.wf_type.startswith("recsec"):
+            print("waveform option `recsec`, scaling y-axis")
+            # Set an arbitrary spacing based on the order of magnitude of the data
+            # Sorta hacky
+            oom = np.floor(np.log10(np.amax(self.st[0].data)))
+            spacing = self.wf_recsec_spacing* 10 ** oom
+            print(f"\trecsec spacing is {spacing}")
+            for i, d in enumerate(data[:]):
+                data[i] = d + (i * spacing)
+        # Plot the waveforms
+        for i, d in enumerate(data):
+            self.ax.plot(
+                xvals, d, c=colors[i], lw=self.linewidth, zorder=6+i, 
+                label=labels[i], alpha=alphas[i]
+                )
+            
+        self._xvals = xvals
+
+    def plot_stream_gage(self, relative=False, units="m"):
+        """
+        Experimental Phelan Creek Stream Gage
+        """
+        assert args.time == "a-08", f"currently only works in AK local"
+
+        # Read data from text file
+        path = ("/Users/chow/Work/research/gulkanaseis24/data/USGS_data/"
+                "phelan_creek_stream_guage_2024-09-07_to_2024-09-14.txt")
+        assert(os.path.exists(path))
+
+        data = np.loadtxt(path, skiprows=28, usecols=[2,4], delimiter="\t", 
+                        dtype=str)
+        times, height_ft = data.T  # time in AK local
+
+        # Time is already in AK Local so we don't need to shift. If we did have
+        # to then we would need to convert to UTC then shift by user request
+        times = np.array([date2num(UTCDateTime(_).datetime) for _ in times])
+        height_ft = np.array(height_ft, dtype=float)
+
+        # Convert units
+        if units == "ft":
+            height = height_ft
+        elif units == "in":
+            height = height_ft * 12
+        elif units == "m":
+            height = np.array([_ * 0.3048 for _ in height_ft.astype(float)])
+        elif units == "cm":
+            height = np.array([_ * 30.48 for _ in height_ft.astype(float)])
+        else:
+            print("stream gage units `sg_units` should be in: ft, in, m, cm")
+            sys.exit()
+        
+        # Subset data where we are plotting waveforms to get the correct ylims
+        idx = np.where((times > self.xvals.min()) & (times < self.xvals.max()))
+
+        if relative:
+            height -= height[idx].min()
 
         # Plot on the same axis as the waveform
-        if args.tr_label:
-            tr_label = args.tr_label
+        twax = self.ax.twinx()
+
+        twax.plot(times[idx], height[idx], "o-", lw=1, c="C0", 
+                label="Phelan Cr. Gage", zorder=5, markersize=1.25, 
+                alpha=0.5)
+
+        _ylabel = f"Stream Height [{units}]"
+        if relative:
+            _ylabel = f"Relative {_ylabel}"
+        twax.set_ylabel(_ylabel, rotation=-90, labelpad=20)
+            
+    def plot_additional_traces(self):
+        """Plot additional time series if requested """
+        twax = self.ax.twinx()
+        st_new = read(self.add_trace).merge()
+        data_new = st_new[0].data
+
+        # Custom time axis
+        if self.tr_time.startswith("a"):
+            # Set xvalues to datetime objects
+            xvals_new = ((st_new[0].times() / SECONDS_PER_DAY) +
+                            date2num(st_new[0].stats.starttime.datetime))
+            _set_xaxis_obspy_dates(twax, maxticks=self.maxticks)
+        else:
+            xvals_new = st_new[0].times() 
+
+            # Set time axis
+            if self.tr_time == "s":
+                xvals_new /= 1  # not necessary but for consistency
+            elif self.tr_time == "m":
+                xvals_new /= 60
+            elif self.tr_time == "h": 
+                xvals_new /= 60 ** 2
+            else:
+                print("unknown time axis choice, default to 's'econds")
+                xvals_new /= 1
+
+            # Offset time axis based on user defined criteria
+            xvals_new -= self.t0
+            xvals_new += self.tstart
+
+        # Plot on the same axis as the waveform
+        if self.tr_label:
+            tr_label = self.tr_label
         else:
             tr_label = st_new[0].get_id()
-        twax.plot(xvals, data_new, lw=1, c=args.tr_color, 
-                  label=tr_label, zorder=5, markersize=1.25, alpha=0.5)
+        twax.plot(xvals_new, data_new, lw=1, c=self.tr_color, 
+                    label=tr_label, zorder=5, markersize=1.25, alpha=0.4)
 
-        twax.set_ylabel(args.tr_ylabel, rotation=-90, labelpad=20)
+        twax.set_ylabel(self.tr_ylabel, rotation=-90, labelpad=20)
 
-    # ==========================================================================
-    #                           PLOT SPECTROGRAM
-    # ==========================================================================
-    # dB scale on by default, but flag to turn off
-    sp_dbscale = not args.sp_dbscale_off  
+        if self.spectrogram:
+            _size = 2.5
+            _pad = 0.05
+            div = make_axes_locatable(twax)
+            cax = div.append_axes("right", size=f"{_size}%", pad=_pad)
+            cax.set_axis_off()
 
-    # Don't plot spectrogram if we're plotting full data because it's too much
-    if args.spectrogram and args.xlim:
-        im = spectrogram(ax=ax_spectra, xvals=xvals, tr=st[args.sp_idx], 
-                         log=args.sp_logscale, dbscale=sp_dbscale, 
-                         cmap=args.sp_cmap, ncolors=args.sp_numcol,
-                         clip=args.sp_clip,
-                         ) 
-        ax_spectra.set_ylabel("Freq. [Hz]")
-        ax_spectra.axis("tight")
-        ax_spectra.grid(False)
+    def plot_spectrogram(self):    
+        """Plot spectrogram on a separate axis"""
+        im = spectrogram(
+            ax=self.ax_spectra, xvals=self._xvals, tr=self.st[self.sp_idx], 
+            log=self.sp_logscale, dbscale=self.sp_dbscale, 
+            cmap=self.sp_cmap, ncolors=self.sp_numcol,
+            clip=self.sp_clip,
+            ) 
+        self.ax_spectra.set_ylabel("Freq. [Hz]")
+        self.ax_spectra.axis("tight")
+        self.ax_spectra.grid(False) 
 
         # SPECTROGRAM COLORBAR
-        #  Pushes over the spectrogram in the same axis 
-        # to make way for the colorbar
+        #  Pushes over the spectrogram in the same axis
         _size = 2.5
         _pad = 0.05
-        div_spectra = make_axes_locatable(ax_spectra)
-        cax_spectra = div_spectra.append_axes("right", size=f"{_size}%", 
-                                              pad=_pad)
-        cbar = f.colorbar(im, cax=cax_spectra, orientation="vertical") 
-
+        div_spectra = make_axes_locatable(self.ax_spectra)
+        cax_spectra = div_spectra.append_axes("right", size=f"{_size}%",
+                                                pad=_pad)
+        cbar = self.f.colorbar(im, cax=cax_spectra, orientation="vertical")
         # Change the plot aeshtetic of the colorbar, should actually be in
         # set_plot_aesthetic() but I'm lazy
         for spine in cbar.ax.spines.values():
             spine.set_linewidth(1.5)
         cbar.ax.set_frame_on(True)
         # Padding was determined by trial and error
-        if sp_dbscale:
+        if self.sp_dbscale:
             # _label = r"Rel. PSD [$10\log_{10}((m/s^2)/Hz)$]"
             _label = f"Power [dB]"
             _labelpad = -37.5
@@ -848,60 +999,56 @@ if __name__ == "__main__":
 
         # HACKY: pushes over the waveform plot over by the same amount but '
         # then turns the space invisible to preserve the shared x-axis
-        div = make_axes_locatable(ax)
+        div = make_axes_locatable(self.ax)
         cax = div.append_axes("right", size=f"{_size}%", pad=_pad)
         cax.set_axis_off()
 
-        # Have to do it for twax, too
-        if args.add_trace:
-            div = make_axes_locatable(twax)
-            cax = div.append_axes("right", size=f"{_size}%", pad=_pad)
-            cax.set_axis_off()
+    def plot_taup_arrivals(self):
+        """Get and plot TauP arrivals if requested"""
+        if not self.tp_phases:
+            return
 
-    # ==========================================================================
-    #                           PLOT TAUP ARRIVALS
-    # ==========================================================================
-    # Get phase arrivals from TauP if requested
-    arrivals = None
-    if args.tp_phases:
-        assert(args.tp_dist_km is not None or args.tp_dist_deg is not None)
-        assert(args.tp_depth is not None)
-        if args.tp_dist_km:
-            dist_deg = kilometers2degrees(args.tp_dist_km)
+        # Get phase arrivals from TauP if requested
+        arrivals = None
+        assert(self.tp_dist_km is not None or self.tp_dist_deg is not None)
+        assert(self.tp_depth is not None)
+        if self.tp_dist_km:
+            dist_deg = kilometers2degrees(self.tp_dist_km)
         else:
-            dist_deg = args.tp_dist_deg
+            dist_deg = self.tp_dist_deg
 
-        model = TauPyModel(model=args.tp_model)
-        tp_arrivals = model.get_travel_times(source_depth_in_km=args.tp_depth,
-                                             distance_in_degree=dist_deg,
-                                             phase_list=args.tp_phases)
+        model = TauPyModel(model=self.tp_model)
+        tp_arrivals = model.get_travel_times(
+            source_depth_in_km=self.tp_depth,
+            distance_in_degree=dist_deg,
+            phase_list=self.tp_phases
+            )
 
         # If some arrivals have multiple entires, only take first and last to 
         # get a range which we will plot with a window
         arrivals = {arrival.name: [] for arrival in tp_arrivals}
-        print(f"TauP Arrivals for {args.tp_model}")
+        print(f"\tTauP Arrivals for {self.tp_model}")
         for i, arrival in enumerate(tp_arrivals):
             arrivals[arrival.name].append(arrival.time)
-            print(f"\t{arrival.name} = {arrival.time:.2f} s")
+            print(f"\t\t{arrival.name} = {arrival.time:.2f} s")
 
         if not arrivals:
-            print(f"No arrivals found for given depth={args.tp_depth}km and "
+            print(f"\tNo arrivals found for given depth={self.tp_depth}km and "
                   f"distance {dist_deg:.2f}deg")
            
         # Determine the time series starttime of the event because the TauP
         # times are relative to an origin time
-        if not args.tp_start: 
-            if args.time.startswith("a"):
-                tp_start = UTCDateTime(args.xlim[0])
+        if not self.tp_start: 
+            if self.time.startswith("a"):
+                tp_start = UTCDateTime(self.xlim[0])
             else:
-                tp_start = float(args.xlim[0])
+                tp_start = float(self.xlim[0])
         else:
-            if args.time.startswith("a"):
-                tp_start = UTCDateTime(args.tp_start)
+            if self.time.startswith("a"):
+                tp_start = UTCDateTime(self.tp_start)
             else:
-                tp_start = float(args.tp_start)  # seconds
+                tp_start = float(self.tp_start)  # seconds
 
-        arrival_dict = {}        
         for i, (name, times) in enumerate(arrivals.items()):
             # Sometimes there are multiple arrival times for the same phase
             if times[0] == times[-1]:
@@ -910,130 +1057,153 @@ if __name__ == "__main__":
                 alpha = 0.3
 
             # Convert arrival times to time series reference
-            if args.time.startswith("a"):
+            if self.time.startswith("a"):
                 times = [date2num((tp_start + time).datetime) for time in times]
             else:
                 times = [tp_start + time for time in times]
+            # Figure out the maximum amplitude in this time window
+            win_start = find_nearest(self.xvals, times[0])
+            win_end = find_nearest(self.xvals, times[-1]) + 1
+            max_amp = np.amax(self.st[0].data[win_start:win_end])
+            self.ax.axvspan(
+                times[0], times[-1], label=f"{name} ({max_amp:.2E})", 
+                color=f"C{i}", alpha=alpha, zorder=7
+                )
+        # plt.legend(prop={"size": 2}, loc="upper left", frameon=False
 
-            # Figure out the maximum amplitude in this time window 
-            win_start = find_nearest(xvals, times[0])
-            win_end = find_nearest(xvals, times[-1]) + 1
-            max_amp = np.amax(st[0].data[win_start:win_end])
-            arrival_dict[name] = max_amp
-
-            ax.axvspan(times[0], times[-1], label=f"{name} ({max_amp:.2E})", 
-                        color=f"C{i}", alpha=alpha, zorder=7)
-        # plt.legend(prop={"size": 2}, loc="upper left", frameon=False)
-
-    # ==========================================================================
-    #                           PLOT TMARKS
-    # ==========================================================================
-    if args.tmarks:
-        if len(args.tmarks_c) == 1:
-            colors = args.tmarks_c * len(args.tmarks)
+    def plot_tmarks(self):
+        """
+        Plot time marks if requested
+        """
+        if len(self.tmarks_c) == 1:
+            colors = self.tmarks_c * len(self.tmarks)
         else:
-            colors = args.tmarks_c
+            colors = self.tmarks_c
 
-        for tmark, c in zip(args.tmarks, colors):
-            if args.time.startswith("a"):
+        for tmark, c in zip(self.tmarks, colors):
+            if self.time.startswith("a"):
                 tmark = date2num(UTCDateTime(tmark).datetime)
                 # date2num(st[0].stats.starttime.datetime) + tmark
-            ax.axvline(tmark, c=c, lw=0.5)
+            self.ax.axvline(tmark, c=c, lw=0.5)
 
-    # ==========================================================================
-    #                           PLOT AESTHETICS
-    # ==========================================================================
-    if not args.no_legend:
-        f.legend(loc="upper right", bbox_to_anchor=(1,1), 
-                 bbox_transform=ax.transAxes, prop={"size": 5},
-                 ncol=2, fontsize='tiny')
+    def plot_aesthetics(self):
+        """
+        Set plot aesthetics
+        """
+        if self.legend:
+            self.ax.legend(loc="upper right", bbox_to_anchor=(1,1), 
+                          bbox_transform=self.ax.transAxes, 
+                          prop={"size": 5},
+                          ncol=self.ncol_legend, fontsize='tiny')
 
-    if args.time.startswith("a"):
-        ax.set_xlabel(f"Time [UTC{args.time[1:]}]")
-    else:
-        ax.set_xlabel(f"Time [{args.time}]")
-    ax.set_ylabel(args.ylabel)
-
-    # Subset x axis
-    xstart, xend = xvals.min(), xvals.max()
-    if args.xlim:
-        if args.time.startswith("a"):
-            xstart = date2num(UTCDateTime(args.xlim[0]).datetime)
-            xend = date2num(UTCDateTime(args.xlim[1]).datetime)
+        if self.time.startswith("a"):
+            self.ax.set_xlabel(f"Time [UTC{self.time[1:]}]")
         else:
-            xstart, xend = [float(_) for _ in args.xlim]
-    ax.set_xlim(xstart, xend)  
-
-    # Subset y axis for waveform plot
-    ymax = np.amax([st[0].data.min(), st[0].data.max()])
-    ymin = -1 * ymax
-    if args.ylim:
-        # Allow for one entry to set min/max if they're the same
-        if len(args.ylim) == 1:
-            ymin, ymax = [-1 * args.ylim[0], args.ylim[0]]
+            self.ax.set_xlabel(f"Time [{self.time}]")
+        if self.ylabel:
+            self.ax.set_ylabel(self.ylabel)
         else:
-            ymin, ymax = args.ylim
-    else:
-        ymax = np.amax([st[0].data.min(), st[0].data.max()])
-        ymin = -1 * ymax
-    ax.set_ylim(ymin, ymax)
+            self.ax.set_ylabel("Amplitude")
 
-    # Spectrogram annotation if there are multiple waveforms plotted
-    # put it outside the axis so it shows up on white background
-    if args.spectrogram and len(st) > 1:
-        ax_spectra.text(0.99, 1.01, st[args.sp_idx].get_id(), 
-                        horizontalalignment="right", verticalalignment="bottom", 
-                        transform=ax_spectra.transAxes, fontsize=8)
+        # Subset x axis
+        xstart, xend = self._xvals.min(), self._xvals.max()
+        if self.xlim:
+            if self.time.startswith("a"):
+                xstart = date2num(UTCDateTime(self.xlim[0]).datetime)
+                xend = date2num(UTCDateTime(self.xlim[1]).datetime)
+            else:
+                xstart, xend = [float(_) for _ in self.xlim]
+        self.ax.set_xlim(xstart, xend)  
 
-    # Finish off by setting plot aesthetics
-    if args.title is None:
-        title = f"{st[0].stats.starttime.year}.{st[0].stats.starttime.julday:0>3}"
-        if st[0].stats.starttime.julday != st[0].stats.endtime.julday:
-            title += f"-{st[0].stats.endtime.julday}"
+        # Subset y axis for waveform plot
+        if self.ylim:
+            ymin, ymax = self.ylim
+            self.ax.set_ylim(ymin, ymax)
 
-        if args.fmin or args.fmax:
-            _fmin = args.fmin or 0
-            _fmax = args.fmax or st[0].stats.sampling_rate / 2
-            title += f" [{_fmin}, {_fmax}]Hz"
+        # Spectrogram annotation if there are multiple waveforms plotted
+        # put it outside the axis so it shows up on white background
+        if self.spectrogram and len(self.st) > 1:
+            self.ax_spectra.text(0.99, 1.01, self.st[self.sp_idx].get_id(), 
+                            horizontalalignment="right", 
+                            verticalalignment="bottom", 
+                            transform=self.ax_spectra.transAxes, fontsize=8)
 
-        # Append some information on the TauP arrivals
-        if arrivals:
-            title += (f"\n(TauP={args.tp_model}; $\\Delta$={dist_deg}deg; "
-                      f"Z={args.tp_depth}km)")
-        if args.title_append:
-            title += f"\n{args.title_append}"
-    else:
-        title = args.title
-    plt.suptitle(title)
+        # Finish off by setting plot aesthetics
+        set_plot_aesthetic(self.ax)
 
-    # Final plotting touches
-    set_plot_aesthetic(ax)
+        if self.spectrogram:
+            set_plot_aesthetic(self.ax_spectra, ytick_format="plain")
 
-    if ax_spectra:
-        set_plot_aesthetic(ax_spectra, ytick_format="plain")
-    f.tight_layout()
-
-    # ==========================================================================
-    #                           FINALIZE PLOT
-    # ==========================================================================
-    _transparent = False  # toggle for transparency in the background
-    if args.save:
-        if args.save == "auto":
-            _fid_out = f"{args.fids[0]}.png"
+        if self.title is None:
+            title = f"{self.st[0].stats.starttime.year}."
+            title += f"{self.st[0].stats.starttime.julday:0>3}"
+            if self.st[0].stats.starttime.julday != \
+                self.st[0].stats.endtime.julday:
+                title += f"-{self.st[0].stats.endtime.julday}"
+            if self.fmin or self.fmax:
+                _fmin = self.fmin or 0
+                _fmax = self.fmax or self.st[0].stats.sampling_rate / 2
+                title += f" [{_fmin}, {_fmax}]Hz"
+            # Append some information on the TauP arrivals
+            if self.tp_phases:
+                title += (f"\n(TauP={self.tp_model}; $\\Delta$="
+                          f"{self.tp_dist_deg}deg; Z={self.tp_depth}km)")
+            if self.title_append:
+                title += f"\n{self.title_append}"
         else:
-            _fid_out = args.save
-        print(f"saving to {_fid_out}")
-        plt.savefig(_fid_out, transparent=_transparent)
+            title = self.title
+        plt.title(title)
+        # plt.suptitle(title)
 
-    if not args.noshow:
-        plt.show()
-    plt.close("all")
+        plt.tight_layout()
 
-    # ==========================================================================
-    #                               OUTPUT
-    # ==========================================================================
-    if args.output:
-        if not os.path.exists(args.output):
-            os.makedirs(args.output)
-        st.write(os.path.join(args.output, args.fids), format="MSEED")
+    def finalize(self, transparent=False):
+        """
+        Final plot adjustments
+        """
+        if self.save:
+            if self.save == "auto":
+                _fid_out = f"{self.fids[0]}.png"
+            else:
+                _fid_out = self.save
+            print(f"\tsaving to {_fid_out}")
+            plt.savefig(_fid_out, transparent=transparent)
+
+        if self.show:
+            plt.show()
+        plt.close("all")
+
+        if self.output:
+            if not os.path.exists(self.output):
+                os.makedirs(self.output)
+            self.st.write(os.path.join(self.output, self.fids), format="MSEED")
+
+    def main(self):
+        """
+        Main plotting function
+        """
+        self.setup_plot()
+        self.trim_waveform()
+        self.process_waveforms()
+        self.plot_waveforms()
+        if self.add_trace:
+            self.plot_additional_traces()
+        if self.spectrogram:
+            self.plot_spectrogram()
+        if self.tmarks:
+            self.plot_tmarks()
+        self.plot_aesthetics()
+        self.finalize()
+
+
+if __name__ == "__main__":
+    # Initialize class using command line arguments 
+    args = parse_args()
+    args_dict = vars(args).copy()
+    fids = args_dict.pop("fids")
+    args_dict["legend"] = not args_dict.pop("no_legend", False)
+    args_dict["show"] = not args_dict.pop("noshow", False)
+    args_dict["sp_dbscale"] = not args_dict.pop("sp_dbscale_off", False)
+    pp = PrettyPlot(fids, **args_dict)
+    pp.main()
 

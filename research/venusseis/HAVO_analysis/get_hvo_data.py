@@ -31,6 +31,11 @@ for sta in ["DESD", "MITD", "KAED"]:
             st = c.get_waveforms(network=net, station=sta, location="*", 
                                  channel=f"EH{comp}", starttime=start, 
                                  endtime=end)
+            inv = c.get_stations(network=net, station=sta, location="*", 
+                                 channel=f"EH{comp}", starttime=start, 
+                                 endtime=end, level="response")
+
+            st.remove_response(inventory=inv, output="VEL")
 
             for tr in st:
                 fid_tr = f"{tr.id}.{start.year}.{start.julday:0>3}"

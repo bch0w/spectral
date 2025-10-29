@@ -13,7 +13,7 @@ from obspy import read
 # Example synthetic data (replace these with your own)
 # -------------------------------------------------------
 fid = sys.argv[1]
-st = read(fid)
+st = read(fid).merge()
 wind_dir_deg = st[0].data
 n = len(wind_dir_deg)
 
@@ -45,7 +45,7 @@ num_periods = len(period_labels)
 # -------------------------------------------------------
 # Define direction bins
 # -------------------------------------------------------
-num_bins = 16
+num_bins = 64
 bin_edges = np.linspace(0, 360, num_bins + 1)
 bin_centers = np.deg2rad((bin_edges[:-1] + bin_edges[1:]) / 2)
 
