@@ -1,10 +1,10 @@
- PDE 2017  9  3  3 30 01.00 41.3324  129.0297 637.0 6.3 6.3 NORTH KOREA
-event name:     NK_2017
+ PDE 2017  9  3  3 30 01.00 41.3324  129.0297 1.0 5.18 5.18 ISONK6
+event name:      ISONK6
 time shift:     00.0000
 half duration:  00.0000
 latitude:       41.3324
 longitude:     129.0297
-depth:         001.0000
+depth:           1.0000
 Mrr:       5.395000e+23
 Mtt:       5.395000e+23
 Mpp:       5.395000e+23
