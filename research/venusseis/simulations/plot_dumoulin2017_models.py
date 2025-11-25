@@ -77,14 +77,19 @@ ylabel = ["Temp (K)", "?", "rho (kg/m^3)", "Vp (km/s)", "Vs (km/s)"]
 # Read in the files used
 values = {}
 fids = sorted(glob("V[14]-*.out"))
-fids = ["V1-Th.out", "V4-Tc.out"]  # only using end-member models
-colors = ["C3", "C0"]  # R, B
+colors = [f"C{_}" for _ in range(0, len(fids))]
+
+# Only use end member models
+# fids = ["V1-Th.out", "V4-Tc.out"] 
+# colors = ["C3", "C0"]  # R, B
+
 for fid in fids:
     depth, *variables = np.loadtxt(fid, skiprows=1).T
     values[fid.split(".")[0]] = variables
 
 # Flip the depth axis so that 0 is the surface (not the core)
 depth = depth[::-1]  
+depth -= 100.  # atmosphere layer is 100km, shift so 0 is surface
 
 # Plot one paramter for all models on a single figure
 idxs = {}
@@ -97,33 +102,34 @@ for i in range(len(variables)):
     f, ax = plt.subplots(figsize=(5,8), dpi=200)
     for j, (name, value) in enumerate(values.items()):
         model = np.array(value[i])
-        plt.plot(model, depth, colors[j], lw=2.5, label=name)
-        
-        # Find layer boundaries for each model based on jumps in values
-        # Only do this for the first (density), then share with other values
-        if first:
-            diffs = model[:-1] - model[1:]
-            # Looking for indices for the 3 largest difference values
-            bigval = np.sort(diffs)[-2]
-            idxs[name] = np.argwhere(diffs >= bigval)
-        
-        for idx, layer in zip(idxs[name], ["CMB", "MTZ"]):
-            plt.annotate(layer, xy=(90, depth[idx]-20), c=colors[j], fontsize=14)
-            plt.axhline(depth[idx], c="k", linestyle="--", lw=1, zorder=10)
+        plt.plot(model, depth, colors[j], lw=1.5, label=name)
+       
+        if False:
+            # Find layer boundaries for each model based on jumps in values
+            # Only do this for the first (density), then share with other values
+            if first:
+                diffs = model[:-1] - model[1:]
+                # Looking for indices for the 3 largest difference values
+                bigval = np.sort(diffs)[-2]
+                idxs[name] = np.argwhere(diffs >= bigval)
+            
+            for idx, layer in zip(idxs[name], ["CMB", "MTZ"]):
+                plt.annotate(layer, xy=(90, depth[idx]-20), c=colors[j], fontsize=14)
+                plt.axhline(depth[idx], c="k", linestyle="--", lw=1, zorder=10)
 
-        # Between each layer, find the depth average for the given layer
-        # Sorry this is pretty nasty, quick and dirty
-        layers = [0] + [_[0] for _ in idxs[name]] + [-1]  # e.g., [0, 15, 21, -1]
-        for _k, k in enumerate(layers[:-1]):
-            k = k
-            l = layers[_k+1]
-            average = model[k:l].mean()
-            plt.vlines(x=average, ymin=depth[k], ymax=depth[l], 
-                       colors=colors[j], alpha=0.44, ls=":", zorder=11, lw=2)
-            print(f"{name} ({title[i]}) {depth[k]:.2f}-{depth[l]:.2f} = {average:.2f}")
+            # Between each layer, find the depth average for the given layer
+            # Sorry this is pretty nasty, quick and dirty
+            layers = [0] + [_[0] for _ in idxs[name]] + [-1]  # e.g., [0, 15, 21, -1]
+            for _k, k in enumerate(layers[:-1]):
+                k = k
+                l = layers[_k+1]
+                average = model[k:l].mean()
+                plt.vlines(x=average, ymin=depth[k], ymax=depth[l], 
+                           colors=colors[j], alpha=0.44, ls=":", zorder=11, lw=2)
+                print(f"{name} ({title[i]}) {depth[k]:.2f}-{depth[l]:.2f} = {average:.2f}")
 
     ax.invert_yaxis()
-    plt.ylim([depth.max(), 0])
+    plt.ylim([depth.max(), depth.min()])
     plt.ylabel("Depth (km)")
     plt.xlabel(ylabel[i])
     plt.legend()
@@ -144,7 +150,7 @@ for i in range(len(variables)):
     plt.close("all")
 
     # Only plot top 1000km so we can see crust/upper-mantle variation better
-    if False:
+    if True:
         f, ax = plt.subplots(figsize=(5,3), dpi=200)
         cutoff = 84  # idx corresponding to table
 

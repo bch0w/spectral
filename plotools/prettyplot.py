@@ -112,6 +112,9 @@ def parse_args():
                              "this modifier set to 1 is a good starting guess "
                              "but you can move it up or down by steps of 0.1 " 
                              "to get waveforms closer or further")
+    parser.add_argument("--wf_spacing_exact", action="store_true", 
+                        help="For `wf_recsec_spacing` the value is used exact "
+                             "rather than as an order of magnitude scale")
     parser.add_argument("--wf_order", type=int, nargs="+", default=None,
                         help="allow custom order when plotting waveforms, " \
                              "based on the alphabetical index. First you need "
@@ -147,6 +150,8 @@ def parse_args():
                             "If using 'a' you may add '+i' or '-i' to "
                             "time shift the array, e.g., to go from UTC to "
                             "local time. E.g., 'a-7' will subtract 7 hours.")
+    parser.add_argument("--minticks", type=int, default=3, 
+                        help="min ticks if --time='a'")
     parser.add_argument("--maxticks", type=int, default=6, 
                         help="max ticks if --time='a'")
     parser.add_argument("-x", "--xlim", nargs="+", default=None,
@@ -225,6 +230,16 @@ def parse_args():
                              "twin X axis")
 
     # Misc plotting options
+    parser.add_argument("--fig_size", type=float, nargs="+", default=None,
+                        help="Figure size")
+    parser.add_argument("--dpi", type=float, nargs="?", default=None,
+                        help="Dots per inch, default 200")
+    parser.add_argument("--fig_len", type=float, nargs="?", default=8,
+                        help="Figure length, use with 'fig_asp', overrides "
+                             "'--fig_size' if both given")
+    parser.add_argument("--fig_asp", type=float, nargs="?", default=None,
+                        help="Figure aspect ratio, use with 'fig_len', "
+                             "overrides '--fig_size' if given")
     parser.add_argument("--no_legend", action="store_true",
                         help="Turn off waveform legend")
     parser.add_argument("--ncol_legend", type=int, default=1,
@@ -564,12 +579,13 @@ class PrettyPlot():
                  differentiate=0, trim_pct=1.,
                  # Waveform plotting
                  wf_abs=False, wf_type="default", wf_norm=False, 
-                 wf_recsec_spacing=1, wf_order=None,
+                 wf_recsec_spacing=1, wf_spacing_exact=False, wf_order=None,
                  # Plotting Aesthetics
                  colors="k", alphas=None, labels=None, linewidth=0.5, 
                  ylabel="amplitude", ylim=None,
                  # Time Axis
-                 time="s", maxticks=6, xlim=6, tmarks=None, tmarks_c="k",
+                 time="s", minticks=3, maxticks=6, xlim=6, tmarks=None, 
+                 tmarks_c="k",
                  # TauP 
                  tp_phases=None, tp_model="iasp91", tp_dist_km=None,
                  tp_dist_deg=None, tp_depth=None, tp_start=None,
@@ -582,6 +598,7 @@ class PrettyPlot():
                  tr_color="C0", 
                  stream_gage=False,
                  # Misc.
+                 fig_size=None, dpi=None, fig_len=None, fig_asp=None, 
                  legend=True, ncol_legend=1, title=None, title_append="",
                  save=None, output=None, show=True,
                  **kwargs
@@ -605,6 +622,7 @@ class PrettyPlot():
         self.wf_type = wf_type
         self.wf_norm = wf_norm
         self.wf_recsec_spacing = wf_recsec_spacing
+        self.wf_spacing_exact = wf_spacing_exact
         self.wf_order = wf_order
 
         self.colors = colors
@@ -616,6 +634,7 @@ class PrettyPlot():
 
         self.time = time
         self.maxticks = maxticks
+        self.minticks = minticks
         self.xlim = xlim
         self.tmarks = tmarks
         self.tmarks_c = tmarks_c
@@ -641,6 +660,10 @@ class PrettyPlot():
         self.tr_ylabel = tr_ylabel
         self.tr_color = tr_color
 
+        self.fig_size = fig_size
+        self.dpi = dpi
+        self.fig_len = fig_len
+        self.fig_asp = fig_asp
         self.legend = legend
         self.ncol_legend = ncol_legend
         self.title = title
@@ -662,16 +685,30 @@ class PrettyPlot():
             print(fid)
         print(f"{self.st.__str__(extended=True)}")
 
-    def setup_plot(self, dpi=200, figsize=(8, 6)):
+    def setup_plot(self, dpi=200):
         """
         Set up the plot based on input parameters
         """
         if self.spectrogram:
+            if self.fig_len and self.fig_asp:
+                figsize = (self.fig_len, self.fig_len * self.fig_asp)
+            else:
+                figsize = self.fig_size or (8, 6)  # default
+
+            dpi = self.dpi or dpi
+
             print("\tsetting up waveform and spectrogram plot")
             self.f, axs = plt.subplots(2, dpi=dpi, figsize=figsize, sharex=True)
             self.f.subplots_adjust(hspace=0)
             self.ax_spectra, self.ax = axs  # waveform on the bottom
         else:
+            if self.fig_len and self.fig_asp:
+                figsize = (self.fig_len, self.fig_len * self.fig_asp)
+            else:
+                figsize = self.fig_size  or (7, 4)  # default
+
+            dpi = self.dpi or dpi
+
             print("\tsetting up waveform plot")
             self.f, self.ax = plt.subplots(dpi=dpi, figsize=figsize)
 
@@ -764,7 +801,8 @@ class PrettyPlot():
             # Set xvalues to datetime objects
             xvals = ((self.st[0].times() / SECONDS_PER_DAY) +
                             date2num(self.st[0].stats.starttime.datetime))
-            _set_xaxis_obspy_dates(self.ax, maxticks=self.maxticks)
+            _set_xaxis_obspy_dates(self.ax, minticks=self.minticks, 
+                                   maxticks=self.maxticks)
         else:
             xvals = self.st[0].times() 
 
@@ -848,10 +886,13 @@ class PrettyPlot():
         # Value shift the data array to make a record section
         if self.wf_type.startswith("recsec"):
             print("waveform option `recsec`, scaling y-axis")
-            # Set an arbitrary spacing based on the order of magnitude of the data
-            # Sorta hacky
-            oom = np.floor(np.log10(np.amax(self.st[0].data)))
-            spacing = self.wf_recsec_spacing* 10 ** oom
+            if self.wf_spacing_exact:
+                # Directly set the spacing with a vlaue
+                spacing = self.wf_recsec_spacing
+            else:
+                # Set an arbitrary spacing based on the order of magnitude 
+                oom = np.floor(np.log10(np.amax(self.st[0].data)))
+                spacing = self.wf_recsec_spacing* 10 ** oom
             print(f"\trecsec spacing is {spacing}")
             for i, d in enumerate(data[:]):
                 data[i] = d + (i * spacing)
@@ -951,7 +992,7 @@ class PrettyPlot():
         else:
             tr_label = st_new[0].get_id()
         twax.plot(xvals_new, data_new, lw=1, c=self.tr_color, 
-                    label=tr_label, zorder=5, markersize=1.25, alpha=0.4)
+                  label=tr_label, zorder=5, markersize=1.25, alpha=0.4)
 
         twax.set_ylabel(self.tr_ylabel, rotation=-90, labelpad=20)
 
@@ -1062,8 +1103,8 @@ class PrettyPlot():
             else:
                 times = [tp_start + time for time in times]
             # Figure out the maximum amplitude in this time window
-            win_start = find_nearest(self.xvals, times[0])
-            win_end = find_nearest(self.xvals, times[-1]) + 1
+            win_start = find_nearest(self._xvals, times[0])
+            win_end = find_nearest(self._xvals, times[-1]) + 1
             max_amp = np.amax(self.st[0].data[win_start:win_end])
             self.ax.axvspan(
                 times[0], times[-1], label=f"{name} ({max_amp:.2E})", 
@@ -1117,7 +1158,11 @@ class PrettyPlot():
 
         # Subset y axis for waveform plot
         if self.ylim:
-            ymin, ymax = self.ylim
+            if len(self.ylim) == 2:
+                ymin, ymax = self.ylim
+            else:
+                ymax = abs(self.ylim[0])
+                ymin = -1 * ymax
             self.ax.set_ylim(ymin, ymax)
 
         # Spectrogram annotation if there are multiple waveforms plotted
@@ -1186,6 +1231,7 @@ class PrettyPlot():
         self.trim_waveform()
         self.process_waveforms()
         self.plot_waveforms()
+        self.plot_taup_arrivals()
         if self.add_trace:
             self.plot_additional_traces()
         if self.spectrogram:
@@ -1206,4 +1252,3 @@ if __name__ == "__main__":
     args_dict["sp_dbscale"] = not args_dict.pop("sp_dbscale_off", False)
     pp = PrettyPlot(fids, **args_dict)
     pp.main()
-
