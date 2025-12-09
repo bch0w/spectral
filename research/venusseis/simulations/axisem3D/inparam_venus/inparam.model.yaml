@@ -148,7 +148,7 @@ list_of_3D_models:
         # -------------------------------- #
         # what: NetCDF data file
         # type: filename
-        nc_data_file: venustopo.nc
+        nc_data_file: topo.nc
         # parameters for grid coordinates
         coordinates:
             # what: type of horizontal coordinates
@@ -184,13 +184,15 @@ list_of_3D_models:
         # parameters for undulation range
         undulation_range:
             # what: interface location
-            interface: 6371000.0
+            interface: 6051900.0
             # what: undulation range
-            min_max: [6361000., 6371000.1]
+            # BC: actual range is -2690 to 10146, halving/doubling to allow 
+            # BCL elements to accomodate. See P31 in user guide.
+            min_max: [6046400., 6072400.]
         # parameters for undulation data
         undulation_data:
             # what: NetCDF variable
-            nc_var: elevation
+            nc_var: relative_topo_radius
             # what: factor or unit
             factor: 1.
         # what: store grid data only on the leader processors

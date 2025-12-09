@@ -33,7 +33,7 @@ list_of_station_groups:
             #          [useless] is for compatibility with SPECFEM and AxiSEM
             #       2) (x1, x2, x3) are specified by the next two options
             #       3) empty lines and comment lines (led by #) are allowed
-            station_file: venus_stations.txt
+            station_file: stations.txt
             # what: horizontal coordinates x1 and x2
             # type: string
             # only: LATITUDE_LONGITUDE / DISTANCE_AZIMUTH / XY_CARTESIAN

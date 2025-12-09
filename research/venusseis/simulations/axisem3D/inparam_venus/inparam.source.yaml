@@ -16,7 +16,7 @@ time_axis:
     # what: record length (the end time in seismograms)
     # type: double
     # note: the start time depends on the source-time functions
-    record_length: 1800.
+    record_length: 3600.
 
     # what: user-specified Δt
     # type: string / double
@@ -51,7 +51,7 @@ time_axis:
 list_of_sources:
     #==========================================================================#
     # this key can be arbitrary
-    - venusquake:
+    - 200512051219A:
         # source location
         location:
             # what: horizontal location
@@ -66,11 +66,13 @@ list_of_sources:
             #       4) if geodesy::lat_lon_north_pole_mesh = SOURCE in
             #          inparam.model.yaml and this is the FIRST source in this
             #          list, the key must be "latitude_longitude"
-            latitude_longitude: [0,0]
+            latitude_longitude: [15., -78.]
             # what: vertical location
             # type: double
             # note: the key can be "depth" or "radius" and the unit is meter
-            radius: 6051900  # surface of Venus
+            # radius: 6051900  # surface of Venus
+            # BC Actual event depth is 18 km
+            depth: 10000  # m
             # what: correct for ellipticity when locating the source
             # type: bool
             # note: used only when the key for horizontal location is
@@ -103,8 +105,8 @@ list_of_sources:
             #          order as in the CMTSOLUTION format (globalcmt.org)
             #       3) if horizontal location is given by "distance_azimuth",
             #          the RT-axes are determined w.r.t. the source (mesh axis)
-            # GCMT 070877B M5 ETHIOPIA Strike Slip
-            data: [-3.59e23, -9.17e23, 1.277e24, 2.39e23, 3.37e23, -2.24e23]
+            # M6.8
+            data: [-1.56E26, -0.138E26, 1.69E26, -0.742E26, -0.121E26, -0.294E26]
             # what: unit of data
             # type: double
             # note: use 1e-7 to convert dyn*cm (in CMTSOLUTION) to N*m
