@@ -52,6 +52,11 @@ def parse_args():
     # Waveform Processing
     parser.add_argument("fids", nargs="+", 
                         help="required, file ID(s), wildcards accepted")
+    parser.add_argument("--idx", nargs="?", type=int, default=0,
+                        help="if the file in `fids` read has more than one " 
+                             "trace in it, allows user to choose index of " 
+                             "which trace to plot. May have unintended " 
+                             "consequences if you have multiple `fids`")
     parser.add_argument("-tp", "--taper", nargs="?", type=float, default=0,
                         help="optional taper percentange")
     parser.add_argument("-f1", "--fmin", nargs="?", type=float, default=None,
@@ -574,7 +579,7 @@ class PrettyPlot():
     """
     Command line and scriptable waveform and spectrogram plotter
     """
-    def __init__(self, fids, 
+    def __init__(self, fids, idx=0,
                  # Processing
                  taper=0, fmin=None, fmax=None, zerophase=False, corners=4,
                  resample=False, t0=0, tstart=0, detrend=False, integrate=0,
@@ -607,6 +612,7 @@ class PrettyPlot():
                  ):
         """Input parameters, see argparser for descriptions"""
         self.fids = fids
+        self.idx = idx
         self.taper = taper
         self.fmin = fmin
         self.fmax = fmax
@@ -679,13 +685,18 @@ class PrettyPlot():
         self.st = Stream()
         for fid in self.fids:
             try:
-                self.st += read(fid)
+                st = read(fid)
             except TypeError:
                 if bool(read_sem):
-                    self.st += read_sem(fid)
+                    st = read_sem(fid)
                 else:
                     sys.exit("no function `read_sem()` from PySEP")
             print(fid)
+            if len(st) > 1:
+                print(f"\t> WARNING: more than 1 trace found, taking index "
+                      f"{self.idx}")
+                st = st[self.idx]
+            self.st += st
         print(f"{self.st.__str__(extended=True)}")
 
     def setup_plot(self, dpi=200):
