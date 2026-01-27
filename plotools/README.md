@@ -5,23 +5,41 @@ flexibily visualizing data.
 
 ## Install
 
-To install you can clone this repo and then make a Conda environment with ObsPy
+All of these instructions should be done in a terminal or Windows Powershell.
 
-```bash
-git clone https://github.com/bch0w/spectral.git
-conda create -n spectral
-conda activate spectral
-conda install obspy
-python spectral/plottols/prettyplot.py -h
-```
----
+1. Install the Python package manager `Micromamba`, [instructions for different operating systems can be found here](https://mamba.readthedocs.io/en/latest/installation/micromamba-installation.html) 
+    > Note: You may also download Miniconda, but I suggest Micromamba. If you go with Conda, you will have to replace all the `mamba` commands in these instrucftions with `conda`.
 
-## PrettyPlot
+2. Create a new Conda environment by running the following and answering the prompts:
+    ```bash
+    mamba env create prettyplot obspy
+    ````
+3. Activate your Mamba environment (you will have to do this everytime you open a new terminal)
+    ```bash
+    mamba activate prettyplot
+    ```
+4. Save the plotting script from my GitHub repository wherever you want. You can swap out the name if you want access to other scripts. 
 
-Makes waveforms and (optionally) spectrograms on the same figure. Some options
-for modest processing. Requires only ObsPy and it's dependencies.
+    ```bash
+    curl https://raw.githubusercontent.com/bch0w/spectral/master/plotools/prettyplot.py -o prettyplot.py
+    ```
 
-### Usage
+5. Ensure that the script works by bringing up the help message
+    ```bash
+    python prettyplot.py -h
+    ```
+
+6. If you got to this stage and the help message worked then you can run the script. If you want to be able to run the script anywhere on your computer, you can get the general command with
+
+    ```bash
+    echo $(which python) $(pwd)/prettyplot.py
+    ```
+Whatever is returned, you can copy-paste that in your terminal anywhere and you should be able to plot things.
+
+
+## PrettyPlot Usage
+
+PrettyPlot makes waveforms and (optionally) spectrograms on the same figure. Some options for modest processing. Requires only ObsPy and it's dependencies.
 
 Call from the command line
 
@@ -33,6 +51,8 @@ Use command line arguments to set options:
 ```bash
 python prettyplot.py <path/to/fid> --resample 100 --fmin 1 --fmax 10
 ```
+
+> NOTE: `<path/to/fid>` should point to your seismic data, which can be in any [format that ObsPy recognizes](https://docs.obspy.org/packages/autogen/obspy.core.stream.read.html#obspy.core.stream.read). Your file should only be a single component, otherwise PrettyPlot will only plot the component in the first index.
 
 ### Features
 

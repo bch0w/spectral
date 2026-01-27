@@ -2,6 +2,7 @@
 Plot 1D velocity profiles from Dumoulin et al. 2017, files were sent to me
 by Indujaa G. after she requested them from Caroline.
 """
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 from glob import glob
@@ -76,20 +77,23 @@ ylabel = ["Temp (K)", "?", "rho (kg/m^3)", "Vp (km/s)", "Vs (km/s)"]
 
 # Read in the files used
 values = {}
-fids = sorted(glob("V[14]-*.out"))
+fids = sorted(glob("V[1]-T[ch].out"))
 colors = [f"C{_}" for _ in range(0, len(fids))]
 
 # Only use end member models
-# fids = ["V1-Th.out", "V4-Tc.out"] 
-# colors = ["C3", "C0"]  # R, B
+fids = ["V1-Th.out", "V4-Tc.out"] 
+path_ = "/Users/chow/Work/research/venusseis/simulations/dumoulin2017_1d_models"
+fids = [os.path.join(path_, _) for _ in fids]
+colors = ["C3", "C0"]  # R, B
 
 for fid in fids:
     depth, *variables = np.loadtxt(fid, skiprows=1).T
-    values[fid.split(".")[0]] = variables
+    values[os.path.basename(fid).split(".")[0]] = variables
 
 # Flip the depth axis so that 0 is the surface (not the core)
-depth = depth[::-1]  
-depth -= 100.  # atmosphere layer is 100km, shift so 0 is surface
+depth -= 6051.9  # values are radius so offset by planet radius to get depth
+depth *= -1  # Z down positive
+# depth += 100.  # atmosphere layer is 100km, shift so 0 is surface
 
 # Plot one paramter for all models on a single figure
 idxs = {}
@@ -128,7 +132,7 @@ for i in range(len(variables)):
                            colors=colors[j], alpha=0.44, ls=":", zorder=11, lw=2)
                 print(f"{name} ({title[i]}) {depth[k]:.2f}-{depth[l]:.2f} = {average:.2f}")
 
-    ax.invert_yaxis()
+    plt.axhline(0, c="k", ls="--", lw=0.5)
     plt.ylim([depth.max(), depth.min()])
     plt.ylabel("Depth (km)")
     plt.xlabel(ylabel[i])
@@ -144,13 +148,15 @@ for i in range(len(variables)):
                            ylabel_fontcolor="w")
 
 
+    # ax.invert_yaxis()
     xmin, xmax = ax.get_xlim()
-    # plt.savefig(title[i].replace(" ","_") + ".png")
+    plt.tight_layout()
+    plt.savefig(title[i].replace(" ","_") + ".png")
     plt.show()
     plt.close("all")
 
     # Only plot top 1000km so we can see crust/upper-mantle variation better
-    if True:
+    if False:
         f, ax = plt.subplots(figsize=(5,3), dpi=200)
         cutoff = 84  # idx corresponding to table
 

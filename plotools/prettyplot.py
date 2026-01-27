@@ -248,6 +248,8 @@ def parse_args():
                         help="title of the figure, defaults to ID and fmin/max")
     parser.add_argument("-ta", "--title_append", nargs="?", type=str, 
                         default="", help="append to default title")
+    parser.add_argument("--frameoff", action="store_true",
+                        help="Turn everything off except the waveform")
     parser.add_argument("-s", "--save", type=str, default=None,
                         help="filename to save figure")
     parser.add_argument("-o", "--output", type=str, default=None,
@@ -600,7 +602,7 @@ class PrettyPlot():
                  # Misc.
                  fig_size=None, dpi=None, fig_len=None, fig_asp=None, 
                  legend=True, ncol_legend=1, title=None, title_append="",
-                 save=None, output=None, show=True,
+                 save=None, output=None, show=True, frameoff=False,
                  **kwargs
                  ):
         """Input parameters, see argparser for descriptions"""
@@ -671,6 +673,7 @@ class PrettyPlot():
         self.save = save
         self.output = output
         self.show = show
+        self.frameoff = frameoff
 
         # Populate Stream object
         self.st = Stream()
@@ -1200,9 +1203,15 @@ class PrettyPlot():
         plt.title(title)
         # plt.suptitle(title)
 
+        # Brute force turn off everything
+        if self.frameoff:
+            self.ax.set_axis_off()
+            self.ax.get_legend().remove()
+            self.ax.set_title("")
+
         plt.tight_layout()
 
-    def finalize(self, transparent=False):
+    def finalize(self, transparent=True):
         """
         Final plot adjustments
         """
