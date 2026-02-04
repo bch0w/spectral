@@ -12,7 +12,7 @@ All of these instructions should be done in a terminal or Windows Powershell.
 
 2. Create a new Conda environment by running the following and answering the prompts:
     ```bash
-    mamba create -n prettyplot obspy
+    mamba create -n prettyplot -c conda-forge obspy
     ````
 3. Activate your Mamba environment (you will have to do this everytime you open a new terminal)
     ```bash
