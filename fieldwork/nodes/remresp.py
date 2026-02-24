@@ -1,6 +1,22 @@
 """
-Remove response from Fairfield nodal data. Builds Node inventory with response 
-information from Nominal Response Library
+Remove response from Magseis-Fairfield ZLand 1C and 3C nodal data. 
+Builds Node inventory with response information from Nominal Response Library.
+Returns new MSEED files with the same name containing response removed data.
+
+.. note:: Sign Convention
+
+    Data converted with this script define the vertical axis as +Z up. Metadata
+    should define `dip=-90` to maintain this orientation during response removal
+
+    Fairfield Zland nodes assume a right handed coordinate system with +Z down
+    (down positive) which is the standard in exploration seismology. 
+    This is the opposite sense from earthquake/observational seismology, which 
+    defines +Z up (up positive). ObsPy's read() function assumes the user is an 
+    earthquake seismologist and flips (multiply by -1) the vertical axis so that 
+    the output data are +Z up. To my understanding there is no accepted 
+    convention for node users, and other groups may leave the vertical axis
+    untouched, instead opting to set `dip=90` in the channel metadata to get
+    data into the +Z up orientation.
 
 .. rubric::
         
@@ -54,6 +70,7 @@ def parse_args():
 
     return parser.parse_args()
 
+
 def return_response(pre_amp_gain="18 dB (8)", sample_rate="250", 
                     phase_type="Linear Phase", low_cut="Off"):
     """
@@ -85,7 +102,7 @@ def return_response(pre_amp_gain="18 dB (8)", sample_rate="250",
     return response
 
 
-if __name__ == "__main__":
+def main():
     args = parse_args()
 
     # Few set up tasks
@@ -150,3 +167,6 @@ if __name__ == "__main__":
         print("\twriting file")
         st.write(pathout, format="MSEED")
 
+
+if __name__ == "__main__":
+    main()
