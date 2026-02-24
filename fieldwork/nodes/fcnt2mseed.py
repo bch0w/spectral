@@ -5,16 +5,31 @@ full julian days with modified header values.
 
 Data Format: https://docs.obspy.org/packages/obspy.io.rg16.html
 
-.. note::
+.. note:: Assumptions
 
     This function assumes that nodes were oriented to geographic north, that
     the nodes are Fairfield ZLand nodes, and that each individual .fcnt file
     correspond to an individual instrument (two stations are NOT present in 
     the same file)
 
+.. note:: Sign Convention
+
+    Data converted with this script define the vertical axis as +Z up. Metadata
+    should define `dip=-90` to maintain this orientation during response removal
+
+    Fairfield Zland nodes assume a right handed coordinate system with +Z down
+    (down positive) which is the standard in exploration seismology.
+    This is the opposite sense from earthquake/observational seismology, which
+    defines +Z up (up positive). ObsPy's read() function assumes the user is an
+    earthquake seismologist and flips (multiply by -1) the vertical axis so that
+    the output data are +Z up. To my understanding there is no accepted
+    convention for node users, and other groups may leave the vertical axis
+    untouched, instead opting to set `dip=90` in the channel metadata to get
+    data into the +Z up orientation.
+
 .. rubric::
 
-    python fcnt2ms.py --files *.fcnt --network XX --output <path/to/output_dir>
+    python fcnt2mseed.py --files *.fcnt --network XX --output <path/to/output_dir>
 
 
 Arguments:
@@ -110,8 +125,7 @@ def parse_st_for_jday_and_comp(st, jday, component):
     
     return st_out
 
-
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(description="Convert .fcnt files to mseed")
     parser.add_argument("-f", "--files", type=str, nargs="+", 
                         help="List of .fcnt files to convert")
@@ -222,3 +236,6 @@ if __name__ == "__main__":
                 print(f"\twriting file: {filename}")
                 st_out.write(outfile, format="MSEED")
                 
+
+if __name__ == "__main__":
+    main()

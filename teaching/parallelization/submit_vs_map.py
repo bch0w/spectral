@@ -42,6 +42,7 @@ def submit_example():
         print(future.result())  # EXCEPTION
 
 if __name__ == "__main__":
+    map_example()
     submit_example()
 
 

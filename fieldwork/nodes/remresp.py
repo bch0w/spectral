@@ -5,18 +5,9 @@ Returns new MSEED files with the same name containing response removed data.
 
 .. note:: Sign Convention
 
-    Data converted with this script define the vertical axis as +Z up. Metadata
-    should define `dip=-90` to maintain this orientation during response removal
-
-    Fairfield Zland nodes assume a right handed coordinate system with +Z down
-    (down positive) which is the standard in exploration seismology. 
-    This is the opposite sense from earthquake/observational seismology, which 
-    defines +Z up (up positive). ObsPy's read() function assumes the user is an 
-    earthquake seismologist and flips (multiply by -1) the vertical axis so that 
-    the output data are +Z up. To my understanding there is no accepted 
-    convention for node users, and other groups may leave the vertical axis
-    untouched, instead opting to set `dip=90` in the channel metadata to get
-    data into the +Z up orientation.
+    If data were converted using the `fcnt2mseed.py` script, then metadata 
+    should define `dip=-90` to maintain +Z up orientation that is enforced
+    by the ObsPy read function. 
 
 .. rubric::
         
