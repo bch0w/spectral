@@ -5,9 +5,12 @@ to compare different events etc.
 """
 import os
 import sys
-import matplotlib.pyplot as plt
 import matplotlib as mpl
+import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 import numpy as np
+import pandas as pd
+
 
 from pathlib import Path
 from scipy.interpolate import griddata
@@ -23,6 +26,7 @@ P_PHASE_LIST = ["p", "P", "PP", "pP", "Pn", "Pg"]
 S_PHASE_LIST = ["s", "S", "SS", "sS", "Sn", "Sg"]
 TAUP_MODEL = "iasp91"
 
+# For beachball plotting
 MOMENT_TENSORS = {
     "NK6ISO": [5.395, 5.395, 5.395, 0, 0, 0],
     "EQ6": [3.54, 24, -27.59, 11.22, -4.015, 21.55],
@@ -30,6 +34,15 @@ MOMENT_TENSORS = {
     "NK6": [7.14, 5.17, 4.27, .130, -2.59, .451]
 }
 
+# For titles
+DESCRIPTORS = {
+    "NK6ISO": "Isotropic Explosion @ 1km",
+    "EQ6": "Tectonic Earthquake (So. Korea) @ 5km",
+    "NK1": "Alvizuri & Tape (2018) MT #1 @ 1km",
+    "NK6": "Alvizuri & Tape (2018) MT #6 @ 1km",
+    "NK6_5km": "Alvizuri & Tape (2018) MT #6 @ 5km",
+
+}
 
 def get_p2s(tr, p_window, s_window, choice="before_after_s"):
     """
@@ -120,7 +133,7 @@ def plot_tr(tr, p_idx=None, s_idx=None, p_window=None, s_window=None,
     plt.xlabel("Time [s]")
     plt.ylabel("Velocity [m/s]")
     plt.title(f"{tr.get_id()}; dist={tr.stats.sac["dist"]:.2f}km; "
-                f"baz={tr.stats.sac["baz"]:.2f}deg")
+              f"baz={tr.stats.sac["baz"]:.2f}deg")
 
     if show:
         plt.show()
@@ -178,7 +191,7 @@ class P2SRatio:
         self.lats = dict_in["lats"]
         self.lons = dict_in["lons"]
         self.distances = dict_in["distances"]    
-        self.ids = dict_in["stations"]
+        # self.ids = dict_in["stations"]
     
     def get_data(self, fmin=2, fmax=4, i=0, j=-1):
         """Read or fetch data from files"""
@@ -246,7 +259,7 @@ class P2SRatio:
         self.lons.append(tr.stats.sac["stlo"])
 
 
-def make_scatterplot(paths, fmin=2, fmax=4, components="Z", j=-1):
+def plot_scatterplot(paths, fmin=2, fmax=4, components="Z", j=-1):
     """
     Run through P2S for multiple events and create a scatterplot of distance
     versus P2S amplitude ratio. Similar to Walter et al 2018 F2a but without
@@ -278,105 +291,105 @@ def make_scatterplot(paths, fmin=2, fmax=4, components="Z", j=-1):
     plt.ylabel("P-to-S Amplitude Ratio")
 
 
-def make_map(path, fmin=1, fmax=6, components="ZNE", vmin=None, vmax=None, 
-             beachball=True, threshold=[-1, 0.8], choice="contour", 
-             i=0, j=-1, overwrite=False):
+def plot_heatmap(p2s, fmin=1, fmax=6, threshold=0.8):
     """
     For a single event plot a map of amplitude ratios for each station 
     interpolated to create a continuous figure rather than a scatterplot.
-    
-    .. parameters::
-        path (str): path to waveform data, and tag for getting CMTSOLUTION
-        fmin (float): min filter bound, see Walter et al 2018
-        components (str): which comoponents to use, averages ratios over all
-        vmin (float): colorscale minimum
-        beachball (bool): use `MOMENT_TENSOR` definition to plot beachball 
-        threshold (list): upper limit used for contouring "minimum" 
-            discrimination threshold
-        choice (str): 'contour' plots with contourf, otherwise use 'pcolormesh'
-            see note below
-        i (int): starting index for which files to read, default 0
-        j (int): ending index for files to read, default -1
-        overwrite (bool): overwrite the existing data files
-
-    .. note::
-
-        for `choice` pcolormesh feels more appropriate because we are looking at
-        a gridded array so the data should be represented as such. but 
-        contourf is more visually pleasing so I have decided to go with that.
     """
-    p2s = P2SRatio(path, source=f"CMTSOLUTION_{Path(path).name}", 
-                   components=components, overwrite=overwrite)
-    p2s.get_data(fmin=fmin, fmax=fmax, i=i, j=j)
+    # Custom parameters here
+    cmap = "seismic"
+    mt_color = "gold"
+    coast_color = "k"
+    fid_coastline = "coastline_128_130_40_43.csv"
+    # ^^^
 
-    f, ax = plt.subplots(1, figsize=(15,12))
+    f, ax = plt.subplots(1, figsize=(15, 12))
 
-    # Generate Scatterplot
-    if choice == "scatter":
-        plt.scatter(p2s.lons, p2s.lats, marker="v", c=p2s.p2sratios)
-    # Contour plot, takes longer
+    # Create a regular grid from lon/lat ranges
+    lon_grid = np.linspace(min(p2s.lons), max(p2s.lons), 
+                            2*len(np.unique(p2s.lons)))
+    lat_grid = np.linspace(min(p2s.lats), max(p2s.lats), 
+                            2*len(np.unique(p2s.lats)))
+    x, y = np.meshgrid(lon_grid, lat_grid)
+    
+    # Interpolate p2s ratios onto the grid
+    # Kludge to force all ratios to be positive so that we don't get negative
+    # values. They should be positive but for some reason some are not
+    # z_vals = np.abs(p2s.p2sratios)
+    z = griddata((p2s.lons, p2s.lats), p2s.p2sratios, (x, y), 
+                 method="linear")
+    
+    # Setting hard bounds for colorscale to keep all figures looking similar
+    vmin = 0
+    vmax = vmin + threshold * 2
+    levels = np.linspace(vmin, vmax, int((vmax - vmin) * 10 * 6))
+    ticks = [vmin, threshold, vmax]
+
+    if vmax < z.max():
+        extend = "max"
     else:
-        # Create a regular grid from lon/lat ranges
-        lon_grid = np.linspace(min(p2s.lons), max(p2s.lons), 
-                               2*len(np.unique(p2s.lons)))
-        lat_grid = np.linspace(min(p2s.lats), max(p2s.lats), 
-                               2*len(np.unique(p2s.lats)))
-        x, y = np.meshgrid(lon_grid, lat_grid)
-        
-        # Interpolate p2s ratios onto the grid
-        z = griddata((p2s.lons, p2s.lats), p2s.p2sratios, (x, y), 
-                     method="cubic")
-        
-        # Differentiate colorbars when we are clearly below threshold
-        if z.max() < threshold[1]:
-            cmap = "cividis"
-        else:
-            cmap = "viridis"
+        extend = "neither"
 
-        if choice == "contour":
-            plt.contourf(x, y, z, vmin=vmin, vmax=vmax, levels=24, cmap=cmap)
-        elif choice == "mesh":
-            plt.pcolormesh(x, y, z, vmin=vmin, vmax=vmax, cmap=cmap)
+    cf = plt.contourf(x, y, z, vmin=vmin, vmax=vmax, levels=levels, cmap=cmap,
+                      extend=extend)
+    
+    # Colorbar that respects the vmin vmax values 
+    cb = f.colorbar(cf, ax=ax, pad=0, extend=extend, ticks=ticks)
+    cb.set_label(rf"$\leftarrow$ Earthquake    "
+                    rf"[P/S Ratio]     "
+                    rf"Explosion $\rightarrow$", 
+                    fontsize=15, c="k")
+    cb.ax.get_yaxis().labelpad = -60
+    cb.ax.tick_params(labelsize=14)
 
-        # Colorbar
-        cb = plt.colorbar(pad=0)
-        cb.set_label(f"P-to-S Ratio [{p2s.components}]", fontsize=15, c="w")
-        cb.ax.get_yaxis().labelpad = -60
-        cb.ax.axhline(threshold[1], c="w", lw=2, ls="--")
-
-        # Highlight the areas which fall below threshold
-        plt.contour(x, y, z, vmin=vmin, vmax=vmax, levels=threshold, 
-                   colors="w", linestyles="dashed", alpha=0.5, linewidths=2)
-
-        # Station markers for reference
-        plt.scatter(p2s.lons, p2s.lats, marker="v", alpha=0.5, c="None", 
-                    ec="k", s=10)
+    # Station markers for reference
+    plt.scatter(p2s.lons, p2s.lats, marker="v", alpha=0.25, c="None", 
+                ec="w", s=10, zorder=8)
         
     # Plot source as location or mechanism
-    if beachball:
-        mt = MOMENT_TENSORS[p2s.tag.split("_")[0]]
-        bb = beach(mt, xy=(p2s.srclon, p2s.srclat), width=5e-2, facecolor="r",
-                   edgecolor="k")
-        ax.add_collection(bb)
+    mt = MOMENT_TENSORS[p2s.tag.split("_")[0]]
+    bb = beach(mt, xy=(p2s.srclon, p2s.srclat), width=5e-2, 
+                facecolor=mt_color, edgecolor="k", zorder=11)
+    ax.add_collection(bb)
 
-    plt.title(f"{p2s.tag} P-to-S Amplitude Ratio [{fmin}-{fmax}]Hz", 
-              fontsize=14)
-    plt.xlabel("Lon", fontsize=12)
-    plt.ylabel("Lat", fontsize=12)
+    # Add coastline to the map (NK specific)
+    if os.path.exists(fid_coastline):
+        df = pd.read_csv(fid_coastline)
+        for i in df["polygon_id"].unique():
+            df[df["polygon_id"] == i].plot(x="longitude", y="latitude", 
+                                        ax=ax, legend=False, c=coast_color, 
+                                        lw=1.5, zorder=9
+                                        )
 
+    # Accoutremont
+    plt.xlim([x.min(), x.max()])
+    plt.ylim([y.min(), y.max()])
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    ax.xaxis.set_major_locator(ticker.MultipleLocator(0.25))
+    ax.yaxis.set_major_locator(ticker.MultipleLocator(0.25))
+    ax.tick_params(axis="both", which="major", labelsize=14)
     ax.set_aspect("equal")
+
+    plt.xlabel("Longitude (deg)", fontsize=14)
+    plt.ylabel("Latitude (deg)", fontsize=14)
+    plt.title(f"{DESCRIPTORS[p2s.tag]}; comp={p2s.components}; "
+              f"freq={fmin}-{fmax} Hz; Threshold={threshold}", 
+              fontsize=16)
+
     plt.tight_layout()
     plt.savefig(f"./figures/{p2s.tag}_heatmap.png")
     plt.show()
 
 
-def plot_waveforms():
-    path = sys.argv[1]
+def main(path, components, fmin, fmax, overwrite, i=0, j=-1):
+    """Get data and plot"""
     p2s = P2SRatio(path, source=f"CMTSOLUTION_{Path(path).name}", 
-                   components="ZNE")
-    p2s.get_data_single(p2s.fids[0], fmin=1, fmax=6)
+                components=components, overwrite=overwrite)
+    p2s.get_data(fmin=fmin, fmax=fmax, i=i, j=j)
+    plot_heatmap(p2s, fmin, fmax)
 
 
 if __name__ == "__main__": 
-    make_map(path=sys.argv[1], overwrite=False)
+    main(path=sys.argv[1], components="ZNE", fmin=1, fmax=6, overwrite=False)
 

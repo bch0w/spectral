@@ -17,7 +17,6 @@ Download Link: http://www.soest.hawaii.edu/pwessel/gshhg/gshhg-shp-2.3.7.zip
     - matplotlib
 """
 import os
-import sys
 import pandas as pd
 import geopandas as gpd
 import matplotlib.pyplot as plt
@@ -25,7 +24,7 @@ from shapely.geometry import Polygon
 
 # SHP_DATABASE_DIR = os.environ.get("GSHHG_SHP_DATABASE_PATH")
 SHP_DATABASE_DIR = "/Users/chow/Data/cartography/coastlines/gshhg-shp-2.3.7"
-
+SHP_
 
 class GetCoastline:
     def __init__(
@@ -125,7 +124,8 @@ def main():
         resolution (str): "f", "h", "i", "l" or "c" (full, high, intermediate, 
             low or crude). Defaults to "c".
     """
-    lonlatbox = [128, 130, 40, 43]
+    lonlatbox = [126, 130, 40, 43]
+    layer = "L1" 
     resolution = "f"
     output_epsg = None  # UTM52N = 32562
     output_file = (f"coastline_{lonlatbox[0]}_{lonlatbox[1]}_"
@@ -134,7 +134,7 @@ def main():
 
     lonlatbox = [float(_) for _ in lonlatbox]
     coast = GetCoastline(resolution=resolution, lonlatbox=lonlatbox,
-                         output_epsg=output_epsg)
+                         output_epsg=output_epsg, layer=layer)
     coast.gdf.head()
 
     # if plot:
