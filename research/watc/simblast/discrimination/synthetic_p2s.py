@@ -3,16 +3,15 @@ Calculate and scatter plot P-to-S amplitude ratio for a set of synthetics.
 Timing windows based on TauP. Allows inputting multiple sets of synthetics
 to compare different events etc.
 """
+import argparse
 import os
-import sys
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
 import pandas as pd
 
-
 from pathlib import Path
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from scipy.interpolate import griddata
 from obspy.imaging.beachball import beach
 from obspy.taup import TauPyModel
@@ -20,11 +19,6 @@ from obspy.geodetics import kilometers2degrees
 from pysep import read_sem, logger
 
 logger.setLevel("CRITICAL")
-
-# For TauP arrival windows
-P_PHASE_LIST = ["p", "P", "PP", "pP", "Pn", "Pg"]
-S_PHASE_LIST = ["s", "S", "SS", "sS", "Sn", "Sg"]
-TAUP_MODEL = "iasp91"
 
 # For beachball plotting
 MOMENT_TENSORS = {
@@ -36,11 +30,11 @@ MOMENT_TENSORS = {
 
 # For titles
 DESCRIPTORS = {
-    "NK6ISO": "Isotropic Explosion @ 1km",
+    "NK6ISO": "Isotropic Explosion @ 5km",
     "EQ6": "Tectonic Earthquake (So. Korea) @ 5km",
     "NK1": "Alvizuri & Tape (2018) MT #1 @ 1km",
     "NK6": "Alvizuri & Tape (2018) MT #6 @ 1km",
-    "NK6_5km": "Alvizuri & Tape (2018) MT #6 @ 5km",
+    "NK6_5KM": "Alvizuri & Tape (2018) MT #6 @ 5km",
 
 }
 
@@ -84,14 +78,23 @@ def get_p2s(tr, p_window, s_window, choice="before_after_s"):
     return float(np.abs(tr[p_idx] / tr[s_idx])), p_idx, s_idx
 
 
-def get_taup_arrivals(source_depth_in_km, distance_in_km, model=TAUP_MODEL):
-    """Get arrival time windows from TauP"""
+def get_taup_arrivals(source_depth_in_km, distance_in_km, p_phase_list=None,
+                      s_phase_list=None, model="iasp91"):
+    """
+    Get arrival time windows from TauP for a given `TAUP_MODEL`
+    """
+    # By default query all the crustal directarrivals
+    if not p_phase_list:
+        p_phase_list = ["p", "P", "PP", "pP", "Pn", "Pg"]
+    if not s_phase_list:
+        s_phase_list = ["s", "S", "SS", "sS", "Sn", "Sg"]
+
     dist_deg = kilometers2degrees(distance_in_km)
 
     model = TauPyModel(model=model)
     p_arrivals = model.get_travel_times(source_depth_in_km=source_depth_in_km,
                                         distance_in_degree=dist_deg,
-                                        phase_list=P_PHASE_LIST)
+                                        phase_list=p_phase_list)
     if not p_arrivals:
         return None, None
     
@@ -100,7 +103,7 @@ def get_taup_arrivals(source_depth_in_km, distance_in_km, model=TAUP_MODEL):
 
     s_arrivals = model.get_travel_times(source_depth_in_km=source_depth_in_km,
                                         distance_in_degree=dist_deg,
-                                        phase_list=S_PHASE_LIST)
+                                        phase_list=s_phase_list)
     if not s_arrivals:
         return None, None
     
@@ -111,7 +114,7 @@ def get_taup_arrivals(source_depth_in_km, distance_in_km, model=TAUP_MODEL):
 
 
 def plot_tr(tr, p_idx=None, s_idx=None, p_window=None, s_window=None,
-            save="./", show=False):
+            title_prepend="", save="./", show=False):
     """Make individual waveform plot"""
     f, ax = plt.subplots(1, figsize=(8,6), dpi=100)
     plt.plot(tr.times(), tr.data, c="k", zorder=9, lw=1)
@@ -132,25 +135,30 @@ def plot_tr(tr, p_idx=None, s_idx=None, p_window=None, s_window=None,
     plt.legend()
     plt.xlabel("Time [s]")
     plt.ylabel("Velocity [m/s]")
-    plt.title(f"{tr.get_id()}; dist={tr.stats.sac["dist"]:.2f}km; "
-              f"baz={tr.stats.sac["baz"]:.2f}deg")
+    plt.title(f"{title_prepend}"
+              f"{tr.get_id()}; dist={tr.stats.sac["dist"]:.2f}km; "
+              f"baz={tr.stats.sac["baz"]:.2f}deg"
+              )
 
     if show:
         plt.show()
     if save:
         plt.savefig(os.path.join(save, f"{tr.get_id()}.png"))
-    plt.close("all")
+    plt.close(f)
 
 
 class P2SRatio:
     """Gather P2S ratio in class attributes"""
-    def __init__(self, path, source="CMTSOLUTION", stations="STATIONS",
-                 components="Z", plot_waveforms="./figures", overwrite=False):
+    def __init__(self, path, fmin=1, fmax=6, source="CMTSOLUTION", 
+                 stations="STATIONS", components="ZNE", 
+                 plot_waveforms="./figures", overwrite=False):
         """Setup attributes for"""
         self.path = Path(path)
         self.tag = self.path.name
-        self.path_save = self.path / f"data_{components}.npz"
+        self.path_save = self.path / f"data_{fmin}-{fmax}_{components}.npz"
 
+        self.fmin = fmin
+        self.fmax = fmax
         self.source = source
         self.stations = stations
         self.components = components
@@ -160,11 +168,12 @@ class P2SRatio:
         self.fids = sorted(self.path.glob(f"*HX[{components[0]}].sem?"))
 
         if plot_waveforms:
-            self.plot_waveforms = os.path.join(plot_waveforms, self.tag)
+            self.plot_waveforms = plot_waveforms
             os.makedirs(self.plot_waveforms, exist_ok=True)
         else:
             self.plot_waveforms = None
 
+        # Internal parameter lists
         self.p2sratios = []
         self.lats = []
         self.lons = []
@@ -173,10 +182,8 @@ class P2SRatio:
         self.srclat = None
         self.srclon = None
 
-    def __len__(self):
-        return len(self.p2sratios)
-    
     def write(self):        
+        """Write to .npz file"""
         dict_out = {"p2sratios": np.array(self.p2sratios),
                     "lats": np.array(self.lats),
                     "lons": np.array(self.lons),
@@ -186,40 +193,78 @@ class P2SRatio:
         np.savez(self.path_save, **dict_out)
     
     def read(self):
+        """Read from .npz file"""
         dict_in = np.load(self.path_save)
         self.p2sratios = dict_in["p2sratios"]
         self.lats = dict_in["lats"]
         self.lons = dict_in["lons"]
         self.distances = dict_in["distances"]    
-        # self.ids = dict_in["stations"]
     
-    def get_data(self, fmin=2, fmax=4, i=0, j=-1):
-        """Read or fetch data from files"""
+    def calculate_ratio(self, i=0, j=-1, parallel=True):
+        """
+        Read or fetch P2S amplitude ratios and meta data from the data files
+
+        Args
+            i (int): optional, starting index for fids
+            j (int): optional, ending index for fids
+            parallel (bool): if True, use concurrent futures to speed up process
+        """
         if self.path_save.exists() and (not self.overwrite):
             self.read()
         else:
-            error = 0
-            for fid in self.fids[i:j]:
-                try:
-                    self.get_data_single(fid, fmin, fmax)
-                except Exception as e:
-                    breakpoint()
-                    error += 1
-                    continue
-            if error:
-                print(f"{self.tag}: {error}/{len(self.fids[i:j])} errors")
-                print(e)
+            if not parallel:
+                error = 0
+                for fid in self.fids[i:j]:
+                    try:
+                        tr, p2sratio = self.calculate_ratio_single(fid)
+
+                        self.p2sratios.append(p2sratio)
+                        self.ids.append(tr.stats.station)
+                        self.lats.append(tr.stats.sac["stla"])
+                        self.lons.append(tr.stats.sac["stlo"])
+                    except Exception as e:
+                        breakpoint()
+                        error += 1
+                        continue
+                if error:
+                    print(f"{self.tag}: {error}/{len(self.fids[i:j])} errors")
+                    print(e)
+            # Use concurrent.futures to parallelize processing
+            else:
+                with ProcessPoolExecutor(
+                    max_workers=os.cpu_count()-1) as executor:
+                    futures = [
+                        executor.submit(self.calculate_ratio_single, fid) for 
+                            fid in self.fids[i:j]
+                            ]
+                # Collect results
+                for future in as_completed(futures):
+                    tr, p2sratio = future.result()
+                    self.p2sratios.append(p2sratio)
+                    self.ids.append(tr.stats.station)
+                    self.lats.append(tr.stats.sac["stla"])
+                    self.lons.append(tr.stats.sac["stlo"])
+
             self.write()
 
+        # Last minute, grab source information
         tr = read_sem(self.fids[0], source=self.source, 
                       stations=self.stations)[0]
         self.srclat = tr.stats.sac["evla"]
         self.srclon = tr.stats.sac["evlo"]
 
-    def get_data_single(self, fid, fmin, fmax):
-        """Read files and collect information including P2S"""
+    def calculate_ratio_single(self, fid):
+        """
+        Read files and collect information including P2S for a single station.
+        `Components` control how many waveforms are opened and included per 
+        station
+
+        Args
+            fid (str): file identifier pointing to one of the synthetic 
+                waveforms for use in analysis
+        """
         tr = read_sem(fid, source=self.source, stations=self.stations)[0]
-        tr.filter("bandpass", freqmin=fmin, freqmax=fmax)
+        tr.filter("bandpass", freqmin=self.fmin, freqmax=self.fmax)
 
         p_window, s_window = get_taup_arrivals(tr.stats.sac["evdp"], 
                                                tr.stats.sac["dist"])
@@ -232,8 +277,8 @@ class P2SRatio:
                                          s_window=s_window)  
         if self.plot_waveforms:
             plot_tr(tr, p_idx, s_idx, p_window, s_window, 
+                    title_prepend=f"{self.tag} ",
                     save=self.plot_waveforms)
-
 
         # If more than 1 component we need to get the other 2 arrays
         if len(self.components) > 1:
@@ -242,21 +287,19 @@ class P2SRatio:
                 fid_ = str(fid).replace(f"X{comp}.sem", f"X{comp_}.sem")
                 tr_ = read_sem(fid_, source=self.source, 
                                stations=self.stations)[0]
-                tr_.filter("bandpass", freqmin=fmin, freqmax=fmax)
+                tr_.filter("bandpass", freqmin=self.fmin, freqmax=self.fmax)
 
                 p2sratio_, p_idx_, s_idx_ = get_p2s(tr=tr_, p_window=p_window, 
                                                     s_window=s_window)  
                 p2sratio += p2sratio_
                 if self.plot_waveforms:
                     plot_tr(tr_, p_idx_, s_idx_, p_window, s_window,
+                            title_prepend=f"{self.tag} ",
                             save=self.plot_waveforms)
             
             p2sratio /= len(self.components)  # take average
 
-        self.p2sratios.append(p2sratio)
-        self.ids.append(tr.stats.station)
-        self.lats.append(tr.stats.sac["stla"])
-        self.lons.append(tr.stats.sac["stlo"])
+        return tr, p2sratio
 
 
 def plot_scatterplot(paths, fmin=2, fmax=4, components="Z", j=-1):
@@ -291,18 +334,13 @@ def plot_scatterplot(paths, fmin=2, fmax=4, components="Z", j=-1):
     plt.ylabel("P-to-S Amplitude Ratio")
 
 
-def plot_heatmap(p2s, fmin=1, fmax=6, threshold=0.8):
+def plot_heatmap(p2s, threshold=0.8, save="./figures", cmap="seismic", 
+                 mt_color="gold", coast_color="k", 
+                 fid_coastline="coastline_128_130_40_43.csv"):
     """
     For a single event plot a map of amplitude ratios for each station 
     interpolated to create a continuous figure rather than a scatterplot.
     """
-    # Custom parameters here
-    cmap = "seismic"
-    mt_color = "gold"
-    coast_color = "k"
-    fid_coastline = "coastline_128_130_40_43.csv"
-    # ^^^
-
     f, ax = plt.subplots(1, figsize=(15, 12))
 
     # Create a regular grid from lon/lat ranges
@@ -313,9 +351,6 @@ def plot_heatmap(p2s, fmin=1, fmax=6, threshold=0.8):
     x, y = np.meshgrid(lon_grid, lat_grid)
     
     # Interpolate p2s ratios onto the grid
-    # Kludge to force all ratios to be positive so that we don't get negative
-    # values. They should be positive but for some reason some are not
-    # z_vals = np.abs(p2s.p2sratios)
     z = griddata((p2s.lons, p2s.lats), p2s.p2sratios, (x, y), 
                  method="linear")
     
@@ -336,9 +371,9 @@ def plot_heatmap(p2s, fmin=1, fmax=6, threshold=0.8):
     # Colorbar that respects the vmin vmax values 
     cb = f.colorbar(cf, ax=ax, pad=0, extend=extend, ticks=ticks)
     cb.set_label(rf"$\leftarrow$ Earthquake    "
-                    rf"[P/S Ratio]     "
-                    rf"Explosion $\rightarrow$", 
-                    fontsize=15, c="k")
+                 rf"[P/S Ratio]     "
+                 rf"Explosion $\rightarrow$", 
+                 fontsize=15, c="k")
     cb.ax.get_yaxis().labelpad = -60
     cb.ax.tick_params(labelsize=14)
 
@@ -357,9 +392,9 @@ def plot_heatmap(p2s, fmin=1, fmax=6, threshold=0.8):
         df = pd.read_csv(fid_coastline)
         for i in df["polygon_id"].unique():
             df[df["polygon_id"] == i].plot(x="longitude", y="latitude", 
-                                        ax=ax, legend=False, c=coast_color, 
-                                        lw=1.5, zorder=9
-                                        )
+                                           ax=ax, legend=False, c=coast_color, 
+                                           lw=1.5, zorder=9
+                                           )
 
     # Accoutremont
     plt.xlim([x.min(), x.max()])
@@ -374,22 +409,54 @@ def plot_heatmap(p2s, fmin=1, fmax=6, threshold=0.8):
     plt.xlabel("Longitude (deg)", fontsize=14)
     plt.ylabel("Latitude (deg)", fontsize=14)
     plt.title(f"{DESCRIPTORS[p2s.tag]}; comp={p2s.components}; "
-              f"freq={fmin}-{fmax} Hz; Threshold={threshold}", 
+              f"freq={p2s.fmin}-{p2s.fmax} Hz; Threshold={threshold}", 
               fontsize=16)
 
     plt.tight_layout()
-    plt.savefig(f"./figures/{p2s.tag}_heatmap.png")
+    if save:
+        plt.savefig(save)
     plt.show()
 
 
-def main(path, components, fmin, fmax, overwrite, i=0, j=-1):
-    """Get data and plot"""
-    p2s = P2SRatio(path, source=f"CMTSOLUTION_{Path(path).name}", 
-                components=components, overwrite=overwrite)
-    p2s.get_data(fmin=fmin, fmax=fmax, i=i, j=j)
-    plot_heatmap(p2s, fmin, fmax)
+def parse_args():
+    parser = argparse.ArgumentParser(description="Synthetic P/S Heatmaps")
+    parser.add_argument("-n", "--name", type=str, nargs="?",
+                        choices=["EQ6", "EQ6_1KM", "NK1", "NK6", "NK6_5KM",
+                                 "NK6ISO"],
+                        required=True, help="source name")
+    parser.add_argument("-m", "--model", type=str, nargs="?", required=True,
+                        choices=["3D", "3D_TOPO_STOCH"],
+                        help="model options")
+    parser.add_argument("-c", "--components", default="ZNE", type=str, 
+                        nargs="?", help="components to include")
+    parser.add_argument("-f1", "--fmin", type=float, default=1, nargs="?",
+                        help="minimum filter frequency")
+    parser.add_argument("-f2", "--fmax", type=float, default=6, nargs="?",
+                        help="maximum filter frequency")
+    parser.add_argument("-o", "--overwrite", default=False, action="store_true",
+                        help="overwrite existing data file")
+    parser.add_argument("-i", default=0, type=int, nargs="?", 
+                        help="starting index for processing")
+    parser.add_argument("-j", default=-1, type=int, nargs="?", 
+                        help="ending index for processing")
+    
+    return parser.parse_args()
+
+
+def main():
+    args = parse_args()
+
+    p2s = P2SRatio(path=f"MODELS/{args.model}/{args.name}", 
+                   fmin=args.fmin, fmax=args.fmax,
+                   source=f"CMTSOLUTIONS/CMTSOLUTION_{args.name}",
+                   plot_waveforms=f"FIGURES/{args.model}/{args.name}",
+                   components=args.components, 
+                   overwrite=args.overwrite,
+                   )
+    p2s.calculate_ratio(i=args.i, j=args.j, parallel=True)
+
+    plot_heatmap(p2s, save=f"FIGURES/{args.model}_{args.name}.png")
 
 
 if __name__ == "__main__": 
-    main(path=sys.argv[1], components="ZNE", fmin=1, fmax=6, overwrite=False)
-
+    main()
