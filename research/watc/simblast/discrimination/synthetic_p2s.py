@@ -198,7 +198,8 @@ class P2SRatio:
         self.p2sratios = dict_in["p2sratios"]
         self.lats = dict_in["lats"]
         self.lons = dict_in["lons"]
-        self.distances = dict_in["distances"]    
+        self.distances = dict_in["distances"]   
+        self.ids = dict_in["ids"] 
     
     def calculate_ratio(self, i=0, j=-1, parallel=True):
         """
@@ -380,6 +381,9 @@ def plot_heatmap(p2s, threshold=0.8, save="./figures", cmap="seismic",
     # Station markers for reference
     plt.scatter(p2s.lons, p2s.lats, marker="v", alpha=0.25, c="None", 
                 ec="w", s=10, zorder=8)
+
+    for lon_, lat_, id_ in zip(p2s.lons, p2s.lats, p2s.ids):
+        plt.text(lon_, lat_, id_, fontsize=4, color="w")
         
     # Plot source as location or mechanism
     mt = MOMENT_TENSORS[p2s.tag.split("_")[0]]
@@ -420,13 +424,12 @@ def plot_heatmap(p2s, threshold=0.8, save="./figures", cmap="seismic",
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Synthetic P/S Heatmaps")
-    parser.add_argument("-n", "--name", type=str, nargs="?",
+    parser.add_argument("-n", "--name", type=str, nargs="?", default="NK6",
                         choices=["EQ6", "EQ6_1KM", "NK1", "NK6", "NK6_5KM",
-                                 "NK6ISO"],
-                        required=True, help="source name")
-    parser.add_argument("-m", "--model", type=str, nargs="?", required=True,
-                        choices=["3D", "3D_TOPO_STOCH"],
-                        help="model options")
+                                 "NK6ISO"], help="source name")
+    parser.add_argument("-m", "--model", type=str, nargs="?",
+                        choices=["3D", "3D_TOPO_STOCH"], 
+                        default="3D_TOPO_STOCH", help="model options")
     parser.add_argument("-c", "--components", default="ZNE", type=str, 
                         nargs="?", help="components to include")
     parser.add_argument("-f1", "--fmin", type=float, default=1, nargs="?",
