@@ -19,6 +19,7 @@ from obspy.taup import TauPyModel
 TAUP_MODEL = "iasp91"
 SYNGINE = "iasp91_2s"
 LOWPASS_S = 2
+P_PHASE_LIST = ["p", "P", "PP", "pP", "Pn", "Pg"]
 S_PHASE_LIST = ["s", "S", "SS", "sS", "Sn", "Sg"]
 
 
@@ -29,7 +30,7 @@ def get_taup_arrivals(source_depth_in_km, distance_in_km, p_phase_list=None,
     """
     # By default query all the crustal directarrivals
     if not p_phase_list:
-        p_phase_list = ["p", "P", "PP", "pP", "Pn", "Pg"]
+        p_phase_list = P_PHASE_LIST
     if not s_phase_list:
         s_phase_list = S_PHASE_LIST
 
@@ -88,32 +89,40 @@ def receivers_from_stations_file(fid="STATIONS", select=None):
     return receivers
 
 
-def plot_waveform(st, start, end, fid, title=""):
+def plot_waveform(st, starts, ends, fid, title=""):
     """Simple plot waveform with start and end lines for window"""
     f, ax = plt.subplots(1, dpi=200)
     for i, tr in enumerate(st):
         plt.plot(tr.times(), tr.data / tr.data.max() + i, 
-                 label=tr.stats.component, lw=1, zorder=6)
-    for val in [start, end]:
-        if val == start:
-            label = ", ".join(S_PHASE_LIST)
-        else:
-            label = None
-        plt.axvline(val, c="r", lw=1, alpha=0.5, zorder=5, 
-                    label=label, ls="--")
+                 label=f"{tr.stats.component} ({max(tr.data):.2f})", 
+                 lw=1, zorder=6)
+        
+    for i, (start, end, list_) in enumerate(
+                        zip(starts, ends, [P_PHASE_LIST, S_PHASE_LIST])):
+        for j, val in enumerate([start, end]):
+            if j:
+                label = ", ".join(list_)
+            else:
+                label = None
+            plt.axvline(val, c=f"C{i}", lw=1, alpha=0.5, zorder=5, 
+                        label=label, ls="--")
     plt.xlim([0, end * 2])
     plt.xlabel("Time [s]")
     plt.ylabel("Normalized Amplitude")
     plt.title(title)
-    plt.legend()
+    plt.legend(loc="upper right")
+    plt.tight_layout()
     plt.savefig(fid)
     plt.close(f)
 
     
-def get_max_amplitude(db, src, rcv, model=None, plot=False):
+def get_measurement(db, src, rcv, lune_idx, plot=False, choice="s_max"):
     """
     Get the maximum amplitude of an instaseis synthetic for a given window of 
     time calculated using TauP using the same model
+
+    choice (str): `s_max`= S amplitude, `p_max`=P amplitude, 
+        `ps_ratio`=P/S ratio
     """
     st = db.get_seismograms(source=src, receiver=rcv, components="ZNE")
     st.filter("lowpass", freq=1/LOWPASS_S, zerophase=True)
@@ -124,42 +133,58 @@ def get_max_amplitude(db, src, rcv, model=None, plot=False):
     dist_km = dist_m * 1E-3
 
     # Determine S-arrival window from TauPy
-    _, s_window = get_taup_arrivals(
+    p_window, s_window = get_taup_arrivals(
         source_depth_in_km=src.depth_in_m * 1E-3, 
-        distance_in_km=dist_km, p_phase_list=None,
+        distance_in_km=dist_km, p_phase_list=P_PHASE_LIST, 
         s_phase_list=S_PHASE_LIST, 
-        model=model or TAUP_MODEL
+        model=TAUP_MODEL
         )
 
     # window start and end based on samples
-    start_idx, end_idx = [int(_ * st[0].stats.sampling_rate) 
-                                for _ in s_window]          
+    sr = st[0].stats.sampling_rate
+    p_start_idx, p_end_idx = [int(_ * sr) for _ in p_window]          
+    s_start_idx, s_end_idx = [int(_ * sr) for _ in s_window]          
 
     # Incase the window is only 1 timestamp long
-    if start_idx == end_idx:
-        end += 1  
+    if p_start_idx == p_end_idx:
+        p_end_idx += 1  
+    if s_start_idx == s_end_idx:
+        s_end_idx += 1  
 
     # Take the largest amplitude from each, assuming it is the S-wave
     # positive values only
-    max_amp = sum([abs(tr.data[start_idx:end_idx].max()) for tr in st]) / 3
+    p_max = sum([abs(tr.data[p_start_idx:p_end_idx].max()) for tr in st]) / 3
+    s_max = sum([abs(tr.data[s_start_idx:s_end_idx].max()) for tr in st]) / 3
+    ps_ratio = p_max / s_max
 
-    if plot:
-        plot_waveform(st, s_window[0], s_window[1], 
-                      title=f"{db.model}; dist={dist_km:.2f}km; baz={baz:2f}",
+    if choice == "pmax":
+        return_val = p_max
+    elif choice == "smax":
+        return_val = s_max
+    elif choice == "ps_ratio":
+        return_val = ps_ratio
+
+    # Only plot waveforms for specific moment tensors
+    if plot and (lune_idx in [1, 8, 15]):
+        plot_waveform(st, starts=[p_window[0], s_window[0]], 
+                      ends=[p_window[1], s_window[1]],
+                      title=f"LUNE_{lune_idx} {db.model}; "
+                            f"dist={dist_km:.2f}km; baz={baz:2f}",
                       fid=plot)
 
-    return dist_km, baz, max_amp
+    return dist_km, baz, return_val
 
 
-def main():
+def main(rcv_lat):
     """
     Open Syngine database, calculate maximum amplitude for a given station 
     epicentral distance for all available moment tensors. Plot on a scatter 
     plot with indices corresponding to the lune indices from Carl's plot
     """
     instaseis_db = f"syngine://{SYNGINE}"
-    rcv_lat = -23
+    rcv_lat = rcv_lat
     rcv_lon = 0
+    choice = "ps_ratio"
 
     cmtsolutions = Path("CMTSOLUTION_rearrange")
     cmtsolutions = sorted(list(cmtsolutions.glob("CMTSOLUTION_*")))
@@ -174,8 +199,8 @@ def main():
         src = cmtsolution_to_instaseis_source(cmtsolution)
         lune_idx = int(cmtsolution.name.split("_")[-1])
 
-        dist_km, baz, max_amp = get_max_amplitude(
-            db, src, rcv, 
+        dist_km, baz, max_amp = get_measurement(
+            db, src, rcv, lune_idx=lune_idx, choice=choice,
             plot=f"FIGURES/waveforms_lat{rcv_lat}_lon{rcv_lon}_{lune_idx}.png"
             )
 
@@ -184,10 +209,10 @@ def main():
         max_amps.append(max_amp)
         lune_idxs.append(lune_idx)
 
-    # Determine scaling
-    width = 1
+    # Used for scaling positions on figure
     scale = max(max_amps) - min(max_amps)
     pct = 0.01 * scale
+    width = scale / 10
 
     # Plot all with a scatterplot to set up figure
     plt.plot(lune_idxs, max_amps, "ko-", zorder=10)
@@ -200,7 +225,7 @@ def main():
         # NM x 6 (M11, M22, M33, M12, M13, M23
         # Mrr, Mtt, Mpp, Mrt, Mrp, Mtp
         bb = beach(tensor, xy=(lune_idx, max_amp), 
-                   width=(1, 1), facecolor="r", edgecolor="k", 
+                   width=(1, width), facecolor="r", edgecolor="k", 
                    zorder=11, linewidth=1)
         ax.add_collection(bb)
         plt.text(lune_idx, max_amp-pct*10, lune_idx, c="k", zorder=12, 
@@ -226,14 +251,18 @@ def main():
 
     plt.ylim([min(max_amps) - 15 * pct, max(max_amps) + 20 * pct])  # add some buffer for text
     plt.xlabel("Lune-Corresponding Index")
-    plt.ylabel("Max S-wave Amplitude [ZNE]")
+    if choice == "p_max":
+        plt.ylabel("Max S-wave Amplitude [ZNE]")
+    elif choice == "s_max":
+        plt.ylabel("Max S-wave Amplitude [ZNE]")
+    elif choice == "ps_ratio":
+        plt.ylabel("P/S Amplitude Ratio [ZNE]")
     plt.title(f"Instaseis model={TAUP_MODEL}; "
-              f"distance={dist_km:.2f}km; baz={baz%360:.2f}")
-
-    plt.savefig(f"FIGURES/s_emergence_lat{rcv_lat}_lon{rcv_lon}")
-
-    plt.show()
+              f"distance={dist_km:.2f}km; baz={baz%360:.2f}; {choice}")
+    plt.tight_layout()
+    plt.savefig(f"FIGURES/s_emergence_lat{rcv_lat}_lon{rcv_lon}.png")
+    plt.close(f)
 
 
 if __name__ == "__main__":
-    main()           
+    main(1)           

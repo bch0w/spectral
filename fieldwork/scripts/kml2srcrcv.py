@@ -11,8 +11,15 @@ Google Earth or input lat/lon coordinates directly.
 
 .. rubric::
 
-    python kml2srcrcv.py --file mar24_test.kml --line 1 --job_name mar24_test \
-        --output rps
+    python kml2srcrcv.py --file mar24_test.kml --job_name mar24_test 
+
+.. note::
+    
+    Option `--preserve_unique_id` will create new line numbers and reset station
+    count for station codes that differ in the first two values. For example,
+    if you have stations NA01 and SA01, they will be assigned station codes
+    101 and 201.
+
 """
 import os
 import argparse
@@ -112,47 +119,9 @@ def read_kml_file(fid):
     return stations
 
 
-def write_src_rcv_txt(stations, job=None, rcv_fid_out="rcv.txt", 
-                      src_fid_out="src.txt", line=1, path_out="./"):
-    """
-    Takes a Station file and writes out in format expected by Fairfield 
-    HarvestManager software
-
-    :type stations: dict of tuples
-    :param stations: output of `read_kml_file`
-    :type rcv_fid_out: str
-    :param rcv_fid_out: name of the output receiver file, should be rcv.txt
-    :type src_fid_out: str
-    :param src_fid_out: name of output source file, should be src.txt
-    :type line: int
-    :param line: line number used for marking line and station
-    """
-    if job is not None:
-        rcv_path_out = os.path.join(path_out, f"{job}_rcv.txt")
-        src_path_out = os.path.join(path_out, f"{job}_src.txt")
-
-    with open(rcv_path_out, "w") as f:
-        f.write("Line Station UTMEast UTMNorth ElevMeters\n")  # header
-        for i, (sta, coords) in enumerate(stations.items()):
-            lat, lon = coords
-            x_utm, y_utm, utm_zone = latlon2utm(lat, lon)
-            print(f"{sta}: ({lat:.2f}, {lon:.2f}) -> "
-                  f"({x_utm:.2f}, {y_utm:.2f}) UTM={utm_zone}")
-            f.write(
-                f"R{line} {line}{i:0>2} {x_utm:.2f} {y_utm:.2f} 0  # {sta}\n"
-                )
-
-    with open(src_path_out, "w") as f:
-        f.write("Line Station UTMEast UTMNorth ElevMeters\n")  # header
-        sta = list(stations.keys())[0]
-        lat, lon = stations[sta]
-        x_utm, y_utm, utm_zone = latlon2utm(lat, lon)
-        f.write(f"S{line} {line}{i:0>2} {x_utm:.2f} {y_utm:.2f} 0\n")
-
-    print(f"UTM Zone: {utm_zone}")
-
 def write_src_rcv_rps(stations, job=None, rcv_fid_out="rcv.rps", 
-                      src_fid_out="src.rps", line=1, path_out="./"):
+                      src_fid_out="src.rps", preserve_unique_id=False, 
+                      path_out="./"):
     """
     Write a tab-delimited SEG .rps file that can be used to import into
     the Fairfield software. See ZLAND quick start presentation for an example
@@ -168,54 +137,88 @@ def write_src_rcv_rps(stations, job=None, rcv_fid_out="rcv.rps",
     :type line: int
     :param line: line number used for marking line and station
     """
-    line_format = "{prefix}{line:<16}{sta:<29}{x_utm:8.1f} {y_utm:8.1f} 0\n"
+    station_prefix = "R"
+    source_prefix = "S"
+    line_start = 1
+    station_start = 1
 
+    # Expected file format for .rps
+    header = \
+        "Line Station UTMEast UTMNorth ElevMeters  # Name (lat, lon) UTM{utm}\n"
+    line_format = \
+            "{prefix}{line:<16}{sta:<29}{x_utm:8.1f} {y_utm:8.1f} 0{suffix}\n"
+    sta_format = "{line}{number:0>2}"
+
+    # Set paths for saving files
     if job is not None:
         rcv_path_out = os.path.join(path_out, f"{job}_{rcv_fid_out}")
         src_path_out = os.path.join(path_out, f"{job}_{src_fid_out}")
     else:
         rcv_path_out = os.path.join(path_out, rcv_fid_out)
         src_path_out = os.path.join(path_out, src_fid_out)
-    
+
+    # Assign unique line numbers based on the order in the KML file, not
+    # alphabetically. Assuming that the KML order is important
+    unique_ids = []
+    for sta_name in stations.keys():
+        unique_id = sta_name[:2]
+        if unique_id not in unique_ids:
+            unique_ids.append(unique_id)
+
     with open(rcv_path_out, "w") as f:
-        f.write("Line Station UTMEast UTMNorth ElevMeters\n")  # header
-        for i, (sta, coords) in enumerate(stations.items()):
+        line = line_start
+        sta_num = station_start
+        prev_id = unique_ids[0]
+        for i, (sta_name, coords) in enumerate(stations.items()):
             lat, lon = coords
             x_utm, y_utm, utm_zone = latlon2utm(lat, lon)
-            print(f"{line}{i:0>2} {sta} {lat:.5f}, {lon:.5f}")
-            f.write(line_format.format(prefix="R", line=line, 
-                                       sta=f"{line}{i:0>2}", x_utm=x_utm, 
-                                       y_utm=y_utm)
-                                       )
 
-    with open(src_path_out, "w") as f:
-        f.write("Line Station UTMEast UTMNorth ElevMeters\n")  # header
-        sta = list(stations.keys())[0]
-        lat, lon = stations[sta]
-        x_utm, y_utm, utm_zone = latlon2utm(lat, lon)
-        f.write(line_format.format(prefix="S", line=line, sta=f"{line}{i:0>2}", 
-                                   x_utm=x_utm, y_utm=y_utm)
-                                   )
+            # Check if we are into a new set of station codes, if so increment
+            # line number and reset station count
+            if preserve_unique_id:
+                if prev_id != sta_name[:2]:
+                    line += 1
+                    sta_num = station_start
 
-    print(f"UTM Zone: {utm_zone}")
+            # Write header before first station
+            # Write the first station out as the source file 
+            if i == 0:
+                f.write(header.format(utm=utm_zone))
+                with open(src_path_out, "w") as fs:
+                    fs.write(line_format.format(prefix=source_prefix, 
+                                               line=line, 
+                                               sta=f"{line}{sta_num:0>2}", 
+                                               x_utm=x_utm, 
+                                               y_utm=y_utm, 
+                                               suffix="")
+                                               )
+            # Write out line containing station information
+            f.write(line_format.format(
+                prefix=station_prefix, line=line, sta=f"{line}{sta_num:0>2}", 
+                x_utm=x_utm, y_utm=y_utm, 
+                suffix=f"    # {sta_name} ({lat:.4f},{lon:.4f})"))
+        
+            sta_num += 1
+            prev_id = sta_name[:2]
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(description="Convert .kml to FF txt files")
     parser.add_argument("-f", "--file", type=str, nargs="?", 
                         help="List of .kml files to convert")
-    parser.add_argument("-l", "--line", type=int, default=1,
-                        help="Line number to assign to the given stations")
     parser.add_argument("-j", "--job_name", type=str, default=None,
                         help="Job name used to name the output files")
-    parser.add_argument("-o", "--output", type=str, default="rps",
-                        help="Output file format, choose one of 'rps' or 'txt'")
+    parser.add_argument("--preserve_unique_id", action="store_true", 
+                        help="Assign different line numbers to stations with "
+                             "differing first values in station code, e.g., if "
+                             "you have XX01 and XY01, they will be assigned "
+                             "different line numbers")
     args = parser.parse_args()
 
     stations = read_kml_file(args.file)
-    if args.output == "txt":
-        write_src_rcv_txt(stations, job=args.job_name, line=args.line)
-    elif args.output == "rps":
-        write_src_rcv_rps(stations, job=args.job_name, line=args.line)
-    else:
-        raise NotImplementedError(f"Output format {args.output} not recognized")
+    write_src_rcv_rps(stations, job=args.job_name, 
+                      preserve_unique_id=args.preserve_unique_id)
+
+
+if __name__ == "__main__":
+    main()
