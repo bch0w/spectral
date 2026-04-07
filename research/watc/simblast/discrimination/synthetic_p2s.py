@@ -22,21 +22,21 @@ logger.setLevel("CRITICAL")
 
 # For beachball plotting
 MOMENT_TENSORS = {
-    "NK6ISO": [5.395, 5.395, 5.395, 0, 0, 0],
-    "EQ6": [3.54, 24, -27.59, 11.22, -4.015, 21.55],
+    "ISO": [5.395, 5.395, 5.395, 0, 0, 0],
+    "EQ2": [2.96, 2.83, -6.91, -4.60, -2.74, -1.48],
     "NK1": [6.06, 3.18, 4.94, 1.32, 3.87, .375],
     "NK6": [7.14, 5.17, 4.27, .130, -2.59, .451]
 }
 
 # For titles
 DESCRIPTORS = {
-    "NK6ISO": "Isotropic Explosion @ 5km",
-    "EQ6": "Tectonic Earthquake (So. Korea) @ 5km",
-    "NK1": "Alvizuri & Tape (2018) MT #1 @ 1km",
-    "NK6": "Alvizuri & Tape (2018) MT #6 @ 1km",
-    "NK6_5KM": "Alvizuri & Tape (2018) MT #6 @ 5km",
-
+    "ISO": "Isotropic Explosion",
+    "EQ2": "Alvizuri & Tape (2018) Quake #2 (So. Korea)",
+    "NK1": "Alvizuri & Tape (2018) MT #1",
+    "NK6": "Alvizuri & Tape (2018) MT #6",
 }
+
+FID_COAST = "/home/bhchow/work/data/cartography/coastline_128_130_40_43.csv"
 
 def get_p2s(tr, p_window, s_window, choice="before_after_s"):
     """
@@ -166,6 +166,7 @@ class P2SRatio:
 
         # Only use the first component to get IDs, even if we have multi-comp.
         self.fids = sorted(self.path.glob(f"*HX[{components[0]}].sem?"))
+        assert(self.fids), f"no files found for {self.path}"
 
         if plot_waveforms:
             self.plot_waveforms = plot_waveforms
@@ -337,7 +338,7 @@ def plot_scatterplot(paths, fmin=2, fmax=4, components="Z", j=-1):
 
 def plot_heatmap(p2s, threshold=0.8, save="./figures", cmap="seismic", 
                  mt_color="gold", coast_color="k", 
-                 fid_coastline="coastline_128_130_40_43.csv"):
+                 fid_coastline=FID_COAST):
     """
     For a single event plot a map of amplitude ratios for each station 
     interpolated to create a continuous figure rather than a scatterplot.
@@ -379,11 +380,12 @@ def plot_heatmap(p2s, threshold=0.8, save="./figures", cmap="seismic",
     cb.ax.tick_params(labelsize=14)
 
     # Station markers for reference
-    plt.scatter(p2s.lons, p2s.lats, marker="v", alpha=0.25, c="None", 
-                ec="w", s=10, zorder=8)
+    if False:
+        plt.scatter(p2s.lons, p2s.lats, marker="v", alpha=0.25, c="None", 
+                    ec="w", s=10, zorder=8)
 
-    for lon_, lat_, id_ in zip(p2s.lons, p2s.lats, p2s.ids):
-        plt.text(lon_, lat_, id_, fontsize=4, color="w")
+        for lon_, lat_, id_ in zip(p2s.lons, p2s.lats, p2s.ids):
+            plt.text(lon_, lat_, id_, fontsize=4, color="w")
         
     # Plot source as location or mechanism
     mt = MOMENT_TENSORS[p2s.tag.split("_")[0]]
@@ -425,11 +427,11 @@ def plot_heatmap(p2s, threshold=0.8, save="./figures", cmap="seismic",
 def parse_args():
     parser = argparse.ArgumentParser(description="Synthetic P/S Heatmaps")
     parser.add_argument("-n", "--name", type=str, nargs="?", default="NK6",
-                        choices=["EQ6", "EQ6_1KM", "NK1", "NK6", "NK6_5KM",
-                                 "NK6ISO"], help="source name")
+                        choices=["EQ2", "NK6", "NK6b", "ISO"], 
+                                 help="source name")
     parser.add_argument("-m", "--model", type=str, nargs="?",
-                        choices=["3D", "3D_TOPO_STOCH"], 
-                        default="3D_TOPO_STOCH", help="model options")
+                        choices=["ALPHA", "BETA", "CHARLIE", "DELTA", "ECHO"],
+                        default="ECHO", help="model options")
     parser.add_argument("-c", "--components", default="ZNE", type=str, 
                         nargs="?", help="components to include")
     parser.add_argument("-f1", "--fmin", type=float, default=1, nargs="?",
@@ -442,23 +444,24 @@ def parse_args():
                         help="starting index for processing")
     parser.add_argument("-j", default=-1, type=int, nargs="?", 
                         help="ending index for processing")
+    parser.add_argument("-p", "--parallel", action="store_true", 
+                        help="use multiprocessing to evaluate in parallel")
     
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
-
-    p2s = P2SRatio(path=f"MODELS/{args.model}/{args.name}", 
+    p2s = P2SRatio(path=f"{args.model}/{args.name}", 
                    fmin=args.fmin, fmax=args.fmax,
-                   source=f"CMTSOLUTIONS/CMTSOLUTION_{args.name}",
-                   plot_waveforms=f"FIGURES/{args.model}/{args.name}",
+                   source=f"paper_events/CMTSOLUTION_{args.name}",
+                   plot_waveforms=f"figures/{args.model}/{args.name}",
                    components=args.components, 
                    overwrite=args.overwrite,
                    )
-    p2s.calculate_ratio(i=args.i, j=args.j, parallel=True)
+    p2s.calculate_ratio(i=args.i, j=args.j, parallel=args.parallel)
 
-    plot_heatmap(p2s, save=f"FIGURES/{args.model}_{args.name}.png")
+    plot_heatmap(p2s, save=f"figures/{args.model}_{args.name}.png")
 
 
 if __name__ == "__main__": 

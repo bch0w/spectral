@@ -1,0 +1,189 @@
+#-----------------------------------------------------------
+#
+# Simulation input parameters for SIMBLAST26 paper 04-02-26
+#
+#-----------------------------------------------------------
+SIMULATION_TYPE                 = 1 
+NOISE_TOMOGRAPHY                = 0
+SAVE_FORWARD                    = .false.
+INVERSE_FWI_FULL_PROBLEM        = .false.
+UTM_PROJECTION_ZONE             = 52
+SUPPRESS_UTM_PROJECTION         = .false.
+NPROC                           = 8 
+NSTEP                           = 15000 
+DT                              = 0.005
+LTS_MODE                        = .false.
+PARTITIONING_TYPE               = 1
+
+#-----------------------------------------------------------
+#
+# LDDRK time scheme
+#
+#-----------------------------------------------------------
+USE_LDDRK                       = .false.
+INCREASE_CFL_FOR_LDDRK          = .false.
+RATIO_BY_WHICH_TO_INCREASE_IT   = 1.4
+
+#-----------------------------------------------------------
+#
+# Mesh
+#
+#-----------------------------------------------------------
+NGNOD                           = 8
+MODEL                           = tomo
+TOMOGRAPHY_PATH                 = DATA/tomo_files/
+SEP_MODEL_DIRECTORY             = DATA/my_SEP_model/
+LOCAL_PATH                      = OUTPUT_FILES/DATABASES_MPI
+
+# parameters describing the model
+APPROXIMATE_OCEAN_LOAD          = .true.
+TOPOGRAPHY                      = .true.
+ATTENUATION                     = .true.
+ANISOTROPY                      = .false.
+GRAVITY                         = .false.
+# reference frequency in Hz that velocity values in the velocity model are given 
+ATTENUATION_f0_REFERENCE        = 1.d0  
+# attenuation period range over which we try to mimic a constant Q factor
+MIN_ATTENUATION_PERIOD          = 999999998.d0
+MAX_ATTENUATION_PERIOD          = 999999999.d0
+# use this unless you know what you are doing
+COMPUTE_FREQ_BAND_AUTOMATIC     = .true.
+
+# Olsen's constant for Q_mu = constant * V_s attenuation rule
+USE_OLSEN_ATTENUATION           = .false.
+OLSEN_ATTENUATION_RATIO         = 0.05
+
+#-----------------------------------------------------------
+#
+# Absorbing boundary conditions
+#
+#-----------------------------------------------------------
+PML_CONDITIONS                  = .false.
+PML_INSTEAD_OF_FREE_SURFACE     = .false.
+f0_FOR_PML                      = 0.05555
+STACEY_ABSORBING_CONDITIONS     = .true.
+STACEY_INSTEAD_OF_FREE_SURFACE  = .false.
+BOTTOM_FREE_SURFACE             = .false.
+
+#-----------------------------------------------------------
+#
+# undoing attenuation and/or PMLs for sensitivity kernel calculations
+#
+#-----------------------------------------------------------
+UNDO_ATTENUATION_AND_OR_PML     = .false.
+NT_DUMP_ATTENUATION             = 200
+
+#-----------------------------------------------------------
+#
+# Visualization
+#
+#-----------------------------------------------------------
+CREATE_SHAKEMAP                 = .false.
+MOVIE_SURFACE                   = .true.  # !!! Movie?
+MOVIE_TYPE                      = 1  # show top surface
+MOVIE_VOLUME                    = .false.
+SAVE_DISPLACEMENT               = .false.
+MOVIE_VOLUME_STRESS             = .false.
+USE_HIGHRES_FOR_MOVIES          = .false.
+NTSTEP_BETWEEN_FRAMES           = 50
+HDUR_MOVIE                      = 0.5  # Based on apprpoximate magnitude
+
+SAVE_MESH_FILES                 = .true.
+NTSTEP_BETWEEN_OUTPUT_INFO      = 500
+
+#-----------------------------------------------------------
+#
+# Sources
+#
+#-----------------------------------------------------------
+USE_SOURCES_RECEIVERS_Z         = .false.
+USE_FORCE_POINT_SOURCE          = .false.
+USE_RICKER_TIME_FUNCTION        = .false.
+USE_EXTERNAL_SOURCE_FILE        = .false.
+PRINT_SOURCE_TIME_FUNCTION      = .false.
+USE_SOURCE_ENCODING             = .false.
+
+#-----------------------------------------------------------
+#
+# Seismograms
+#
+#-----------------------------------------------------------
+NTSTEP_BETWEEN_OUTPUT_SEISMOS   = 10000   # !!! Set to writing 1 time during
+NTSTEP_BETWEEN_OUTPUT_SAMPLE    = 1  # !!! Set to downsample to 100Hz
+
+SAVE_SEISMOGRAMS_DISPLACEMENT   = .false.
+SAVE_SEISMOGRAMS_VELOCITY       = .true.  # <- Following Walter et al. 2018
+SAVE_SEISMOGRAMS_ACCELERATION   = .false.
+SAVE_SEISMOGRAMS_PRESSURE       = .false.   
+SAVE_SEISMOGRAMS_STRAIN         = .false.
+SAVE_SEISMOGRAMS_IN_ADJOINT_RUN = .true.
+USE_BINARY_FOR_SEISMOGRAMS      = .false.
+SU_FORMAT                       = .false.
+ASDF_FORMAT                     = .false.
+HDF5_FORMAT                     = .false.
+WRITE_SEISMOGRAMS_BY_MAIN       = .false.
+SAVE_ALL_SEISMOS_IN_ONE_FILE    = .false.
+USE_TRICK_FOR_BETTER_PRESSURE   = .false.
+
+#-----------------------------------------------------------
+#
+# Energy calculation
+#
+#-----------------------------------------------------------
+OUTPUT_ENERGY                   = .false.
+NTSTEP_BETWEEN_OUTPUT_ENERGY    = 10
+
+#-----------------------------------------------------------
+#
+# Adjoint kernel outputs
+#
+#-----------------------------------------------------------
+NTSTEP_BETWEEN_READ_ADJSRC      = 0
+READ_ADJSRC_ASDF                = .false.
+ANISOTROPIC_KL                  = .false.
+SAVE_TRANSVERSE_KL              = .false.
+ANISOTROPIC_VELOCITY_KL         = .false.
+APPROXIMATE_HESS_KL             = .false.
+SAVE_MOHO_MESH                  = .false.
+
+#-----------------------------------------------------------
+#
+# Coupling with an injection technique (DSM, AxiSEM, or FK)
+#
+#-----------------------------------------------------------
+COUPLE_WITH_INJECTION_TECHNIQUE = .false.
+INJECTION_TECHNIQUE_TYPE        = 3   # 1 = DSM, 2 = AxiSEM, 3 = FK
+MESH_A_CHUNK_OF_THE_EARTH       = .false.
+TRACTION_PATH                   = DATA/AxiSEM_tractions/3/
+FKMODEL_FILE                    = FKmodel
+RECIPROCITY_AND_KH_INTEGRAL     = .false.   
+
+#-----------------------------------------------------------
+##
+## Prescribed wavefield discontinuity on an interface
+##
+##-----------------------------------------------------------
+IS_WAVEFIELD_DISCONTINUITY      = .false.
+
+#-----------------------------------------------------------
+#
+# Run modes
+#
+#-----------------------------------------------------------
+NUMBER_OF_SIMULTANEOUS_RUNS     = 1
+BROADCAST_SAME_MESH_AND_MODEL   = .true.
+
+#-----------------------------------------------------------
+GPU_MODE                        = .true.
+
+# ADIOS Options for I/Os
+ADIOS_ENABLED                   = .false.
+ADIOS_FOR_DATABASES             = .false.
+ADIOS_FOR_MESH                  = .false.
+ADIOS_FOR_FORWARD_ARRAYS        = .false.
+ADIOS_FOR_KERNELS               = .false.
+ADIOS_FOR_UNDO_ATTENUATION      = .false.
+HDF5_ENABLED                    = .false.
+HDF5_FOR_MOVIES                 = .false.
+HDF5_IO_NODES                   = 0  
+

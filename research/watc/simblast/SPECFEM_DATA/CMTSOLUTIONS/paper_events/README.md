@@ -1,0 +1,4 @@
+- ISO: Isotropic explosion M5.18 at NK6 location
+- NK6: Alvizuri & Tape (2018) 6th NK nuclear test M5.24
+- NK6b: Alvizuri & Tape (2018) Mine Collapse after NK6 M4.50
+- EQ2: Alvizuri & Tape (2018) tectonic earthquake in South Korea M5.5
