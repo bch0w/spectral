@@ -369,10 +369,10 @@ def example_usage():
         coast_resolution="h",  # Use high resolution coastlines
     )
 
-
-if __name__ == "__main__":
-    # Example with UTM coordinates (Zone 11N)
-    # Same location as above, converted to UTM Zone 11N
+def simblast_paper():
+    """Example with UTM coordinates (Zone 11N)
+    Same location as above, converted to UTM Zone 11N
+    """
     region_utm_example = [425_000.000, 565_000.000, 4_490_000.000, 4_680_000.000]
     markers_utm_example = [
         {"lon": 129.0297, "lat": 41.33, "label": "NKNTS", "color": "red"},
@@ -380,7 +380,7 @@ if __name__ == "__main__":
 
     plot_bbox_map(
         region=region_utm_example,
-        output="mapping/pygmt/simblast_utm.png",
+        output="simblast_utm.png",
         topo_resolution="01m",
         projection="M12c",
         contour_interval=250,
@@ -390,3 +390,7 @@ if __name__ == "__main__":
         utm_hemisphere="N",
         coast_resolution="h",  # Use high resolution coastlines
     )
+
+
+if __name__ == "__main__":
+    simblast_paper()
