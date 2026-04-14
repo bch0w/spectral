@@ -106,7 +106,8 @@ def parse_args():
                              "each waveform is visually distinct from the " 
                              "others\n"
                              "'recsec_stack', recsec but add stack",
-                        choices=["default", "stack", "recsec", "recsec_stack"]
+                        choices=["default", "stack", "recsec", "recsec_stack",
+                                 "grid"]
                              )
     parser.add_argument("--wf_norm", action="store_true", 
                         help="normalize traces to their individual max")
@@ -125,6 +126,11 @@ def parse_args():
                              "based on the alphabetical index. First you need "
                              "to plot the normal sorted one and then you can" \
                              "rearrange based on that order")
+    parser.add_argument("--wf_grid", nargs="+", type=int, default=None,
+                        help="(nrow, ncol) If `wf_type` is 'grid', determine " \
+                            "the number of rows and columns of that grid. " \
+                            "For example, '--wf_grid 2 3' will give you 2 rows "
+                            "3 columns. Default is one column")
     
     # Plot Aesthetics for Waveforms
     parser.add_argument("-c", "--colors", nargs="+", type=str, default="k",
@@ -681,6 +687,11 @@ class PrettyPlot():
         self.show = show
         self.frameoff = frameoff
 
+        # Parameter conflicts
+        if self.wf_type == "grid":
+            assert(not self.spectrogram), \
+                f"spectrogram option cannot be used with grid style plots"
+
         # Populate Stream object
         self.st = Stream()
         for fid in self.fids:
@@ -715,16 +726,28 @@ class PrettyPlot():
             self.f, axs = plt.subplots(2, dpi=dpi, figsize=figsize, sharex=True)
             self.f.subplots_adjust(hspace=0)
             self.ax_spectra, self.ax = axs  # waveform on the bottom
+            self.axs = [self.ax]
+        # Set up a gridspec plot+
+        elif self.wf_type == "grid":
+            if self.wf_grid:
+                nrows, ncols = self.wf_grid
+            else:
+                ncols = 1
+                nrows = len(self.st)
+            # Ax is now a list and not an object
+            figsize = (self.fig_len, self.fig_len * self.fig_asp)
+            self.f, self.axs = plt.subplots(nrows=nrows, ncols=ncols, 
+                                            sharex=True, dpi=self.dpi or dpi,
+                                            figsize=figsize)
         else:
             if self.fig_len and self.fig_asp:
                 figsize = (self.fig_len, self.fig_len * self.fig_asp)
             else:
                 figsize = self.fig_size  or (7, 4)  # default
 
-            dpi = self.dpi or dpi
-
             print("\tsetting up waveform plot")
-            self.f, self.ax = plt.subplots(dpi=dpi, figsize=figsize)
+            self.f, self.ax = plt.subplots(dpi=self.dpi or dpi, figsize=figsize)
+            self.axs = [self.ax]
 
     def trim_waveform(self):
         """Trim the waveform data so we don't plot the whole thing"""         
@@ -1250,6 +1273,7 @@ class PrettyPlot():
         self.setup_plot()
         self.trim_waveform()
         self.process_waveforms()
+
         self.plot_waveforms()
         self.plot_taup_arrivals()
         if self.add_trace:
