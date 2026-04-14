@@ -204,6 +204,9 @@ def plot_bbox_map(
     utm_zone: Optional[int] = None,
     utm_hemisphere: str = "N",
     topo_data_source: str = "gebco",
+    coast_resolution: str = "i",
+    river_resolution: Optional[str] = None,
+    border_resolution: Optional[str] = None,
 ) -> pygmt.Figure:
     """Plot a bounding-box map with topography, contours, coastlines, and markers.
 
@@ -242,6 +245,15 @@ def plot_bbox_map(
         Only used if utm_zone is specified.
     topo_data_source
         Data source for topography, e.g. "gebco" (default) or "etopo1g".
+    coast_resolution
+        GMT coastline resolution. Options from highest to lowest detail:
+        "f" (full), "h" (high), "i" (intermediate, default), "l" (low), "c" (crude).
+    river_resolution
+        GMT river resolution. Same resolution levels as coast_resolution.
+        If None, rivers are not displayed.
+    border_resolution
+        GMT political boundary resolution. Same resolution levels as coast_resolution.
+        If None, borders are not displayed.
 
     Returns
     -------
@@ -274,23 +286,48 @@ def plot_bbox_map(
         frame=["a"] + ([f"+t{title}"] if title else []),
     )
 
-    # Contour the topography
+    # Contour the topography (excluding sea level at 0 meters to avoid overlap with coastline)
+    # Generate contour levels, excluding 0
+    contour_levels = []
+    # Negative levels (below sea level)
+    level = -6000
+    while level < -contour_interval/2:
+        contour_levels.append(level)
+        level += contour_interval
+    # Positive levels (above sea level)
+    level = contour_interval
+    while level <= 9000:
+        contour_levels.append(level)
+        level += contour_interval
+    
+    # Select every other contour level for annotation to avoid overcrowding
+    annotate_levels = contour_levels[::2]
+    
     fig.grdcontour(
         grid=topo_grid,
-        interval=contour_interval,
-        pen="0.5p,black,gray",
-        annotation=f"{contour_interval}+f8p",
-        limit=[-6000, 9000],
+        levels=contour_levels,
+        pen="0.5p,black",
+        annotation=annotate_levels,
     )
 
     # Add coastlines over the topo layer.
-    fig.coast(
-        region=region_lonlat,
-        projection=projection,
-        shorelines=["1/0.8p,black"],
-        frame=["a"] + ([f"+t{title}"] if title else []),
-        resolution="i",
-    )
+    coast_args = {
+        "region": region_lonlat,
+        "projection": projection,
+        "shorelines": ["1/0.8p,black"],
+        "frame": ["a"] + ([f"+t{title}"] if title else []),
+        "resolution": coast_resolution,
+    }
+    
+    # Add rivers if specified
+    if river_resolution:
+        coast_args["rivers"] = river_resolution
+
+    # Add political boundaries if specified
+    if border_resolution:
+        coast_args["borders"] = border_resolution
+
+    fig.coast(**coast_args)
 
     # Plot markers and optional labels
     if markers_lonlat:
@@ -329,6 +366,7 @@ def example_usage():
         contour_interval=200,
         markers=markers_lonlat_example,
         title="SimBlast NK",
+        coast_resolution="h",  # Use high resolution coastlines
     )
 
 
@@ -350,4 +388,5 @@ if __name__ == "__main__":
         title=None,
         utm_zone=52,
         utm_hemisphere="N",
+        coast_resolution="h",  # Use high resolution coastlines
     )
