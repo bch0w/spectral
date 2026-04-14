@@ -4,64 +4,6 @@ This script plots topography, contour elevations, coastlines, and allows
 simple latitude/longitude markers with optional labels. Supports both lon/lat
 and UTM coordinate systems.
 
-PyGMT Pen Specification Reference Guide.
-    
-    Overview:
-        Pens control line appearance (thickness, color, style) for coastlines,
-        contours, and other map features. Pen format: "width[unit],color[,style]"
-    
-    Components:
-    -----------
-    1. Width (line thickness):
-        - Format: number + unit
-        - Units: "p" (points, ~1/72 inch), "c" (cm), "i" (inches), "m" (mm)
-        - Examples: "0.5p", "1p", "2p", "0.1c"
-        - Common values:
-          * Thin lines: "0.5p" or "1p"
-          * Medium lines: "1.5p" or "2p"
-          * Thick lines: "3p" or "4p"
-    
-    2. Color (line color):
-        - Color names: "black", "red", "blue", "green", "white", etc.
-        - Hex codes: "#FF0000" (red), "#00FF00" (green), "#0000FF" (blue)
-        - RGB format: "255/0/0" for (R,G,B) values
-        - Common colors: "gray", "lightgray", "darkgray", "yellow", "cyan", "magenta"
-    
-    3. Style (line pattern - OPTIONAL):
-        - Solid (default): omit or use "-"
-        - Dashed: use "-" with dash specification like "2p-" or "3p_5p" (3pt dash, 5pt gap)
-        - Dotted: "1p.." (1pt dots)
-        - Dash-dot: "2p-_1p" 
-        - Note: Many GMT commands don't support style, only width and color
-    
-    PyGMT Pen Examples:
-    -------------------
-    Single parameter examples (most common):
-        "0.5p,black"           → thin black line
-        "1.5p,red"             → medium red line
-        "2p,blue"              → thick blue line
-        "1p,gray"              → thin gray line
-        "0.75p,#FF6600"        → thin orange line (hex)
-        "1.5p,100/150/255"     → medium custom-color line (RGB)
-    
-    With style (less common in PyGMT):
-        "1p,black,-"           → 1pt black dashed line
-        "1.5p,red,."           → 1.5pt red dotted line
-    
-    Typical Use in plot_bbox_map:
-    ----------------------------
-    bbox_pen="1.5p"            → 1.5 point thin line for bounding boxes
-    bbox_pen="2p"              → 2 point medium line
-    pen="0.5p,black"           → 0.5 point black line for contours
-    shorelines=["1/0.8p,black"] → 1/0.8 point black shoreline
-    
-    Tips:
-    -----
-    - Start with "1p" or "1.5p" - adjust up or down for visibility
-    - Use "black" or "gray" for professional maps
-    - Avoid fancy styles; many PyGMT commands ignore them
-    - Test on a small map area to see the effect before final plots
-
 * Vibecoded by GitHub Copilot
 """
 import os
@@ -291,12 +233,135 @@ def find_largest_region(regions: List[List[float]]) -> Tuple[List[float], List[L
     return largest, smaller
 
 
+def get_default_styles() -> Dict[str, object]:
+    """Get default style configuration for all map elements.
+
+    Returns a dictionary containing all styling parameters for topography,
+    coastlines, contours, markers, text, and bounding boxes. These can be
+    overridden by passing a custom styles dict to plot_bbox_map().
+
+    PyGMT Pen Specification Reference Guide.
+    
+    Overview:
+        Pens control line appearance (thickness, color, style) for coastlines,
+        contours, and other map features. Pen format: "width[unit],color[,style]"
+    
+    Components:
+    -----------
+    1. Width (line thickness):
+        - Format: number + unit
+        - Units: "p" (points, ~1/72 inch), "c" (cm), "i" (inches), "m" (mm)
+        - Examples: "0.5p", "1p", "2p", "0.1c"
+        - Common values:
+          * Thin lines: "0.5p" or "1p"
+          * Medium lines: "1.5p" or "2p"
+          * Thick lines: "3p" or "4p"
+    
+    2. Color (line color):
+        - Color names: "black", "red", "blue", "green", "white", etc.
+        - Hex codes: "#FF0000" (red), "#00FF00" (green), "#0000FF" (blue)
+        - RGB format: "255/0/0" for (R,G,B) values
+        - Common colors: "gray", "lightgray", "darkgray", "yellow", "cyan", "magenta"
+    
+    3. Style (line pattern - OPTIONAL):
+        - Solid (default): omit or use "-"
+        - Dashed: use "-" with dash specification like "2p-" or "3p_5p" (3pt dash, 5pt gap)
+        - Dotted: "1p.." (1pt dots)
+        - Dash-dot: "2p-_1p" 
+        - Note: Many GMT commands don't support style, only width and color
+    
+    PyGMT Pen Examples:
+    -------------------
+    Single parameter examples (most common):
+        "0.5p,black"           → thin black line
+        "1.5p,red"             → medium red line
+        "2p,blue"              → thick blue line
+        "1p,gray"              → thin gray line
+        "0.75p,#FF6600"        → thin orange line (hex)
+        "1.5p,100/150/255"     → medium custom-color line (RGB)
+    
+    With style (less common in PyGMT):
+        "1p,black,-"           → 1pt black dashed line
+        "1.5p,red,."           → 1.5pt red dotted line
+    
+    Typical Use in plot_bbox_map:
+    ----------------------------
+    bbox_pen="1.5p"            → 1.5 point thin line for bounding boxes
+    bbox_pen="2p"              → 2 point medium line
+    pen="0.5p,black"           → 0.5 point black line for contours
+    shorelines=["1/0.8p,black"] → 1/0.8 point black shoreline
+    
+    Tips:
+    -----
+    - Start with "1p" or "1.5p" - adjust up or down for visibility
+    - Use "black" or "gray" for professional maps
+    - Avoid fancy styles; many PyGMT commands ignore them
+    - Test on a small map area to see the effect before final plots
+
+    Code	Style	        Format
+    c	    Circle	        c0.5c (0.5 cm diameter)
+    s	    Square	        s0.5c
+    t	    Triangle	    t0.5c
+    d	    Diamond	        d0.5c
+    h	    Hexagon	        h0.5c
+    p	    Pentagon	    p0.5c
+    x	    X/cross	        x0.5c
+    +	    Plus sign	    +0.5c
+    *	    Asterisk	    *0.5c
+    a	    Star (5-point)	a0.5c
+
+    Returns
+    -------
+    dict
+        Dictionary with keys for each map element's styling:
+        - topo: topography image settings
+        - contour: contour line settings
+        - coastline: coastline settings
+        - marker: default marker settings
+        - text: default text label settings
+        - bbox: bounding box settings
+    """
+    return {
+        # Topography (grdimage) settings
+        "topo": {
+            "cmap": "gmt/geo",
+            "shading": True,
+        },
+        # Contour (grdcontour) settings
+        "contour": {
+            "pen": "0.5p,black",
+            "annotate_size": "8p",  # Font size for contour labels
+        },
+        # Coastline (coast) settings
+        "coastline": {
+            "shoreline_width": "0.8p",
+            "shoreline_color": "black",
+        },
+        # Default marker (plot) settings
+        "marker": {
+            "style": "c0.4c",  # Circle, 0.4 cm diameter
+            "color": "red",
+            "pen": "0.5p,black",
+        },
+        # Default text label settings
+        "text": {
+            "font": "8p,Helvetica",  # 8 point Helvetica (color set separately)
+            "color": "black",        # Text label color
+            "offset": "0.15c/0.15c",  # Offset from marker point
+        },
+        # Bounding box settings
+        "bbox": {
+            "color": "red",
+            "pen_width": "1.5p",
+        },
+    }
+
+
 def plot_bbox_map(
     region: List[float] | List[List[float]],
     output: str = "bbox_map.png",
     topo_resolution: str = "01m",
     projection: str = "M12c",
-    cmap: str = "geo",
     contour_interval: float = 500,
     markers: Optional[List[Dict[str, object]]] = None,
     title: Optional[str] = None,
@@ -307,8 +372,7 @@ def plot_bbox_map(
     coast_resolution: str = "i",
     river_resolution: Optional[str] = None,
     border_resolution: Optional[str] = None,
-    bbox_color: str = "red",
-    bbox_pen: str = "1.5p",
+    styles: Optional[Dict[str, object]] = None,
 ) -> pygmt.Figure:
     """Plot a bounding-box map with topography, contours, coastlines, and markers.
 
@@ -332,10 +396,13 @@ def plot_bbox_map(
         Optional list of marker dictionaries, each with keys:
         - lon/lat: longitude/latitude (lon/lat coordinates)
         - easting/northing: UTM easting/northing (if utm_zone is specified)
-        - style: GMT symbol style string (default "c0.4c")
-        - color: fill color
-        - pen: outline pen
+        - style: GMT symbol style string (default from styles["marker"]["style"])
+        - color: fill color (default from styles["marker"]["color"])
+        - pen: outline pen (default from styles["marker"]["pen"])
         - label: optional text label
+        - text_color: text label color (default from styles["text"]["color"], overrides per-marker)
+        - label_offset: text label offset (default from styles["text"]["offset"])
+        - font: text font specification (default from styles["text"]["font"])
     title
         Optional title text.
     show
@@ -359,14 +426,36 @@ def plot_bbox_map(
         If None, borders are not displayed.
     bbox_color
         Color for the outlined bounding boxes (default "red").
+        Note: Overridden by styles["bbox"]["color"] if provided.
     bbox_pen
         Pen specification for bounding boxes (default "1.5p" = 1.5 point line).
+        Note: Overridden by styles["bbox"]["pen_width"] if provided.
+    styles
+        Optional dictionary of style overrides. Keys can include "topo", "contour",
+        "coastline", "marker", "text", "bbox". Unspecified values use defaults from
+        get_default_styles(). Example:
+            styles = {
+                "contour": {"pen": "1p,blue", "annotate_size": "10p"},
+                "marker": {"style": "s0.5c", "color": "green"},
+            }
 
     Returns
     -------
     pygmt.Figure
         The generated figure.
     """
+    # Get default styles and merge with user-provided overrides
+    default_styles = get_default_styles()
+    if styles is None:
+        styles = {}
+    
+    
+    # Deep merge: update defaults with any provided overrides
+    merged_styles = {}
+    for key in default_styles:
+        merged_styles[key] = {**default_styles[key], **styles.get(key, {})}
+    styles = merged_styles
+
     # Handle multiple regions: main region should be the first
     if region and isinstance(region[0], (list, tuple)):
         # Multiple regions provided
@@ -412,7 +501,7 @@ def plot_bbox_map(
         projection=projection,
         region=region_lonlat,
         cmap="gmt/geo",
-        shading=True,
+        shading=styles["topo"]["shading"],
         frame=["a"] + ([f"+t{title}"] if title else []),
     )
 
@@ -436,7 +525,7 @@ def plot_bbox_map(
     fig.grdcontour(
         grid=topo_grid,
         levels=contour_levels,
-        pen="0.5p,black",
+        pen=styles["contour"]["pen"],
         annotation=annotate_levels,
     )
 
@@ -444,7 +533,7 @@ def plot_bbox_map(
     coast_args = {
         "region": region_lonlat,
         "projection": projection,
-        "shorelines": ["1/0.8p,black"],
+        "shorelines": [f"1/{styles['coastline']['shoreline_width']},{styles['coastline']['shoreline_color']}"],
         "frame": ["a"] + ([f"+t{title}"] if title else []),
         "resolution": coast_resolution,
     }
@@ -469,7 +558,7 @@ def plot_bbox_map(
                 projection=projection,
                 x=[minlon, maxlon, maxlon, minlon, minlon],
                 y=[minlat, minlat, maxlat, maxlat, minlat],
-                pen=f"{bbox_pen},{bbox_color}",
+                pen=f"{styles['bbox']['pen_width']},{styles['bbox']['color']}",
             )
 
     # Plot markers and optional labels
@@ -477,16 +566,16 @@ def plot_bbox_map(
         for marker in markers_lonlat:
             lon = float(marker["lon"])
             lat = float(marker["lat"])
-            style = marker.get("style", "c0.4c")
-            fill = marker.get("color", "red")
-            pen = marker.get("pen", "0.5p,black")
+            style = marker.get("style", styles["marker"]["style"])
+            fill = marker.get("color", styles["marker"]["color"])
+            pen = marker.get("pen", styles["marker"]["pen"])
             fig.plot(x=lon, y=lat, style=style, fill=fill, pen=pen)
 
             label = marker.get("label")
             if label:
-                offset = marker.get("label_offset", "0.15c")
-                font = marker.get("font", "8p,white,Helvetica-Bold")
-                fig.text(x=lon, y=lat, text=label, font=font, offset=f"0.15c/0.15c")
+                offset = marker.get("label_offset", styles["text"]["offset"])
+                font = marker.get("font", styles["text"]["font"])
+                fig.text(x=lon, y=lat, text=label, font=font, offset=offset)
 
     os.makedirs(os.path.dirname(output) or ".", exist_ok=True)
     fig.savefig(output)
@@ -494,23 +583,6 @@ def plot_bbox_map(
         fig.show(method="external")
     return fig
     
-def example_usage():
-    """Example usage of the plot_bbox_map function with a single region."""
-    region_lonlat_example = [125.5, 130.5, 34, 42.5]
-    markers_lonlat_example = [
-        {"lon": 129.0297, "lat": 41.33, "label": "NKNTS", "color": "red"},
-    ]
-
-    plot_bbox_map(
-        region=region_lonlat_example,
-        output="mapping/pygmt/simblast.png",
-        topo_resolution="01m",
-        projection="M12c",
-        contour_interval=200,
-        markers=markers_lonlat_example,
-        title="SimBlast NK",
-        coast_resolution="h",  # Use high resolution coastlines
-    )
 
 
 def simblast_paper():
@@ -523,12 +595,24 @@ def simblast_paper():
     regions = [main_region, high_res_region]
 
     markers_lonlat_example = [
-        {"lon": 129.0297, "lat": 41.33, "label": "NKNTS", "color": "red"},
+        {"lon": 129.0297, "lat": 41.33, "label": "NKNTS", "font": "10p,Helvetica,white",
+         "color": "yellow", "pen": "1p,black", "style": "a0.5c"},
     ]
+
+    custom_styles = {
+        "topo": {
+            "cmap": "gmt/geo",
+            "shading": True,
+        },
+        "text": {
+            "font": "10p,Helvetica-Bold",
+            "offset": "0.2c/0.2c",
+        },
+    }
 
     plot_bbox_map(
         region=regions,
-        output="mapping/pygmt/simblast_multi.png",
+        output="mapping/pygmt/simblast.png",
         topo_resolution="01m",
         projection="M12c",
         contour_interval=200,
@@ -537,8 +621,8 @@ def simblast_paper():
         markers=markers_lonlat_example,
         title=None,
         coast_resolution="h",
-        bbox_color="red",
-        bbox_pen="1.5p",
+        styles=custom_styles,  # Pass all styles at once
+
     )
 
 
