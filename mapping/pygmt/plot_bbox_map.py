@@ -4,7 +4,65 @@ This script plots topography, contour elevations, coastlines, and allows
 simple latitude/longitude markers with optional labels. Supports both lon/lat
 and UTM coordinate systems.
 
-Vibecoded by GitHub Copilot
+PyGMT Pen Specification Reference Guide.
+    
+    Overview:
+        Pens control line appearance (thickness, color, style) for coastlines,
+        contours, and other map features. Pen format: "width[unit],color[,style]"
+    
+    Components:
+    -----------
+    1. Width (line thickness):
+        - Format: number + unit
+        - Units: "p" (points, ~1/72 inch), "c" (cm), "i" (inches), "m" (mm)
+        - Examples: "0.5p", "1p", "2p", "0.1c"
+        - Common values:
+          * Thin lines: "0.5p" or "1p"
+          * Medium lines: "1.5p" or "2p"
+          * Thick lines: "3p" or "4p"
+    
+    2. Color (line color):
+        - Color names: "black", "red", "blue", "green", "white", etc.
+        - Hex codes: "#FF0000" (red), "#00FF00" (green), "#0000FF" (blue)
+        - RGB format: "255/0/0" for (R,G,B) values
+        - Common colors: "gray", "lightgray", "darkgray", "yellow", "cyan", "magenta"
+    
+    3. Style (line pattern - OPTIONAL):
+        - Solid (default): omit or use "-"
+        - Dashed: use "-" with dash specification like "2p-" or "3p_5p" (3pt dash, 5pt gap)
+        - Dotted: "1p.." (1pt dots)
+        - Dash-dot: "2p-_1p" 
+        - Note: Many GMT commands don't support style, only width and color
+    
+    PyGMT Pen Examples:
+    -------------------
+    Single parameter examples (most common):
+        "0.5p,black"           → thin black line
+        "1.5p,red"             → medium red line
+        "2p,blue"              → thick blue line
+        "1p,gray"              → thin gray line
+        "0.75p,#FF6600"        → thin orange line (hex)
+        "1.5p,100/150/255"     → medium custom-color line (RGB)
+    
+    With style (less common in PyGMT):
+        "1p,black,-"           → 1pt black dashed line
+        "1.5p,red,."           → 1.5pt red dotted line
+    
+    Typical Use in plot_bbox_map:
+    ----------------------------
+    bbox_pen="1.5p"            → 1.5 point thin line for bounding boxes
+    bbox_pen="2p"              → 2 point medium line
+    pen="0.5p,black"           → 0.5 point black line for contours
+    shorelines=["1/0.8p,black"] → 1/0.8 point black shoreline
+    
+    Tips:
+    -----
+    - Start with "1p" or "1.5p" - adjust up or down for visibility
+    - Use "black" or "gray" for professional maps
+    - Avoid fancy styles; many PyGMT commands ignore them
+    - Test on a small map area to see the effect before final plots
+
+* Vibecoded by GitHub Copilot
 """
 import os
 from typing import List, Dict, Optional, Tuple
@@ -191,8 +249,50 @@ def convert_markers_to_lonlat(
     return converted_markers
 
 
+def get_region_area(region: List[float]) -> float:
+    """Calculate the area of a region bounding box.
+
+    Parameters
+    ----------
+    region
+        [minx, maxx, miny, maxy]
+
+    Returns
+    -------
+    float
+        Area (width * height)
+    """
+    minx, maxx, miny, maxy = region[:4]
+    width = maxx - minx
+    height = maxy - miny
+    return width * height
+
+
+def find_largest_region(regions: List[List[float]]) -> Tuple[List[float], List[List[float]]]:
+    """Find the largest region and return it along with the remaining smaller regions.
+
+    Parameters
+    ----------
+    regions
+        List of region bounding boxes, each [minx, maxx, miny, maxy]
+
+    Returns
+    -------
+    tuple
+        (largest_region, smaller_regions)
+    """
+    if len(regions) == 1:
+        return regions[0], []
+    
+    areas = [get_region_area(r) for r in regions]
+    max_idx = areas.index(max(areas))
+    largest = regions[max_idx]
+    smaller = [regions[i] for i in range(len(regions)) if i != max_idx]
+    return largest, smaller
+
+
 def plot_bbox_map(
-    region: List[float],
+    region: List[float] | List[List[float]],
     output: str = "bbox_map.png",
     topo_resolution: str = "01m",
     projection: str = "M12c",
@@ -207,14 +307,17 @@ def plot_bbox_map(
     coast_resolution: str = "i",
     river_resolution: Optional[str] = None,
     border_resolution: Optional[str] = None,
+    bbox_color: str = "red",
+    bbox_pen: str = "1.5p",
 ) -> pygmt.Figure:
     """Plot a bounding-box map with topography, contours, coastlines, and markers.
 
     Parameters
     ----------
     region
-        [minlon, maxlon, minlat, maxlat] in lon/lat coordinates, or
-        [min_easting, max_easting, min_northing, max_northing] if utm_zone is specified.
+        Either a single region [minlon, maxlon, minlat, maxlat] or a list of regions.
+        If multiple regions are provided, the largest becomes the main map and
+        smaller ones are drawn as outlined boxes on top.
     output
         Path to save the figure.
     topo_resolution
@@ -254,14 +357,41 @@ def plot_bbox_map(
     border_resolution
         GMT political boundary resolution. Same resolution levels as coast_resolution.
         If None, borders are not displayed.
+    bbox_color
+        Color for the outlined bounding boxes (default "red").
+    bbox_pen
+        Pen specification for bounding boxes (default "1.5p" = 1.5 point line).
 
     Returns
     -------
     pygmt.Figure
         The generated figure.
     """
+    # Handle multiple regions: main region should be the first
+    if region and isinstance(region[0], (list, tuple)):
+        # Multiple regions provided
+        main_region = region[0]
+        smaller_regions = region[1:]
+    else:
+        # Single region provided
+        main_region = region
+        smaller_regions = []
+
     # Convert region from UTM to lon/lat if needed
-    region_lonlat = convert_region_to_lonlat(region, utm_zone, utm_hemisphere)
+    if detect_coordinate_system(main_region) == "utm":
+        region_lonlat = convert_region_to_lonlat(main_region, utm_zone, utm_hemisphere)
+    else:
+        region_lonlat = main_region
+
+    # Convert smaller regions from UTM to lon/lat if needed
+    smaller_regions_lonlat = []
+    if smaller_regions:
+        for small_region in smaller_regions:
+            if detect_coordinate_system(small_region) == "utm":
+                small_region_lonlat = convert_region_to_lonlat(small_region, utm_zone, utm_hemisphere)
+                smaller_regions_lonlat.append(small_region_lonlat)
+            else:
+                smaller_regions_lonlat.append(small_region)
 
     # Convert markers from UTM to lon/lat if needed
     markers_lonlat = markers
@@ -329,6 +459,19 @@ def plot_bbox_map(
 
     fig.coast(**coast_args)
 
+    # Draw outlined boxes for smaller regions
+    if smaller_regions_lonlat:
+        for small_region in smaller_regions_lonlat:
+            minlon, maxlon, minlat, maxlat = small_region[:4]
+            # Create rectangle coordinates: west, east, south, north
+            fig.plot(
+                region=region_lonlat,
+                projection=projection,
+                x=[minlon, maxlon, maxlon, minlon, minlon],
+                y=[minlat, minlat, maxlat, maxlat, minlat],
+                pen=f"{bbox_pen},{bbox_color}",
+            )
+
     # Plot markers and optional labels
     if markers_lonlat:
         for marker in markers_lonlat:
@@ -342,7 +485,7 @@ def plot_bbox_map(
             label = marker.get("label")
             if label:
                 offset = marker.get("label_offset", "0.15c")
-                font = marker.get("font", "8p,black,Helvetica-Bold")
+                font = marker.get("font", "8p,white,Helvetica-Bold")
                 fig.text(x=lon, y=lat, text=label, font=font, offset=f"0.15c/0.15c")
 
     os.makedirs(os.path.dirname(output) or ".", exist_ok=True)
@@ -352,7 +495,7 @@ def plot_bbox_map(
     return fig
     
 def example_usage():
-    """Example usage of the plot_bbox_map function."""
+    """Example usage of the plot_bbox_map function with a single region."""
     region_lonlat_example = [125.5, 130.5, 34, 42.5]
     markers_lonlat_example = [
         {"lon": 129.0297, "lat": 41.33, "label": "NKNTS", "color": "red"},
@@ -369,26 +512,33 @@ def example_usage():
         coast_resolution="h",  # Use high resolution coastlines
     )
 
+
 def simblast_paper():
-    """Example with UTM coordinates (Zone 11N)
-    Same location as above, converted to UTM Zone 11N
-    """
-    region_utm_example = [425_000.000, 565_000.000, 4_490_000.000, 4_680_000.000]
-    markers_utm_example = [
+    """Example usage of the plot_bbox_map function with multiple bounding boxes."""
+    # Define main region (largest) and two smaller regions
+    main_region = [125.0, 131.0, 33.5, 43.0]
+    high_res_region = [425_000.000, 565_000.000, 4_490_000.000, 4_680_000.000]
+
+    # Convert all to Lon/Lat if needed
+    regions = [main_region, high_res_region]
+
+    markers_lonlat_example = [
         {"lon": 129.0297, "lat": 41.33, "label": "NKNTS", "color": "red"},
     ]
 
     plot_bbox_map(
-        region=region_utm_example,
-        output="simblast_utm.png",
+        region=regions,
+        output="mapping/pygmt/simblast_multi.png",
         topo_resolution="01m",
         projection="M12c",
-        contour_interval=250,
-        markers=markers_utm_example,
-        title=None,
+        contour_interval=200,
         utm_zone=52,
         utm_hemisphere="N",
-        coast_resolution="h",  # Use high resolution coastlines
+        markers=markers_lonlat_example,
+        title=None,
+        coast_resolution="h",
+        bbox_color="red",
+        bbox_pen="1.5p",
     )
 
 
