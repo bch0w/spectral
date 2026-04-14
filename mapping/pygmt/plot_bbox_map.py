@@ -345,7 +345,7 @@ if __name__ == "__main__":
         output="mapping/pygmt/simblast_utm.png",
         topo_resolution="01m",
         projection="M12c",
-        contour_interval=500,
+        contour_interval=250,
         markers=markers_utm_example,
         title=None,
         utm_zone=52,
