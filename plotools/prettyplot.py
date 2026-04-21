@@ -787,6 +787,18 @@ class PrettyPlot():
         """
         Process the waveforms based on input parameters
         """
+        # Downsample all waveforms to the lowest sampling rate
+        lowest_samp_rate = min([tr.stats.sampling_rate for tr in self.st])
+        for tr in self.st:
+            if tr.stats.sampling_rate > lowest_samp_rate:
+                print(f"\tresampling {tr.get_id()} to {lowest_samp_rate}")
+                tr.resample(lowest_samp_rate)
+
+        # Trim start and endtimes
+        latest_starttime = max([tr.stats.starttime for tr in self.st])
+        earliest_endtime = min([tr.stats.endtime for tr in self.st])
+        self.st.trim(latest_starttime, earliest_endtime)
+
         if self.detrend:
             print(f"\tdetrending with '{self.detrend}'")
             self.st.detrend(type=self.detrend)

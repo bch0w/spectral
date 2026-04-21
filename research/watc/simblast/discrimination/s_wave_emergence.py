@@ -11,6 +11,7 @@ import instaseis
 import matplotlib.pyplot as plt
 
 from pathlib import Path
+from matplotlib.patches import Rectangle
 from obspy.geodetics import kilometers2degrees, gps2dist_azimuth
 from obspy.imaging.beachball import beach
 from obspy.taup import TauPyModel
@@ -19,6 +20,7 @@ from obspy.taup import TauPyModel
 TAUP_MODEL = "iasp91"
 SYNGINE = "iasp91_2s"
 LOWPASS_S = 2
+HIGHPASS_S = 5
 P_PHASE_LIST = ["p", "P", "PP", "pP", "Pn", "Pg"]
 S_PHASE_LIST = ["s", "S", "SS", "sS", "Sn", "Sg"]
 
@@ -88,33 +90,6 @@ def receivers_from_stations_file(fid="STATIONS", select=None):
 
     return receivers
 
-
-def plot_waveform(st, starts, ends, fid, title=""):
-    """Simple plot waveform with start and end lines for window"""
-    f, ax = plt.subplots(1, dpi=200)
-    for i, tr in enumerate(st):
-        plt.plot(tr.times(), tr.data / tr.data.max() + i, 
-                 label=f"{tr.stats.component} ({max(tr.data):.2f})", 
-                 lw=1, zorder=6)
-        
-    for i, (start, end, list_) in enumerate(
-                        zip(starts, ends, [P_PHASE_LIST, S_PHASE_LIST])):
-        for j, val in enumerate([start, end]):
-            if j:
-                label = ", ".join(list_)
-            else:
-                label = None
-            plt.axvline(val, c=f"C{i}", lw=1, alpha=0.5, zorder=5, 
-                        label=label, ls="--")
-    plt.xlim([0, end * 2])
-    plt.xlabel("Time [s]")
-    plt.ylabel("Normalized Amplitude")
-    plt.title(title)
-    plt.legend(loc="upper right")
-    plt.tight_layout()
-    plt.savefig(fid)
-    plt.close(f)
-
     
 def get_measurement(db, src, rcv, lune_idx, plot=False, choice="s_max"):
     """
@@ -124,8 +99,12 @@ def get_measurement(db, src, rcv, lune_idx, plot=False, choice="s_max"):
     choice (str): `s_max`= S amplitude, `p_max`=P amplitude, 
         `ps_ratio`=P/S ratio
     """
-    st = db.get_seismograms(source=src, receiver=rcv, components="ZNE")
-    st.filter("lowpass", freq=1/LOWPASS_S, zerophase=True)
+    st = db.get_seismograms(source=src, receiver=rcv, components="ZNE", 
+                            kind="velocity")
+    for tr in st:
+        tr.data *= 1E-9  # convert from nm/s to m/s
+    st.filter("bandpass", freqmin=1/HIGHPASS_S, freqmax=1/LOWPASS_S, 
+              zerophase=True)
     
     # Get src-rcv distance
     dist_m, az, baz = gps2dist_azimuth(src.latitude, src.longitude,
@@ -153,8 +132,13 @@ def get_measurement(db, src, rcv, lune_idx, plot=False, choice="s_max"):
 
     # Take the largest amplitude from each, assuming it is the S-wave
     # positive values only
-    p_max = sum([abs(tr.data[p_start_idx:p_end_idx].max()) for tr in st]) / 3
-    s_max = sum([abs(tr.data[s_start_idx:s_end_idx].max()) for tr in st]) / 3
+    p_max_vals = [abs(tr.data[p_start_idx:p_end_idx].max()) for tr in st]
+    s_max_vals = [abs(tr.data[s_start_idx:s_end_idx].max()) for tr in st]
+
+    s_max_single = max(s_max_vals)  # for scaling the plot of waveforms
+
+    p_max = sum(p_max_vals) / 3
+    s_max = sum(s_max_vals) / 3
     ps_ratio = p_max / s_max
 
     if choice == "pmax":
@@ -166,34 +150,71 @@ def get_measurement(db, src, rcv, lune_idx, plot=False, choice="s_max"):
 
     # Only plot waveforms for specific moment tensors
     if plot and (lune_idx in [1, 8, 15]):
-        plot_waveform(st, starts=[p_window[0], s_window[0]], 
-                      ends=[p_window[1], s_window[1]],
-                      title=f"LUNE_{lune_idx} {db.model}; "
-                            f"dist={dist_km:.2f}km; baz={baz:2f}",
-                      fid=plot)
+        f, ax = plt.subplots(1, dpi=200)
+
+        for i, tr in enumerate(st):
+            # Scale by max S amplitude for better visualization of 
+            # P and S arrivals
+            _p_max = p_max_vals[i]  
+            _s_max = s_max_vals[i]
+            plt.plot(tr.times(), tr.data / s_max_single + i, 
+                     label=(f"{tr.stats.component}"
+                            f"(P_max={_p_max:.2E}m/s; S_max={_s_max:.2E}m/s)"),
+                     lw=1, zorder=6)
+            
+            # Plot windows for P and S arrival prediction windows
+            ymin, ymax = plt.gca().get_ylim()
+
+        labelled = False
+        for window, label in zip([p_window, s_window], 
+                                 ["P window", "S window"]):
+            if not labelled:
+                label = label
+                labelled = True
+            rc = Rectangle(
+                xy=(window[0],  ymin),  width=window[1]-window[0],
+                height=ymax-ymin, alpha=0.25, 
+                color=f"C{i+3}", zorder=2, label=label
+                )
+            i += 1  # just to get a different color for the S window 
+            plt.gca().add_patch(rc)
+                
+        plt.xlim([0, s_window[1] * 1.25])
+        plt.ylim([-2, 4])
+        plt.xlabel("Time [s]")
+        plt.ylabel("Normalized Amplitude")
+        plt.title(f"LUNE_{lune_idx} {db.model}; "
+                f"dist={dist_km:.2f}km; baz={baz:2f}",)
+        plt.legend(loc="upper right", fontsize=8)
+        plt.tight_layout()
+        plt.savefig(plot)
+        plt.close(f)
 
     return dist_km, baz, return_val
 
 
-def main(rcv_lat):
+def main(dist):
     """
     Open Syngine database, calculate maximum amplitude for a given station 
     epicentral distance for all available moment tensors. Plot on a scatter 
     plot with indices corresponding to the lune indices from Carl's plot
     """
     instaseis_db = f"syngine://{SYNGINE}"
-    rcv_lat = rcv_lat
+    rcv_lat = dist/111.111
     rcv_lon = 0
     choice = "ps_ratio"
+    threshold = 0.8
 
-    cmtsolutions = Path("CMTSOLUTION_rearrange")
+    cmtsolutions = Path("CMTSOLUTION")
     cmtsolutions = sorted(list(cmtsolutions.glob("CMTSOLUTION_*")))
+
+    assert(bool(len(cmtsolutions))), "no source files found" 
 
     db = instaseis.open_db(instaseis_db)
     rcv = instaseis.Receiver(latitude=rcv_lat, longitude=rcv_lon,
                              network="NN", station="S000")
 
-    f, ax = plt.subplots(1)
+    f, ax = plt.subplots(1, dpi=200)
     tensors, max_amps, lune_idxs = [], [], []
     for i, cmtsolution in enumerate(cmtsolutions):
         src = cmtsolution_to_instaseis_source(cmtsolution)
@@ -201,7 +222,7 @@ def main(rcv_lat):
 
         dist_km, baz, max_amp = get_measurement(
             db, src, rcv, lune_idx=lune_idx, choice=choice,
-            plot=f"FIGURES/waveforms_lat{rcv_lat}_lon{rcv_lon}_{lune_idx}.png"
+            plot=f"FIGURES/WAV/wav_{dist:.0f}_{lune_idx:0>2}.png"
             )
 
         # Collect for later scatterplot to connect all MTs
@@ -211,11 +232,13 @@ def main(rcv_lat):
 
     # Used for scaling positions on figure
     scale = max(max_amps) - min(max_amps)
-    pct = 0.01 * scale
+    pct = 0.0075 * scale
     width = scale / 10
 
     # Plot all with a scatterplot to set up figure
     plt.plot(lune_idxs, max_amps, "ko-", zorder=10)
+
+    plt.axhline(threshold, c="k", ls="--", zorder=5, alpha=0.5)
 
     # Plot all beachballs
     for tensor, lune_idx, max_amp in zip(tensors, lune_idxs, max_amps):
@@ -250,19 +273,20 @@ def main(rcv_lat):
                  zorder=9, ha="left")
 
     plt.ylim([min(max_amps) - 15 * pct, max(max_amps) + 20 * pct])  # add some buffer for text
-    plt.xlabel("Lune-Corresponding Index")
+    plt.xlabel("Lune Index")
     if choice == "p_max":
         plt.ylabel("Max S-wave Amplitude [ZNE]")
     elif choice == "s_max":
         plt.ylabel("Max S-wave Amplitude [ZNE]")
     elif choice == "ps_ratio":
         plt.ylabel("P/S Amplitude Ratio [ZNE]")
-    plt.title(f"Instaseis model={TAUP_MODEL}; "
-              f"distance={dist_km:.2f}km; baz={baz%360:.2f}; {choice}")
+    plt.title(f"{TAUP_MODEL.upper()}; dist={dist_km:.2f}km; BAz={baz%360:.2f}")
     plt.tight_layout()
-    plt.savefig(f"FIGURES/s_emergence_lat{rcv_lat}_lon{rcv_lon}.png")
+    plt.savefig(f"FIGURES/smg_{dist:.0f}.png")
     plt.close(f)
 
 
 if __name__ == "__main__":
-    main(1)           
+    for dist in [50, 100, 250, 500, 1000, 1500, 2500, 5000]:
+        main(dist=dist)
+    

@@ -363,6 +363,7 @@ def plot_bbox_map(
     topo_resolution: str = "01m",
     projection: str = "M12c",
     contour_interval: float = 500,
+    map_scale: str = None,
     markers: Optional[List[Dict[str, object]]] = None,
     title: Optional[str] = None,
     show: bool = True,
@@ -392,6 +393,8 @@ def plot_bbox_map(
         Colormap for topography.
     contour_interval
         Elevation contour interval in meters.
+    map_scale
+        Optional map scale string for basemap, e.g. "jBL+w100k+f+o0.5c/0.5c".
     markers
         Optional list of marker dictionaries, each with keys:
         - lon/lat: longitude/latitude (lon/lat coordinates)
@@ -548,6 +551,10 @@ def plot_bbox_map(
 
     fig.coast(**coast_args)
 
+    # Scale Bar
+    if map_scale:
+        fig.basemap(map_scale=map_scale)
+
     # Draw outlined boxes for smaller regions
     if smaller_regions_lonlat:
         for small_region in smaller_regions_lonlat:
@@ -584,47 +591,88 @@ def plot_bbox_map(
     return fig
     
 
-
-def simblast_paper():
+def simblast_regional(main_region):
     """Example usage of the plot_bbox_map function with multiple bounding boxes."""
     # Define main region (largest) and two smaller regions
-    main_region = [125.0, 131.0, 33.5, 43.0]
+    # main_region = [115.0, 140.5, 33.5, 45.5]
     high_res_region = [425_000.000, 565_000.000, 4_490_000.000, 4_680_000.000]
 
     # Convert all to Lon/Lat if needed
     regions = [main_region, high_res_region]
 
-    markers_lonlat_example = [
-        {"lon": 129.0297, "lat": 41.33, "label": "NKNTS", "font": "10p,Helvetica,white",
-         "color": "yellow", "pen": "1p,black", "style": "a0.5c"},
-    ]
 
-    custom_styles = {
-        "topo": {
-            "cmap": "gmt/geo",
-            "shading": True,
-        },
-        "text": {
-            "font": "10p,Helvetica-Bold",
-            "offset": "0.2c/0.2c",
-        },
-    }
+    station_color = "red"
+    city_color = "orange"
+    markers_lonlat_example = [
+        {"label": "NKNTS", "lon": 129.0297, "lat": 41.33, 
+         "font": "10p,Helvetica,white", "color": "yellow", 
+         "pen": "1p,black", "style": "a0.5c"},         
+         # STATIONS
+        {"label": "IC.MDJ", "lon": 129.5934, "lat": 44.6176, 
+          "font": "10p,Helvetica,white", "color": station_color, 
+          "pen": "1p,black", "style": "t0.5c"},
+        {"label": "IU.INCN", "lon": 126.6244, "lat": 37.4777, 
+          "font": "10p,Helvetica,white", "color": station_color, 
+          "pen": "1p,black", "style": "t0.5c"},
+        {"label": "IC.BJT", "lon": 116.1679, "lat": 40.0183, 
+          "font": "10p,Helvetica,white", "color": station_color, 
+          "pen": "1p,black", "style": "t0.5c"},
+        {"label": "G.INU", "lon": 137.029, "lat": 35.35, 
+          "font": "10p,Helvetica,white", "color": station_color, 
+          "pen": "1p,black", "style": "t0.5c"},
+        # CITIES
+        # {"label": "Seoul", "lon": 126.978, "lat": 37.5665, 
+        #   "font": "10p,Helvetica,white", "color": station_color, 
+        #   "pen": "1p,black", "style": "c0.5c"},
+        # {"label": "Tokyo", "lon": 139.6917, "lat": 35.6895, 
+        #   "font": "10p,Helvetica,white", "color": city_color, 
+        #   "pen": "1p,black", "style": "c0.5c"}
+    ]
 
     plot_bbox_map(
         region=regions,
-        output="mapping/pygmt/simblast.png",
+        output="simblast_regional.png",
         topo_resolution="01m",
         projection="M12c",
-        contour_interval=200,
+        contour_interval=10000,
+        map_scale="jBR+w100k+f+o0.5c/0.5c",
         utm_zone=52,
         utm_hemisphere="N",
         markers=markers_lonlat_example,
         title=None,
         coast_resolution="h",
-        styles=custom_styles,  # Pass all styles at once
+        styles={},  # Pass all styles at once
+    )
 
+
+def simblast_high_res():
+    """Example usage of the plot_bbox_map function with multiple bounding boxes."""
+    region = [425_000.000, 565_000.000, 4_490_000.000, 4_680_000.000]
+
+    markers_lonlat_example = [
+        {"label": "NKNTS", "lon": 129.0297, "lat": 41.33, 
+         "font": "10p,Helvetica,red", "color": "yellow", 
+         "pen": "1p,black", "style": "a0.5c"},        
+    ]
+
+    plot_bbox_map(
+        region=region,
+        output="simblast_high_res.png",
+        topo_resolution="01m",
+        projection="M12c",
+        contour_interval=250,
+        map_scale="jBL+w100k+f+o0.5c/0.5c",
+        utm_zone=52,
+        utm_hemisphere="N",
+        markers=markers_lonlat_example,
+        title=None,
+        coast_resolution="h",
+        styles={},  # Pass all styles at once
     )
 
 
 if __name__ == "__main__":
-    simblast_paper()
+    INCN = [126.0, 130., 37.25, 42.5]
+    MDJ = [128.0, 131., 40.5, 45.0]
+    simblast_regional(MDJ)
+    # simblast_high_res()
