@@ -1,13 +1,1 @@
-XXXX 2026  3  7  8 19 22.92   0.0000    0.0000   0.0 5.0 5.0 lune_ipts4_iref5_013
-event name: lune_ipts4_iref5_013
-time shift:      0.0000
-half duration:   0.0000
-latitude:        0.0000
-longitude:       0.0000
-depth:           0.0000
-Mrr:       4.650332e+23
-Mtt:      -4.698870e+22
-Mpp:       6.065929e+21
-Mrt:      -1.010417e+23
-Mrp:       1.959443e+23
-Mtp:      -3.726855e+22
+ALL/CMTSOLUTION_lune_ipts4_iref5_013
