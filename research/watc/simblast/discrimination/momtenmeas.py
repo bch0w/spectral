@@ -334,7 +334,7 @@ class MomTenMeas:
             title=f"{choice}={self.meas:.2f}; "
                   f"d={dist_km:.2f}km baz={baz:.2f}; "
                   f"T=[{tmin}, {tmax}]s\n"
-                  f"{self.tag}; {self.syngine}; ",
+                  f"MT #{self.tag}; {self.syngine}; ",
                   save=f"{self.figure_path}/{self.tag:0>3}_{dist_km}_{baz}.png",
                   show=False
                   )
@@ -368,7 +368,7 @@ def main(dist_km, baz, src_depth_m=1E3, tmin=2, tmax=5):
         # Y label with tick every 
         frame = ["af", "+gwhite", 
                 "ya5f1g5+lP/S Amplitude Ratio [ZNE]",
-                "xa1f1g1+lLune Index",
+                f"xa1f1g1+l< DC{' '*36}ISO{' '*30}CLVD >",
                 ]
         fig = pygmt.Figure()
         fig.basemap(region=region, projection=projection, frame=frame)
@@ -385,17 +385,18 @@ def main(dist_km, baz, src_depth_m=1E3, tmin=2, tmax=5):
                 "mrr": tensor[0], "mtt": tensor[1], "mff": tensor[2],
                 "mrt": tensor[3], "mrf": tensor[4], "mtf": tensor[5], 
                 "exponent": 1}
-            fig.meca(spec=tensor_dict, scale="1.0c", longitude=idx, 
+            fig.meca(spec=tensor_dict, scale="1.25c", longitude=idx, 
                      latitude=amp, depth=0, compression_fill="red", 
                      extension_fill="cornsilk",
                      pen="0.5p,black,solid",)
         
-    fig.savefig(f"{mtm.figure_path}/smg_{int(dist_km)}.png", dpi=500)
+    fig.savefig(f"{mtm.figure_path}/smg_{int(dist_km)}_{int(baz)}.png", dpi=500)
 
 
 if __name__ == "__main__":
-    for dist_km in np.arange(100, 1000, 100):
-        for baz in [0, 45, 90]:
+    for dist_km in [100, 250, 500, 1000]:
+        for baz in [0, 45, 89]:
+            print(f"{dist_km} {baz}")
             main(dist_km, baz)
 
     
