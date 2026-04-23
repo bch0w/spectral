@@ -21,6 +21,7 @@ import os
 import math
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 import numpy as np
 
 from dateutil.rrule import MINUTELY, SECONDLY
@@ -96,19 +97,21 @@ def parse_args():
                              "not affect processing, just final plotting")
     parser.add_argument("--wf_type", nargs="?", type=str, default="default",
                         help="Option for how to plot the waveforms:\n"
-                             "'default': plot all `fids` on top of each other " 
+                             "-'default': plot all `fids` on top of each other " 
                              "with absolute amplitudes.\n"
-                             "'stack': stack all `fids` on top of each other w " 
+                             "-'stack': stack all `fids` on top of each other w " 
                              "some transparency, and then plot the mean value " 
                              "of all traces as a dark line on top of all\n"
-                             "'recsec': plot all waveforms with relative " 
+                             "-'recsec': plot all waveforms with relative " 
                              "amplitudes on a record section style plot so that" 
                              "each waveform is visually distinct from the " 
                              "others\n"
-                             "'recsec_stack', recsec but add stack",
+                             "-'recsec_stack', recsec but add stack\n"
+                             "-'grid': plot subplots for each waveform in " 
+                             "`fids`. cant be used with spectrogram\n"
+                             "-'grid_stack': grid and stack combined",
                         choices=["default", "stack", "recsec", "recsec_stack",
-                                 "grid"]
-                             )
+                                 "grid", "grid_stack"])
     parser.add_argument("--wf_norm", action="store_true", 
                         help="normalize traces to their individual max")
     parser.add_argument("--wf_recsec_spacing", nargs="?", type=float, default=1,
@@ -131,6 +134,10 @@ def parse_args():
                             "the number of rows and columns of that grid. " \
                             "For example, '--wf_grid 2 3' will give you 2 rows "
                             "3 columns. Default is one column")
+    parser.add_argument("--rows", type=int, default=None,
+                        help="Number of rows for subplots grid using gridspec")
+    parser.add_argument("--cols", type=int, default=None,
+                        help="Number of columns for subplots grid using gridspec")
     
     # Plot Aesthetics for Waveforms
     parser.add_argument("-c", "--colors", nargs="+", type=str, default="k",
@@ -593,6 +600,7 @@ class PrettyPlot():
                  # Waveform plotting
                  wf_abs=False, wf_type="default", wf_norm=False, 
                  wf_recsec_spacing=1, wf_spacing_exact=False, wf_order=None,
+                 rows=None, cols=None,
                  # Plotting Aesthetics
                  colors="k", alphas=None, labels=None, linewidth=0.5, 
                  ylabel="amplitude", ylim=None,
@@ -609,16 +617,18 @@ class PrettyPlot():
                  # Additional Time Series
                  add_trace=None, tr_time="a", tr_label="", tr_ylabel="", 
                  tr_color="C0", 
-                 stream_gage=False,
                  # Misc.
-                 fig_size=None, dpi=None, fig_len=None, fig_asp=None, 
+                 fig_size=None, dpi=200, fig_len=None, fig_asp=None, 
                  legend=True, ncol_legend=1, title=None, title_append="",
                  save=None, output=None, show=True, frameoff=False,
                  **kwargs
                  ):
         """Input parameters, see argparser for descriptions"""
+        # Waveforms
         self.fids = fids
         self.idx = idx
+
+        # Preprocessing
         self.taper = taper
         self.fmin = fmin
         self.fmax = fmax
@@ -632,13 +642,17 @@ class PrettyPlot():
         self.differentiate = differentiate
         self.trim_pct = trim_pct
 
+        # Plot structure control
         self.wf_abs = wf_abs
         self.wf_type = wf_type
         self.wf_norm = wf_norm
         self.wf_recsec_spacing = wf_recsec_spacing
         self.wf_spacing_exact = wf_spacing_exact
         self.wf_order = wf_order
+        self.rows = rows
+        self.cols = cols
 
+        # Waveform style parameters
         self.colors = colors
         self.alphas = alphas
         self.labels = labels
@@ -646,6 +660,7 @@ class PrettyPlot():
         self.ylim = ylim
         self.ylabel = ylabel
 
+        # Time axis
         self.time = time
         self.maxticks = maxticks
         self.minticks = minticks
@@ -653,12 +668,15 @@ class PrettyPlot():
         self.tmarks = tmarks
         self.tmarks_c = tmarks_c
 
+        # (optional) TauP arrival times
         self.tp_phases = tp_phases
         self.tp_model = tp_model
         self.tp_dist_km = tp_dist_km
         self.tp_dist_deg = tp_dist_deg
         self.tp_depth = tp_depth
         self.tp_start = tp_start
+
+        # (optional) Spectrograms
         self.spectrogram = spectrogram
         self.sp_cmap = sp_cmap
         self.sp_numcol = sp_numcol
@@ -668,12 +686,14 @@ class PrettyPlot():
         self.sp_vmax = sp_vmax
         self.sp_idx = sp_idx
 
+        # Additional time series on shared-X axis
         self.add_trace = add_trace
         self.tr_time = tr_time
         self.tr_label = tr_label
         self.tr_ylabel = tr_ylabel
         self.tr_color = tr_color
 
+        # Figure output control
         self.fig_size = fig_size
         self.dpi = dpi
         self.fig_len = fig_len
@@ -686,6 +706,13 @@ class PrettyPlot():
         self.output = output
         self.show = show
         self.frameoff = frameoff
+
+        # Internal attributes for plotting functions
+        self._xvals = None
+        self._data = None
+        self._labels = None 
+        self._colors = None
+        self._alphas = None
 
         # Parameter conflicts
         if self.wf_type == "grid":
@@ -710,35 +737,64 @@ class PrettyPlot():
             self.st += st
         print(f"{self.st.__str__(extended=True)}")
 
-    def setup_plot(self, dpi=200):
+    def get_xvals(self, tr, ax):
         """
-        Set up the plot based on input parameters
+        Determine the x-axis values, whether it be absolute time, or converting
+        different units
         """
+        if self.time.startswith("a"):
+            xvals = ((tr.times() / SECONDS_PER_DAY) + 
+                     date2num(tr.stats.starttime.datetime))
+            _set_xaxis_obspy_dates(ax, minticks=self.minticks, 
+                                   maxticks=self.maxticks)
+        else:
+            xvals = tr.times()
+            if self.time == "s":
+                pass
+            elif self.time == "m":
+                xvals /= 60
+            elif self.time == "h":
+                xvals /= 3600
+            xvals -= self.t0
+            xvals += self.tstart
+        return xvals
+
+    def setup_plot(self):
+        """
+        Set up the plot based on input parameters, choose how the figure and
+        axes visually appears
+        """
+        self.f = None
+        self.ax = None
+        self.axs = None
+        self.ax_spectra = None
+
+        # Spectrogram + waveform plot
         if self.spectrogram:
             if self.fig_len and self.fig_asp:
                 figsize = (self.fig_len, self.fig_len * self.fig_asp)
             else:
                 figsize = self.fig_size or (8, 6)  # default
 
-            dpi = self.dpi or dpi
-
             print("\tsetting up waveform and spectrogram plot")
-            self.f, axs = plt.subplots(2, dpi=dpi, figsize=figsize, sharex=True)
+            self.f, axs = plt.subplots(2, dpi=self.dpi, figsize=figsize, 
+                                       sharex=True)
             self.f.subplots_adjust(hspace=0)
             self.ax_spectra, self.ax = axs  # waveform on the bottom
-            self.axs = [self.ax]
-        # Set up a gridspec plot+
+        # Grid style with subplots, no `ax`
         elif self.wf_type == "grid":
-            if self.wf_grid:
-                nrows, ncols = self.wf_grid
-            else:
-                ncols = 1
-                nrows = len(self.st)
-            # Ax is now a list and not an object
-            figsize = (self.fig_len, self.fig_len * self.fig_asp)
-            self.f, self.axs = plt.subplots(nrows=nrows, ncols=ncols, 
-                                            sharex=True, dpi=self.dpi or dpi,
-                                            figsize=figsize)
+            if self.wf_type == "grid":
+                self.rows = self.rows or len(self.st)
+                self.cols = self.cols or 1
+            figsize = self.fig_size or (3.5 * self.cols, 2 * self.rows)
+            self.f = plt.figure(figsize=figsize, dpi=self.dpi)
+            gs = gridspec.GridSpec(self.rows, self.cols, figure=self.f, 
+                                   hspace=0.0, wspace=0.0)
+            num_subplots = min(self.rows * self.cols, len(self.st))
+            for i in range(num_subplots):
+                ax = self.f.add_subplot(gs[i // self.cols, i % self.cols])
+                self.axs.append(ax)
+        # Waveform only plot
         else:
             if self.fig_len and self.fig_asp:
                 figsize = (self.fig_len, self.fig_len * self.fig_asp)
@@ -746,11 +802,15 @@ class PrettyPlot():
                 figsize = self.fig_size  or (7, 4)  # default
 
             print("\tsetting up waveform plot")
-            self.f, self.ax = plt.subplots(dpi=self.dpi or dpi, figsize=figsize)
-            self.axs = [self.ax]
+            self.f, self.ax = plt.subplots(dpi=self.dpi, figsize=figsize)
+            self.axs 
 
     def trim_waveform(self):
-        """Trim the waveform data so we don't plot the whole thing"""         
+        """
+        Trim the waveform data so we don't plot the whole thing. Has some 
+        functionality to add buffer to the trimmed tail ends of the data for
+        FFT style processing which requires stable ends.
+        """         
         if self.resample:
             print(f"\tresampling to {self.resample}")
             self.st.resample(sampling_rate=self.resample)
@@ -785,7 +845,8 @@ class PrettyPlot():
 
     def process_waveforms(self):
         """
-        Process the waveforms based on input parameters
+        Process the waveforms based on input parameters with options for 
+        filtering, detrending, tapering etc.
         """
         # Downsample all waveforms to the lowest sampling rate
         lowest_samp_rate = min([tr.stats.sampling_rate for tr in self.st])
@@ -842,34 +903,15 @@ class PrettyPlot():
         
         self.st.merge()
 
-    def plot_waveforms(self):
+    def get_plot_parameters(self):
         """
-        Plot the waveforms based on input parameters
+        Establish what will be plotted and the styles for each of them. The data
+        itself will control things like stacking or record sections. The final
+        internal attributes created are: xvals, data, labels, colors, alphas
         """
-        if self.time.startswith("a"):
-            # Set xvalues to datetime objects
-            xvals = ((self.st[0].times() / SECONDS_PER_DAY) +
-                            date2num(self.st[0].stats.starttime.datetime))
-            _set_xaxis_obspy_dates(self.ax, minticks=self.minticks, 
-                                   maxticks=self.maxticks)
-        else:
-            xvals = self.st[0].times() 
-
-            # Set time axis
-            if self.time == "s":
-                xvals /= 1  # not necessary but for consistency
-            elif self.time == "m":
-                xvals /= 60
-            elif self.time == "h": 
-                xvals /= 60 ** 2
-            else:
-                print("unknown time axis choice, default to 's'econds")
-                xvals /= 1
-
-            # Offset time axis based on user defined criteria
-            xvals -= self.t0
-            xvals += self.tstart
-        
+        # DATA ASSIMILATION
+        # Determine the order in which to plot the waveforms, either by stream
+        # order (alphabetical) or by user-defined through `wf_order`
         if not self.wf_order:
             data = np.array([tr.data for tr in self.st])
             labels = [tr.get_id() for tr in self.st]
@@ -879,60 +921,36 @@ class PrettyPlot():
             for i in self.wf_order:
                 data.append(self.st[i].data)
                 labels.append(self.st[i].get_id())
-        n = len(data)
-        # Overwrite waveform labels for the legend if User requests
-        if self.labels:
-            labels = self.labels
-        # Determine how many waveforms we will be plotting
-        if self.wf_type.endswith("stack"):
-            n += 1
-        # Set up the type of waveform
-        if self.wf_type == "stack":  # stack or recsec_stack
-            print("waveform option `stack`")
-            print("overriding `alphas` and `colors` for action `stack`")
-            # Adjust these if you want 
-            alphas = [0.5] * n
-            colors = [f"C{i}" for i in range(n)]
-        else:
-            # Allow list of alpha values
-            if not self.alphas:
-                alphas = [1] * n
-            else:
-                alphas = self.alphas
-            # Allow single color, list of colors, or C colors
-            if len(self.colors) > 1:
-                colors = self.colors
-            elif len(self.colors) == 1:
-                if self.colors[0] == "C?":
-                    colors = [f"C{i}" for i in range(n)]
-                # Allow colormaps that we make into discrete colors
-                elif len(self.colors[0]) > 1:
-                    cmap = mpl.colormaps[self.colors[0]]
-                    colors = cmap(np.linspace(0.1, 1, n))
-                else:
-                    colors = [self.colors[0]] * n
 
-        # Allow for absolute amplitudes
-        if self.wf_abs:
-            data = [np.abs(d) for d in data]
-            labels = [f"abs {l}" for l in labels]
-        # Generate the stacked data (by default it takes the mean)
-        if self.wf_type.endswith("stack"):
-            wf_stack_type = "absmean"
-            # Determine how to stack
-            if wf_stack_type == "mean":
-                stacked_data = np.mean(data, axis=0)
-            # Pseudo envelope by meaning all abs values
-            elif wf_stack_type == "absmean":
-                stacked_data = np.abs(np.mean(np.abs(data), axis=0))
-            # Add stacked data to the list of plottable data
-            data = np.vstack((data, stacked_data))
-            labels.append("abs stacked mean")
-        # Normalize the dat arrays
+        # DATA MANIPULATION
+        # Normalize data by its own max so everything falls between [-1, 1]
         if self.wf_norm:
             for i, d in enumerate(data[:]):
                 data[i] = d / d.max()
-        # Value shift the data array to make a record section
+        # Absolute value of each trace if we just want to look at rel. amplitude
+        if self.wf_abs:
+            data = [np.abs(d) for d in data]
+            labels = [f"abs {l}" for l in labels]
+
+        n = len(data)
+
+        # RECSEC/STACK PLOTTING
+        # Stack plotting means add the summation of all waveforms as new trace 
+        if self.wf_type.endswith("stack"):
+            n += 1
+            wf_stack_type = "absmean"  # hard-coded for now
+            # Determine how to stack
+            if wf_stack_type == "mean":
+                stacked_data = np.mean(data, axis=0)
+                labels.append("stacked mean")
+            # Pseudo envelope by meaning all abs values
+            elif wf_stack_type == "absmean":
+                stacked_data = np.abs(np.mean(np.abs(data), axis=0))
+                labels.append("abs stacked mean")
+
+            # Add stacked data to the list of plottable data
+            data = np.vstack((data, stacked_data))
+        # Record section means we offset each new data strean by a constant val
         if self.wf_type.startswith("recsec"):
             print("waveform option `recsec`, scaling y-axis")
             if self.wf_spacing_exact:
@@ -943,21 +961,59 @@ class PrettyPlot():
                 oom = np.floor(np.log10(np.amax(self.st[0].data)))
                 spacing = self.wf_recsec_spacing* 10 ** oom
             print(f"\trecsec spacing is {spacing}")
+
+            # Visually stack the waveform data by adding offset values to data
             for i, d in enumerate(data[:]):
                 data[i] = d + (i * spacing)
-        # Plot the waveforms
-        for i, d in enumerate(data):
-            self.ax.plot(
-                xvals, d, c=colors[i], lw=self.linewidth, zorder=6+i, 
-                label=labels[i], alpha=alphas[i]
-                )
-            
-        self._xvals = xvals
 
-    def plot_stream_gage(self, relative=False, units="m"):
+        # WAVEFORM STYLES
+        # Determine the waveform styling including colors and opacity (alpha)
+        alphas = self.alphas or [1] * n
+        # User-selection of colors
+        if len(self.colors) > 1:
+            colors = self.colors
+        elif len(self.colors) == 1:
+            if self.colors[0] == "C?":
+                colors = [f"C{i}" for i in range(n)]
+            # Allow colormaps that we make into discrete colors
+            elif len(self.colors[0]) > 1:
+                cmap = mpl.colormaps[self.colors[0]]
+                colors = cmap(np.linspace(0.1, 1, n))
+            else:
+                colors = [self.colors[0]] * n
+        # User-overwrite of the waveform labels put in legends
+        if self.labels:
+            labels = self.labels 
+
+        # Set internal attributes for plotting functions
+        self._data = data
+        self._labels = labels 
+        self._colors = colors
+        self._alphas = alphas
+
+    def plot_waveforms(self):
+        """Plot the waveforms based on plot parameters defined before"""
+        # Grid style plot or not
+        if self.axs:
+            axs = self.axs
+        else:
+            axs = [self.ax] * len(self._data)
+
+        for i, (data, ax, c, l, a) in enumerate(
+            zip(self._data, axs,  self._colors, self._labels, self._alphas)):
+                # Create time axis on the fly based on the axis chosen but 
+                # assuming all data share the same start and end times
+                _xvals = self.get_xvals(self.st[0], ax)  # time axis
+                ax.plot(self._xvals, data,  c=c,  lw=self.linewidth,
+                        zorder=6+i, label=l, alpha=a
+                        )
+
+    def _plot_stream_gage(self, relative=False, units="m"):
         """
-        Experimental Phelan Creek Stream Gage
+        Experimental Phelan Creek Stream Gage for Bryant's Gulkana experiement,
+        not accesible by user.
         """
+        raise NotImplementedError
         assert args.time == "a-08", f"currently only works in AK local"
 
         # Read data from text file
@@ -1006,12 +1062,19 @@ class PrettyPlot():
         twax.set_ylabel(_ylabel, rotation=-90, labelpad=20)
             
     def plot_additional_traces(self):
-        """Plot additional time series if requested """
+        """
+        Plot additional time series with a common X axis but with a different Y 
+        axis. This can be used to plot other geophysical or physical data.
+        Required parameters would be `add_trace` which should be in an ObsPy 
+        readable format. Spectrogram of this other data can be plotted, too.
+
+        Does not work with `wf_type`='grid' option
+        """
         twax = self.ax.twinx()
         st_new = read(self.add_trace).merge()
         data_new = st_new[0].data
 
-        # Custom time axis
+        # Custom time axis for the new X-axis so it can still be plotted with
         if self.tr_time.startswith("a"):
             # Set xvalues to datetime objects
             xvals_new = ((st_new[0].times() / SECONDS_PER_DAY) +
@@ -1053,7 +1116,11 @@ class PrettyPlot():
             cax.set_axis_off()
 
     def plot_spectrogram(self):    
-        """Plot spectrogram on a separate axis"""
+        """
+        Plot spectrogram on a separate axis above the main waveform plot. Plots
+        the spectrogram for the `sp_idx` index of the Stream. Cannot be used
+        in conjunction with `wf_type`=='grid' option
+        """
         im = spectrogram(
             ax=self.ax_spectra, xvals=self._xvals, tr=self.st[self.sp_idx], 
             log=self.sp_logscale, dbscale=self.sp_dbscale, 
@@ -1094,7 +1161,21 @@ class PrettyPlot():
         cax.set_axis_off()
 
     def plot_taup_arrivals(self):
-        """Get and plot TauP arrivals if requested"""
+        """
+        Get and plot TauP arrivals based on theoretical model, event distance
+        and depth. Phases can be input. Relevant parameters are:
+
+        Parameters
+        ----------
+        - tp_phases (list of str): phases that must match TauP phase list
+        - tp_model (str): TauP model to be used
+        - tp_dist_km (float): Hypo distance in km (see also `tp_dist_deg`). 
+            Choose one of `tp_dist_km` or `tp_dist_deg`
+        - tp_dist_deg (float): Hypo distance in deg (see also `tp_dist_km`)
+        - tp_depth (float): Depth of event in km
+        - tp_start (float): If time=='a', the actual origin time of the event
+            to match the data. TauP arrivals are given in relative timing
+        """
         if not self.tp_phases:
             return
 
@@ -1159,7 +1240,6 @@ class PrettyPlot():
                 times[0], times[-1], label=f"{name} ({max_amp:.2E})", 
                 color=f"C{i}", alpha=alpha, zorder=7
                 )
-        # plt.legend(prop={"size": 2}, loc="upper left", frameon=False
 
     def plot_tmarks(self):
         """
@@ -1180,6 +1260,35 @@ class PrettyPlot():
         """
         Set plot aesthetics
         """
+        if len(self.axs) > 1:
+            # Set xlim and ylim on all axes
+            xstart, xend = self._xvals.min(), self._xvals.max()
+            if self.xlim:
+                if self.time.startswith("a"):
+                    xstart = date2num(UTCDateTime(self.xlim[0]).datetime)
+                    xend = date2num(UTCDateTime(self.xlim[1]).datetime)
+                else:
+                    xstart, xend = [float(_) for _ in self.xlim]
+            if self.ylim:
+                if len(self.ylim) == 2:
+                    ymin, ymax = self.ylim
+                else:
+                    ymax = abs(self.ylim[0])
+                    ymin = -1 * ymax
+            for i, ax in enumerate(self.axs):
+                if i % self.cols == 0:  # left column
+                    ax.set_ylabel(self.ylabel or "Amplitude")
+                if i >= (self.rows - 1) * self.cols:  # bottom row
+                    if self.time.startswith("a"):
+                        ax.set_xlabel(f"Time [UTC{self.time[1:]}]")
+                    else:
+                        ax.set_xlabel(f"Time [{self.time}]")
+                ax.set_xlim(xstart, xend)
+                if self.ylim:
+                    ax.set_ylim(ymin, ymax)
+                set_plot_aesthetic(ax)
+            return
+
         if self.legend:
             self.ax.legend(loc="upper right", bbox_to_anchor=(1,1), 
                           bbox_transform=self.ax.transAxes, 
@@ -1285,16 +1394,15 @@ class PrettyPlot():
         self.setup_plot()
         self.trim_waveform()
         self.process_waveforms()
-
+        self.get_plot_parameters()
         self.plot_waveforms()
-        self.plot_taup_arrivals()
         if self.add_trace:
             self.plot_additional_traces()
         if self.spectrogram:
             self.plot_spectrogram()
         if self.tmarks:
             self.plot_tmarks()
-        self.plot_aesthetics()
+        self.set_plot_aesthetics()
         self.finalize()
 
 
