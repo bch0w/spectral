@@ -97,6 +97,14 @@ python prettyplot.py GS.109.DHZ.2024.253 GS.109.DHN.2024.253 GS.109.DHE.2024.253
 ```
 <img width="1600" height="800" alt="ex2" src="https://github.com/user-attachments/assets/ffffc492-5aac-4445-889f-d809b3f885e0" />
 
+#### Grid Waveforms
+Plot multiple waveforms but each waveform gets its own subplot with a shared X-axis
+Y-axis is unique. Does not work with spectrograms.
+
+```bash
+python prettyplot.py GS.10[12].DH?.2024.252 --time a --wf_type grid --nrows 3 --ncols 2
+```
+
 
 #### Waveform + Spectrogram
 Plot waveform and add spectrogram on top. Set the amplitudes of the PSDs in 
