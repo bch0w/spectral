@@ -1252,10 +1252,16 @@ class PrettyPlot():
             colors = self.tmarks_c
 
         for tmark, c in zip(self.tmarks, colors):
+            # If time is absolute, tmarks are given as UTCDateTime strings
             if self.time.startswith("a"):
                 tmark = date2num(UTCDateTime(tmark).datetime)
                 # date2num(st[0].stats.starttime.datetime) + tmark
-            self.ax.axvline(tmark, c=c, lw=0.5)
+            # Else time is given as a floating point value in s/m/h
+            else:
+                tmark = float(tmark)
+
+            for ax in self.axs:
+                ax.axvline(tmark, c=c, lw=0.5)
 
     def set_plot_aesthetics(self):
         """
