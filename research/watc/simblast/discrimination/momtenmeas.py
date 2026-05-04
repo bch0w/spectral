@@ -626,9 +626,9 @@ def main():
                     ylabel=f"Velocity x {kwargs['wf_scale']} [m/s]",
                     tp_phases=["p", "P", "Pn", "Pg", "s", "S", "Sn", "Sg"],
                     tp_model=taup_model, tp_dist_km=dist_km, 
-                    tp_depth=src_depth_km,
+                    tp_depth=src_depth_km, tp_start=0,
                     tmarks=tmarks, tmarks_c=["r", "r", "b", "b"], title=title, 
-                    save=save, show=SHOW, legend=False, dpi=200, 
+                    save=save, show=SHOW, legend=True, dpi=200, 
                     transparent=False,
                     **kwargs)
     pp.main()

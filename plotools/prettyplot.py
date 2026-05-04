@@ -1016,9 +1016,12 @@ class PrettyPlot():
             zip(self._data, axs,  self._colors, self._labels, self._alphas)):
                 # Create time axis on the fly based on the axis chosen but 
                 # assuming all data share the same start and end times
+                # ax.plot(self._xvals, data,  c=c,  lw=self.linewidth,
+                #         zorder=6+i, label=l, alpha=a
+                #         )
                 ax.plot(self._xvals, data,  c=c,  lw=self.linewidth,
-                        zorder=6+i, label=l, alpha=a
-                        )
+                    zorder=6+i, label=None, alpha=a
+                    )
 
     def _plot_stream_gage(self, relative=False, units="m"):
         """
@@ -1218,11 +1221,11 @@ class PrettyPlot():
            
         # Determine the time series starttime of the event because the TauP
         # times are relative to an origin time
-        if not self.tp_start: 
+        if self.tp_start is None: 
             if self.time.startswith("a"):
-                tp_start = UTCDateTime(self.xlim[0])
+                tp_start = UTCDateTime(self._xvals[0])
             else:
-                tp_start = float(self.xlim[0])
+                tp_start = float(self._xvals[0])
         else:
             if self.time.startswith("a"):
                 tp_start = UTCDateTime(self.tp_start)
@@ -1277,10 +1280,11 @@ class PrettyPlot():
         """
         for ax in self.axs:
             if self.legend:
-                ax.legend(loc="upper right", bbox_to_anchor=(1,1), 
-                            bbox_transform=ax.transAxes, 
-                            prop={"size": 5},
-                            ncol=self.ncol_legend, fontsize='tiny')
+                leg = ax.legend(loc="upper right", bbox_to_anchor=(1,1), 
+                                bbox_transform=ax.transAxes, 
+                                prop={"size": 5},
+                                ncol=self.ncol_legend, fontsize='tiny')
+                leg.set(zorder=100)
 
             if self.time.startswith("a"):
                 ax.set_xlabel(f"Time [UTC{self.time[1:]}]")
