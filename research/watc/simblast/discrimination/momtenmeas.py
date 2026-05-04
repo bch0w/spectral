@@ -10,19 +10,25 @@ DC or CLVD are S-waves significant enough to affect classic body-wave
 discrimination techniques
 """
 import os
+import sys
 import instaseis
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pygmt
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from matplotlib.patches import Rectangle
-from obspy import read_events
+from obspy import read, read_events, Stream
 from obspy.geodetics import kilometers2degrees, gps2dist_azimuth
 from obspy.taup import TauPyModel
 
-FIGURES="./FIGURES"
+# Import plotting from the internal spectral Class
+import sys
+sys.path.insert(0, "/Users/prof/Repos/spectral")
+from plotools.prettyplot import PrettyPlot
+
+
 
 def cmaphex(nvals, cmap="seismic"):
     """Return a list of hex codes for `nvals` of a `cmap`"""
@@ -41,9 +47,47 @@ class MomTenMeas:
     amplitude measurements that can be used for discrimination purposes
     """
     def __init__(self, dist_km, baz, src_depth_km, tmin, tmax, choice="ps", 
-                 components="ZNE", kind="velocity", syngine="iasp91_2s", 
+                 p_phase_list=None, s_phase_list=None, arrival_choice="taup",
+                 components="ZNE", kind="velocity", syngine="iasp91_2s",  
                  taup_model="iasp91", fig_path="FIGURES", wav_path="SAC"):
-        """Set up calling structure"""
+        """
+        Set up calling structure
+        
+        Parameters
+        ----------
+        dist_km : float
+            Distance from source to receiver in kilometers
+        baz : float
+            Back azimuth from source to receiver in degrees
+        src_depth_km : float
+            Source depth in kilometers
+        tmin : float
+            Minimum time window in seconds
+        tmax : float
+            Maximum time window in seconds
+        choice : str, optional
+            Phase choice for measurement ('ps', 'p', 's'), default is "ps"
+        p_phase_list : list, optional
+            List of P-wave phase names to consider in TauP
+        s_phase_list : list, optional
+            List of S-wave phase names to consider in TauP
+        arrival_choice : str, optional
+            Method for determining phase arrivals 
+            - 'taup': Use TauP with with `taup_model`
+            - 'group': Select based on group arrival wavespeeds
+        components : str, optional
+            Seismogram components to extract ('ZNE'), default is "ZNE"
+        kind : str, optional
+            Waveform type ('velocity', 'displacement', etc.), default is "velocity"
+        syngine : str, optional
+            Syngine model to use for synthetics, default is "iasp91_2s"
+        taup_model : str, optional
+            TauP velocity model, default is "iasp91"
+        fig_path : str, optional
+            Directory path to save figures, default is "FIGURES"
+        wav_path : str, optional
+            Directory path to save waveform data, default is "SAC"
+        """
         # Input parameters for processing
         self.dist_km = dist_km
         self.dist_deg = kilometers2degrees(kilometer=self.dist_km)
@@ -53,6 +97,10 @@ class MomTenMeas:
         self.tmin = tmin
         self.tmax = tmax
         self.choice = choice
+        self.p_phase_list = p_phase_list or ["p", "P" , "Pn", "Pg"]
+        self.s_phase_list = s_phase_list or ["s", "S", "Sn", "Sg"]
+        self.arrival_choice = arrival_choice
+        assert(self.arrival_choice in ["taup", "group"])
         self.components = components
         self.kind = kind
 
@@ -70,14 +118,12 @@ class MomTenMeas:
                 os.makedirs(path_)
 
         # Empty vals for later
-        self.tag = None
+        self.idx = None
         self.rcv = None
         self.src = None
         self.st = None
-        self.pwin = None
-        self.swin = None
-        self.pmax = None
-        self.smax = None
+        self.pwin_s = None
+        self.swin_s = None
         self.meas = None
         self.save_tag = None
 
@@ -100,7 +146,7 @@ class MomTenMeas:
         return the Instaseis receiver object
         """
         if station is None:
-            station = f"{self.tag:0>4}"
+            station = f"{self.idx:0>4}"
         # Very rudimentary calculation in Cartesian coordinates, shooting 
         # down a backazimuth for a given distance
         lon = self.dist_deg * np.cos(np.deg2rad(self.baz))
@@ -116,7 +162,10 @@ class MomTenMeas:
     def get_synthetics(self):
         """
         Query Instaseis Database for synthetic waveforms, preprocess and attach 
-        SAC headers. Option to save waveforms    
+        SAC headers. Process and save waveforms, too. We filter the waveforms 
+        before saving so that when we plot with PrettyPlot we get the exact
+        same waveforms, instead of having to repeat and possibly change the
+        processing steps taken.
         """
         st = self.db.get_seismograms(source=self.src, receiver=self.rcv, 
                                      components=self.components,  
@@ -141,7 +190,7 @@ class MomTenMeas:
             "stla": self.rcv.latitude,
             "stlo": self.rcv.longitude,
             "stel": 0,
-            "kevnm": str(self.tag),
+            "kevnm": str(self.idx),
             "nzyear": st[0].stats.starttime.year,
             "nzjday": st[0].stats.starttime.julday,
             "nzhour": st[0].stats.starttime.hour,
@@ -159,30 +208,46 @@ class MomTenMeas:
         for tr in st:
             tr.stats.sac = sac_header
 
+        st.filter("bandpass", freqmin=1/self.tmax, freqmax=1/self.tmin, 
+                  zerophase=True)
+        
+        # Write out SAC File of the filtered waveform
+        for tr in st:
+            fid = f"{self.wav_path}/{self.save_tag}_{tr.stats.component}.SAC"
+            tr.write(fid, format="SAC")
+
+        return st
+    
+    def load_synthetics(self):
+        """
+        Load synthetics from disk to avoid re-querying Instaseis each time.
+        Expectation is that synthetics were written by `get_synthetics` as SAC
+        files and will have already been processed
+        """
+        st = Stream()
+        for comp in self.components:
+            fid = f"{self.wav_path}/{self.save_tag}_{comp}.SAC"
+            if os.path.exists(fid):
+                st += read(fid)
+            else:
+                raise FileNotFoundError
         return st
 
-    def get_taup_arrivals(self, p_phase_list=None, s_phase_list=None,
-                          buffer=0.025):
+    def get_taup_arrivals(self, buffer=0.025):
         """
         Get arrival time windows from TauP for a given `TAUP_MODEL`. Returns 
         expected P and S-wave arrival windows in units of `samples`
         """
-        # By default query all the crustal directarrivals
-        if not p_phase_list:
-            p_phase_list = ["p", "P", "Pn", "Pg"]
-        if not s_phase_list:
-            s_phase_list = ["s", "S", "Sn", "Sg"]
-
         model = TauPyModel(model=self.taup_model)
 
         # Get P-phase windows
         p_arrivals = model.get_travel_times(
             source_depth_in_km=self.src_depth_km, 
             distance_in_degree=self.dist_deg,
-            phase_list=p_phase_list
+            phase_list=self.p_phase_list
             )
         if not p_arrivals:
-            raise Exception(f"No P-arrivals found for {self.tag}")
+            raise Exception(f"No P-arrivals found for {self.idx}")
 
         # Take only time information, add a buffer around direct pick 
         p_arrivals = [_.time for _ in p_arrivals]
@@ -192,16 +257,52 @@ class MomTenMeas:
         s_arrivals = model.get_travel_times(
             source_depth_in_km=self.src_depth_km, 
             distance_in_degree=self.dist_deg,
-            phase_list=s_phase_list
+            phase_list=self.s_phase_list
             )
         if not s_arrivals:
-            raise Exception(f"No P-arrivals found for {self.tag}")
+            raise Exception(f"No P-arrivals found for {self.idx}")
         
         # Take only time information, add a buffer around direct pick 
         s_arrivals = [_.time for _ in s_arrivals]
         s_window = [min(s_arrivals) * (1-buffer), max(s_arrivals) * (1+buffer)]
 
         return p_window, s_window
+    
+    def get_group_vel_arrivals(self):
+        """
+        Return phase arrivals based on regional India phase velocities provided
+        by Rodgers et al. 2001
+        """
+        group_velocities = {
+            "Pn": [7.7, 8.25],  # km/s
+            "Pg": [5.5, 6.5],
+            "Sn": [4.0, 4.6],
+            "Sg": [3.0, 3.6]  # Lg, values from Baker et al. 2012
+        }
+        
+        # Figure out arrival time based on straight line distance
+        arrivals = {}
+        for key, vals in group_velocities.items():
+            # [min_arrival, max_arrival]
+            arrivals[f"{key}"] = [self.dist_km / val for val in vals][::-1]  # s
+
+        p_window = [np.inf, -np.inf]
+        s_window = [np.inf, -np.inf]
+        for phase, arvs in arrivals.items():
+            # Go through and figure out min and max arrival times based on phase
+            if phase in self.p_phase_list:
+                if min(arvs) < p_window[0]:
+                    p_window[0] = min(arvs)
+                if max(arvs) > p_window[1]:
+                    p_window[1] = max(arvs)
+            if phase in self.s_phase_list:
+                if min(arvs) < s_window[0]:
+                    s_window[0] = min(arvs)
+                if max(arvs) > s_window[1]:
+                    s_window[1] = max(arvs)
+
+        return p_window, s_window
+
     
     def make_measurement(self):
         """
@@ -212,10 +313,7 @@ class MomTenMeas:
         - choice (str): 'ps'=P/S amplitude ratio, 's': maximum S amplitude,
             'p': maximum P amplitude
         """
-        self.st.filter("bandpass", freqmin=1/self.tmax, freqmax=1/self.tmin, 
-                       zerophase=True)
-
-                # Convert from units time to sampling rate for plotting and picking
+        # Convert from units time to sampling rate for plotting and picking
         samprate = self.st[0].stats.sampling_rate
 
         # Figure out max amplitude and corresponding index within P window
@@ -252,14 +350,19 @@ class MomTenMeas:
         s_max_avg /= len(self.st)
         ps_ratio = p_max_avg / s_max_avg
 
-        if self.choice == "ps":
+        if self.choice.startswith("ps"):
             measurement = ps_ratio
-        elif self.choice == "s":
+        elif self.choice.startswith("s"):
             measurement = s_max_avg
-        elif self.choice == "p":
+        elif self.choice.startswith("p"):
             measurement = p_max_avg
         else:
             raise NotImplementedError
+        
+        # Allow for log10
+        if self.choice.endswith("log"):
+            raise NotImplementedError("negative values won't plot pygmt")
+            measurement = np.log10(measurement)
                 
         return maxdict, measurement
         
@@ -269,6 +372,9 @@ class MomTenMeas:
         """
         # Only plot waveforms for specific moment tensors
         f, axs = plt.subplots(len(self.st), dpi=200, sharex=True)
+        # Edge case when we only hve 1 component, still allows for looping
+        if len(self.st) == 1:
+            axs = [axs]
         middle_idx = len(self.st) // 2
 
         # Window bounds for plotting rectangles
@@ -323,7 +429,7 @@ class MomTenMeas:
         title = (f"{self.choice}={self.meas:.2f}; "
                  f"d={self.dist_km:.2f}km baz={self.baz:.2f}; "
                  f"T=[{self.tmin}, {self.tmax}]s\n"
-                 f"MT #{self.tag}; {self.syngine};")
+                 f"MT #{self.idx}; {self.syngine};")
         axs[0].set_title(title)
 
         plt.xlim([pwin_start_s * .9, swin_end_s * 1.15])  # cut off long tail
@@ -333,6 +439,28 @@ class MomTenMeas:
         if show:
             plt.show()
         plt.close(f)
+
+    def setup(self, path_cmtsolution):
+        """
+        Initialize all internal attributes used for making measurements
+        Split up from `run` so it can be run separately without going through 
+        processing step
+        """
+        self.event = read_events(path_cmtsolution)[0]
+
+        # e.g.,lune_ipts4_iref5_001
+        self.idx = int(self.event.resource_id.id.split("/")[2].split("_")[-1])  
+        self.save_tag = f"n{self.idx:0>2}_d{self.dist_km}_b{self.baz}"
+
+        # Get Instaseis synthetics
+        self.src = self.get_src()
+        self.rcv = self.get_rcv()
+
+        # Get TauP arrivals in units of samples
+        if self.arrival_choice == "taup":
+            self.pwin_s, self.swin_s = self.get_taup_arrivals()  
+        elif self.arrival_choice == "group":
+            self.pwin_s, self.swin_s = self.get_group_vel_arrivals()
     
     def run(self, path_cmtsolution):
         """
@@ -340,43 +468,23 @@ class MomTenMeas:
         setup, get synthetics, taup arrivals, pick peak amplitudes and plot, 
         return information needed for beachball plots.
         """  
-        self.event = read_events(path_cmtsolution)[0]
+        self.setup(path_cmtsolution)
 
-        # e.g.,lune_ipts4_iref5_001
-        self.tag = int(self.event.resource_id.id.split("/")[2].split("_")[-1])  
-        self.save_tag = f"n{self.tag:0>3}_d{self.dist_km}_b{self.baz}"
-
-        # Get Instaseis synthetics
-        self.src = self.get_src()
-        self.rcv = self.get_rcv()
-        self.st = self.get_synthetics()
-
-        # Get TauP arrivals in units of samples
-        self.pwin_s, self.swin_s = self.get_taup_arrivals()  
-        
         # Make amplitude measurement
+        try:
+            self.st = self.load_synthetics()
+        except FileNotFoundError:
+            self.st = self.get_synthetics()
+
         self.maxdict, self.meas = self.make_measurement()
         
-        # Write out SAC File of the filtered waveform
-        for tr in self.st:
-            fid = f"{self.wav_path}/{self.save_tag}_{tr.stats.component}.SAC"
-            tr.write(fid, format="SAC")
-
-        self.plot_waveforms(save=f"{self.fig_path}/{self.save_tag}.png",
+        self.plot_waveforms(save=f"{self.fig_path}/WAV/wav_{self.save_tag}.png",
                             show=False)
         
-        # Main process prints out the pplot command to run
-        if self.tag == 1:
-
-            print(f"pplot *.SAC --tmarks "
-                  f"{self.pwin_s[0]:.1f} {self.pwin_s[1]:.1f} "
-                  f"{self.swin_s[0]:.1f} {self.swin_s[1]:.1f} "
-                  f"--tmark_c r r b b")
-        
-        return self.src.tensor, self.tag, self.meas
+        return self.idx, self.meas, self.src.tensor
 
 
-def main(dist_km, baz, src_depth_km=1, tmin=2, tmax=5, parallel=True):
+def mtmrun(dist_km, baz, src_depth_km=1, parallel=True, **kwargs):
     """
     Run `MomTenMeas` for multiple CMTSOLUTIONS, collect the measurement 
     information and then plot
@@ -388,34 +496,44 @@ def main(dist_km, baz, src_depth_km=1, tmin=2, tmax=5, parallel=True):
 
     # Set up class instance to be used for all runs
     mtm = MomTenMeas(dist_km=dist_km, baz=baz, src_depth_km=src_depth_km,
-                     tmin=tmin, tmax=tmax)
+                     **kwargs)
 
-    tensors, lune_idxs, max_amps = [], [], []
+    idxs, max_amps, tensors = [], [], []
     if parallel:
         with ProcessPoolExecutor(max_workers=os.cpu_count()) as executor:
             results = executor.map(mtm.run, cmtsolutions)
         for result in results:   
-            tensor, tag, meas = result     
-            tensors.append(tensor)
-            lune_idxs.append(tag)
+            idx, meas, tensor = result     
+            idxs.append(idx)
             max_amps.append(meas)
+            tensors.append(tensor)
     else:
         for cmtsolution in cmtsolutions:
-            tensor, tag, meas = mtm.run(cmtsolution)
-            tensors.append(tensor)
-            lune_idxs.append(tag)
+            idx, meas, tensor = mtm.run(cmtsolution)
+            idxs.append(idx)
             max_amps.append(meas)
-    
+            tensors.append(tensor)
+
+    # Kludgy: Run setup on 1 event to run the TauP arrival getter so we have
+    # access to the window information which is the same for all sources.
+    # Probably a better way to do it but this works.
+    mtm.setup(list(path_cmtsolutions.glob("CMTSOLUTION_*"))[0])
+
+    return idxs, max_amps, tensors, mtm.pwin_s, mtm.swin_s
+
+
+def plot_beachballs(x, y, t, title=None, save=False):
+    """
+    Plot beachballs based on their assigned index `x` and max amplitude `y` with
+    the given moment tensor components `t`
+    """
     # Used for coloring beachballs, hex color codes for each index can be used
     # to match waveform plots etc.
-    hexvals = cmaphex(nvals=len(tensors), cmap="RdYlBu_r")
+    hexvals = cmaphex(nvals=len(t), cmap="viridis")
 
     # Plot PyGMT Beachball diagrams showing variation of MT with PS ratio
     with pygmt.config(FONT="7.5p"):
-        region = [0, 
-                  max(lune_idxs) + 1, 
-                  min(max_amps) * -1, 
-                  max(max_amps) * 1.25]
+        region = [0, max(x) + 1,  min(y) * -1,  max(y) * 1.25]
 
         projection = "X10c/4c"
         
@@ -429,30 +547,94 @@ def main(dist_km, baz, src_depth_km=1, tmin=2, tmax=5, parallel=True):
 
         # Title as separate figure becuase I cannot for the life of me figure
         # out how to plot the title with the frame
-        fig.text(
-            x=0.2, y=region[-1] * 0.95, 
-            text=f"{mtm.taup_model}, dist={dist_km:.2f}km, baz={baz%360:.2f}",
-            justify="TL")
+        fig.text(x=0.2, y=region[-1] * 0.95, text=title, justify="TL")
 
-        for idx, amp, tensor in zip(lune_idxs, max_amps, tensors):
+        for x_, y_, t_ in zip(x, y, t):
             tensor_dict = {
-                "mrr": tensor[0], "mtt": tensor[1], "mff": tensor[2],
-                "mrt": tensor[3], "mrf": tensor[4], "mtf": tensor[5], 
+                "mrr": t_[0], "mtt": t_[1], "mff": t_[2],
+                "mrt": t_[3], "mrf": t_[4], "mtf": t_[5], 
                 "exponent": 1}
-            fig.meca(spec=tensor_dict, scale="1.25c", longitude=idx, 
-                     latitude=amp, depth=0, compression_fill=hexvals[idx-1], 
+            fig.meca(spec=tensor_dict, scale="1.25c", longitude=x_, 
+                     latitude=y_, depth=0, compression_fill=hexvals[x_-1], 
                      extension_fill="cornsilk",
                      pen="0.5p,black,solid",)
         
-    fig.savefig(f"{mtm.fig_path}/smg_{int(dist_km)}_{int(baz)}.png", dpi=500)
+    fig.savefig(save, dpi=500)
+
+
+def main():
+    """Run and plot"""
+    # Enforce integer values only for naming schema
+    dist_km = int(sys.argv[1]) 
+    baz = int(sys.argv[2])
+    src_depth_km = 1
+    tmin = 2
+    tmax = 4 
+    components = "Z"
+    p_phase_list = ["Pn"]
+    s_phase_list = ["Sn"]
+    arrival_choice = "taup"  # taup, group
+    parallel = False
+    syngine="iasp91_2s"
+    taup_model="iasp91"
+    fig_path = "FIGURES"
+    wav_path = "SAC"
+
+    # Toggles
+    SKIP = True
+    SHOW = False
+
+    # Used for RS and BB plots
+    title = (f"{taup_model}, dist={dist_km}km, baz={int(baz%360)}; "
+             f"T=[{tmin}, {tmax}]")
+
+    # Main processing workflow
+    if not SKIP:
+        x, y, t, pwin, swin = mtmrun(dist_km, baz, src_depth_km,
+                                     tmin=tmin, tmax=tmax, 
+                                     components=components, 
+                                     p_phase_list=p_phase_list, 
+                                     s_phase_list=s_phase_list, 
+                                     arrival_choice=arrival_choice,
+                                     syngine=syngine, taup_model=taup_model, 
+                                     fig_path=fig_path, wav_path=wav_path, 
+                                     parallel=parallel)
+        
+        # Make beachball plots
+        save = f"{fig_path}/bb_d{dist_km}_b{baz}.png"
+        plot_beachballs(x, y, t, title, save)
+
+    # Plot record sections
+    # Custom look for each of the distances
+    customization = {
+        150: {"wf_scale": 10, "xlim": [0, 60], "ylim": [-.25E-3, 1.6E-3]},
+        250: {"wf_scale": 10, "xlim": [20, 80], "ylim": [-.25E-3, 1.6E-3]},
+        500: {"wf_scale": 30, "xlim": [60, 150], "ylim": [-.25E-3, 1.6E-3]},
+        750: {"wf_scale": 40, "xlim": [75, 225], "ylim": [-.25E-3, 1.6E-3]},
+        1000: {"wf_scale": 50, "xlim": [110, 300], "ylim": [-.25E-3, 1.6E-3]},
+    }
+    if SKIP:
+        tmarks = None
+    else:
+        tmarks = pwin + swin
+
+    sac_files = Path(wav_path).glob(f"*_d{dist_km}_b{baz}_{components}.SAC")
+    save = f"{fig_path}/rs_d{dist_km}_b{baz}.png"
+    kwargs = customization[dist_km]
+    pp = PrettyPlot(fids=sac_files, wf_type="recsec", wf_recsec_spacing=5, 
+                    colors=["viridis"], linewidth=1,
+                    ylabel=f"Velocity x {kwargs['wf_scale']} [m/s]",
+                    tp_phases=["p", "P", "Pn", "Pg", "s", "S", "Sn", "Sg"],
+                    tp_model=taup_model, tp_dist_km=dist_km, 
+                    tp_depth=src_depth_km,
+                    tmarks=tmarks, tmarks_c=["r", "r", "b", "b"], title=title, 
+                    save=save, show=SHOW, legend=False, dpi=200, 
+                    transparent=False,
+                    **kwargs)
+    pp.main()
 
 
 if __name__ == "__main__":
-    main(100, 45, parallel=True)
-
-    # for dist_km in [100, 250, 500, 1000]:
-    #     for baz in [0, 45, 89]:
-    #         print(f"{dist_km} {baz}")
-    #         main(dist_km, baz)
-
+    main()
+   
     

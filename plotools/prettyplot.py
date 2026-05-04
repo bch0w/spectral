@@ -92,9 +92,6 @@ def parse_args():
                              "processed")
     
     # Waveform options
-    parser.add_argument("--wf_abs", action="store_true", 
-                        help="plot the absolute value of the waveform, does" 
-                             "not affect processing, just final plotting")
     parser.add_argument("--wf_type", nargs="?", type=str, default="default",
                         help="Option for how to plot the waveforms:\n"
                              "-'default': plot all `fids` on top of each other " 
@@ -113,6 +110,12 @@ def parse_args():
                                  "grid"])
     parser.add_argument("--wf_norm", action="store_true", 
                         help="normalize traces to their individual max")
+    parser.add_argument("--wf_scale", type=float, default=1,
+                        help="scale the amplitudes by an arbitrary value, used "
+                             "to emphasize small arrivals")
+    parser.add_argument("--wf_abs", action="store_true", 
+                        help="plot the absolute value of the waveform, does" 
+                             "not affect processing, just final plotting")
     parser.add_argument("--wf_recsec_spacing", nargs="?", type=float, default=1,
                         help="if `wf_type` is some form of recsec, choose the " 
                              "spacing modifier between each of the waveforms. " 
@@ -271,6 +274,9 @@ def parse_args():
                         help="filename to save figure")
     parser.add_argument("-o", "--output", type=str, default=None,
                         help="optional path to output processed seismograms")
+    parser.add_argument("--transparent", action="store_true", default=False,
+                        help="Saved figure transparent/alpha background. If " 
+                             "not set then background will be white")
     parser.add_argument("--noshow", action="store_true", default=False,
                         help="dont show the figure, default behavior will show")
 
@@ -597,7 +603,7 @@ class PrettyPlot():
                  resample=False, t0=0, tstart=0, detrend=False, integrate=0,
                  differentiate=0, trim_pct=1.,
                  # Waveform plotting
-                 wf_abs=False, wf_type="default", wf_norm=False, 
+                 wf_abs=False, wf_type="default", wf_norm=False, wf_scale=1,
                  wf_recsec_spacing=1, wf_spacing_exact=False, wf_order=None,
                  nrows=None, ncols=None,
                  # Plotting Aesthetics
@@ -619,7 +625,8 @@ class PrettyPlot():
                  # Misc.
                  fig_size=None, dpi=200, fig_len=None, fig_asp=None, 
                  legend=True, ncol_legend=1, title=None, title_append="",
-                 save=None, output=None, show=True, frameoff=False,
+                 save=None, output=None, show=True, frameoff=False, 
+                 transparent=False,
                  **kwargs
                  ):
         """Input parameters, see argparser for descriptions"""
@@ -645,6 +652,7 @@ class PrettyPlot():
         self.wf_abs = wf_abs
         self.wf_type = wf_type
         self.wf_norm = wf_norm
+        self.wf_scale = wf_scale
         self.wf_recsec_spacing = wf_recsec_spacing
         self.wf_spacing_exact = wf_spacing_exact
         self.wf_order = wf_order
@@ -705,6 +713,7 @@ class PrettyPlot():
         self.output = output
         self.show = show
         self.frameoff = frameoff
+        self.transparent = transparent
 
         # Internal attributes for plotting functions
         self._xvals = None
@@ -931,6 +940,8 @@ class PrettyPlot():
         if self.wf_abs:
             data = [np.abs(d) for d in data]
             labels = [f"abs {l}" for l in labels]
+        # Scale the amplitudes of each of the data arrays by some value
+        data = [d * self.wf_scale for d in data]
 
         n = len(data)
 
@@ -1177,9 +1188,6 @@ class PrettyPlot():
         - tp_start (float): If time=='a', the actual origin time of the event
             to match the data. TauP arrivals are given in relative timing
         """
-        if not self.tp_phases:
-            return
-
         # Get phase arrivals from TauP if requested
         arrivals = None
         assert(self.tp_dist_km is not None or self.tp_dist_deg is not None)
@@ -1345,7 +1353,7 @@ class PrettyPlot():
 
         plt.tight_layout()
 
-    def finalize(self, transparent=True):
+    def finalize(self):
         """
         Final plot adjustments
         """
@@ -1355,7 +1363,7 @@ class PrettyPlot():
             else:
                 _fid_out = self.save
             print(f"\tsaving to {_fid_out}")
-            plt.savefig(_fid_out, transparent=transparent)
+            plt.savefig(_fid_out, transparent=self.transparent)
 
         if self.show:
             plt.show()
@@ -1381,6 +1389,8 @@ class PrettyPlot():
             self.plot_spectrogram()
         if self.tmarks:
             self.plot_tmarks()
+        if self.tp_phases:
+            self.plot_taup_arrivals()
         self.set_plot_aesthetics()
         self.finalize()
 
