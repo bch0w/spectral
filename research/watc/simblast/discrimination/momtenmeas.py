@@ -29,6 +29,15 @@ sys.path.insert(0, "/Users/prof/Repos/spectral")
 from plotools.prettyplot import PrettyPlot
 
 
+# For TauP Phase list
+P_TRAIN = ["p", "P", "PP", "pP", "Pn", "Pg"]
+S_TRAIN = ["s", "S", "SS", "sS", "Sn", "Sg"]  
+
+
+# Toggles
+SKIP = False
+SHOW = True
+
 
 def cmaphex(nvals, cmap="seismic"):
     """Return a list of hex codes for `nvals` of a `cmap`"""
@@ -49,7 +58,8 @@ class MomTenMeas:
     def __init__(self, dist_km, baz, src_depth_km, tmin, tmax, choice="ps", 
                  p_phase_list=None, s_phase_list=None, arrival_choice="taup",
                  components="ZNE", kind="velocity", syngine="iasp91_2s",  
-                 taup_model="iasp91", fig_path="FIGURES", wav_path="SAC"):
+                 taup_model="iasp91", taup_buffer=0, 
+                 fig_path="FIGURES", wav_path="SAC"):
         """
         Set up calling structure
         
@@ -83,6 +93,10 @@ class MomTenMeas:
             Syngine model to use for synthetics, default is "iasp91_2s"
         taup_model : str, optional
             TauP velocity model, default is "iasp91"
+        taup_buffer: float, optional
+            TauP usually provides single travel times. This option pads the TT
+            by a given percentage so that each arrival constitutes a window. 
+            Allows for some variation with longer period arrivals.
         fig_path : str, optional
             Directory path to save figures, default is "FIGURES"
         wav_path : str, optional
@@ -97,10 +111,10 @@ class MomTenMeas:
         self.tmin = tmin
         self.tmax = tmax
         self.choice = choice
-        self.p_phase_list = p_phase_list or ["p", "P" , "Pn", "Pg"]
-        self.s_phase_list = s_phase_list or ["s", "S", "Sn", "Sg"]
+        self.p_phase_list = p_phase_list or P_TRAIN
+        self.s_phase_list = s_phase_list or S_TRAIN
         self.arrival_choice = arrival_choice
-        assert(self.arrival_choice in ["taup", "group"])
+        assert(self.arrival_choice in ["taup", "group", "custom"])
         self.components = components
         self.kind = kind
 
@@ -109,6 +123,7 @@ class MomTenMeas:
         self.syngine = syngine
         self.db = instaseis.open_db(f"syngine://{self.syngine}")
         self.taup_model = taup_model
+        self.taup_buffer = taup_buffer
         
         # For storing output files
         self.fig_path = fig_path
@@ -207,11 +222,8 @@ class MomTenMeas:
 
         for tr in st:
             tr.stats.sac = sac_header
-
-        st.filter("bandpass", freqmin=1/self.tmax, freqmax=1/self.tmin, 
-                  zerophase=True)
         
-        # Write out SAC File of the filtered waveform
+        # Write out SAC File for the RAW waveform
         for tr in st:
             fid = f"{self.wav_path}/{self.save_tag}_{tr.stats.component}.SAC"
             tr.write(fid, format="SAC")
@@ -233,38 +245,43 @@ class MomTenMeas:
                 raise FileNotFoundError
         return st
 
-    def get_taup_arrivals(self, buffer=0.025):
+    def get_taup_arrivals(self, p_phase_list=None, s_phase_list=None):
         """
         Get arrival time windows from TauP for a given `TAUP_MODEL`. Returns 
         expected P and S-wave arrival windows in units of `samples`
         """
         model = TauPyModel(model=self.taup_model)
+        p_phase_list = p_phase_list or self.p_phase_list
+        s_phase_list = s_phase_list or self.s_phase_list
 
         # Get P-phase windows
         p_arrivals = model.get_travel_times(
             source_depth_in_km=self.src_depth_km, 
             distance_in_degree=self.dist_deg,
-            phase_list=self.p_phase_list
+            phase_list=p_phase_list
             )
         if not p_arrivals:
             raise Exception(f"No P-arrivals found for {self.idx}")
 
         # Take only time information, add a buffer around direct pick 
         p_arrivals = [_.time for _ in p_arrivals]
-        p_window = [min(p_arrivals) * (1-buffer), max(p_arrivals) * (1+buffer)]
+        p_window = [min(p_arrivals) * (1-self.taup_buffer) - self.tmax, 
+                    max(p_arrivals) * (1+self.taup_buffer) + self.tmax]
 
         # Get S-phase windows
         s_arrivals = model.get_travel_times(
             source_depth_in_km=self.src_depth_km, 
             distance_in_degree=self.dist_deg,
-            phase_list=self.s_phase_list
+            phase_list=s_phase_list
             )
         if not s_arrivals:
             raise Exception(f"No P-arrivals found for {self.idx}")
         
-        # Take only time information, add a buffer around direct pick 
+        # Take only time information, add a buffer around direct pick and 
+        # enlarge the buffer by the largest period
         s_arrivals = [_.time for _ in s_arrivals]
-        s_window = [min(s_arrivals) * (1-buffer), max(s_arrivals) * (1+buffer)]
+        s_window = [min(s_arrivals) * (1-self.taup_buffer) - self.tmax , 
+                    max(s_arrivals) * (1+self.taup_buffer) + self.tmax]
 
         return p_window, s_window
     
@@ -278,6 +295,8 @@ class MomTenMeas:
             "Pg": [5.5, 6.5],
             "Sn": [4.0, 4.6],
             "Sg": [3.0, 3.6]  # Lg, values from Baker et al. 2012
+            # "p_train": ,
+            # "s_train": [6],
         }
         
         # Figure out arrival time based on straight line distance
@@ -302,7 +321,20 @@ class MomTenMeas:
                     s_window[1] = max(arvs)
 
         return p_window, s_window
+    
+    def get_arrivals_custom(self):
+        """
+        Custom windows based on picking from waveform plots for 2-4Hz waveforms
+        """
+        dict_out = {
+            150: [[20, 40], [41.75, 55]],
+            250: [[35, 44.5], [67, 77]],
+            500: [[], []],
+            1000: [[120, 180], [233, 297]],
+        }
+        p_win, s_win = dict_out[self.dist_km]
 
+        return p_win, s_win
     
     def make_measurement(self):
         """
@@ -427,9 +459,11 @@ class MomTenMeas:
         axs[middle_idx].set_ylabel("Velocity [m/s]")
 
         title = (f"{self.choice}={self.meas:.2f}; "
-                 f"d={self.dist_km:.2f}km baz={self.baz:.2f}; "
-                 f"T=[{self.tmin}, {self.tmax}]s\n"
-                 f"MT #{self.idx}; {self.syngine};")
+                 f"d={self.dist_km:.2f}km baz={self.baz:.2f};\n "
+                 f"MT #{self.idx}; {self.syngine}; ")
+        if self.tmin and self.tmax:
+            title += f"T=[{self.tmin}, {self.tmax}]s"
+
         axs[0].set_title(title)
 
         plt.xlim([pwin_start_s * .9, swin_end_s * 1.15])  # cut off long tail
@@ -461,7 +495,9 @@ class MomTenMeas:
             self.pwin_s, self.swin_s = self.get_taup_arrivals()  
         elif self.arrival_choice == "group":
             self.pwin_s, self.swin_s = self.get_group_vel_arrivals()
-    
+        elif self.arrival_choice == "custom":
+            self.pwin_s, self.swin_s = self.get_arrivals_custom()
+
     def run(self, path_cmtsolution):
         """
         Main Processing Workflow, for a given CMTSOLUTION and initial state
@@ -475,6 +511,11 @@ class MomTenMeas:
             self.st = self.load_synthetics()
         except FileNotFoundError:
             self.st = self.get_synthetics()
+
+        if self.tmin and self.tmax:
+            self.st.filter("bandpass", freqmin=1/self.tmax, freqmax=1/self.tmin, 
+                           zerophase=False)
+
 
         self.maxdict, self.meas = self.make_measurement()
         
@@ -562,31 +603,15 @@ def plot_beachballs(x, y, t, title=None, save=False):
     fig.savefig(save, dpi=500)
 
 
-def main():
+def main(dist_km=150, baz=45, src_depth_km=1, tmin=2, tmax=4, components="Z",
+         p_phase_list=P_TRAIN, s_phase_list=S_TRAIN, arrival_choice="taup",
+         parallel=True, syngine="iasp91_2s", taup_model="iasp91", 
+         taup_buffer=0.0, fig_path="FIGURES", wav_path="SAC"):
     """Run and plot"""
-    # Enforce integer values only for naming schema
-    dist_km = int(sys.argv[1]) 
-    baz = int(sys.argv[2])
-    src_depth_km = 1
-    tmin = 2
-    tmax = 4 
-    components = "Z"
-    p_phase_list = ["Pn"]
-    s_phase_list = ["Sn"]
-    arrival_choice = "taup"  # taup, group
-    parallel = False
-    syngine="iasp91_2s"
-    taup_model="iasp91"
-    fig_path = "FIGURES"
-    wav_path = "SAC"
-
-    # Toggles
-    SKIP = True
-    SHOW = False
 
     # Used for RS and BB plots
-    title = (f"{taup_model}, dist={dist_km}km, baz={int(baz%360)}; "
-             f"T=[{tmin}, {tmax}]")
+    title = (f"{syngine}, dist={dist_km}km, baz={int(baz%360)}; "
+             f"T=[{tmin}, {tmax}]; depth={src_depth_km}km")
 
     # Main processing workflow
     if not SKIP:
@@ -597,6 +622,7 @@ def main():
                                      s_phase_list=s_phase_list, 
                                      arrival_choice=arrival_choice,
                                      syngine=syngine, taup_model=taup_model, 
+                                     taup_buffer=taup_buffer,
                                      fig_path=fig_path, wav_path=wav_path, 
                                      parallel=parallel)
         
@@ -607,34 +633,52 @@ def main():
     # Plot record sections
     # Custom look for each of the distances
     customization = {
-        150: {"wf_scale": 10, "xlim": [0, 60], "ylim": [-.25E-3, 1.6E-3]},
-        250: {"wf_scale": 10, "xlim": [20, 80], "ylim": [-.25E-3, 1.6E-3]},
-        500: {"wf_scale": 30, "xlim": [60, 150], "ylim": [-.25E-3, 1.6E-3]},
-        750: {"wf_scale": 40, "xlim": [75, 225], "ylim": [-.25E-3, 1.6E-3]},
-        1000: {"wf_scale": 50, "xlim": [110, 300], "ylim": [-.25E-3, 1.6E-3]},
+        150: {"wf_scale": 10, "xlim": [20, 70]}, #, "ylim": [-.25E-3, 1.6E-3]},
+        250: {"wf_scale": 10, "xlim": [20, 100]},
+        500: {"wf_scale": 30, "xlim": [60, 180]},
+        750: {"wf_scale": 40, "xlim": [75, 300]},
+        1000: {"wf_scale": 50, "xlim": [100, 370]},
     }
     if SKIP:
         tmarks = None
     else:
         tmarks = pwin + swin
 
-    sac_files = Path(wav_path).glob(f"*_d{dist_km}_b{baz}_{components}.SAC")
+    sac_files = []
+    for component in components:
+        sac_files += Path(wav_path).glob(f"*_d{dist_km}_b{baz}_{component}.SAC")
     save = f"{fig_path}/rs_d{dist_km}_b{baz}.png"
     kwargs = customization[dist_km]
     pp = PrettyPlot(fids=sac_files, wf_type="recsec", wf_recsec_spacing=5, 
-                    colors=["viridis"], linewidth=1,
+                    fmin=1/tmax, fmax=1/tmin, colors=["viridis"], linewidth=1,
                     ylabel=f"Velocity x {kwargs['wf_scale']} [m/s]",
-                    tp_phases=["p", "P", "Pn", "Pg", "s", "S", "Sn", "Sg"],
+                    # tp_phases=["ttall"],
+                    # tp_phases=P_TRAIN + S_TRAIN,
                     tp_model=taup_model, tp_dist_km=dist_km, 
                     tp_depth=src_depth_km, tp_start=0,
-                    tmarks=tmarks, tmarks_c=["r", "r", "b", "b"], title=title, 
-                    save=save, show=SHOW, legend=True, dpi=200, 
+                    tmarks=tmarks, tmarks_c=["C0", "C0", "C1", "C1"], 
+                    title=title,  save=save, show=SHOW, legend=True, dpi=200, 
                     transparent=False,
                     **kwargs)
     pp.main()
 
 
 if __name__ == "__main__":
-    main()
+    # syngine="ak135f_1s"
+    main(dist_km=150, baz=45, tmin=1, tmax=4, 
+         syngine="ak135f_1s", 
+         arrival_choice="custom", src_depth_km=20)
+
+    # for dist_km in [150, 250, 500, 750, 1000]:
+    #     if dist_km < 500:
+    #         choice = "custom"
+    #         tmin = None
+    #         tmax = None
+    #     else:
+    #         choice = "taup"
+    #         tmin = 2
+    #         tmax = 4
+    #     for baz in [0, 45, 89]:
+    #         main(dist_km, baz, choice, tmin, tmax)
    
     

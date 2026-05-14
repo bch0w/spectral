@@ -1237,7 +1237,7 @@ class PrettyPlot():
             if times[0] == times[-1]:
                 alpha = 1
             else: 
-                alpha = 0.3
+                alpha = 0.3  # 0.3
 
             # Convert arrival times to time series reference
             if self.time.startswith("a"):
@@ -1250,7 +1250,7 @@ class PrettyPlot():
             max_amp = np.amax(self.st[0].data[win_start:win_end])
             self.ax.axvspan(
                 times[0], times[-1], label=f"{name} ({max_amp:.2E})", 
-                color=f"C{i}", alpha=alpha, zorder=7
+                color=f"C{i}", alpha=alpha, zorder=5
                 )
 
     def plot_tmarks(self):
@@ -1272,7 +1272,7 @@ class PrettyPlot():
                 tmark = float(tmark)
 
             for ax in self.axs:
-                ax.axvline(tmark, c=c, lw=0.5)
+                ax.axvline(tmark, c=c, lw=0.5, zorder=6)
 
     def set_plot_aesthetics(self):
         """
