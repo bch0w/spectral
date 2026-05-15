@@ -890,7 +890,7 @@ class PrettyPlot():
                 corners=self.corners
                 )
         
-        self.st.merge()
+        # self.st.merge()
 
     def get_plot_parameters(self):
         """
@@ -1250,7 +1250,7 @@ class PrettyPlot():
             max_amp = np.amax(self.st[0].data[win_start:win_end])
             self.ax.axvspan(
                 times[0], times[-1], label=f"{name} ({max_amp:.2E})", 
-                color=f"C{i}", alpha=alpha, zorder=5
+                color=f"C{i}", alpha=alpha, zorder=5, ls="--"
                 )
 
     def plot_tmarks(self):
@@ -1367,7 +1367,8 @@ class PrettyPlot():
             else:
                 _fid_out = self.save
             print(f"\tsaving to {_fid_out}")
-            plt.savefig(_fid_out, transparent=self.transparent)
+            plt.savefig(_fid_out, transparent=self.transparent,
+                        bbox_inches="tight")
 
         if self.show:
             plt.show()
