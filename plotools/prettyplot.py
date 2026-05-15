@@ -778,8 +778,12 @@ class PrettyPlot():
             gs = gridspec.GridSpec(self.nrows, self.ncols, figure=self.f, 
                                    hspace=0.2, wspace=0.2)
             num_subplots = min(self.nrows * self.ncols, len(self.st))
-            for i in range(num_subplots):
-                ax = self.f.add_subplot(gs[i // self.ncols, i % self.ncols])
+            # Set the first axis then share x axis with all others
+            ax0 = self.f.add_subplot(gs[0])
+            self.axs.append(ax0)
+            for i in range(1, num_subplots):
+                ax = self.f.add_subplot(gs[i // self.ncols, i % self.ncols],
+                                        sharex=ax0)
                 self.axs.append(ax)
             self.ax = self.axs[0]  # for consistency with other plots
         # Waveform only plot
@@ -890,8 +894,6 @@ class PrettyPlot():
                 corners=self.corners
                 )
         
-        # self.st.merge()
-
     def get_plot_parameters(self):
         """
         Establish what will be plotted and the styles for each of them. The data
