@@ -483,10 +483,15 @@ def main():
    
     # Input directories/files
     path = f"waveforms/{args.model}/{args.source}" 
-    path_src  = (f"/home/bhchow/REPOS/spectral/research/watc/simblast/"
+
+    path = (f"/import/c1/ERTHQUAK/bhchow/work/simblast/"
+            f"specfem/{args.model}/{args.source}")
+
+    spectral = "/import/home/bhchow/REPOS/spectral"
+    path_src  = (f"{spectral}/research/watc/simblast/"
                  f"SPECFEM_DATA/CMTSOLUTIONS/paper_events/"
                  f"CMTSOLUTION_{args.source}")
-    path_sta = (f"/home/bhchow/REPOS/spectral/research/watc/simblast/"
+    path_sta = (f"{spectral}/research/watc/simblast/"
                 f"SPECFEM_DATA/STATIONS/STATIONS_PAPER_NK_GRID")
 
     # Output directories/files

@@ -9,9 +9,9 @@ SAVE_FORWARD                    = .false.
 INVERSE_FWI_FULL_PROBLEM        = .false.
 UTM_PROJECTION_ZONE             = 52
 SUPPRESS_UTM_PROJECTION         = .false.
-NPROC                           = 8 
-NSTEP                           = 15000 
-DT                              = 0.005
+NPROC                           = 160
+NSTEP                           = 15000
+DT                              = 0.004
 LTS_MODE                        = .false.
 PARTITIONING_TYPE               = 1
 
@@ -37,8 +37,8 @@ LOCAL_PATH                      = OUTPUT_FILES/DATABASES_MPI
 
 # parameters describing the model
 APPROXIMATE_OCEAN_LOAD          = .false.
-TOPOGRAPHY                      = .true.
-ATTENUATION                     = .true.
+TOPOGRAPHY                      = .false.
+ATTENUATION                     = .false.
 ANISOTROPY                      = .false.
 GRAVITY                         = .false.
 # reference frequency in Hz that velocity values in the velocity model are given 
