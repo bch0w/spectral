@@ -1252,7 +1252,7 @@ class PrettyPlot():
             max_amp = np.amax(self.st[0].data[win_start:win_end])
             self.ax.axvspan(
                 times[0], times[-1], label=f"{name} ({max_amp:.2E})", 
-                color=f"C{i}", alpha=alpha, zorder=5, ls="--"
+                color=f"C{i}", alpha=alpha, zorder=5
                 )
 
     def plot_tmarks(self):

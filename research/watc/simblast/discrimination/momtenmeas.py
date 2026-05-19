@@ -34,11 +34,6 @@ P_TRAIN = ["p", "P", "PP", "pP", "Pn", "Pg"]
 S_TRAIN = ["s", "S", "SS", "sS", "Sn", "Sg"]  
 
 
-# Toggles
-SKIP = False
-SHOW = True
-
-
 def cmaphex(nvals, cmap="seismic"):
     """Return a list of hex codes for `nvals` of a `cmap`"""
     cmap = plt.get_cmap(cmap, nvals)
@@ -327,10 +322,11 @@ class MomTenMeas:
         Custom windows based on picking from waveform plots for 2-4Hz waveforms
         """
         dict_out = {
-            150: [[20, 40], [41.75, 55]],
+            50: [[6, 12], [12.5, 16.5]],
+            150: [[21, 38], [40, 51]],
             250: [[35, 44.5], [67, 77]],
-            500: [[], []],
-            1000: [[120, 180], [233, 297]],
+            500: [[60, 110], [115, 150]],
+            1000: [[120, 220], [227, 300]],
         }
         p_win, s_win = dict_out[self.dist_km]
 
@@ -484,7 +480,9 @@ class MomTenMeas:
 
         # e.g.,lune_ipts4_iref5_001
         self.idx = int(self.event.resource_id.id.split("/")[2].split("_")[-1])  
-        self.save_tag = f"n{self.idx:0>2}_d{self.dist_km}_b{self.baz}"
+        self.save_tag = (
+            f"n{self.idx:0>2}_z{int(self.src_depth_km)}_"
+            f"d{self.dist_km}_b{self.baz}")
 
         # Get Instaseis synthetics
         self.src = self.get_src()
@@ -574,7 +572,7 @@ def plot_beachballs(x, y, t, title=None, save=False):
 
     # Plot PyGMT Beachball diagrams showing variation of MT with PS ratio
     with pygmt.config(FONT="7.5p"):
-        region = [0, max(x) + 1,  min(y) * -1,  max(y) * 1.25]
+        region = [0.1, max(x) + 0.5,  0,  max(y) * 1.25]
 
         projection = "X10c/4c"
         
@@ -588,33 +586,36 @@ def plot_beachballs(x, y, t, title=None, save=False):
 
         # Title as separate figure becuase I cannot for the life of me figure
         # out how to plot the title with the frame
-        fig.text(x=0.2, y=region[-1] * 0.95, text=title, justify="TL")
+        fig.text(x=1, y=region[-1]*.95, text=title, justify="TL",
+                 fill="white")
 
         for x_, y_, t_ in zip(x, y, t):
             tensor_dict = {
                 "mrr": t_[0], "mtt": t_[1], "mff": t_[2],
                 "mrt": t_[3], "mrf": t_[4], "mtf": t_[5], 
-                "exponent": 1}
+                "exponent": 1
+                }
             fig.meca(spec=tensor_dict, scale="1.25c", longitude=x_, 
                      latitude=y_, depth=0, compression_fill=hexvals[x_-1], 
                      extension_fill="cornsilk",
                      pen="0.5p,black,solid",)
-        
+
     fig.savefig(save, dpi=500)
 
 
 def main(dist_km=150, baz=45, src_depth_km=1, tmin=2, tmax=4, components="Z",
          p_phase_list=P_TRAIN, s_phase_list=S_TRAIN, arrival_choice="taup",
          parallel=True, syngine="iasp91_2s", taup_model="iasp91", 
-         taup_buffer=0.0, fig_path="FIGURES", wav_path="SAC"):
+         taup_buffer=0.0, fig_path="FIGURES", wav_path="SAC", skip=False, 
+         show=False):
     """Run and plot"""
 
     # Used for RS and BB plots
     title = (f"{syngine}, dist={dist_km}km, baz={int(baz%360)}; "
-             f"T=[{tmin}, {tmax}]; depth={src_depth_km}km")
+             f"T=[{tmin}, {tmax}]; depth={src_depth_km}km; comp={components}")
 
     # Main processing workflow
-    if not SKIP:
+    if not skip:
         x, y, t, pwin, swin = mtmrun(dist_km, baz, src_depth_km,
                                      tmin=tmin, tmax=tmax, 
                                      components=components, 
@@ -627,37 +628,41 @@ def main(dist_km=150, baz=45, src_depth_km=1, tmin=2, tmax=4, components="Z",
                                      parallel=parallel)
         
         # Make beachball plots
-        save = f"{fig_path}/bb_d{dist_km}_b{baz}.png"
+        save = f"{fig_path}/bb_z{int(src_depth_km)}_d{dist_km}_b{baz}.png"
         plot_beachballs(x, y, t, title, save)
 
     # Plot record sections
     # Custom look for each of the distances
     customization = {
-        150: {"wf_scale": 10, "xlim": [20, 70]}, #, "ylim": [-.25E-3, 1.6E-3]},
-        250: {"wf_scale": 10, "xlim": [20, 100]},
-        500: {"wf_scale": 30, "xlim": [60, 180]},
-        750: {"wf_scale": 40, "xlim": [75, 300]},
-        1000: {"wf_scale": 50, "xlim": [100, 370]},
+        50: {"xlim": [0, 30]}, #"ylim": [-2.5E-2, 1.5E-1], "wf_scale": 20, 
+        150:  {"xlim": [19, 60], "ylim": [-2.5E-2, 1.5E-1], "wf_scale": 20, 
+               "wf_recsec_spacing": 5},
+        250:  {"xlim": [20, 100]},
+        500:  {"xlim": [55, 200], "ylim": [-3E-4, 3E-3], "wf_scale": 5},
+        750:  {"xlim": [75, 300]},
+        1000: {"xlim": [100, 370], "ylim": [-.5E-3, 3E-3], "wf_scale": 20},
     }
-    if SKIP:
+    if skip:
         tmarks = None
     else:
         tmarks = pwin + swin
 
     sac_files = []
     for component in components:
-        sac_files += Path(wav_path).glob(f"*_d{dist_km}_b{baz}_{component}.SAC")
-    save = f"{fig_path}/rs_d{dist_km}_b{baz}.png"
+        sac_files += Path(wav_path).glob(
+            f"*_z{int(src_depth_km)}_d{dist_km}_b{baz}_{component}.SAC"
+            )
+    save = f"{fig_path}/rs_z{int(src_depth_km)}_d{dist_km}_b{baz}.png"
     kwargs = customization[dist_km]
-    pp = PrettyPlot(fids=sac_files, wf_type="recsec", wf_recsec_spacing=5, 
+    pp = PrettyPlot(fids=sorted(sac_files), wf_type="recsec",  
                     fmin=1/tmax, fmax=1/tmin, colors=["viridis"], linewidth=1,
-                    ylabel=f"Velocity x {kwargs['wf_scale']} [m/s]",
+                    ylabel=f"Velocity [m/s]",
                     # tp_phases=["ttall"],
                     # tp_phases=P_TRAIN + S_TRAIN,
                     tp_model=taup_model, tp_dist_km=dist_km, 
                     tp_depth=src_depth_km, tp_start=0,
                     tmarks=tmarks, tmarks_c=["C0", "C0", "C1", "C1"], 
-                    title=title,  save=save, show=SHOW, legend=True, dpi=200, 
+                    title=title,  save=save, show=show, legend=True, dpi=200, 
                     transparent=False,
                     **kwargs)
     pp.main()
@@ -665,9 +670,9 @@ def main(dist_km=150, baz=45, src_depth_km=1, tmin=2, tmax=4, components="Z",
 
 if __name__ == "__main__":
     # syngine="ak135f_1s"
-    main(dist_km=150, baz=45, tmin=1, tmax=4, 
-         syngine="ak135f_1s", 
-         arrival_choice="custom", src_depth_km=20)
+    main(dist_km=50, baz=0, tmin=1, tmax=1.5, syngine="ak135f_1s", 
+         taup_model="ak135", arrival_choice="custom", src_depth_km=1,
+         components="Z", skip=False, show=True, parallel=True)
 
     # for dist_km in [150, 250, 500, 750, 1000]:
     #     if dist_km < 500:
