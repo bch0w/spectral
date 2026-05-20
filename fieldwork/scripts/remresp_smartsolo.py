@@ -24,9 +24,9 @@ from obspy import read, read_inventory
 RESP_LINK = ("https://service.iris.edu/irisws/nrl/1/combine?instconfig="
              "datalogger_DTCC_SmartSolo-IGU-BD3C-5_PD0_FR100_FPLP_DFDC_OUcount"
              "&format=stationxml")
-OUTPUT_PATH = "./resp_removed"
+OUTPUT_PATH = "./resp_removed"  # path to save new data files with resp. removed
 PRE_FILT = [.001, .005, 120, 125]  # pre-filter, if 'None', will not apply
-OUTPUT = "VEL"  # DISP=displacement, VEL=velocity, ACC=acceleration
+OUTPUT = "VEL"  # output unit; DISP=displacement, VEL=velocity, ACC=acceleration
 # ==============================================================================
 
 # Begin response removal
