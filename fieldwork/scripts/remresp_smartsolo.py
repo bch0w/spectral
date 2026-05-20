@@ -6,7 +6,7 @@ https://docs.obspy.org/packages/autogen/obspy.core.trace.Trace.remove_response.h
 
 .. rubric::
 
-    $ python remresp_smartsolo.py <PATH/TO/DATA/*>
+    $ python remresp_smartsolo.py PATH/TO/DATA/*  # or similar file tag
 
 .. requires::
 
@@ -48,7 +48,12 @@ for fid in files:
         continue
 
     # Read data, get metadata
-    st = read(fid)
+    try:
+        st = read(fid)
+    except (TypeError, IsADirectoryError):
+        print("skipped, unknown file format")
+        continue
+
     net, sta, loc, cha = st[0].get_id().split(".")
 
     # Rebuild the inventory by name assuming only trace per file
