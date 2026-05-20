@@ -1274,7 +1274,7 @@ class PrettyPlot():
                 tmark = float(tmark)
 
             for ax in self.axs:
-                ax.axvline(tmark, c=c, lw=0.5, zorder=6)
+                ax.axvline(tmark, c=c, lw=1, zorder=100)
 
     def set_plot_aesthetics(self):
         """
