@@ -102,8 +102,8 @@ def main():
     args = parse_args()
 
     # Few set up tasks
-    if not os.path.exists(args.output):
-        os.makedirs(args.output)
+    if not os.path.exists(args.save):
+        os.makedirs(args.save)
 
     assert(args.fids), f"{len(args.fids)} file IDs found"
 
