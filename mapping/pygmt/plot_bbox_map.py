@@ -671,8 +671,34 @@ def simblast_high_res():
     )
 
 
+def gulkana():
+    """Example usage of the plot_bbox_map function with multiple bounding boxes."""
+    region = [-145.59971,-145.3003,63.198378,63.349744]
+
+    markers_lonlat_example = [
+        {"label": "NKNTS", "lon": 129.0297, "lat": 41.33, 
+         "font": "10p,Helvetica,red", "color": "yellow", 
+         "pen": "1p,black", "style": "a0.5c"},        
+    ]
+
+    plot_bbox_map(
+        region=region,
+        output="cryo.png",
+        topo_data_source="igpp",
+        topo_resolution="01m",
+        projection="M12c",
+        contour_interval=250,
+        map_scale="jBL+w10k+f+o0.5c/0.5c",
+        utm_zone=6,
+        utm_hemisphere="N",
+        title=None,
+        coast_resolution="h",
+        styles={},  # Pass all styles at once
+    )
+
 if __name__ == "__main__":
     INCN = [126.0, 130., 37.25, 42.5]
     MDJ = [128.0, 131., 40.5, 45.0]
-    simblast_regional(MDJ)
+    # simblast_regional(MDJ)
     # simblast_high_res()
+    gulkana()

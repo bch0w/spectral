@@ -32,7 +32,7 @@ def parse_args():
 
     # Waveform Processing
     parser.add_argument("fids", nargs="+", help="required, file ID")
-    parser.add_argument("-s", "--sample_rate", nargs="?", type=str, 
+    parser.add_argument("-sr", "--sample_rate", nargs="?", type=str, 
                         help="Sampling rate (Hz). If not given, sampling rate"
                              "will be taken from the first file, assuming that "
                              "all traces have the same sample rate",
@@ -46,6 +46,8 @@ def parse_args():
                                   "24 dB (16)", "30 dB (32)", "36 dB (64)", 
                                   "6 dB (2)"]
                         )
+    parser.add_argument("-pf", "--pre_filt", nargs="+", type=float,
+                        default=None, help="Pre filter [f1, f2, f3, f4]")
     parser.add_argument("-t", "--phase_type", nargs="?", type=str, 
                         default="Linear Phase", 
                         help="Final phase type. Typically 'Linear Phase'.", 
@@ -55,7 +57,10 @@ def parse_args():
                         default="Off", help="Low cut filter. Not usually used",
                         choices=["1 Hz", "Off"]
                         )
-    parser.add_argument("-o", "--output", nargs="?", type=str, 
+    parser.add_argument("-o", "--output", nargs="?", type=str, default="VEL",
+                        help="output units of seismogram", 
+                        choices=["DISP", "VEL", "ACC"])
+    parser.add_argument("-s", "--save", nargs="?", type=str, 
                         default="./response_removed",
                         help="where to save the newly created files")
 
@@ -100,7 +105,7 @@ def main():
     if not os.path.exists(args.output):
         os.makedirs(args.output)
 
-    assert(args.fids), f"{len(fids)} file IDs found"
+    assert(args.fids), f"{len(args.fids)} file IDs found"
 
     if args.sample_rate is None:
         print(f"no sample rate given, retrieving from: {args.fids[0]}")
@@ -130,7 +135,7 @@ def main():
     for fid in args.fids:
         # Set up output file name and check existence
         fidout = os.path.basename(fid)
-        pathout = os.path.join(args.output, fidout)
+        pathout = os.path.join(args.save, fidout)
         if os.path.exists(pathout):
             print(f"{pathout} exists, skipping")
             continue
@@ -153,7 +158,7 @@ def main():
         inv = Inventory(networks=[network])
 
         print("\tremoving response")
-        st.remove_response(inv)
+        st.remove_response(inv, output=args.output, pre_filt=args.pre_filt)
 
         print("\twriting file")
         st.write(pathout, format="MSEED")
