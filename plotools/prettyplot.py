@@ -1022,7 +1022,7 @@ class PrettyPlot():
                 #         zorder=6+i, label=l, alpha=a
                 #         )
                 ax.plot(self._xvals, data,  c=c,  lw=self.linewidth,
-                    zorder=6+i, label=None, alpha=a
+                    zorder=6+i, label=l, alpha=a
                     )
 
     def _plot_stream_gage(self, relative=False, units="m"):
@@ -1251,7 +1251,9 @@ class PrettyPlot():
             win_end = find_nearest(self._xvals, times[-1]) + 1
             max_amp = np.amax(self.st[0].data[win_start:win_end])
             self.ax.axvspan(
-                times[0], times[-1], label=f"{name} ({max_amp:.2E})", 
+                times[0], times[-1], 
+                # label=f"{name} ({max_amp:.2E})", 
+                label=name,
                 color=f"C{i}", alpha=alpha, zorder=5
                 )
 
