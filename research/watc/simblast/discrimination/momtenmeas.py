@@ -323,7 +323,11 @@ class MomTenMeas:
         """
         dict_out = {
             50: [[6, 12], [12.5, 16.5]],
+<<<<<<< HEAD
             150: [[21, 38], [40, 50]],
+=======
+            150: [[21, 38], [40, 51]],
+>>>>>>> 9c4a00a (updates)
             250: [[35, 44.5], [67, 77]],
             500: [[60, 110], [115, 150]],
             1000: [[120, 220], [227, 300]],
@@ -670,7 +674,11 @@ def main(dist_km=150, baz=45, src_depth_km=1, tmin=2, tmax=4, components="Z",
 
 if __name__ == "__main__":
     # syngine="ak135f_1s"
+<<<<<<< HEAD
     main(dist_km=150, baz=89, tmin=1, tmax=4, syngine="ak135f_1s", 
+=======
+    main(dist_km=50, baz=0, tmin=1, tmax=1.5, syngine="ak135f_1s", 
+>>>>>>> 9c4a00a (updates)
          taup_model="ak135", arrival_choice="custom", src_depth_km=1,
          components="Z", skip=False, show=True, parallel=True)
 
