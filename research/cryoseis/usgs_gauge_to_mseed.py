@@ -1,22 +1,37 @@
-# Pulled from Prettyplot, need to clean up
-path = ("/Users/chow/Work/research/gulkanaseis24/data/USGS_data/"
-        "phelan_creek_stream_guage_2024-09-07_to_2024-09-14.txt")
+"""
+Convert USGS Stream Gauge data, whichi is provided in ASCII format, into a 
+an ObsPy Stream and save as a MiniSEED file so that it can be plotted easily
+"""
+import sys
+import os
+import numpy as np
+
+
+# Input Parameters
+path = sys.argv[1]
+units = "m"  # ft, in, m, cm
+relative = "min"  # 'origin', 'min', 'mean', 'med', 'abs'
+
+
+# Begin processing
 assert(os.path.exists(path))
 
-data = np.loadtxt(path, skiprows=28, usecols=[2,4], delimiter="\t", 
-                    dtype=str)
+# Get data
+data = np.loadtxt(path, skiprows=28, usecols=[2,4], delimiter="\t", dtype=str)
+time, amplitude = data.T
+amplt
 
 # Convert units
-if args.sg_units == "ft":
+if units == "ft":
     height = height_ft
-elif args.sg_units == "in":
+elif units == "in":
     height = height_ft * 12
-elif args.sg_units == "m":
+elif units == "m":
     height = np.array([_ * 0.3048 for _ in height_ft.astype(float)])
-elif args.sg_units == "cm":
+elif units == "cm":
     height = np.array([_ * 30.48 for _ in height_ft.astype(float)])
 else:
-    print("stream gage units `sg_units` should be in: ft, in, m, cm")
+    print("`units` should be in: ft, in, m, cm")
     sys.exit()
 
 # Subset data where we are plotting waveforms to get the correct ylims

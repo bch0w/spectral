@@ -244,7 +244,7 @@ def parse_args():
                        help="color of the time series")
     
     # CUSTOM
-    parser.add_argument("--stream_gage", action="store_true", default=False,
+    parser.add_argument("--stream_gauge", action="store_true", default=False,
                         help="For GULKANASEIS data only, plots stream gauge " 
                              "data at the bottom of the waveform plot with a " 
                              "twin X axis")
@@ -1025,17 +1025,15 @@ class PrettyPlot():
                     zorder=6+i, label=l, alpha=a
                     )
 
-    def _plot_stream_gage(self, relative=False, units="m"):
+    def _plot_stream_gauge(self, relative=False, units="m"):
         """
         Experimental Phelan Creek Stream Gage for Bryant's Gulkana experiement,
         not accesible by user.
         """
-        raise NotImplementedError
         assert args.time == "a-08", f"currently only works in AK local"
 
         # Read data from text file
-        path = ("/Users/chow/Work/research/gulkanaseis24/data/USGS_data/"
-                "phelan_creek_stream_guage_2024-09-07_to_2024-09-14.txt")
+        path = ("/Users/prof/Work/cryoseis/stream_gauge/phelan_cr_2024.txt")
         assert(os.path.exists(path))
 
         data = np.loadtxt(path, skiprows=28, usecols=[2,4], delimiter="\t", 
@@ -1392,6 +1390,7 @@ class PrettyPlot():
         self.process_waveforms()
         self.get_plot_parameters()
         self.plot_waveforms()
+        self._plot_stream_gauge()
         if self.add_trace:
             self.plot_additional_traces()
         if self.spectrogram:
