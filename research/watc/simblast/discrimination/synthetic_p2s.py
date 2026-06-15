@@ -451,10 +451,10 @@ def plot_heatmap(p2s, threshold=0.8, save="./figures", cmap="seismic",
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Synthetic P/S Heatmaps")
-    parser.add_argument("-m", "--model", type=str, nargs="?", required=True,
+    parser.add_argument("-m", "--model", type=str, nargs="?", required=False,
                         # choices=["alpha", "beta", "charlie", "echo"],      
                         help="model options")
-    parser.add_argument("-s", "--source", type=str, nargs="?",  required=True,
+    parser.add_argument("-s", "--source", type=str, nargs="?",  required=False,
                         # choices=["EQ2", "NK6", "NK6b", "ISO"], 
                         help="source name")
     parser.add_argument("-c", "--components", default="ZNE", type=str, 
@@ -478,7 +478,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def main():
+def main_old():
     args = parse_args()
    
     # Input directories/files
@@ -511,6 +511,28 @@ def main():
 
     plot_heatmap(p2s, save=f"figures/{args.model}_{args.source}.png")
 
+def main():
+    args = parse_args()
+   
+    # Input directories/files
+    path = f"3D-NK6-M3"
+    path_src = "CMTSOLUTION"
+    path_sta = "STATIONS"
 
+    # Output directories/files
+    path_save = f"data/{args.fmax}_{args.components}.npz"
+    path_fig  = f"figures/"
+
+    # Run ratio maker
+    p2s = P2SRatio(path=path, path_src=path_src, path_sta=path_sta,
+                   path_save=path_save, path_fig=path_fig,
+                   fmin=args.fmin, fmax=args.fmax,
+                   components=args.components, 
+                   overwrite=args.overwrite,
+                   )
+    p2s.calculate_ratio(i=args.i, j=args.j, parallel=args.parallel,
+                        ntasks=args.ntasks)
+
+    plot_heatmap(p2s, save=f"figures/heatmap.png")
 if __name__ == "__main__": 
     main()
