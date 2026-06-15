@@ -8,7 +8,7 @@ from obspy.imaging.beachball import beachball
 
 PLOT = False
 # Desired Mw
-mw_desired = 4.0
+mw_desired = 1.96
 
 # Original moment tensor values
 mt_dict = dict(m_rr = 5.395e+23,
