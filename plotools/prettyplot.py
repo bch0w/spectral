@@ -483,15 +483,15 @@ def convert_timezone(code, st):
     """
     assert(len(code) == 3), f"must be +?? or -??, not {code}"
     assert(code[0] in ["+", "-"])
-    starttime = st[0].stats.starttime  # Dropping the 'Z' repr. UTC
 
     sign = code[0]
-    shift = int(code[1:]) * 60 * 60  # hours
+    shift = int(code[1:]) * 60 * 60  # hours -> seconds
 
-    if sign == "+":
-        starttime += shift
-    elif sign == "-":
-        starttime -= shift
+    # starttime = st[0].stats.starttime  # Dropping the 'Z' repr. UTC
+    # if sign == "+":
+    #     starttime += shift
+    # elif sign == "-":
+    #     starttime -= shift
 
     for tr in st:
         if sign == "+":
@@ -743,6 +743,7 @@ class PrettyPlot():
                       f"{self.idx}")
                 st = st[self.idx]
             self.st += st
+        self.st.merge()  # incase we are plotting multiple days
         print(f"{self.st.__str__(extended=True)}")
 
     def setup_plot(self):
@@ -754,6 +755,7 @@ class PrettyPlot():
         self.ax = None
         self.axs = []
         self.ax_spectra = None
+        self.twax = None
 
         # Spectrogram + waveform plot
         if self.spectrogram:
@@ -1025,56 +1027,56 @@ class PrettyPlot():
                     zorder=6+i, label=l, alpha=a
                     )
 
-    def _plot_stream_gauge(self, relative=False, units="m"):
-        """
-        Experimental Phelan Creek Stream Gage for Bryant's Gulkana experiement,
-        not accesible by user.
-        """
-        assert args.time == "a-08", f"currently only works in AK local"
+    # def _plot_stream_gauge(self, relative=False, units="m"):
+    #     """
+    #     Experimental Phelan Creek Stream Gage for Bryant's Gulkana experiement,
+    #     not accesible by user.
+    #     """
+    #     assert args.time == "a-08", f"currently only works in AK local"
 
-        # Read data from text file
-        path = ("/Users/prof/Work/cryoseis/stream_gauge/phelan_cr_2024.txt")
-        assert(os.path.exists(path))
+    #     # Read data from text file
+    #     path = ("/Users/prof/Work/cryoseis/stream_gauge/phelan_cr_2024.txt")
+    #     assert(os.path.exists(path))
 
-        data = np.loadtxt(path, skiprows=28, usecols=[2,4], delimiter="\t", 
-                        dtype=str)
-        times, height_ft = data.T  # time in AK local
+    #     data = np.loadtxt(path, skiprows=28, usecols=[2,4], delimiter="\t", 
+    #                     dtype=str)
+    #     times, height_ft = data.T  # time in AK local
 
-        # Time is already in AK Local so we don't need to shift. If we did have
-        # to then we would need to convert to UTC then shift by user request
-        times = np.array([date2num(UTCDateTime(_).datetime) for _ in times])
-        height_ft = np.array(height_ft, dtype=float)
+    #     # Time is already in AK Local so we don't need to shift. If we did have
+    #     # to then we would need to convert to UTC then shift by user request
+    #     times = np.array([date2num(UTCDateTime(_).datetime) for _ in times])
+    #     height_ft = np.array(height_ft, dtype=float)
 
-        # Convert units
-        if units == "ft":
-            height = height_ft
-        elif units == "in":
-            height = height_ft * 12
-        elif units == "m":
-            height = np.array([_ * 0.3048 for _ in height_ft.astype(float)])
-        elif units == "cm":
-            height = np.array([_ * 30.48 for _ in height_ft.astype(float)])
-        else:
-            print("stream gage units `sg_units` should be in: ft, in, m, cm")
-            sys.exit()
+    #     # Convert units
+    #     if units == "ft":
+    #         height = height_ft
+    #     elif units == "in":
+    #         height = height_ft * 12
+    #     elif units == "m":
+    #         height = np.array([_ * 0.3048 for _ in height_ft.astype(float)])
+    #     elif units == "cm":
+    #         height = np.array([_ * 30.48 for _ in height_ft.astype(float)])
+    #     else:
+    #         print("stream gage units `sg_units` should be in: ft, in, m, cm")
+    #         sys.exit()
         
-        # Subset data where we are plotting waveforms to get the correct ylims
-        idx = np.where((times > self.xvals.min()) & (times < self.xvals.max()))
+    #     # Subset data where we are plotting waveforms to get the correct ylims
+    #     idx = np.where((times > self.xvals.min()) & (times < self.xvals.max()))
 
-        if relative:
-            height -= height[idx].min()
+    #     if relative:
+    #         height -= height[idx].min()
 
-        # Plot on the same axis as the waveform
-        twax = self.ax.twinx()
+    #     # Plot on the same axis as the waveform
+    #     twax = self.ax.twinx()
 
-        twax.plot(times[idx], height[idx], "o-", lw=1, c="C0", 
-                label="Phelan Cr. Gage", zorder=5, markersize=1.25, 
-                alpha=0.5)
+    #     twax.plot(times[idx], height[idx], "o-", lw=1, c="C0", 
+    #             label="Phelan Cr. Gage", zorder=5, markersize=1.25, 
+    #             alpha=0.5)
 
-        _ylabel = f"Stream Height [{units}]"
-        if relative:
-            _ylabel = f"Relative {_ylabel}"
-        twax.set_ylabel(_ylabel, rotation=-90, labelpad=20)
+    #     _ylabel = f"Stream Height [{units}]"
+    #     if relative:
+    #         _ylabel = f"Relative {_ylabel}"
+    #     twax.set_ylabel(_ylabel, rotation=-90, labelpad=20)
             
     def plot_additional_traces(self):
         """
@@ -1088,6 +1090,10 @@ class PrettyPlot():
         twax = self.ax.twinx()
         st_new = read(self.add_trace).merge()
         data_new = st_new[0].data
+
+        # Shift to correct time axis
+        if self.time.startswith("a") and len(self.time) > 1:
+            st_new = convert_timezone(code=self.time[1:], st=st_new)
 
         # Custom time axis for the new X-axis so it can still be plotted with
         if self.tr_time.startswith("a"):
@@ -1119,10 +1125,14 @@ class PrettyPlot():
         else:
             tr_label = st_new[0].get_id()
         twax.plot(xvals_new, data_new, lw=1, c=self.tr_color, 
-                  label=tr_label, zorder=5, markersize=1.25, alpha=0.4)
+                  label=tr_label, zorder=5, markersize=1.25, alpha=0.8)
 
         twax.set_ylabel(self.tr_ylabel, rotation=-90, labelpad=20)
 
+        # !!! BCBC
+        twax.set_ylim([0, 12])
+
+        self.twax = twax
         if self.spectrogram:
             _size = 2.5
             _pad = 0.05
@@ -1274,7 +1284,8 @@ class PrettyPlot():
                 tmark = float(tmark)
 
             for ax in self.axs:
-                ax.axvline(tmark, c=c, lw=1, zorder=100)
+                ax.axvline(tmark, c=c, lw=1, zorder=100, 
+                           ls="--", alpha=0.8)
 
     def set_plot_aesthetics(self):
         """
@@ -1390,7 +1401,6 @@ class PrettyPlot():
         self.process_waveforms()
         self.get_plot_parameters()
         self.plot_waveforms()
-        self._plot_stream_gauge()
         if self.add_trace:
             self.plot_additional_traces()
         if self.spectrogram:
