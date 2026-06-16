@@ -8,15 +8,15 @@ from obspy.imaging.beachball import beachball
 
 PLOT = False
 # Desired Mw
-mw_desired = 1.96
+mw_desired = 3
 
 # Original moment tensor values
-mt_dict = dict(m_rr = 5.395e+23,
-               m_tt = 5.395e+23,
-               m_pp = 5.395e+23,
-               m_rt = 0,
-               m_rp = 0,
-               m_tp = 0 
+mt_dict = dict(m_rr = 2.962945e+23, 
+               m_tt =  2.834051e+23,
+               m_pp = -6.907862e+23,
+               m_rt = -4.599846e+23,
+               m_rp = -2.735922e+23,
+               m_tp = -1.478905e+23,
                )
 
 # Check what the current Mw is
