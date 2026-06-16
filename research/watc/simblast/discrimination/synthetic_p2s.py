@@ -23,7 +23,7 @@ logger.setLevel("CRITICAL")
 
 FID_COAST = "/home/bhchow/work/data/cartography/coastline_128_130_40_43.csv"
 
-def get_p2s(tr, p_window, s_window, choice="before_after_s"):
+def get_p2s(tr, p_window, s_window, choice="window"):
     """
     Calculate P-to-S amplitude ratio for one synthetic
     
@@ -48,15 +48,15 @@ def get_p2s(tr, p_window, s_window, choice="before_after_s"):
 
     # Only look inside the given P or S window
     if choice == "window":    
-        p_idx = np.argmax(tr[p_start: p_stop])
+        p_idx = np.argmax(tr[p_start: p_stop]) + p_start
         s_idx = np.argmax(tr[s_start: s_stop]) + s_start
     # Use the extremum bounds to search for P and S
     elif choice == "bounds":
-        p_idx = np.argmax(tr[:p_stop])
+        p_idx = np.argmax(tr[:p_stop]) + p_start
         s_idx = np.argmax(tr[s_start:]) + s_start
     # Use min S time as a dividing line
     elif choice == "before_after_s":
-        p_idx = np.argmax(tr[:s_start])
+        p_idx = np.argmax(tr[:s_start]) + p_start
         s_idx = np.argmax(tr[s_start:]) + s_start 
 
     # P-to-S amplitude ratio, index of max P, index of max S
@@ -94,6 +94,43 @@ def get_taup_arrivals(source_depth_in_km, distance_in_km, p_phase_list=None,
     
     s_arrivals = [_.time for _ in s_arrivals]
     s_window = [min(s_arrivals), max(s_arrivals)]
+
+    return p_window, s_window
+
+def get_group_vel_arrivals(distance_in_km):
+    """
+    Return phase arrivals based on expected phase/group velocities that give 
+    min and max expected arrival times
+    """
+    group_velocities = {
+        "Pn": [7.7, 8.25],  # km/s
+        "Pg": [5.5, 6.5],
+        # "P_general": [5.8, 11],
+        "Sn": [4.0, 4.6],
+        # "Sg": [3.0, 3.6],  # Lg, values from Baker et al. 2012
+        "Sg": [3.2, 3.6],  # Lg, values from Baker et al. 2012
+        # "S_general": [3.0, 6.5],
+    }
+    
+    # Figure out arrival time based on straight line distance
+    arrivals = {}
+    for key, vals in group_velocities.items():
+        arrivals[f"{key}"] = [distance_in_km / val for val in vals][::-1]  # s
+
+    p_window = [np.inf, -np.inf]
+    s_window = [np.inf, -np.inf]
+    for phase, arvs in arrivals.items():
+        # Go through and figure out min and max arrival times based on phase
+        if phase.startswith("P"):
+            if min(arvs) < p_window[0]:
+                p_window[0] = min(arvs)
+            if max(arvs) > p_window[1]:
+                p_window[1] = max(arvs)
+        elif phase.startswith("S"):
+            if min(arvs) < s_window[0]:
+                s_window[0] = min(arvs)
+            if max(arvs) > s_window[1]:
+                s_window[1] = max(arvs)
 
     return p_window, s_window
 
@@ -291,12 +328,19 @@ class P2SRatio:
         tr = self._read_sem(fid)
         tr.filter("bandpass", freqmin=self.fmin, freqmax=self.fmax)
 
-        p_window, s_window = get_taup_arrivals(tr.stats.sac["evdp"], 
-                                               tr.stats.sac["dist"])
+        if False:
+            p_window, s_window = get_taup_arrivals(tr.stats.sac["evdp"], 
+                                                   tr.stats.sac["dist"])
+        else:
+            p_window, s_window = get_group_vel_arrivals(tr.stats.sac["dist"])
         if not p_window or not s_window:
             if self.path_fig:
                 self.plot_tr(tr)
             raise Exception
+        
+        # Offset window times by T0
+        p_window = [_ - tr.stats.sac.b for _ in p_window]
+        s_window = [_ - tr.stats.sac.b for _ in s_window]
         
         p2sratio, p_idx, s_idx = get_p2s(tr=tr, p_window=p_window, 
                                          s_window=s_window)  
@@ -377,7 +421,8 @@ def plot_heatmap(p2s, threshold=0.8, save="./figures", cmap="seismic",
     
     # Interpolate p2s ratios onto the grid
     z = griddata((p2s.lons, p2s.lats), p2s.p2sratios, (x, y), 
-                 method="linear")
+                  method="nearest")
+                #   method="linear")
     
     # Setting hard bounds for colorscale to keep all figures looking similar
     vmin = 0
@@ -403,12 +448,12 @@ def plot_heatmap(p2s, threshold=0.8, save="./figures", cmap="seismic",
     cb.ax.tick_params(labelsize=14)
 
     # Station markers for reference
-    if False:
+    if True:
         plt.scatter(p2s.lons, p2s.lats, marker="v", alpha=0.25, c="None", 
                     ec="w", s=10, zorder=8)
 
         for lon_, lat_, id_ in zip(p2s.lons, p2s.lats, p2s.ids):
-            plt.text(lon_, lat_, id_, fontsize=4, color="w")
+            plt.text(lon_, lat_, id_, fontsize=8, color="w")
         
     # Plot source as location or mechanism
     mt = [p2s.cmt["Mrr"], p2s.cmt["Mtt"], p2s.cmt["Mpp"], 
@@ -515,13 +560,13 @@ def main():
     args = parse_args()
    
     # Input directories/files
-    path = f"3D-NK6-M3"
-    path_src = "CMTSOLUTION"
+    path = f"3D-EQ2-M3"
+    path_src = "CMTSOLUTION_EQ2-M3"
     path_sta = "STATIONS"
 
     # Output directories/files
-    path_save = f"data/{args.fmax}_{args.components}.npz"
-    path_fig  = f"figures/"
+    path_save = f"data/{path}_{args.fmax}_{args.components}.npz"
+    path_fig  = f"figures/{path}/"
 
     # Run ratio maker
     p2s = P2SRatio(path=path, path_src=path_src, path_sta=path_sta,
