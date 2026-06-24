@@ -670,8 +670,8 @@ def main(dist_km=150, baz=45, src_depth_km=1, tmin=2, tmax=4, components="Z",
 
 if __name__ == "__main__":
     # syngine="ak135f_1s"
-    main(dist_km=50, baz=0, tmin=1, tmax=1.5, syngine="ak135f_1s", 
-         taup_model="ak135", arrival_choice="custom", src_depth_km=1,
+    main(dist_km=1000, baz=0, tmin=1, tmax=1.5, syngine="ak135f_1s", 
+         taup_model="ak135", arrival_choice="custom", src_depth_km=0.5,
          components="Z", skip=False, show=True, parallel=True)
 
     # for dist_km in [150, 250, 500, 750, 1000]:
