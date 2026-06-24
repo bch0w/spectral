@@ -700,5 +700,5 @@ if __name__ == "__main__":
     INCN = [126.0, 130., 37.25, 42.5]
     MDJ = [128.0, 131., 40.5, 45.0]
     # simblast_regional(MDJ)
-    # simblast_high_res()
-    gulkana()
+    simblast_high_res()
+    # gulkana()
