@@ -32,8 +32,8 @@ from matplotlib.ticker import MultipleLocator
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from obspy import read, UTCDateTime, Stream
-from obspy.taup import TauPyModel
-from obspy.geodetics import kilometers2degrees
+from obspy.taup import TauPyModel, plot_ray_paths
+from obspy.geodetics import kilometers2degrees, degrees2kilometers
 from obspy.imaging.cm import obspy_sequential
 from obspy.imaging.util import ObsPyAutoDateFormatter
 
@@ -186,6 +186,10 @@ def parse_args():
                         help="colors for each of the time marks, should "
                              "either be single letter for all marks or match " 
                              "length of tmarks for individual colors")
+    parser.add_argument("--group_vels", nargs="+", default=None, type=float,
+                        help="plot time markers for given group velocities "
+                             "arrival times calculatedusing `tp_dist_deg` or "
+                             "`tp_dist_km` as well as `tp_start`")
 
     # TauP Phase Arrivals
     parser.add_argument("--tp_phases", nargs="+", type=str, default=None,
@@ -202,6 +206,12 @@ def parse_args():
                         help="origintime of the event, must match the format "
                              "of --time. If not given, assumes first sample "
                              "of --xlim defines origintime")
+    parser.add_argument("--tp_cmap", nargs="?", type=str, default="rainbow_r",
+                        help="Matplotlib colormap that defines how to color "
+                             "each of the TauP phases")
+    parser.add_argument("--tp_plot_rays", action="store_true", default=False,
+                        help="Create a separate plot of raypaths for the given "
+                             "source parameters and phase list")
     
     # Spectrogram (all parameters end with _s)
     parser.add_argument("--spectrogram", action="store_true", default=False,
@@ -266,8 +276,10 @@ def parse_args():
                         help="Number of columns in legend")
     parser.add_argument("--title", nargs="?", type=str, default=None,
                         help="title of the figure, defaults to ID and fmin/max")
-    parser.add_argument("-ta", "--title_append", nargs="?", type=str, 
+    parser.add_argument("--title_append", nargs="?", type=str, 
                         default="", help="append to default title")
+    parser.add_argument("--title_prepend", nargs="?", type=str, 
+                        default="", help="prepend to default title")
     parser.add_argument("--frameoff", action="store_true",
                         help="Turn everything off except the waveform")
     parser.add_argument("-s", "--save", type=str, default=None,
@@ -592,6 +604,19 @@ def _set_xaxis_obspy_dates(ax, ticklabels_small=True, minticks=3, maxticks=6):
     if ticklabels_small:
         plt.setp(ax.get_xticklabels(), fontsize='small')
 
+def cmaphex(nvals, cmap="seismic"):
+    """
+    Return a list of hex codes for `nvals` of a `cmap` which can be used to
+    provide a sequential colormap made up of discrete color values
+    """
+    cmap = plt.get_cmap(cmap, nvals)
+    hex_out = []
+    for i in range(cmap.N):
+        rgba = cmap(i)
+        # rgb2hex accepts rgb or rgba
+        hex_out.append(mpl.colors.rgb2hex(rgba))
+    return hex_out
+
 
 class PrettyPlot():
     """
@@ -611,10 +636,11 @@ class PrettyPlot():
                  ylabel="amplitude", ylim=None,
                  # Time Axis
                  time="s", minticks=3, maxticks=6, xlim=6, tmarks=None, 
-                 tmarks_c="k",
+                 tmarks_c="k", group_vels=None,
                  # TauP 
                  tp_phases=None, tp_model="iasp91", tp_dist_km=None,
-                 tp_dist_deg=None, tp_depth=None, tp_start=None,
+                 tp_dist_deg=None, tp_depth=None, tp_start=None, 
+                 tp_cmap="viridis", tp_plot_rays=False,
                  # Spectrogram
                  spectrogram=False, sp_cmap="viridis", sp_numcol=256,
                  sp_dbscale=True, sp_logscale=False, sp_clip=None,
@@ -625,6 +651,7 @@ class PrettyPlot():
                  # Misc.
                  fig_size=None, dpi=200, fig_len=None, fig_asp=None, 
                  legend=True, ncol_legend=1, title=None, title_append="",
+                 title_prepend="",
                  save=None, output=None, show=True, frameoff=False, 
                  transparent=False,
                  **kwargs
@@ -674,6 +701,7 @@ class PrettyPlot():
         self.xlim = xlim
         self.tmarks = tmarks
         self.tmarks_c = tmarks_c
+        self.group_vels = group_vels
 
         # (optional) TauP arrival times
         self.tp_phases = tp_phases
@@ -682,6 +710,8 @@ class PrettyPlot():
         self.tp_dist_deg = tp_dist_deg
         self.tp_depth = tp_depth
         self.tp_start = tp_start
+        self.tp_cmap = tp_cmap
+        self.tp_plot_rays = tp_plot_rays
 
         # (optional) Spectrograms
         self.spectrogram = spectrogram
@@ -709,6 +739,7 @@ class PrettyPlot():
         self.ncol_legend = ncol_legend
         self.title = title
         self.title_append = title_append
+        self.title_prepend = title_prepend
         self.save = save
         self.output = output
         self.show = show
@@ -1024,7 +1055,8 @@ class PrettyPlot():
                 #         zorder=6+i, label=l, alpha=a
                 #         )
                 ax.plot(self._xvals, data,  c=c,  lw=self.linewidth,
-                    zorder=6+i, label=l, alpha=a
+                    zorder=6+i, alpha=a,
+                    # label=l, 
                     )
 
     # def _plot_stream_gauge(self, relative=False, units="m"):
@@ -1207,6 +1239,7 @@ class PrettyPlot():
         assert(self.tp_depth is not None)
         if self.tp_dist_km:
             dist_deg = kilometers2degrees(self.tp_dist_km)
+            self.tp_dist_deg = dist_deg
         else:
             dist_deg = self.tp_dist_deg
 
@@ -1242,28 +1275,55 @@ class PrettyPlot():
             else:
                 tp_start = float(self.tp_start)  # seconds
 
-        for i, (name, times) in enumerate(arrivals.items()):
-            # Sometimes there are multiple arrival times for the same phase
-            if times[0] == times[-1]:
-                alpha = 1
-            else: 
-                alpha = 0.3  # 0.3
+        # Discrete colormap for the arrivals
+        cvals = cmaphex(nvals=len(arrivals), cmap=self.tp_cmap)
 
+        for i, (name, times) in enumerate(arrivals.items()):
             # Convert arrival times to time series reference
             if self.time.startswith("a"):
                 times = [date2num((tp_start + time).datetime) for time in times]
             else:
                 times = [tp_start + time for time in times]
+
             # Figure out the maximum amplitude in this time window
             win_start = find_nearest(self._xvals, times[0])
             win_end = find_nearest(self._xvals, times[-1]) + 1
             max_amp = np.amax(self.st[0].data[win_start:win_end])
-            self.ax.axvspan(
-                times[0], times[-1], 
-                # label=f"{name} ({max_amp:.2E})", 
-                label=name,
-                color=f"C{i}", alpha=alpha, zorder=5
+
+            # Linestyle based on what the phase arrives at
+            if name.upper().endswith("P"):
+                ls = "--"
+            elif name.upper().endswith("S"):
+                ls = "-"
+            else:
+                if name.upper().startswith("P"):
+                    ls = "--"
+                elif name.upper().startswith("S"):
+                    ls="-"
+
+            # Plot discrete arrivals
+            for time in times:
+                self.ax.axvline(
+                    time,
+                    alpha=1, 
+                    ls=ls,
+                    # label=name, 
+                    color=cvals[i],
+                    zorder=5,
+                    )
+                self.ax.text(x=time, y=max_amp, s=name, c=cvals[i], zorder=100)
+
+        # Plot the global ray paths for sanity check
+        # https://github.com/obspy/obspy/blob/master/obspy/taup/tau.py#L250
+        if self.tp_plot_rays:
+            tp_rays = model.get_ray_paths(
+                source_depth_in_km=self.tp_depth,
+                distance_in_degree=dist_deg,
+                phase_list=self.tp_phases,
                 )
+            # Modify types here
+            tp_rays.plot_rays(legend=True, indicate_wave_type=True,
+                              plot_type="cartesian", show=False)
 
     def plot_tmarks(self):
         """
@@ -1286,6 +1346,42 @@ class PrettyPlot():
             for ax in self.axs:
                 ax.axvline(tmark, c=c, lw=1, zorder=100, 
                            ls="--", alpha=0.8)
+
+    def plot_group_vels(self, c="r", ls="-"):
+        """
+        Create time mark lines for a given set of group velocities.
+        Requires values from TauP arrivals, namely: `tp_dist` and `tp_start`
+        """
+        # Get phase arrivals from TauP if requested
+        assert(self.tp_dist_km is not None or self.tp_dist_deg is not None)
+        if self.tp_dist_deg:
+            self.tp_dist_km = degrees2kilometers(self.tp_dist_deg)
+
+        # e.g., {5 km/s: 10s}
+        arrivals = {str(vel): self.tp_dist_km / vel for vel in self.group_vels}
+
+        # Determine the time series starttime of the event because the TauP
+        # times are relative to an origin time
+        if self.tp_start is None: 
+            if self.time.startswith("a"):
+                tp_start = UTCDateTime(self._xvals[0])
+            else:
+                tp_start = float(self._xvals[0])
+        else:
+            if self.time.startswith("a"):
+                tp_start = UTCDateTime(self.tp_start)
+            else:
+                tp_start = float(self.tp_start)  # seconds
+
+        for i, (name, time) in enumerate(arrivals.items()):
+            # Convert arrival times to time series reference
+            if self.time.startswith("a"):
+                time = date2num((tp_start + time).datetime) 
+            else:
+                time += tp_start 
+
+            # Plot discrete arrivals
+            self.ax.axvline(time, alpha=1, ls=ls, c=c, zorder=5, label=name)
 
     def set_plot_aesthetics(self):
         """
@@ -1354,9 +1450,11 @@ class PrettyPlot():
             # Append some information on the TauP arrivals
             if self.tp_phases:
                 title += (f"\n(TauP={self.tp_model}; $\\Delta$="
-                          f"{self.tp_dist_deg}deg; Z={self.tp_depth}km)")
+                          f"{self.tp_dist_deg:.2f}deg; Z={self.tp_depth}km)")
             if self.title_append:
                 title += f"\n{self.title_append}"
+            if self.title_prepend:
+                title = f"{self.title_prepend}{title}"
         else:
             title = self.title
         self.ax.set_title(title)
@@ -1407,6 +1505,8 @@ class PrettyPlot():
             self.plot_spectrogram()
         if self.tmarks:
             self.plot_tmarks()
+        if self.group_vels:
+            self.plot_group_vels()
         if self.tp_phases:
             self.plot_taup_arrivals()
         self.set_plot_aesthetics()
