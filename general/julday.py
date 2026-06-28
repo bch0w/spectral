@@ -2,4 +2,4 @@
 import sys
 from obspy import UTCDateTime
 time = UTCDateTime(sys.argv[1])
-print(f"{time.year}-{time.julday:0>3}")
+print(f"{time.year}-{time.julday:0>3} = {time.year}-{time.month:0>2}-{time.day:0>2}")
