@@ -187,9 +187,10 @@ def parse_args():
                              "either be single letter for all marks or match " 
                              "length of tmarks for individual colors")
     parser.add_argument("--group_vels", nargs="+", default=None, type=float,
-                        help="plot time markers for given group velocities "
-                             "arrival times calculatedusing `tp_dist_deg` or "
-                             "`tp_dist_km` as well as `tp_start`")
+                        help="plot time markers for given group velocities in "
+                             "units km/s. Arrival times are calculated using "
+                             "`tp_dist_deg` or `tp_dist_km` as well as "
+                             "`tp_start`")
 
     # TauP Phase Arrivals
     parser.add_argument("--tp_phases", nargs="+", type=str, default=None,
@@ -571,14 +572,16 @@ def set_plot_aesthetic(
         ax.yaxis.set_minor_locator(MultipleLocator(float(ytick_minor)))
 
     plt.sca(ax)
-    if xgrid_major:
-        plt.grid(visible=True, which="major", axis="x", alpha=0.2, linewidth=1)
-    if xgrid_minor:
-        plt.grid(visible=True, which="minor", axis="x", alpha=0.2, linewidth=.5)
-    if ygrid_major:
-        plt.grid(visible=True, which="major", axis="y", alpha=0.2, linewidth=1)
-    if ygrid_minor:
-        plt.grid(visible=True, which="minor", axis="y", alpha=0.2, linewidth=.5)
+    # !!! BCBC
+    if False:
+        if xgrid_major:
+            plt.grid(visible=True, which="major", axis="x", alpha=0.2, linewidth=1)
+        if xgrid_minor:
+            plt.grid(visible=True, which="minor", axis="x", alpha=0.2, linewidth=.5)
+        if ygrid_major:
+            plt.grid(visible=True, which="major", axis="y", alpha=0.2, linewidth=1)
+        if ygrid_minor:
+            plt.grid(visible=True, which="minor", axis="y", alpha=0.2, linewidth=.5)
 
 
 def _set_xaxis_obspy_dates(ax, ticklabels_small=True, minticks=3, maxticks=6):
@@ -633,9 +636,9 @@ class PrettyPlot():
                  nrows=None, ncols=None,
                  # Plotting Aesthetics
                  colors="k", alphas=None, labels=None, linewidth=0.5, 
-                 ylabel="amplitude", ylim=None,
+                 ylabel="amplitude", ylim=None, xlim=None,
                  # Time Axis
-                 time="s", minticks=3, maxticks=6, xlim=6, tmarks=None, 
+                 time="s", minticks=3, maxticks=6, tmarks=None, 
                  tmarks_c="k", group_vels=None,
                  # TauP 
                  tp_phases=None, tp_model="iasp91", tp_dist_km=None,
@@ -1347,10 +1350,15 @@ class PrettyPlot():
                 ax.axvline(tmark, c=c, lw=1, zorder=100, 
                            ls="--", alpha=0.8)
 
-    def plot_group_vels(self, c="r", ls="-"):
+    def plot_group_vels(self, c="k", alpha=0.25, ls="-", lw=2, fontsize=8,
+                        zorder=10):
         """
-        Create time mark lines for a given set of group velocities.
+        Create time mark lines for a given set of group velocities `group_vel`
+        given in units of km/s
         Requires values from TauP arrivals, namely: `tp_dist` and `tp_start`
+        to get the correct arrival time
+        Annotates the value of the group velocity at the max amplitude of the 
+        waveform. 
         """
         # Get phase arrivals from TauP if requested
         assert(self.tp_dist_km is not None or self.tp_dist_deg is not None)
@@ -1381,7 +1389,9 @@ class PrettyPlot():
                 time += tp_start 
 
             # Plot discrete arrivals
-            self.ax.axvline(time, alpha=1, ls=ls, c=c, zorder=5, label=name)
+            self.ax.axvline(time, alpha=alpha, ls=ls, lw=lw, c=c, zorder=zorder)
+            self.ax.text(x=time, y=self.st[0].max(), s=f"{name}km/s", 
+                         fontsize=fontsize, color=c, alpha=alpha)
 
     def set_plot_aesthetics(self):
         """
@@ -1438,11 +1448,14 @@ class PrettyPlot():
             set_plot_aesthetic(self.ax_spectra, ytick_format="plain")
 
         if self.title is None:
-            title = f"{self.st[0].stats.starttime.year}."
-            title += f"{self.st[0].stats.starttime.julday:0>3}"
-            if self.st[0].stats.starttime.julday != \
-                self.st[0].stats.endtime.julday:
-                title += f"-{self.st[0].stats.endtime.julday}"
+            title= ""
+            # !!! BCBC 
+            if False:
+                title = f"{self.st[0].stats.starttime.year}."
+                title += f"{self.st[0].stats.starttime.julday:0>3}"
+                if self.st[0].stats.starttime.julday != \
+                    self.st[0].stats.endtime.julday:
+                    title += f"-{self.st[0].stats.endtime.julday}"
             if self.fmin or self.fmax:
                 _fmin = self.fmin or 0
                 _fmax = self.fmax or self.st[0].stats.sampling_rate / 2
