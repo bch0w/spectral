@@ -174,7 +174,7 @@ def parse_args():
                         help="min ticks if --time='a'")
     parser.add_argument("--maxticks", type=int, default=6, 
                         help="max ticks if --time='a'")
-    parser.add_argument("-x", "--xlim", nargs="+", default=None,
+    parser.add_argument("-x", "--xlim", nargs="+", default=None, dtype=float,
                         help="time axis limits in s or if `time`=='a' then "
                              "values should be in datetime, see tmarks")
     parser.add_argument("-tm", "--tmarks", nargs="+", 
@@ -1061,58 +1061,12 @@ class PrettyPlot():
                     zorder=6+i, alpha=a,
                     # label=l, 
                     )
+                if self.xlim:
+                    x = self.xlim[0]
+                else:
+                    x = self._xvals[0]
+                ax.text(x, data[0], s=i, c="k", fontsize="small")
 
-    # def _plot_stream_gauge(self, relative=False, units="m"):
-    #     """
-    #     Experimental Phelan Creek Stream Gage for Bryant's Gulkana experiement,
-    #     not accesible by user.
-    #     """
-    #     assert args.time == "a-08", f"currently only works in AK local"
-
-    #     # Read data from text file
-    #     path = ("/Users/prof/Work/cryoseis/stream_gauge/phelan_cr_2024.txt")
-    #     assert(os.path.exists(path))
-
-    #     data = np.loadtxt(path, skiprows=28, usecols=[2,4], delimiter="\t", 
-    #                     dtype=str)
-    #     times, height_ft = data.T  # time in AK local
-
-    #     # Time is already in AK Local so we don't need to shift. If we did have
-    #     # to then we would need to convert to UTC then shift by user request
-    #     times = np.array([date2num(UTCDateTime(_).datetime) for _ in times])
-    #     height_ft = np.array(height_ft, dtype=float)
-
-    #     # Convert units
-    #     if units == "ft":
-    #         height = height_ft
-    #     elif units == "in":
-    #         height = height_ft * 12
-    #     elif units == "m":
-    #         height = np.array([_ * 0.3048 for _ in height_ft.astype(float)])
-    #     elif units == "cm":
-    #         height = np.array([_ * 30.48 for _ in height_ft.astype(float)])
-    #     else:
-    #         print("stream gage units `sg_units` should be in: ft, in, m, cm")
-    #         sys.exit()
-        
-    #     # Subset data where we are plotting waveforms to get the correct ylims
-    #     idx = np.where((times > self.xvals.min()) & (times < self.xvals.max()))
-
-    #     if relative:
-    #         height -= height[idx].min()
-
-    #     # Plot on the same axis as the waveform
-    #     twax = self.ax.twinx()
-
-    #     twax.plot(times[idx], height[idx], "o-", lw=1, c="C0", 
-    #             label="Phelan Cr. Gage", zorder=5, markersize=1.25, 
-    #             alpha=0.5)
-
-    #     _ylabel = f"Stream Height [{units}]"
-    #     if relative:
-    #         _ylabel = f"Relative {_ylabel}"
-    #     twax.set_ylabel(_ylabel, rotation=-90, labelpad=20)
-            
     def plot_additional_traces(self):
         """
         Plot additional time series with a common X axis but with a different Y 
