@@ -174,7 +174,7 @@ def parse_args():
                         help="min ticks if --time='a'")
     parser.add_argument("--maxticks", type=int, default=6, 
                         help="max ticks if --time='a'")
-    parser.add_argument("-x", "--xlim", nargs="+", default=None, dtype=float,
+    parser.add_argument("-x", "--xlim", nargs="+", default=None, type=float,
                         help="time axis limits in s or if `time`=='a' then "
                              "values should be in datetime, see tmarks")
     parser.add_argument("-tm", "--tmarks", nargs="+", 
@@ -1058,13 +1058,13 @@ class PrettyPlot():
                 #         zorder=6+i, label=l, alpha=a
                 #         )
                 ax.plot(self._xvals, data,  c=c,  lw=self.linewidth,
-                    zorder=6+i, alpha=a,
-                    # label=l, 
+                    zorder=6+i, alpha=a, label=l, 
                     )
                 if self.xlim:
                     x = self.xlim[0]
                 else:
                     x = self._xvals[0]
+                # !!! BCBC Annotate number next to waveform
                 ax.text(x, data[0], s=i, c="k", fontsize="small")
 
     def plot_additional_traces(self):

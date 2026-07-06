@@ -5,11 +5,15 @@ colors to make it easier to visually separate.
 Models are pulled directly from IRIS EMC links and will be downloaded
 to your local machine
 """
-import numpy as  np
+import sys
+import numpy as np
 import matplotlib.pyplot as plt
 
 
-choices = ["prem"]
+choices = sys.argv[1:]
+for choice in choices:
+    assert choice in ["ak135f", "iasp91", "prem"]
+
 
 # Choose which model to plot
 depth_arrays = {}

@@ -24,9 +24,13 @@ from obspy import read, read_inventory
 RESP_LINK = ("https://service.iris.edu/irisws/nrl/1/combine?instconfig="
              "datalogger_DTCC_SmartSolo-IGU-BD3C-5_PD0_FR100_FPLP_DFDC_OUcount"
              "&format=stationxml")
-OUTPUT_PATH = "./resp_removed"  # path to save new data files with resp. removed
+OUTPUT_PATH = "./../resp_removed"  # path to save new data files with resp. removed
 PRE_FILT = [.001, .005, 120, 125]  # pre-filter, if 'None', will not apply
 OUTPUT = "VEL"  # output unit; DISP=displacement, VEL=velocity, ACC=acceleration
+RENAME = True
+
+# if RENAME == TRUE
+FID_OUT_TEMPLATE = "VH.H23K.EX.CH{c}.{y}.{j}"
 # ==============================================================================
 
 # Begin response removal
@@ -38,14 +42,15 @@ files = sys.argv[1:]
 print(f"removing response for {len(files)} waveforms")
 
 for fid in files:
-    fid_base = os.path.basename(fid)
-    print(fid_base, end="... ")
+    if not RENAME:
+        fid_out = os.path.basename(fid)
+        print(fid_base, end="... ")
 
-    # Check if this data has already been processed
-    path_out = os.path.join(OUTPUT_PATH, fid_base)
-    if os.path.exists(path_out):
-        print("skipped, already processed")
-        continue
+        # Check if this data has already been processed
+        path_out = os.path.join(OUTPUT_PATH, fid_out)
+        if os.path.exists(path_out):
+            print("skipped, already processed")
+            continue
 
     # Read data, get metadata
     try:
@@ -53,6 +58,24 @@ for fid in files:
     except (TypeError, IsADirectoryError):
         print("skipped, unknown file format")
         continue
+   
+    # RENAME based on SEED convention, requires opening the file first
+    if RENAME:
+        start = st[0].stats.starttime
+        comp = st[0].stats.component
+        fid_out = FID_OUT_TEMPLATE.format(c=comp, y=start.year, j=start.julday)
+        print(fid_out, end="... ")
+
+        # Check if this data has already been processed
+        path_out = os.path.join(OUTPUT_PATH, fid_out)
+        if os.path.exists(path_out):
+            print("skipped, already processed")
+            continue
+
+        st[0].stats.network = "VH"
+        st[0].stats.station = "H23K"
+        st[0].stats.location = "EX"
+        st[0].stats.channel = "CHZ"
 
     net, sta, loc, cha = st[0].get_id().split(".")
 

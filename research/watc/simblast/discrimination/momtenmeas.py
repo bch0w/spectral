@@ -50,8 +50,9 @@ class MomTenMeas:
     For a given moment tensor, query Instaseis/AxiSEM synthetics and make
     amplitude measurements that can be used for discrimination purposes
     """
-    def __init__(self, dist_km, baz, src_depth_km, tmin, tmax, choice="ps", 
-                 p_phase_list=None, s_phase_list=None, arrival_choice="taup",
+    def __init__(self, dist_km, baz, src_depth_km, tmin, tmax, corners=4, 
+                 choice="ps", p_phase_list=None, s_phase_list=None, 
+                 arrival_choice="taup",
                  components="ZNE", kind="velocity", syngine="iasp91_2s",  
                  taup_model="iasp91", taup_buffer=0, 
                  fig_path="FIGURES", wav_path="SAC"):
@@ -89,9 +90,9 @@ class MomTenMeas:
         taup_model : str, optional
             TauP velocity model, default is "iasp91"
         taup_buffer: float, optional
-            TauP usually provides single travel times. This option pads the TT
-            by a given percentage so that each arrival constitutes a window. 
-            Allows for some variation with longer period arrivals.
+            Buffer time in seconds. TauP usually provides single travel times. 
+            This option pads the TT a value so that each arrival constitutes a 
+            window. Allows for some variation with longer period arrivals.
         fig_path : str, optional
             Directory path to save figures, default is "FIGURES"
         wav_path : str, optional
@@ -105,6 +106,7 @@ class MomTenMeas:
         self.src_depth_km = src_depth_km
         self.tmin = tmin
         self.tmax = tmax
+        self.corners = corners
         self.choice = choice
         self.p_phase_list = p_phase_list or P_TRAIN
         self.s_phase_list = s_phase_list or S_TRAIN
@@ -117,6 +119,17 @@ class MomTenMeas:
         self.taup_model = taup_model
         self.syngine = syngine
         self.db = instaseis.open_db(f"syngine://{self.syngine}")
+
+        if self.syngine.startswith("ak135f"):
+            self.model_surface_m = 3300  # just below the mud layer
+        elif self.syngine.startswith("iasp91"):
+            self.model_surface_m = 0
+        elif self.syngine.startswith("prem"):
+            self.model_surface_m = 3000
+
+        print(f"syngine db '{self.syngine}', "
+              f"setting model surface == {self.model_surface_m}m")
+
         self.taup_model = taup_model
         self.taup_buffer = taup_buffer
         
@@ -141,19 +154,35 @@ class MomTenMeas:
         """
         Turn one of the event objects (based on idx) into an InstaSeis src 
         object for synthetic lookup
+
+        .. warning::
+
+            pushes the user-defined source depth below the expected 
+            `model_surface_m` to ensure that source are not in the water or mud
+            layer of the models
         """
         mt = self.event.focal_mechanisms[0].moment_tensor.tensor
         return instaseis.Source(
             latitude=latitude, longitude=longitude, 
-            depth_in_m=self.src_depth_km * 1E3,
+            depth_in_m=self.src_depth_km * 1E3 + self.model_surface_m,
             m_rr=mt["m_rr"], m_tt=mt["m_tt"], m_pp=mt["m_pp"], 
             m_rt=mt["m_rt"], m_rp=mt["m_rp"], m_tp=mt["m_tp"]
             )
     
-    def get_rcv(self, network="XX", station=None):
+    def get_rcv(self, network="XX", station=None, depth_in_m=0):
         """
         Define a receiver lat/lon location based on backazimuth and distance and
         return the Instaseis receiver object
+
+        .. warning::
+
+            The value `depth_in_m` is important here and is dependent on the 
+            underlying database model. For example, AK135f contains an ocean
+            layer for the first 3km, and then a 300m mud layer of very low 
+            velocities. So if you put a station at 0km, it is technically
+            sitting at the top of the fluid ocean layer. Setting `depth_in_m`
+            to 3300m situates the station at the "sea floor".
+            https://rses.anu.edu.au/seismology/ak135/ak135f.html
         """
         if station is None:
             station = f"{self.idx:0>4}"
@@ -166,7 +195,16 @@ class MomTenMeas:
         lon += self.src.longitude  
 
         rcv = instaseis.Receiver(latitude=lat, longitude=lon,
-                                 network=network, station=station)      
+                                 network=network, station=station)
+
+        # DOES NOT WORK
+        # UserWarning: Receiver depth cannot be changed when reading from 
+        #              reciprocal DB. Using depth from the DB.
+        # This is a source side green's function so the receiver locations are 
+        # locked?
+        # rcv = instaseis.Receiver(latitude=lat, longitude=lon,
+        #                          network=network, station=station)
+        #                          depth_in_m=depth_in_m + self.model_surface_m)      
         return rcv
 
     def get_synthetics(self):
@@ -176,16 +214,20 @@ class MomTenMeas:
         before saving so that when we plot with PrettyPlot we get the exact
         same waveforms, instead of having to repeat and possibly change the
         processing steps taken.
+        https://instaseis.net/instaseis.html#\
+                instaseis.database_interfaces.base_instaseis_db.\
+                BaseInstaseisDB.get_seismograms
         """
         st = self.db.get_seismograms(source=self.src, receiver=self.rcv, 
                                      components=self.components,  
-                                     kind=self.kind, dt=0.1)
+                                     kind=self.kind, dt=0.1,
+                                     remove_source_shift=True)
 
         # Calcualte dist, az and baz from the now set locations
         dist_m, az, baz = gps2dist_azimuth(lat1=self.src.latitude, 
-                                         lon1=self.src.longitude,
-                                         lat2=self.rcv.latitude,
-                                         lon2=self.rcv.longitude)
+                                           lon1=self.src.longitude,
+                                           lat2=self.rcv.latitude,
+                                           lon2=self.rcv.longitude)
         dist_km = dist_m * 1E-3
         dist_deg = kilometers2degrees(dist_km)
         
@@ -260,8 +302,8 @@ class MomTenMeas:
 
         # Take only time information, add a buffer around direct pick 
         p_arrivals = [_.time for _ in p_arrivals]
-        p_window = [min(p_arrivals) * (1-self.taup_buffer) - self.tmax, 
-                    max(p_arrivals) * (1+self.taup_buffer) + self.tmax]
+        p_window = [min(p_arrivals) - self.taup_buffer - self.tmax, 
+                    max(p_arrivals) + self.taup_buffer + self.tmax]
 
         # Get S-phase windows
         s_arrivals = model.get_travel_times(
@@ -275,9 +317,9 @@ class MomTenMeas:
         # Take only time information, add a buffer around direct pick and 
         # enlarge the buffer by the largest period
         s_arrivals = [_.time for _ in s_arrivals]
-        s_window = [min(s_arrivals) * (1-self.taup_buffer) - self.tmax , 
-                    max(s_arrivals) * (1+self.taup_buffer) + self.tmax]
-
+        s_window = [min(s_arrivals) - self.taup_buffer - self.tmax , 
+                    max(s_arrivals) + self.taup_buffer + self.tmax]
+        
         return p_window, s_window
     
     def get_group_vel_arrivals(self):
@@ -389,7 +431,7 @@ class MomTenMeas:
         
         # Allow for log10
         if self.choice.endswith("log"):
-            raise NotImplementedError("negative values won't plot pygmt")
+            # raise NotImplementedError("negative values won't plot pygmt")
             measurement = np.log10(measurement)
                 
         return maxdict, measurement
@@ -410,8 +452,9 @@ class MomTenMeas:
         swin_start_s, swin_end_s = self.swin_s
 
         for i, (tr, ax) in enumerate(zip(self.st, axs)):
-            ax.plot(tr.times(), tr.data, label=tr.stats.component, lw=.8, 
-                    zorder=6, c="gray")
+            ax.plot(tr.times(), tr.data, lw=.8, zorder=6, c="gray",
+                    label=tr.stats.component)
+                    
 
             maxvals = self.maxdict[tr.stats.component]
 
@@ -512,7 +555,7 @@ class MomTenMeas:
 
         if self.tmin and self.tmax:
             self.st.filter("bandpass", freqmin=1/self.tmax, freqmax=1/self.tmin, 
-                           zerophase=False)
+                           zerophase=False, corners=self.corners)
 
 
         self.maxdict, self.meas = self.make_measurement()
@@ -603,7 +646,8 @@ def plot_beachballs(x, y, t, title=None, save=False):
     fig.savefig(save, dpi=500)
 
 
-def main(dist_km=150, baz=45, src_depth_km=1, tmin=2, tmax=4, components="Z",
+def main(dist_km=150, baz=45, src_depth_km=1, tmin=2, tmax=4, corners=4,
+         components="Z",
          p_phase_list=P_TRAIN, s_phase_list=S_TRAIN, arrival_choice="taup",
          parallel=True, syngine="iasp91_2s", taup_model="iasp91", 
          taup_buffer=0.0, fig_path="FIGURES", wav_path="SAC", skip=False, 
@@ -617,7 +661,7 @@ def main(dist_km=150, baz=45, src_depth_km=1, tmin=2, tmax=4, components="Z",
     # Main processing workflow
     if not skip:
         x, y, t, pwin, swin = mtmrun(dist_km, baz, src_depth_km,
-                                     tmin=tmin, tmax=tmax, 
+                                     tmin=tmin, tmax=tmax, corners=corners,
                                      components=components, 
                                      p_phase_list=p_phase_list, 
                                      s_phase_list=s_phase_list, 
@@ -637,10 +681,13 @@ def main(dist_km=150, baz=45, src_depth_km=1, tmin=2, tmax=4, components="Z",
         50: {"xlim": [0, 30]}, #"ylim": [-2.5E-2, 1.5E-1], "wf_scale": 20, 
         150:  {"xlim": [19, 60], "ylim": [-2.5E-2, 1.5E-1], "wf_scale": 20, 
                "wf_recsec_spacing": 5},
+        200:  {"xlim": [15, 80], "wf_scale": 10},
         250:  {"xlim": [20, 100]},
         500:  {"xlim": [55, 200], "ylim": [-3E-4, 3E-3], "wf_scale": 5},
         750:  {"xlim": [75, 300]},
-        1000: {"xlim": [100, 370], "ylim": [-.5E-3, 3E-3], "wf_scale": 20},
+        1000: {"xlim": [100, 370], "ylim": [-.5E-3, 3E-3], "wf_scale": 10,
+               "wf_recsec_spacing": 1},
+        3000: {"xlim": [300, 1000], "ylim": [-1E-7, 1E-7], "wf_scale": 0},
     }
     if skip:
         tmarks = None
@@ -653,37 +700,54 @@ def main(dist_km=150, baz=45, src_depth_km=1, tmin=2, tmax=4, components="Z",
             f"*_z{int(src_depth_km)}_d{dist_km}_b{baz}_{component}.SAC"
             )
     save = f"{fig_path}/rs_z{int(src_depth_km)}_d{dist_km}_b{baz}.png"
-    kwargs = customization[dist_km]
+
+    if dist_km in customization.keys():
+        kwargs = customization[dist_km]
+    else:
+        kwargs = {}
     pp = PrettyPlot(fids=sorted(sac_files), wf_type="recsec",  
-                    fmin=1/tmax, fmax=1/tmin, colors=["viridis"], linewidth=1,
+                    fmin=1/tmax, fmax=1/tmin, corners=corners, 
+                    colors=["viridis"], linewidth=1,
                     ylabel=f"Velocity [m/s]",
-                    # tp_phases=["ttall"],
-                    # tp_phases=P_TRAIN + S_TRAIN,
+                    tp_phases=["P", "PP", "Pn", "Pg", "pP", "pS", "PS", "PcP", 
+                               "S", "SS", "Sn", "Sg", "sP", "sS", "SP", "PcS"],
+                    # tp_phases=p_phase_list + s_phase_list,
                     tp_model=taup_model, tp_dist_km=dist_km, 
                     tp_depth=src_depth_km, tp_start=0,
                     tmarks=tmarks, tmarks_c=["C0", "C0", "C1", "C1"], 
-                    title=title,  save=save, show=show, legend=True, dpi=200, 
+                    title=title,  save=save, show=show, legend=False, dpi=200, 
                     transparent=False,
                     **kwargs)
     pp.main()
 
 
 if __name__ == "__main__":
-    # syngine="ak135f_1s"
-    main(dist_km=1000, baz=0, tmin=1, tmax=1.5, syngine="ak135f_1s", 
-         taup_model="ak135", arrival_choice="custom", src_depth_km=0.5,
-         components="Z", skip=False, show=True, parallel=True)
+    syngine = "ak135f_1s"
+    if syngine == "ak135f_1s":
+         tmin=1
+         tmax=2 
+         taup_model="ak135"
+    elif syngine == "prem_2s":
+        tmin = 2
+        tmax = 2
+        taup_model = "prem"
 
-    # for dist_km in [150, 250, 500, 750, 1000]:
-    #     if dist_km < 500:
-    #         choice = "custom"
-    #         tmin = None
-    #         tmax = None
-    #     else:
-    #         choice = "taup"
-    #         tmin = 2
-    #         tmax = 4
-    #     for baz in [0, 45, 89]:
-    #         main(dist_km, baz, choice, tmin, tmax)
-   
-    
+    # syngine="ak135f_1s"
+    main(dist_km=1000, 
+         baz=0, 
+         src_depth_km=0,
+         arrival_choice="taup", 
+         tmin=tmin, tmax=tmax, 
+         syngine=syngine,
+         taup_model=taup_model,
+         taup_buffer=0.1,
+         p_phase_list=["Pn"],
+         s_phase_list=["Sn"],
+         # p_phase_list=P_TRAIN,
+         # s_phase_list=S_TRAIN,
+         components="Z", 
+         skip=False, 
+         show=True, 
+         parallel=False,
+         )
+
