@@ -11,12 +11,20 @@ PLOT = False
 mw_desired = 3
 
 # Original moment tensor values
-mt_dict = dict(m_rr = 2.962945e+23, 
-               m_tt =  2.834051e+23,
-               m_pp = -6.907862e+23,
-               m_rt = -4.599846e+23,
-               m_rp = -2.735922e+23,
-               m_tp = -1.478905e+23,
+
+vals = [7.141639e+23, 
+        5.172632e+23,
+        4.273256e+23, 
+        1.300210e+22, 
+       -2.593009e+23, 
+        4.511765e+22]
+
+mt_dict = dict(m_rr=vals[0], 
+               m_tt=vals[1],
+               m_pp=vals[2],
+               m_rt=vals[3],
+               m_rp=vals[4],
+               m_tp=vals[5],
                )
 
 # Check what the current Mw is

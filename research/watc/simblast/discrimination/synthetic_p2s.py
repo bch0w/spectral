@@ -103,13 +103,20 @@ def get_group_vel_arrivals(distance_in_km):
     min and max expected arrival times
     """
     group_velocities = {
-        "Pn": [7.7, 8.25],  # km/s
-        "Pg": [5.5, 6.5],
+        "Pn": [7.7, 8.5],  # km/s
+        "Pg": [5.25, 6.5],
         # "P_general": [5.8, 11],
         "Sn": [4.0, 4.6],
         # "Sg": [3.0, 3.6],  # Lg, values from Baker et al. 2012
         "Sg": [3.2, 3.6],  # Lg, values from Baker et al. 2012
         # "S_general": [3.0, 6.5],
+    }
+
+    # Values taken from the actual velocity model
+    # S_min is slightly faster to be above theoretical surface wave max speed
+    group_velocities = {
+        "P": [5.424, 7.936],  # km/s
+        "S": [3.2, 4.554],  # Lg, values from Baker et al. 2012
     }
     
     # Figure out arrival time based on straight line distance
@@ -139,20 +146,25 @@ def plot_tr(tr, p_idx=None, s_idx=None, p_window=None, s_window=None,
             title_prepend="", save="./", show=False):
     """Make individual waveform plot"""
     f, ax = plt.subplots(1, figsize=(8,6), dpi=100)
+
     plt.plot(tr.times(), tr.data, c="k", zorder=9, lw=1)
 
     if p_idx:
         plt.scatter(tr.times()[p_idx], tr.data[p_idx], zorder=10, 
-                    c="r", label=f"P {tr.data[p_idx]:.2E}")
+                c="r", label=f"P {tr.data[p_idx]:.2E}; {tr.times()[p_idx]:.2f}")
     if s_idx:
         plt.scatter(tr.times()[s_idx], tr.data[s_idx], zorder=10,
-                    c="g", label=f"S {tr.data[s_idx]:.2E}")
+                c="g", label=f"S {tr.data[s_idx]:.2E}; {tr.times()[s_idx]:.2f}")
     if p_window:
         plt.axvline(p_window[0], c="r", zorder=8, lw=1)
         plt.axvline(p_window[1], c="r", zorder=8, lw=1)
     if s_window:
         plt.axvline(s_window[0], c="g", zorder=8, lw=1)
         plt.axvline(s_window[1], c="g", zorder=8, lw=1)
+
+    # !!!
+    # plt.xlim(p_window[0]-5, s_window[1]+5)
+    # plt.ylim([-1 * tr.data[s_idx] * 3, tr.data[s_idx]])
 
     plt.legend()
     plt.xlabel("Time [s]")
@@ -245,7 +257,13 @@ class P2SRatio:
 
     def _read_sem(self, fid):
         """Wrapper to read sem without calling all args"""
-        return read_sem(fid, source=self.path_src, stations=self.path_sta)[0]
+        tr = read_sem(fid, source=self.path_src, stations=self.path_sta)[0]
+        # Trim off the T0 values to avoid any confusion
+        starttime = tr.stats.starttime - tr.stats.sac.b
+        endtime = tr.stats.endtime 
+        tr.trim(starttime, endtime)
+        return tr
+
 
     def _get_mt(self):
         """Get moment tensor components from CMTSOLUTION for plotting"""
@@ -339,8 +357,8 @@ class P2SRatio:
             raise Exception
         
         # Offset window times by T0
-        p_window = [_ - tr.stats.sac.b for _ in p_window]
-        s_window = [_ - tr.stats.sac.b for _ in s_window]
+        # p_window = [_ - tr.stats.sac.b for _ in p_window]
+        # s_window = [_ - tr.stats.sac.b for _ in s_window]
         
         p2sratio, p_idx, s_idx = get_p2s(tr=tr, p_window=p_window, 
                                          s_window=s_window)  
@@ -402,58 +420,87 @@ def plot_scatterplot(paths, fmin=2, fmax=4, components="Z", j=-1):
     plt.ylabel("P-to-S Amplitude Ratio")
 
 
-def plot_heatmap(p2s, threshold=0.8, save="./figures", cmap="seismic", 
-                 mt_color="gold", coast_color="k", 
-                 fid_coastline=FID_COAST):
+def plot_heatmap(p2s, threshold=0.8, interpolate=True, method="cubic", 
+                 save="./figures", cmap="seismic", mt_color="gold", 
+                 coast_color="k", fid_coastline=FID_COAST):
     """
     For a single event plot a map of amplitude ratios for each station 
     interpolated to create a continuous figure rather than a scatterplot.
     """
     print("plotting heatmap")
     f, ax = plt.subplots(1, figsize=(15, 12))
-
+    
+    # Interpolation causes some NaN errors with large values
     # Create a regular grid from lon/lat ranges
-    lon_grid = np.linspace(min(p2s.lons), max(p2s.lons), 
-                            2*len(np.unique(p2s.lons)))
-    lat_grid = np.linspace(min(p2s.lats), max(p2s.lats), 
-                            2*len(np.unique(p2s.lats)))
-    x, y = np.meshgrid(lon_grid, lat_grid)
-    
-    # Interpolate p2s ratios onto the grid
-    z = griddata((p2s.lons, p2s.lats), p2s.p2sratios, (x, y), 
-                  method="nearest")
-                #   method="linear")
-    
-    # Setting hard bounds for colorscale to keep all figures looking similar
-    vmin = 0
-    vmax = vmin + threshold * 2
-    levels = np.linspace(vmin, vmax, int((vmax - vmin) * 10 * 6))
-    ticks = [vmin, threshold, vmax]
+    if interpolate:
+        # Set colorscale bounds based on user-defined threshold
+        vmin = 0
+        vmax = vmin + threshold * 2
+        levels = np.linspace(vmin, vmax, int((vmax - vmin) * 10 * 6))
+        ticks = [vmin, threshold, vmax]
 
-    if vmax < z.max():
-        extend = "max"
+        # Interpolate the values to get a smoother looking heatmap
+        grid_multiply = 4
+        lon_grid = np.linspace(min(p2s.lons), max(p2s.lons), 
+                               grid_multiply *  len(np.unique(p2s.lons)))
+        lat_grid = np.linspace(min(p2s.lats), max(p2s.lats), 
+                               grid_multiply * len(np.unique(p2s.lats)))
+        x, y = np.meshgrid(lon_grid, lat_grid)
+        
+        # Interpolate p2s ratios onto the grid
+        z = griddata((p2s.lons, p2s.lats), p2s.p2sratios, (x, y), 
+                      method=method, fill_value=vmax)
+
+        # Colorbar that respects the vmin vmax values 
+        if vmax < z.max():
+            extend = "max"
+        else:
+            extend = "neither"
+       
+        # PLOT
+        cf = plt.contourf(x, y, z, vmin=vmin, vmax=vmax, levels=levels, 
+                          cmap=cmap, extend=extend)
+
+        cb = f.colorbar(cf, ax=ax, pad=0, extend=extend, ticks=ticks)
+        cb.set_label(rf"$\leftarrow$ Earthquake    "
+                     rf"[P/S Ratio]     "
+                     rf"Explosion $\rightarrow$", 
+                     fontsize=15, c="k")
+        cb.ax.get_yaxis().labelpad = -60
+        cb.ax.tick_params(labelsize=14)
+    # Non-interpolation approach, can lead to some jagged looking plots
     else:
-        extend = "neither"
+        # Set up parameters related to the colormaps
+        vmin = 0
+        vmax = vmin + threshold * 2
+        levels = np.linspace(vmin, vmax, int((vmax - vmin) * 10 * 6))
+        ticks = [vmin, threshold, vmax]
+        if vmax < max(p2s.p2sratios):
+            extend = "max"
+        else:
+            extend = "neither"
 
-    cf = plt.contourf(x, y, z, vmin=vmin, vmax=vmax, levels=levels, cmap=cmap,
-                      extend=extend)
-    
-    # Colorbar that respects the vmin vmax values 
-    cb = f.colorbar(cf, ax=ax, pad=0, extend=extend, ticks=ticks)
-    cb.set_label(rf"$\leftarrow$ Earthquake    "
-                 rf"[P/S Ratio]     "
-                 rf"Explosion $\rightarrow$", 
-                 fontsize=15, c="k")
-    cb.ax.get_yaxis().labelpad = -60
-    cb.ax.tick_params(labelsize=14)
+        # Plot the heatmap as a contour
+        cf = plt.tricontourf(p2s.lons, p2s.lats, p2s.p2sratios, 
+                             vmin=vmin, vmax=vmax, levels=levels, cmap=cmap, 
+                             extend=extend)
+
+
+        # Colorbar that respects the vmin vmax values 
+        cb = f.colorbar(cf, ax=ax, pad=0, extend=extend, ticks=ticks)
+        cb.set_label(rf"$\leftarrow$ Earthquake    "
+                     rf"[P/S Ratio]     "
+                     rf"Explosion $\rightarrow$", 
+                     fontsize=15, c="k")
+        cb.ax.get_yaxis().labelpad = -60
+        cb.ax.tick_params(labelsize=14)
 
     # Station markers for reference
-    if True:
-        plt.scatter(p2s.lons, p2s.lats, marker="v", alpha=0.25, c="None", 
-                    ec="w", s=10, zorder=8)
+    plt.scatter(p2s.lons, p2s.lats, marker="v", alpha=0.5, c="None", 
+                ec="w", s=10, zorder=8)
 
-        for lon_, lat_, id_ in zip(p2s.lons, p2s.lats, p2s.ids):
-            plt.text(lon_, lat_, id_, fontsize=8, color="w")
+    for lon_, lat_, id_ in zip(p2s.lons, p2s.lats, p2s.ids):
+        plt.text(lon_, lat_, id_, fontsize=7, color="w", alpha=0.5)
         
     # Plot source as location or mechanism
     mt = [p2s.cmt["Mrr"], p2s.cmt["Mtt"], p2s.cmt["Mpp"], 
@@ -472,8 +519,8 @@ def plot_heatmap(p2s, threshold=0.8, save="./figures", cmap="seismic",
                                            )
 
     # Accoutremont
-    plt.xlim([x.min(), x.max()])
-    plt.ylim([y.min(), y.max()])
+    # plt.xlim([x.min(), x.max()])
+    # plt.ylim([y.min(), y.max()])
     plt.xticks(fontsize=14)
     plt.yticks(fontsize=14)
     ax.xaxis.set_major_locator(ticker.MultipleLocator(0.25))
@@ -496,6 +543,8 @@ def plot_heatmap(p2s, threshold=0.8, save="./figures", cmap="seismic",
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Synthetic P/S Heatmaps")
+    parser.add_argument("-p", "--path", type=str, nargs="?", default=None,
+                        help="path to waveform files .sem?")
     parser.add_argument("-m", "--model", type=str, nargs="?", required=False,
                         # choices=["alpha", "beta", "charlie", "echo"],      
                         help="model options")
@@ -508,7 +557,7 @@ def parse_args():
                         help="minimum filter frequency")
     parser.add_argument("-f2", "--fmax", type=float, default=6, nargs="?",
                         help="maximum filter frequency")
-    parser.add_argument("-p", "--parallel", action="store_true", 
+    parser.add_argument("-P", "--parallel", action="store_true", 
                         help="use multiprocessing to evaluate in parallel")
     parser.add_argument("-n", "--ntasks", default=os.cpu_count(), nargs="?", 
                         type=int, help="how many cores to use")
@@ -523,49 +572,21 @@ def parse_args():
     return parser.parse_args()
 
 
-def main_old():
-    args = parse_args()
-   
-    # Input directories/files
-    path = f"waveforms/{args.model}/{args.source}" 
-
-    path = (f"/import/c1/ERTHQUAK/bhchow/work/simblast/"
-            f"specfem/{args.model}/{args.source}")
-
-    spectral = "/import/home/bhchow/REPOS/spectral"
-    path_src  = (f"{spectral}/research/watc/simblast/"
-                 f"SPECFEM_DATA/CMTSOLUTIONS/paper_events/"
-                 f"CMTSOLUTION_{args.source}")
-    path_sta = (f"{spectral}/research/watc/simblast/"
-                f"SPECFEM_DATA/STATIONS/STATIONS_PAPER_NK_GRID")
-
-    # Output directories/files
-    path_save = (f"data/{args.model}_{args.source}_{args.fmin}_"
-                 f"{args.fmax}_{args.components}.npz")
-    path_fig  = f"figures/{args.model}/{args.source}"
-
-    # Run ratio maker
-    p2s = P2SRatio(path=path, path_src=path_src, path_sta=path_sta,
-                   path_save=path_save, path_fig=path_fig,
-                   fmin=args.fmin, fmax=args.fmax,
-                   components=args.components, 
-                   overwrite=args.overwrite,
-                   )
-    p2s.calculate_ratio(i=args.i, j=args.j, parallel=args.parallel,
-                        ntasks=args.ntasks)
-
-    plot_heatmap(p2s, save=f"figures/{args.model}_{args.source}.png")
-
 def main():
     args = parse_args()
    
     # Input directories/files
-    path = f"3D-EQ2-M3"
-    path_src = "CMTSOLUTION_EQ2-M3"
+    if args.path is None:
+        path = f"NK6-M3"
+    else:
+        path = args.path
+    print(path)
+
+    path_src = f"CMTSOLUTION_{path}"
     path_sta = "STATIONS"
 
     # Output directories/files
-    path_save = f"data/{path}_{args.fmax}_{args.components}.npz"
+    path_save = f"data/{path}_{args.fmin}-{args.fmax}_{args.components}.npz"
     path_fig  = f"figures/{path}/"
 
     # Run ratio maker
@@ -578,6 +599,9 @@ def main():
     p2s.calculate_ratio(i=args.i, j=args.j, parallel=args.parallel,
                         ntasks=args.ntasks)
 
-    plot_heatmap(p2s, save=f"figures/heatmap.png")
+    plot_heatmap(p2s, save=os.path.join(path_fig, "heatmap.png"),
+                 method="linear")
+
+
 if __name__ == "__main__": 
     main()

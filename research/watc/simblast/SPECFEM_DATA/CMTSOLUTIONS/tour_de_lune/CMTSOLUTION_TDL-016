@@ -1,9 +1,9 @@
- PDE 2017  9  3  3 30 1.76 41.3324 129.0297 1.0 5.18 5.18 NK6
-event name:     NK6
-time shift:     00.0000
+XXXX 2026  4 20 11 21 24.80   0.0000    0.0000   0.0 5.0 5.0 lune_ipts7_iref1_016
+event name: lune_ipts7_iref1_016
+time shift:      0.0000
 half duration:   0.0000
-latitude:       41.3324
-longitude:     129.0297
+latitude: 41.3324
+longitude: 129.0297
 depth:           0.2500
 Mrr:       3.531589e+20
 Mtt:       2.557902e+20
