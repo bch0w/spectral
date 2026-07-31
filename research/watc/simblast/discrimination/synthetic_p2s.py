@@ -572,10 +572,47 @@ def parse_args():
     return parser.parse_args()
 
 
+<<<<<<< HEAD
+=======
+# def main_old():
+#     args = parse_args()
+   
+#     # Input directories/files
+#     path = f"waveforms/{args.model}/{args.source}" 
+
+#     path = (f"/import/c1/ERTHQUAK/bhchow/work/simblast/"
+#             f"specfem/{args.model}/{args.source}")
+
+#     spectral = "/import/home/bhchow/REPOS/spectral"
+#     path_src  = (f"{spectral}/research/watc/simblast/"
+#                  f"SPECFEM_DATA/CMTSOLUTIONS/paper_events/"
+#                  f"CMTSOLUTION_{args.source}")
+#     path_sta = (f"{spectral}/research/watc/simblast/"
+#                 f"SPECFEM_DATA/STATIONS/STATIONS_PAPER_NK_GRID")
+
+#     # Output directories/files
+#     path_save = (f"data/{args.model}_{args.source}_{args.fmin}_"
+#                  f"{args.fmax}_{args.components}.npz")
+#     path_fig  = f"figures/{args.model}/{args.source}"
+
+#     # Run ratio maker
+#     p2s = P2SRatio(path=path, path_src=path_src, path_sta=path_sta,
+#                    path_save=path_save, path_fig=path_fig,
+#                    fmin=args.fmin, fmax=args.fmax,
+#                    components=args.components, 
+#                    overwrite=args.overwrite,
+#                    )
+#     p2s.calculate_ratio(i=args.i, j=args.j, parallel=args.parallel,
+#                         ntasks=args.ntasks)
+
+#     plot_heatmap(p2s, save=f"figures/{args.model}_{args.source}.png")
+
+>>>>>>> 3e3d0d4 (removing hardcodes from prettyplot)
 def main():
     args = parse_args()
    
     # Input directories/files
+<<<<<<< HEAD
     if args.path is None:
         path = f"NK6-M3"
     else:
@@ -583,6 +620,10 @@ def main():
     print(path)
 
     path_src = f"CMTSOLUTION_{path}"
+=======
+    path = f"3D-ISO-M3"
+    path_src = "CMTSOLUTION_ISO-M3"
+>>>>>>> 3e3d0d4 (removing hardcodes from prettyplot)
     path_sta = "STATIONS"
 
     # Output directories/files

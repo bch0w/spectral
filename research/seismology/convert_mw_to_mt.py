@@ -9,11 +9,19 @@ but this gives a first order approximation, to be refined later if necessary.
 import sys
 from math import sqrt
 
+UNITS = "nm"  # 'nm' or 'dyncm'
 magnitude = float(sys.argv[1])  # Mw
 
 # Convert moment magnitude to seismic moment (Mw -> M0; Hanks & Kanamori 1979)
-c = 10.7  # for units of N*m
-m0 = 10 ** ((3/2) * (magnitude + c))
+# or (Boormann et al. 2002)  -> Mw = 2/3 (log_10 M0 - 9.1)
+if UNITS == "dyncm":
+    c = 10.7  
+elif UNITS == "nm":
+    c = 9.1  
+else:
+    raise Exception
+
+m0 = 10 ** ((3/2 * magnitude) + c)
 
 # Distribute seismic moment, M0, across 3 moment tensor components Mrr, Mtt, Mpp
 m_ii = sqrt(2/3 * m0 ** 2)

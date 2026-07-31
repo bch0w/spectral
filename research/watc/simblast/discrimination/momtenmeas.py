@@ -454,7 +454,6 @@ class MomTenMeas:
         for i, (tr, ax) in enumerate(zip(self.st, axs)):
             ax.plot(tr.times(), tr.data, lw=.8, zorder=6, c="gray",
                     label=tr.stats.component)
-                    
 
             maxvals = self.maxdict[tr.stats.component]
 
@@ -716,7 +715,7 @@ def main(dist_km=150, baz=45, src_depth_km=1, tmin=2, tmax=4, corners=4,
                     tp_depth=src_depth_km, tp_start=0,
                     tmarks=tmarks, tmarks_c=["C0", "C0", "C1", "C1"], 
                     title=title,  save=save, show=show, legend=False, dpi=200, 
-                    transparent=False,
+                    transparent=False, wf_scale=100,
                     **kwargs)
     pp.main()
 

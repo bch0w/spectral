@@ -572,16 +572,15 @@ def set_plot_aesthetic(
         ax.yaxis.set_minor_locator(MultipleLocator(float(ytick_minor)))
 
     plt.sca(ax)
-    # !!! BCBC
-    if False:
-        if xgrid_major:
-            plt.grid(visible=True, which="major", axis="x", alpha=0.2, linewidth=1)
-        if xgrid_minor:
-            plt.grid(visible=True, which="minor", axis="x", alpha=0.2, linewidth=.5)
-        if ygrid_major:
-            plt.grid(visible=True, which="major", axis="y", alpha=0.2, linewidth=1)
-        if ygrid_minor:
-            plt.grid(visible=True, which="minor", axis="y", alpha=0.2, linewidth=.5)
+
+    if xgrid_major:
+        plt.grid(visible=True, which="major", axis="x", alpha=0.2, linewidth=1)
+    if xgrid_minor:
+        plt.grid(visible=True, which="minor", axis="x", alpha=0.2, linewidth=.5)
+    if ygrid_major:
+        plt.grid(visible=True, which="major", axis="y", alpha=0.2, linewidth=1)
+    if ygrid_minor:
+        plt.grid(visible=True, which="minor", axis="y", alpha=0.2, linewidth=.5)
 
 
 def _set_xaxis_obspy_dates(ax, ticklabels_small=True, minticks=3, maxticks=6):
@@ -1064,8 +1063,9 @@ class PrettyPlot():
                     x = self.xlim[0]
                 else:
                     x = self._xvals[0]
-                # !!! BCBC Annotate number next to waveform
-                ax.text(x, data[0], s=i, c="k", fontsize="small")
+
+                # OPTIONAL: annotate the index number next to the waveform
+                # ax.text(x, data[0], s=i, c="k", fontsize="small")
 
     def plot_additional_traces(self):
         """
@@ -1117,9 +1117,6 @@ class PrettyPlot():
                   label=tr_label, zorder=5, markersize=1.25, alpha=0.8)
 
         twax.set_ylabel(self.tr_ylabel, rotation=-90, labelpad=20)
-
-        # !!! BCBC
-        twax.set_ylim([0, 12])
 
         self.twax = twax
         if self.spectrogram:
@@ -1232,6 +1229,9 @@ class PrettyPlot():
             else:
                 tp_start = float(self.tp_start)  # seconds
 
+        # Offset by USER_T0 if SPECFEM synthetics
+        tp_start += self.t0
+
         # Discrete colormap for the arrivals
         cvals = cmaphex(nvals=len(arrivals), cmap=self.tp_cmap)
 
@@ -1335,6 +1335,9 @@ class PrettyPlot():
             else:
                 tp_start = float(self.tp_start)  # seconds
 
+        # Offset by USER_T0 if SPECFEM synthetics
+        tp_start += self.t0
+
         for i, (name, time) in enumerate(arrivals.items()):
             # Convert arrival times to time series reference
             if self.time.startswith("a"):
@@ -1402,13 +1405,10 @@ class PrettyPlot():
             set_plot_aesthetic(self.ax_spectra, ytick_format="plain")
 
         if self.title is None:
-            title= ""
-            # !!! BCBC 
-            if False:
-                title = f"{self.st[0].stats.starttime.year}."
-                title += f"{self.st[0].stats.starttime.julday:0>3}"
-                if self.st[0].stats.starttime.julday != \
-                    self.st[0].stats.endtime.julday:
+            title = f"{self.st[0].stats.starttime.year}."
+            title += f"{self.st[0].stats.starttime.julday:0>3}"
+            if self.st[0].stats.starttime.julday != \
+                self.st[0].stats.endtime.julday:
                     title += f"-{self.st[0].stats.endtime.julday}"
             if self.fmin or self.fmax:
                 _fmin = self.fmin or 0
