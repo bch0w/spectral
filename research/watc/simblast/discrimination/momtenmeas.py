@@ -707,15 +707,15 @@ def main(dist_km=150, baz=45, src_depth_km=1, tmin=2, tmax=4, corners=4,
     pp = PrettyPlot(fids=sorted(sac_files), wf_type="recsec",  
                     fmin=1/tmax, fmax=1/tmin, corners=corners, 
                     colors=["viridis"], linewidth=1,
-                    ylabel=f"Velocity [m/s]",
-                    tp_phases=["P", "PP", "Pn", "Pg", "pP", "pS", "PS", "PcP", 
-                               "S", "SS", "Sn", "Sg", "sP", "sS", "SP", "PcS"],
+                    ylabel=f"Normalized Velocity",
+                    tp_phases=["P", "PP", "Pn", "Pg", "pP", "pS", "PS", # "PcP", 
+                               "S", "SS", "Sn", "Sg", "sP", "sS", "SP"], # "PcS"],
                     # tp_phases=p_phase_list + s_phase_list,
                     tp_model=taup_model, tp_dist_km=dist_km, 
                     tp_depth=src_depth_km, tp_start=0,
                     tmarks=tmarks, tmarks_c=["C0", "C0", "C1", "C1"], 
                     title=title,  save=save, show=show, legend=False, dpi=200, 
-                    transparent=False, wf_scale=100,
+                    transparent=False,
                     **kwargs)
     pp.main()
 
@@ -732,7 +732,7 @@ if __name__ == "__main__":
         taup_model = "prem"
 
     # syngine="ak135f_1s"
-    main(dist_km=1000, 
+    main(dist_km=250, 
          baz=0, 
          src_depth_km=0,
          arrival_choice="taup", 
@@ -740,13 +740,11 @@ if __name__ == "__main__":
          syngine=syngine,
          taup_model=taup_model,
          taup_buffer=0.1,
-         p_phase_list=["Pn"],
-         s_phase_list=["Sn"],
-         # p_phase_list=P_TRAIN,
-         # s_phase_list=S_TRAIN,
+         p_phase_list=["Pn", "Pg"],
+         s_phase_list=["Sn", "Sg"],
          components="Z", 
          skip=False, 
          show=True, 
-         parallel=False,
+         parallel=True,
          )
 
