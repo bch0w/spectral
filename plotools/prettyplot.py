@@ -29,6 +29,7 @@ from matplotlib import mlab
 from matplotlib.colors import Normalize
 from matplotlib.dates import date2num, AutoDateLocator
 from matplotlib.ticker import MultipleLocator
+from matplotlib.patches import Rectangle
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from obspy import read, UTCDateTime, Stream
@@ -45,6 +46,9 @@ except ImportError:
     pass
 
 SECONDS_PER_DAY = 3600.0 * 24.0
+
+# !!! BCBC
+YLABEL= 1.5E-5
 
 def parse_args():
     """All modifications are accomplished with command line arguments"""
@@ -516,7 +520,8 @@ def convert_timezone(code, st):
 
     
 def set_plot_aesthetic(
-        ax, ytick_fontsize=9., xtick_fontsize=9., tick_linewidth=1.5,
+        ax, xtick_labels=True, ytick_labels=True, 
+        ytick_fontsize=9., xtick_fontsize=9., tick_linewidth=1.5,
         tick_length=5., tick_direction="in", ytick_format="sci",
         xlabel_fontsize=10., ylabel_fontsize=10., axis_linewidth=1.5, 
         spine_zorder=8, title_fontsize=10.,
@@ -529,11 +534,18 @@ def set_plot_aesthetic(
     """
     ax.title.set_fontsize(title_fontsize)
     ax.tick_params(axis="both", which="both", width=tick_linewidth,
-                        direction=tick_direction, length=tick_length)
+                   direction=tick_direction, length=tick_length)
     ax.tick_params(axis="x", labelsize=xtick_fontsize)
     ax.tick_params(axis="y", labelsize=ytick_fontsize)
     ax.xaxis.label.set_size(xlabel_fontsize)
     ax.yaxis.label.set_size(ylabel_fontsize)
+
+    # Remove tick labels but not ticks themselves
+    # breakpoint()
+    # if not xtick_labels:
+    #     plt.setp(ax.get_xticklabels(), visible=False)
+    # if not ytick_labels:
+    #     plt.setp(ax.get_yticklabels(), visible=False)
 
     # Thicken up the bounding axis lines
     for axis, flag in zip(["top", "bottom", "left", "right"],
@@ -560,6 +572,10 @@ def set_plot_aesthetic(
             ax.ticklabel_format(axis="y", style=ytick_format)
         except AttributeError:
             pass
+
+    # !!! BCBC
+    # plt.tick_params(axis="y", which="both", left=False)
+    # ax.ticklabel_format(axis="y", style="plain")
 
     # Set xtick label major and minor which is assumed to be a time series
     if xtick_major:
@@ -1247,28 +1263,23 @@ class PrettyPlot():
             win_end = find_nearest(self._xvals, times[-1]) + 1
             max_amp = np.amax(self.st[0].data[win_start:win_end])
 
-            # Linestyle based on what the phase arrives at
-            if name.upper().endswith("P"):
-                ls = "--"
-            elif name.upper().endswith("S"):
-                ls = "-"
-            else:
-                if name.upper().startswith("P"):
-                    ls = "--"
-                elif name.upper().startswith("S"):
-                    ls="-"
+            # !!! BCBC
+            for time in times:
+                for ax in self.axs:
+                    ax.axvline(time, alpha=1,  ls="-", color=cvals[i], zorder=5)
+                    ax.text(x=time, y=YLABEL, s=name, c=cvals[i], zorder=100)
 
             # Plot discrete arrivals
-            for time in times:
-                self.ax.axvline(
-                    time,
-                    alpha=1, 
-                    ls=ls,
-                    # label=name, 
-                    color=cvals[i],
-                    zorder=5,
-                    )
-                self.ax.text(x=time, y=max_amp, s=name, c=cvals[i], zorder=100)
+            # for time in times:
+            #     self.ax.axvline(
+            #         time,
+            #         alpha=1, 
+            #         ls=ls,
+            #         # label=name, 
+            #         color=cvals[i],
+            #         zorder=5,
+            #         )
+            #     self.ax.text(x=time, y=max_amp, s=name, c=cvals[i], zorder=100)
 
         # Plot the global ray paths for sanity check
         # https://github.com/obspy/obspy/blob/master/obspy/taup/tau.py#L250
@@ -1304,7 +1315,7 @@ class PrettyPlot():
                 ax.axvline(tmark, c=c, lw=1, zorder=100, 
                            ls="--", alpha=0.8)
 
-    def plot_group_vels(self, c="k", alpha=0.25, ls="-", lw=2, fontsize=8,
+    def plot_group_vels(self, c="r", alpha=1, ls="--", lw=1.5, fontsize=10,
                         zorder=10):
         """
         Create time mark lines for a given set of group velocities `group_vel`
@@ -1345,11 +1356,51 @@ class PrettyPlot():
             else:
                 time += tp_start 
 
-            # Plot discrete arrivals
-            self.ax.axvline(time, alpha=alpha, ls=ls, lw=lw, c=c, zorder=zorder)
-            self.ax.text(x=time, y=self.st[0].max(), s=f"{name}km/s", 
-                         fontsize=fontsize, color=c, alpha=alpha)
+            for ax in self.axs:
+                # Plot discrete arrivals
+                ax.axvline(time, alpha=alpha, ls=ls, lw=lw, c=c, zorder=zorder)
+                # self.ax.text(x=time, y=self.st[0].max(), s=f"{name}km/s", 
+                #              fontsize=fontsize, color=c, alpha=alpha)
+                # !!! BCBC
+                # One space infront of label to get away from the line
+                ax.text(x=time, y=YLABEL, s=f" {name}km/s", 
+                            fontsize=fontsize, color=c, alpha=alpha, zorder=100)
 
+    def plot_peak_amplitudes(self):
+        """
+        Given a series of time windows, select the maximum waveform amplitude 
+        and plot its value, as well as the time windows
+        """
+        windows = {
+            "Pn": [125, 135], 
+            "Pg": [172.25, 220],
+            "Sn": [228, 250],
+            "Sg": [283, 300]
+        }
+        sr = self.st[0].stats.sampling_rate
+        cvals = cmaphex(nvals=len(windows), cmap=self.tp_cmap)
+
+        for ax, data in zip(self.axs, self._data):
+            for i, (label, window) in enumerate(windows.items()):
+                samp_start, samp_end = [int(_*sr) for _ in window]
+
+                # Figure out the correct time index to plot the figure
+                idx_max = np.argmax(np.abs(data[samp_start:samp_end])) 
+                idx_max += samp_start
+
+                time_max = idx_max / sr
+
+                ax.scatter(time_max, data[idx_max], c=cvals[i], marker="o",
+                           s=20, label=f"{label}: {np.sqrt(data[idx_max]**2):.2E}",
+                           ec="k")
+                ax.add_patch(
+                    Rectangle(xy=(window[0], self.st[0].data.min()),
+                              width=window[1] - window[0],
+                              height=1.5 * (self.st[0].data.max() - self.st[0].data.min()),
+                              facecolor=cvals[i], alpha=0.25)
+                              )
+
+            
     def set_plot_aesthetics(self):
         """
         Set plot aesthetics
@@ -1358,8 +1409,8 @@ class PrettyPlot():
             if self.legend:
                 leg = ax.legend(loc="upper right", bbox_to_anchor=(1,1), 
                                 bbox_transform=ax.transAxes, 
-                                prop={"size": 5},
-                                ncol=self.ncol_legend, fontsize='tiny')
+                                prop={"size": 8},
+                                ncol=self.ncol_legend, fontsize='small')
                 leg.set(zorder=100)
 
             if self.time.startswith("a"):
@@ -1399,7 +1450,7 @@ class PrettyPlot():
                                 transform=self.ax.transAxes, fontsize=8)
 
             # Finish off by setting plot aesthetics
-            set_plot_aesthetic(ax)
+            set_plot_aesthetic(ax, ytick_labels=False)
 
         if self.spectrogram:
             set_plot_aesthetic(self.ax_spectra, ytick_format="plain")
@@ -1476,6 +1527,7 @@ class PrettyPlot():
             self.plot_group_vels()
         if self.tp_phases:
             self.plot_taup_arrivals()
+        self.plot_peak_amplitudes()
         self.set_plot_aesthetics()
         self.finalize()
 
