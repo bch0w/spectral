@@ -48,7 +48,8 @@ except ImportError:
 SECONDS_PER_DAY = 3600.0 * 24.0
 
 # !!! BCBC
-YLABEL= 1.5E-5
+YLABEL= -2.6E-5
+YAXISOFF=True
 
 def parse_args():
     """All modifications are accomplished with command line arguments"""
@@ -521,10 +522,10 @@ def convert_timezone(code, st):
     
 def set_plot_aesthetic(
         ax, xtick_labels=True, ytick_labels=True, 
-        ytick_fontsize=9., xtick_fontsize=9., tick_linewidth=1.5,
+        ytick_fontsize=12., xtick_fontsize=12., tick_linewidth=1.5,
         tick_length=5., tick_direction="in", ytick_format="sci",
-        xlabel_fontsize=10., ylabel_fontsize=10., axis_linewidth=1.5, 
-        spine_zorder=8, title_fontsize=10.,
+        xlabel_fontsize=12., ylabel_fontsize=12., axis_linewidth=1.5, 
+        spine_zorder=500, title_fontsize=12.,
         spine_top=True, spine_bot=True, spine_left=True, spine_right=True, 
         xtick_minor=None, xtick_major=None, ytick_minor=None, ytick_major=None,
         xgrid_major=True, xgrid_minor=True, ygrid_major=True, ygrid_minor=True,
@@ -574,8 +575,10 @@ def set_plot_aesthetic(
             pass
 
     # !!! BCBC
-    # plt.tick_params(axis="y", which="both", left=False)
-    # ax.ticklabel_format(axis="y", style="plain")
+    if YAXISOFF:
+        ax.ticklabel_format(axis="y", style="plain")
+        # ax.tick_params(axis="y", which="both", left=False)
+        plt.yticks([])
 
     # Set xtick label major and minor which is assumed to be a time series
     if xtick_major:
@@ -1081,7 +1084,14 @@ class PrettyPlot():
                     x = self._xvals[0]
 
                 # OPTIONAL: annotate the index number next to the waveform
-                # ax.text(x, data[0], s=i, c="k", fontsize="small")
+                j = i + 1
+                jdict = {1: "DC", 15: "ISO", 29: "CLVD"}
+                if j not in [1, 15, 29]:
+                    ax.text(x, data[0], s=f"{j:0>2}", c="k", fontsize="small", 
+                            zorder=200)
+                else:
+                    ax.text(x, data[0], s=f"{j:0>2} ({jdict[j]})", c="k", 
+                            fontsize="medium", zorder=200)
 
     def plot_additional_traces(self):
         """
@@ -1266,8 +1276,10 @@ class PrettyPlot():
             # !!! BCBC
             for time in times:
                 for ax in self.axs:
-                    ax.axvline(time, alpha=1,  ls="-", color=cvals[i], zorder=5)
-                    ax.text(x=time, y=YLABEL, s=name, c=cvals[i], zorder=100)
+                    ax.axvline(time, alpha=1,  ls="-", color=cvals[i], 
+                               zorder=100)
+                    ax.text(x=time, y=YLABEL, s=name, c=cvals[i], zorder=100,
+                            fontsize=12)
 
             # Plot discrete arrivals
             # for time in times:
@@ -1316,7 +1328,7 @@ class PrettyPlot():
                            ls="--", alpha=0.8)
 
     def plot_group_vels(self, c="r", alpha=1, ls="--", lw=1.5, fontsize=10,
-                        zorder=10):
+                        zorder=100):
         """
         Create time mark lines for a given set of group velocities `group_vel`
         given in units of km/s
@@ -1372,10 +1384,10 @@ class PrettyPlot():
         and plot its value, as well as the time windows
         """
         windows = {
-            "Pn": [125, 135], 
-            "Pg": [172.25, 220],
-            "Sn": [228, 250],
-            "Sg": [283, 300]
+            "Pn": [126, 131.21], # [125, 135], 
+            "Pg": [172.25, 207.3], # [172.25, 220],
+            "Sn": [228.34, 236], # [228, 250],
+            "Sg": [284, 295], # [283, 300]
         }
         sr = self.st[0].stats.sampling_rate
         cvals = cmaphex(nvals=len(windows), cmap=self.tp_cmap)
@@ -1392,12 +1404,18 @@ class PrettyPlot():
 
                 ax.scatter(time_max, data[idx_max], c=cvals[i], marker="o",
                            s=20, label=f"{label}: {np.sqrt(data[idx_max]**2):.2E}",
-                           ec="k")
+                           ec="k", zorder=101)
+                # ax.add_patch(
+                #     Rectangle(xy=(window[0], self.st[0].data.min()),
+                #               width=window[1] - window[0],
+                #               height=1.5 * (self.st[0].data.max() - self.st[0].data.min()),
+                #               facecolor=cvals[i], alpha=0.25)
+                #               )
                 ax.add_patch(
-                    Rectangle(xy=(window[0], self.st[0].data.min()),
+                    Rectangle(xy=(window[0], self.ylim[0]),
                               width=window[1] - window[0],
-                              height=1.5 * (self.st[0].data.max() - self.st[0].data.min()),
-                              facecolor=cvals[i], alpha=0.25)
+                              height=np.abs(self.ylim[0]) + np.abs(self.ylim[1]),
+                              facecolor=cvals[i], alpha=0.01, zorder=100)
                               )
 
             
