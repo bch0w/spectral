@@ -111,7 +111,7 @@ class MomTenMeas:
         self.p_phase_list = p_phase_list or P_TRAIN
         self.s_phase_list = s_phase_list or S_TRAIN
         self.arrival_choice = arrival_choice
-        assert(self.arrival_choice in ["taup", "group", "custom"])
+        # assert(self.arrival_choice in ["taup", "group", "custom"])
         self.components = components
         self.kind = kind
 
@@ -359,16 +359,22 @@ class MomTenMeas:
 
         return p_window, s_window
     
-    def get_arrivals_custom(self, p_phase="Pn", s_phase="Sn"):
+    def get_arrivals_custom(self):
         """
         Custom windows based on picking from waveform plots for 2-4Hz waveforms
         """
-        windows = {1000: {
-            "Pn": [126, 131.21], # [125, 135], 
-            "Pg": [172.25, 207.3], # [172.25, 220],
-            "Sn": [228.34, 236], # [228, 250],
-            "Sg": [284, 295], # [283, 300]
-        }
+        _, p_phase, s_phase = self.arrival_choice.split("_")
+        windows = {
+            1000: {"Pn": [126, 131.21], # [125, 135], 
+                   "Pg": [172.25, 207.3], # [172.25, 220],
+                   "Sn": [228.34, 236], # [228, 250],
+                   "Sg": [284, 295], # [283, 300],
+                   },
+            500: {"Pn": [64.51, 69.37], 
+                  "Pg": [79.8, 110], 
+                  "Sn": [121.08, 127.53], 
+                  "Sg": [134.55, 150.07], 
+                  }, 
         }
         # dict_out = {
         #     50: [[6, 12], [12.5, 16.5]],
@@ -543,8 +549,10 @@ class MomTenMeas:
             self.pwin_s, self.swin_s = self.get_taup_arrivals()  
         elif self.arrival_choice == "group":
             self.pwin_s, self.swin_s = self.get_group_vel_arrivals()
-        elif self.arrival_choice == "custom":
+        elif self.arrival_choice.startswith("custom"):
             self.pwin_s, self.swin_s = self.get_arrivals_custom()
+        else:
+            raise NotImplementedError
 
     def run(self, path_cmtsolution):
         """
@@ -611,7 +619,8 @@ def mtmrun(dist_km, baz, src_depth_km=1, parallel=True, **kwargs):
     return idxs, max_amps, tensors, mtm.pwin_s, mtm.swin_s
 
 
-def plot_beachballs(x, y, t, title=None, save=False):
+def plot_beachballs(x, y, t, title=None, save=False, 
+                    p_phase="P", s_phase="S"):
     """
     Plot beachballs based on their assigned index `x` and max amplitude `y` with
     the given moment tensor components `t`
@@ -622,13 +631,13 @@ def plot_beachballs(x, y, t, title=None, save=False):
 
     # Plot PyGMT Beachball diagrams showing variation of MT with PS ratio
     with pygmt.config(FONT="7.5p"):
-        region = [0.1, max(x) + 0.5,  0.1,  max(y) * 2.5]
+        region = [0.1, max(x) + 0.5,  0.01,  max(y) * 2.5]
 
         projection = "X10c/4cl"  # y-axis logarithmic
         
         # Y label with tick every 
         frame = ["af", "+gwhite", 
-                "ya5f1g5+lPn/Sn Amplitude Ratio",
+                f"ya5f1g5+l{p_phase}/{s_phase} Amplitude Ratio",
                 f"xa1f1g1+l< DC{' '*36}ISO{' '*30}CLVD >",
                 ]
         fig = pygmt.Figure()
@@ -677,10 +686,20 @@ def main(dist_km=150, baz=45, src_depth_km=1, tmin=2, tmax=4, corners=4,
                                      taup_buffer=taup_buffer,
                                      fig_path=fig_path, wav_path=wav_path, 
                                      parallel=parallel)
+
+        # Save the values for later plotting
+        if arrival_choice.startswith("custom"):
+            _, p_phase, s_phase = arrival_choice.split("_")
+            tag = f"_{p_phase}_{s_phase}"
+        else:
+            tag = ""
+        # Sort out values
+        x_, y_ = list(zip(*sorted(zip(x, y))))
+        np.save(f"mt_z{int(src_depth_km)}_d{dist_km}_b{baz}{tag}", y_)
         
         # Make beachball plots
-        save = f"{fig_path}/bb_z{int(src_depth_km)}_d{dist_km}_b{baz}.png"
-        plot_beachballs(x, y, t, title, save)
+        save = f"{fig_path}/bb_z{int(src_depth_km)}_d{dist_km}_b{baz}{tag}.png"
+        plot_beachballs(x, y, t, title, save, p_phase, s_phase)
 
     # Plot record sections
     # Custom look for each of the distances
@@ -706,7 +725,7 @@ def main(dist_km=150, baz=45, src_depth_km=1, tmin=2, tmax=4, corners=4,
         sac_files += Path(wav_path).glob(
             f"*_z{int(src_depth_km)}_d{dist_km}_b{baz}_{component}.SAC"
             )
-    save = f"{fig_path}/rs_z{int(src_depth_km)}_d{dist_km}_b{baz}.png"
+    save = f"{fig_path}/rs_z{int(src_depth_km)}_d{dist_km}_b{baz}{tag}.png"
 
     if dist_km in customization.keys():
         kwargs = customization[dist_km]
@@ -741,10 +760,10 @@ if __name__ == "__main__":
         taup_model = "prem"
 
     # syngine="ak135f_1s"
-    main(dist_km=1000, 
+    main(dist_km=500, 
          baz=0, 
          src_depth_km=0,
-         arrival_choice="custom", 
+         arrival_choice="custom_Pg_Sg", 
          tmin=tmin, tmax=tmax, 
          syngine=syngine,
          taup_model=taup_model,

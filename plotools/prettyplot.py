@@ -48,7 +48,8 @@ except ImportError:
 SECONDS_PER_DAY = 3600.0 * 24.0
 
 # !!! BCBC
-YLABEL= -2.6E-5
+YLABELS= {1000: -2.6E-5, 500: -3E-4}
+YLABEL=YLABELS[500]
 YAXISOFF=True
 
 def parse_args():
@@ -1261,6 +1262,7 @@ class PrettyPlot():
         # Discrete colormap for the arrivals
         cvals = cmaphex(nvals=len(arrivals), cmap=self.tp_cmap)
 
+        plotted_names = []
         for i, (name, times) in enumerate(arrivals.items()):
             # Convert arrival times to time series reference
             if self.time.startswith("a"):
@@ -1278,8 +1280,10 @@ class PrettyPlot():
                 for ax in self.axs:
                     ax.axvline(time, alpha=1,  ls="-", color=cvals[i], 
                                zorder=100)
-                    ax.text(x=time, y=YLABEL, s=name, c=cvals[i], zorder=100,
-                            fontsize=12)
+                    if name not in plotted_names:
+                        ax.text(x=time, y=YLABEL, s=name, c=cvals[i], zorder=100,
+                                fontsize=12)
+                        plotted_names.append(name)
 
             # Plot discrete arrivals
             # for time in times:
@@ -1383,12 +1387,20 @@ class PrettyPlot():
         Given a series of time windows, select the maximum waveform amplitude 
         and plot its value, as well as the time windows
         """
+        # !!! BCBC
         windows = {
-            "Pn": [126, 131.21], # [125, 135], 
-            "Pg": [172.25, 207.3], # [172.25, 220],
-            "Sn": [228.34, 236], # [228, 250],
-            "Sg": [284, 295], # [283, 300]
+            1000: {"Pn": [126, 131.21], # [125, 135], 
+                   "Pg": [172.25, 207.3], # [172.25, 220],
+                   "Sn": [228.34, 236], # [228, 250],
+                   "Sg": [284, 295], # [283, 300],
+                   },
+            500: {"Pn": [64.51, 69.37], 
+                  "Pg": [79.8, 110], 
+                  "Sn": [121.08, 127.53], 
+                  "Sg": [134.55, 150.07], 
+                  }, 
         }
+        windows = windows[500]
         sr = self.st[0].stats.sampling_rate
         cvals = cmaphex(nvals=len(windows), cmap=self.tp_cmap)
 
