@@ -359,18 +359,26 @@ class MomTenMeas:
 
         return p_window, s_window
     
-    def get_arrivals_custom(self):
+    def get_arrivals_custom(self, p_phase="Pn", s_phase="Sn"):
         """
         Custom windows based on picking from waveform plots for 2-4Hz waveforms
         """
-        dict_out = {
-            50: [[6, 12], [12.5, 16.5]],
-            150: [[21, 38], [40, 50]],
-            250: [[35, 44.5], [67, 77]],
-            500: [[60, 110], [115, 150]],
-            1000: [[120, 220], [227, 300]],
+        windows = {1000: {
+            "Pn": [126, 131.21], # [125, 135], 
+            "Pg": [172.25, 207.3], # [172.25, 220],
+            "Sn": [228.34, 236], # [228, 250],
+            "Sg": [284, 295], # [283, 300]
         }
-        p_win, s_win = dict_out[self.dist_km]
+        }
+        # dict_out = {
+        #     50: [[6, 12], [12.5, 16.5]],
+        #     150: [[21, 38], [40, 50]],
+        #     250: [[35, 44.5], [67, 77]],
+        #     500: [[60, 110], [115, 150]],
+        #     1000: [[120, 220], [227, 300]],
+        # }
+        p_win = windows[self.dist_km][p_phase]
+        s_win = windows[self.dist_km][s_phase]
 
         return p_win, s_win
     
@@ -610,17 +618,17 @@ def plot_beachballs(x, y, t, title=None, save=False):
     """
     # Used for coloring beachballs, hex color codes for each index can be used
     # to match waveform plots etc.
-    hexvals = cmaphex(nvals=len(t), cmap="viridis")
+    hexvals = cmaphex(nvals=len(t), cmap="vanimo")
 
     # Plot PyGMT Beachball diagrams showing variation of MT with PS ratio
     with pygmt.config(FONT="7.5p"):
-        region = [0.1, max(x) + 0.5,  0,  max(y) * 1.25]
+        region = [0.1, max(x) + 0.5,  0.1,  max(y) * 2.5]
 
-        projection = "X10c/4c"
+        projection = "X10c/4cl"  # y-axis logarithmic
         
         # Y label with tick every 
         frame = ["af", "+gwhite", 
-                "ya5f1g5+lP/S Amplitude Ratio [ZNE]",
+                "ya5f1g5+lPn/Sn Amplitude Ratio",
                 f"xa1f1g1+l< DC{' '*36}ISO{' '*30}CLVD >",
                 ]
         fig = pygmt.Figure()
@@ -681,11 +689,11 @@ def main(dist_km=150, baz=45, src_depth_km=1, tmin=2, tmax=4, corners=4,
         150:  {"xlim": [19, 60], "ylim": [-2.5E-2, 1.5E-1], "wf_scale": 20, 
                "wf_recsec_spacing": 5},
         200:  {"xlim": [15, 80], "wf_scale": 10},
-        250:  {"xlim": [20, 100]},
+        250:  {"xlim": [30, 100], "wf_scale": 50},
         500:  {"xlim": [55, 200], "ylim": [-3E-4, 3E-3], "wf_scale": 5},
         750:  {"xlim": [75, 300]},
         1000: {"xlim": [100, 370], "ylim": [-.5E-3, 3E-3], "wf_scale": 10,
-               "wf_recsec_spacing": 1},
+               "wf_recsec_spacing": 10},
         3000: {"xlim": [300, 1000], "ylim": [-1E-7, 1E-7], "wf_scale": 0},
     }
     if skip:
@@ -704,6 +712,7 @@ def main(dist_km=150, baz=45, src_depth_km=1, tmin=2, tmax=4, corners=4,
         kwargs = customization[dist_km]
     else:
         kwargs = {}
+    print(title)
     pp = PrettyPlot(fids=sorted(sac_files), wf_type="recsec",  
                     fmin=1/tmax, fmax=1/tmin, corners=corners, 
                     colors=["viridis"], linewidth=1,
@@ -726,16 +735,16 @@ if __name__ == "__main__":
          tmin=1
          tmax=2 
          taup_model="ak135"
-    elif syngine == "prem_2s":
+    elif syngine == "prem_e_2s":
         tmin = 2
-        tmax = 2
+        tmax = 20
         taup_model = "prem"
 
     # syngine="ak135f_1s"
-    main(dist_km=250, 
+    main(dist_km=1000, 
          baz=0, 
          src_depth_km=0,
-         arrival_choice="taup", 
+         arrival_choice="custom", 
          tmin=tmin, tmax=tmax, 
          syngine=syngine,
          taup_model=taup_model,
@@ -744,7 +753,7 @@ if __name__ == "__main__":
          s_phase_list=["Sn", "Sg"],
          components="Z", 
          skip=False, 
-         show=True, 
+         show=False, 
          parallel=True,
          )
 
