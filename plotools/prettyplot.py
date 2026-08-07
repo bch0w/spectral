@@ -1259,7 +1259,7 @@ class PrettyPlot():
         # Offset by USER_T0 if SPECFEM synthetics
         tp_start += self.t0
 
-        # Discrete colormap for the arrivals
+        # Discrete colormap for each unique arrivals
         cvals = cmaphex(nvals=len(arrivals), cmap=self.tp_cmap)
 
         plotted_names = []
@@ -1281,8 +1281,12 @@ class PrettyPlot():
                     ax.axvline(time, alpha=1,  ls="-", color=cvals[i], 
                                zorder=100)
                     if name not in plotted_names:
-                        ax.text(x=time, y=YLABEL, s=name, c=cvals[i], zorder=100,
-                                fontsize=12)
+                        if name == "Pn":
+                            y = -4E-4
+                        else:
+                            y = YLABEL
+                        ax.text(x=time, y=y, s=name, c=cvals[i],
+                                zorder=125, fontsize=12)
                         plotted_names.append(name)
 
             # Plot discrete arrivals
@@ -1380,7 +1384,7 @@ class PrettyPlot():
                 # !!! BCBC
                 # One space infront of label to get away from the line
                 ax.text(x=time, y=YLABEL, s=f" {name}km/s", 
-                            fontsize=fontsize, color=c, alpha=alpha, zorder=100)
+                        fontsize=fontsize, color=c, alpha=alpha, zorder=100)
 
     def plot_peak_amplitudes(self):
         """
@@ -1399,8 +1403,20 @@ class PrettyPlot():
                   "Sn": [121.08, 127.53], 
                   "Sg": [134.55, 150.07], 
                   }, 
+            250: {"Pn": [33., 37.23], 
+                  "Pg": [41.47, 52.7], 
+                  "Sn": [66.88, 69.83],  # [60, 66.88], 
+                  "Sg": [69.83, 73.06], 
+                  }, 
+            150: {"Pn": [20., 26.73], 
+                  "Pg": [26.73, 28.9], 
+                  "Sn": [44.68, 48.55],  # [60, 66.88], 
+                  "Sg": [39.06, 44.8], 
+                #   "P": [20, 39.06],
+                #   "S": [39.06, 50],
+                  }
         }
-        windows = windows[500]
+        windows = windows[150]
         sr = self.st[0].stats.sampling_rate
         cvals = cmaphex(nvals=len(windows), cmap=self.tp_cmap)
 
