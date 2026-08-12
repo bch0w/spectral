@@ -52,7 +52,7 @@ class MomTenMeas:
     """
     def __init__(self, dist_km, baz, src_depth_km, tmin, tmax, corners=4, 
                  choice="ps", p_phase_list=None, s_phase_list=None, 
-                 arrival_choice="taup",
+                 arrival_choice="taup", windows=None,
                  components="ZNE", kind="velocity", syngine="iasp91_2s",  
                  taup_model="iasp91", taup_buffer=0, 
                  fig_path="FIGURES", wav_path="SAC"):
@@ -120,18 +120,29 @@ class MomTenMeas:
         self.syngine = syngine
         self.db = instaseis.open_db(f"syngine://{self.syngine}")
 
+
+        # !!! BCBC
+        # These were put in place before I realized that Syngine 
+        # removed the water and mud layer so the top of the model is 
+        # actually the solid Earth. Used now to put the source at
+        # slightly below the surface to avoid any issue with being
+        # right at the surface
         if self.syngine.startswith("ak135f"):
-            self.model_surface_m = 3300  # just below the mud layer
+            self.model_surface_m = 0  # 
         elif self.syngine.startswith("iasp91"):
             self.model_surface_m = 0
         elif self.syngine.startswith("prem"):
-            self.model_surface_m = 3000
+            self.model_surface_m = 0
 
         print(f"syngine db '{self.syngine}', "
               f"setting model surface == {self.model_surface_m}m")
 
         self.taup_model = taup_model
         self.taup_buffer = taup_buffer
+
+        # !!!  BCBC
+        self.windows = windows
+
         
         # For storing output files
         self.fig_path = fig_path
@@ -220,7 +231,7 @@ class MomTenMeas:
         """
         st = self.db.get_seismograms(source=self.src, receiver=self.rcv, 
                                      components=self.components,  
-                                     kind=self.kind, dt=0.1,
+                                     kind=self.kind, dt=0.01,
                                      remove_source_shift=True)
 
         # Calcualte dist, az and baz from the now set locations
@@ -364,45 +375,30 @@ class MomTenMeas:
         Custom windows based on picking from waveform plots for 2-4Hz waveforms
         """
         _, p_phase, s_phase = self.arrival_choice.split("_")
-        windows = {
-            1000: {"Pn": [126, 131.21], # [125, 135], 
-                   "Pg": [172.25, 207.3], # [172.25, 220],
-                   "Sn": [228.34, 236], # [228, 250],
-                   "Sg": [284, 295], # [283, 300],
-                   "P": [126, 228.34],
-                   "S": [228.34, 295]
-                   },
-            500: {"Pn": [64.51, 69.37], 
-                  "Pg": [79.8, 110], 
-                  "Sn": [121.08, 127.53], 
-                  "Sg": [134.55, 150.07], 
-                  "P": [64.51, 121.08],
-                  "S": [121.08, 150.07],
-                  }, 
-            250: {"Pn": [33., 37.23], 
-                  "Pg": [41.47, 52.7], 
-                  "Sn": [66.88, 69.83],  # [60, 66.88], 
-                  "Sg": [69.83, 73.06],
-                  "P": [33, 69.83],
-                  "S": [66.88, 73.06], 
-                  }, 
-            150: {"Pn": [20., 26.73], 
-                  "Pg": [26.73, 28.9], 
-                  "Sn": [44.68, 48.55],  # [60, 66.88], 
-                  "Sg": [39.06, 44.8], 
-                  "P": [20, 39.06],
-                  "S": [39.06, 50],
-                  }
-        }
-        # dict_out = {
-        #     50: [[6, 12], [12.5, 16.5]],
-        #     150: [[21, 38], [40, 50]],
-        #     250: [[35, 44.5], [67, 77]],
-        #     500: [[60, 110], [115, 150]],
-        #     1000: [[120, 220], [227, 300]],
-        # }
-        p_win = windows[self.dist_km][p_phase]
-        s_win = windows[self.dist_km][s_phase]
+
+        # Determine min and max P and S windows
+        for dist, windict in self.windows.items():
+            p_start = np.inf
+            p_end = 0
+            s_start = np.inf
+            s_end = 0
+            for phase, window in windict.items():
+                start, end = window
+                if phase.startswith("P"):
+                    if start < p_start:
+                        p_start = start
+                    if end > p_end:
+                        p_end = end
+                elif phase.startswith("S"):
+                    if start < s_start:
+                        s_start = start
+                    if end > s_end:
+                        s_end = end
+            self.windows[dist]["P"] = [p_start, s_start]  # Run P all the way to S
+            self.windows[dist]["S"] = [s_start, s_end]
+                        
+        p_win = self.windows[self.dist_km][p_phase]
+        s_win = self.windows[self.dist_km][s_phase]
 
         return p_win, s_win
     
@@ -555,7 +551,7 @@ class MomTenMeas:
         # e.g.,lune_ipts4_iref5_001
         self.idx = int(self.event.resource_id.id.split("/")[2].split("_")[-1])  
         self.save_tag = (
-            f"n{self.idx:0>2}_z{int(self.src_depth_km)}_"
+            f"{self.syngine}_n{self.idx:0>2}_z{int(self.src_depth_km)}_"
             f"d{self.dist_km}_b{self.baz}")
 
         # Get Instaseis synthetics
@@ -649,7 +645,7 @@ def plot_beachballs(x, y, t, title=None, save=False,
 
     # Plot PyGMT Beachball diagrams showing variation of MT with PS ratio
     with pygmt.config(FONT="7.5p"):
-        region = [0.1, max(x) + 0.5,  0.01,  max(y) * 2.5]
+        region = [0.1, max(x) + 0.5,  0.1,  max(y) * 2.5]
 
         projection = "X10c/4cl"  # y-axis logarithmic
         
@@ -663,7 +659,7 @@ def plot_beachballs(x, y, t, title=None, save=False,
 
         # Title as separate figure becuase I cannot for the life of me figure
         # out how to plot the title with the frame
-        fig.text(x=1, y=region[-1]*.95, text=title, justify="TL",
+        fig.text(x=1, y=region[-1]*.9, text=title, justify="TL",
                  fill="white")
 
         for x_, y_, t_ in zip(x, y, t):
@@ -685,12 +681,58 @@ def main(dist_km=150, baz=45, src_depth_km=1, tmin=2, tmax=4, corners=4,
          p_phase_list=P_TRAIN, s_phase_list=S_TRAIN, arrival_choice="taup",
          parallel=True, syngine="iasp91_2s", taup_model="iasp91", 
          taup_buffer=0.0, fig_path="FIGURES", wav_path="SAC", skip=False, 
-         show=False):
+         show=False, **kwargs):
     """Run and plot"""
+    windows = {
+            # 1000: {"Pn": [127.21, 135.21],
+            #        "Pg": [172.24, 200], 
+            #        "Sn": [229.37, 237.37], 
+            #        "Sg": [288.72, 300],
+            #        },
+            # ak135f_2s
+            1000: {"Pn": [131.18, 172.23],
+                   "Pg": [172.23, 200], 
+                   "Sn": [233.3, 267.14], 
+                   "Sg": [288.72, 314],
+                   },
+            500: {"Pn": [64.51, 69.37], 
+                  "Pg": [79.8, 110], 
+                  "Sn": [122.38, 127.53], 
+                  "Sg": [134.55, 151], 
+                  }, 
+            # 50 km depth
+            # 500: {"Pg": [64, 104], 
+            #       "Sg": [105, 140], 
+            #       }, 
+            # 25 km depth
+            # 500: {"Pg": [64, 115], 
+            #       "Sg": [116, 180], 
+            #       }, 
+            # 10 km depth
+            # 500: {"Pg": [68.17, 115.49], 
+            #       "Sg": [116, 144.49], 
+            #       }, 
+            250: {"Pn": [33., 38.44], 
+                  "Pg": [41.47, 53.41], 
+                  "Sn": [65, 68.92], 
+                  "Sg": [69.83, 78], 
+                  }, 
+            150: {"Pn": [21.9, 26.73], 
+                  "Pg": [26.73, 31.8], 
+                  "Sn": [44.68, 48.8],  
+                  "Sg": [42, 44.8], 
+                  },
+            80: {"Pn": [21.9, 26.73], 
+                  "Pg": [26.73, 31.8], 
+                  "Sn": [44.68, 48.8],  
+                  "Sg": [42, 44.8], 
+                  }
+        }
 
     # Used for RS and BB plots
-    title = (f"{syngine}, dist={dist_km}km, baz={int(baz%360)}; "
-             f"T=[{tmin}, {tmax}]; depth={src_depth_km}km; comp={components}")
+    title = (f"Dist={dist_km}km; BAz={int(baz%360)}; "
+             f"T=[{tmin}, {tmax}]s; Depth={src_depth_km}km; Comp={components}; "
+             f"{syngine}")
 
     # Main processing workflow
     if not skip:
@@ -703,7 +745,8 @@ def main(dist_km=150, baz=45, src_depth_km=1, tmin=2, tmax=4, corners=4,
                                      syngine=syngine, taup_model=taup_model, 
                                      taup_buffer=taup_buffer,
                                      fig_path=fig_path, wav_path=wav_path, 
-                                     parallel=parallel)
+                                     parallel=parallel,
+                                     windows=windows)
 
         # Save the values for later plotting
         if arrival_choice.startswith("custom"):
@@ -713,84 +756,115 @@ def main(dist_km=150, baz=45, src_depth_km=1, tmin=2, tmax=4, corners=4,
             tag = ""
         # Sort out values
         x_, y_ = list(zip(*sorted(zip(x, y))))
-        np.save(f"mt_z{int(src_depth_km)}_d{dist_km}_b{baz}{tag}", y_)
+        np.save(f"MTVALS/mt_{syngine}_z{int(src_depth_km)}_d{dist_km}_b{baz}{tag}", y_)
         
         # Make beachball plots
-        save = f"{fig_path}/bb_z{int(src_depth_km)}_d{dist_km}_b{baz}{tag}.png"
+        save = f"{fig_path}/bb_{syngine}_z{int(src_depth_km)}_d{dist_km}_b{baz}{tag}.png"
         plot_beachballs(x, y, t, title, save, p_phase, s_phase)
 
     # Plot record sections
     # Custom look for each of the distances
-    customization = {
-        50: {"xlim": [0, 30]}, #"ylim": [-2.5E-2, 1.5E-1], "wf_scale": 20, 
-        150:  {"xlim": [19, 60], "ylim": [-2.5E-2, 1.5E-1], "wf_scale": 20, 
-               "wf_recsec_spacing": 5},
-        200:  {"xlim": [15, 80], "wf_scale": 10},
-        250:  {"xlim": [30, 100], "ylim": [-1E-4, 3E-3], "wf_scale": 50},
-        500:  {"xlim": [55, 200], "ylim": [-3E-4, 3E-3], "wf_scale": 5},
-        750:  {"xlim": [75, 300]},
-        1000: {"xlim": [100, 370], "ylim": [-.5E-3, 3E-3], "wf_scale": 10,
-               "wf_recsec_spacing": 10},
-        3000: {"xlim": [300, 1000], "ylim": [-1E-7, 1E-7], "wf_scale": 0},
+    kwargdict = {
+        150:  {"xlim": [19, 60], 
+               "ylim": [-2.5E-2, 1.5E-1], 
+               "wf_scale": 20, 
+               "wf_recsec_spacing": 5
+               },
+        250:  {"xlim": [30, 100], 
+               "ylim": [-1E-4, 3E-3], 
+               "wf_scale": 50
+               },
+        500:  {"xlim": [50, 200], 
+            #    "ylim": [-5.8E-4, 3.4E-3], 
+               "wf_scale": 15
+               },
+        1000: {"xlim": [100, 370], 
+            #    "ylim": [-.5E-3, 3E-3],
+               "wf_scale": 10,
+               "wf_recsec_spacing": 1
+               },
     }
-    if skip:
-        tmarks = None
+    if dist_km not in kwargs:
+        kwargs = {}
     else:
-        tmarks = pwin + swin
+        kwargs = kwargs[dist_km]
 
+    # Collect waveform files used for the plot
     sac_files = []
     for component in components:
         sac_files += Path(wav_path).glob(
-            f"*_z{int(src_depth_km)}_d{dist_km}_b{baz}_{component}.SAC"
+            f"{syngine}_n??_z{int(src_depth_km)}_d{dist_km}_b{baz}_{component}.SAC"
             )
-    save = f"{fig_path}/rs_z{int(src_depth_km)}_d{dist_km}_b{baz}{tag}.png"
+    save = f"{fig_path}/rs_{syngine}_z{int(src_depth_km)}_d{dist_km}_b{baz}{tag}.png"
 
-    if dist_km in customization.keys():
-        kwargs = customization[dist_km]
-    else:
-        kwargs = {}
-    print(title)
-    pp = PrettyPlot(fids=sorted(sac_files), wf_type="recsec",  
-                    fmin=1/tmax, fmax=1/tmin, corners=corners, 
-                    colors=["viridis"], linewidth=1,
-                    ylabel=f"Normalized Velocity",
-                    tp_phases=["P", "PP", "Pn", "Pg", "pP", "pS", "PS", # "PcP", 
-                               "S", "SS", "Sn", "Sg", "sP", "sS", "SP"], # "PcS"],
-                    # tp_phases=p_phase_list + s_phase_list,
-                    tp_model=taup_model, tp_dist_km=dist_km, 
-                    tp_depth=src_depth_km, tp_start=0,
-                    tmarks=tmarks, tmarks_c=["C0", "C0", "C1", "C1"], 
-                    title=title,  save=save, show=show, legend=False, dpi=200, 
+    pp = PrettyPlot(fids=sorted(sac_files), 
+                    fig_size=(12, 8),
+                    wf_type="recsec",  
+                    fmin=1/tmax, 
+                    fmax=1/tmin, 
+                    corners=corners, 
+                    colors=["vanimo"], 
+                    linewidth=1,
+                    ylabel=f"Z Velocity [normalized]",
+                    group_vels=[8,7,6,5,4,3],
+                    tp_phases=["Pn", "Pg", "Sn", "Sg"],
+                    tp_model=taup_model, 
+                    tp_dist_km=dist_km, 
+                    tp_depth=src_depth_km, 
+                    tp_start=0,
+                    title=title,  
+                    save=save, 
+                    show=True, 
+                    legend=False, 
+                    dpi=100, 
                     transparent=False,
+                    windows=windows,
                     **kwargs)
     pp.main()
 
 
 if __name__ == "__main__":
     syngine = "ak135f_1s"
+    comp = "Z"
     if syngine == "ak135f_1s":
          tmin=1
          tmax=2 
-         taup_model="ak135"
+         taup_model="ak135f_no_mud"
+    elif syngine == "ak135f_2s":
+         tmin=2
+         tmax=3 
+         taup_model="ak135f_no_mud"
+         comp="ZE"
     elif syngine == "prem_e_2s":
         tmin = 2
         tmax = 20
         taup_model = "prem"
 
-    # syngine="ak135f_1s"
-    main(dist_km=150, 
-         baz=0, 
-         src_depth_km=50,
-         arrival_choice="custom_P_S", 
-         tmin=tmin, tmax=tmax, 
-         syngine=syngine,
-         taup_model=taup_model,
-         taup_buffer=0.1,
-         p_phase_list=["Pn", "Pg"],
-         s_phase_list=["Sn", "Sg"],
-         components="Z", 
-         skip=False, 
-         show=False, 
-         parallel=True,
-         )
+    kwargs = {
+        "dist_km": 80, 
+        "baz":0, 
+        "src_depth_km":.25,
+        "arrival_choice":"custom_P_S", 
+        "tmin":tmin, 
+        "tmax":tmax, 
+        "corners": 8,
+        "syngine":syngine,
+        "taup_model":taup_model,
+        "taup_buffer":0.1,
+        "components":comp, 
+        "skip":False, 
+        "show":False, 
+        "parallel":True,
+    }
+
+    if True:
+        main(**kwargs)
+    elif True:
+        for depth in [5, 10, 50]:
+            kwargs["src_depth_km"] = depth
+            main(**kwargs)
+    else:
+        for custom in ["Pg_Sg", "Pn_Sn", "Pg_Sn", "Pn_Sg", "P_S"]:
+            kwargs["arrival_choice"] = f"custom_{custom}"
+            main(**kwargs)
 

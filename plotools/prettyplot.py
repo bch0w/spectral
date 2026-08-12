@@ -48,8 +48,6 @@ except ImportError:
 SECONDS_PER_DAY = 3600.0 * 24.0
 
 # !!! BCBC
-YLABELS= {1000: -2.6E-5, 500: -3E-4}
-YLABEL=YLABELS[500]
 YAXISOFF=True
 
 def parse_args():
@@ -260,12 +258,6 @@ def parse_args():
     parser.add_argument("--tr_color", type=str, default="C0",
                        help="color of the time series")
     
-    # CUSTOM
-    parser.add_argument("--stream_gauge", action="store_true", default=False,
-                        help="For GULKANASEIS data only, plots stream gauge " 
-                             "data at the bottom of the waveform plot with a " 
-                             "twin X axis")
-
     # Misc plotting options
     parser.add_argument("--fig_size", type=float, nargs="+", default=None,
                         help="Figure size")
@@ -287,6 +279,9 @@ def parse_args():
                         default="", help="append to default title")
     parser.add_argument("--title_prepend", nargs="?", type=str, 
                         default="", help="prepend to default title")
+    parser.add_argument("--subplot_label", nargs="?", type=str, default=None,
+                        help="For publications, annotate a subplot label to "
+                             "top right corner of the figure")
     parser.add_argument("--frameoff", action="store_true",
                         help="Turn everything off except the waveform")
     parser.add_argument("-s", "--save", type=str, default=None,
@@ -670,10 +665,12 @@ class PrettyPlot():
                  # Additional Time Series
                  add_trace=None, tr_time="a", tr_label="", tr_ylabel="", 
                  tr_color="C0", 
+                 # !!! BCBC
+                 windows=None,
                  # Misc.
-                 fig_size=None, dpi=200, fig_len=None, fig_asp=None, 
+                 fig_size=None, dpi=100, fig_len=None, fig_asp=None, 
                  legend=True, ncol_legend=1, title=None, title_append="",
-                 title_prepend="",
+                 title_prepend="", subplot_label=None,
                  save=None, output=None, show=True, frameoff=False, 
                  transparent=False,
                  **kwargs
@@ -752,6 +749,9 @@ class PrettyPlot():
         self.tr_ylabel = tr_ylabel
         self.tr_color = tr_color
 
+        # !!!BCBC
+        self.windows = windows
+
         # Figure output control
         self.fig_size = fig_size
         self.dpi = dpi
@@ -762,6 +762,7 @@ class PrettyPlot():
         self.title = title
         self.title_append = title_append
         self.title_prepend = title_prepend
+        self.subplot_label = subplot_label
         self.save = save
         self.output = output
         self.show = show
@@ -798,6 +799,7 @@ class PrettyPlot():
             self.st += st
         self.st.merge()  # incase we are plotting multiple days
         print(f"{self.st.__str__(extended=True)}")
+
 
     def setup_plot(self):
         """
@@ -1085,14 +1087,17 @@ class PrettyPlot():
                     x = self._xvals[0]
 
                 # OPTIONAL: annotate the index number next to the waveform
-                j = i + 1
-                jdict = {1: "DC", 15: "ISO", 29: "CLVD"}
-                if j not in [1, 15, 29]:
-                    ax.text(x, data[0], s=f"{j:0>2}", c="k", fontsize="small", 
-                            zorder=200)
-                else:
-                    ax.text(x, data[0], s=f"{j:0>2} ({jdict[j]})", c="k", 
-                            fontsize="medium", zorder=200)
+                if YAXISOFF:
+                    j = (i + 1) // 3
+                    jdict = {1: "DC", 15: "ISO", 29: "CLVD"}
+                    ax.text(x, data[0], s=f"{j:0>2}{l[-1]}", c="k", 
+                                            fontsize="small", zorder=200)
+                    # if j not in [1, 15, 29]:
+                    #     ax.text(x, data[0], s=f"{j:0>2}", c="k", 
+                    #             fontsize="small",  zorder=200)
+                    # else:
+                    #     ax.text(x, data[0], s=f"{j:0>2}{l[-1]} ({jdict[j]})", c="k", 
+                    #             fontsize="medium", zorder=200)
 
     def plot_additional_traces(self):
         """
@@ -1276,30 +1281,19 @@ class PrettyPlot():
             max_amp = np.amax(self.st[0].data[win_start:win_end])
 
             # !!! BCBC
-            for time in times:
-                for ax in self.axs:
+            for ax in self.axs:
+                for time in times:
                     ax.axvline(time, alpha=1,  ls="-", color=cvals[i], 
                                zorder=100)
-                    if name not in plotted_names:
-                        if name == "Pn":
-                            y = -4E-4
-                        else:
-                            y = YLABEL
-                        ax.text(x=time, y=y, s=name, c=cvals[i],
-                                zorder=125, fontsize=12)
-                        plotted_names.append(name)
 
-            # Plot discrete arrivals
-            # for time in times:
-            #     self.ax.axvline(
-            #         time,
-            #         alpha=1, 
-            #         ls=ls,
-            #         # label=name, 
-            #         color=cvals[i],
-            #         zorder=5,
-            #         )
-            #     self.ax.text(x=time, y=max_amp, s=name, c=cvals[i], zorder=100)
+                    if name not in plotted_names:
+                        # if name == "Pn":
+                        #     y = -4E-4
+                        # else:
+                        #     y = YLABEL
+                        ax.text(x=time, y=self.ylim[0]*0.9, s=name, 
+                                c="k", zorder=125, fontsize=12)
+                        plotted_names.append(name)
 
         # Plot the global ray paths for sanity check
         # https://github.com/obspy/obspy/blob/master/obspy/taup/tau.py#L250
@@ -1335,7 +1329,7 @@ class PrettyPlot():
                 ax.axvline(tmark, c=c, lw=1, zorder=100, 
                            ls="--", alpha=0.8)
 
-    def plot_group_vels(self, c="r", alpha=1, ls="--", lw=1.5, fontsize=10,
+    def plot_group_vels(self, c="r", alpha=1, ls="-", lw=1.5, fontsize=10,
                         zorder=100):
         """
         Create time mark lines for a given set of group velocities `group_vel`
@@ -1378,13 +1372,14 @@ class PrettyPlot():
 
             for ax in self.axs:
                 # Plot discrete arrivals
-                ax.axvline(time, alpha=alpha, ls=ls, lw=lw, c=c, zorder=zorder)
+                ax.axvline(time, ymin=0, ymax=0.05, alpha=alpha, ls=ls, lw=lw, 
+                           c=c, zorder=zorder)
                 # self.ax.text(x=time, y=self.st[0].max(), s=f"{name}km/s", 
                 #              fontsize=fontsize, color=c, alpha=alpha)
                 # !!! BCBC
                 # One space infront of label to get away from the line
-                ax.text(x=time, y=YLABEL, s=f" {name}km/s", 
-                        fontsize=fontsize, color=c, alpha=alpha, zorder=100)
+                ax.text(x=time, y=0.9*self.ylim[0], s=f" {name}km/s", 
+                        fontsize=fontsize, color=c, alpha=alpha, zorder=250)
 
     def plot_peak_amplitudes(self):
         """
@@ -1392,61 +1387,75 @@ class PrettyPlot():
         and plot its value, as well as the time windows
         """
         # !!! BCBC
-        windows = {
-            1000: {"Pn": [126, 131.21], # [125, 135], 
-                   "Pg": [172.25, 207.3], # [172.25, 220],
-                   "Sn": [228.34, 236], # [228, 250],
-                   "Sg": [284, 295], # [283, 300],
-                   },
-            500: {"Pn": [64.51, 69.37], 
-                  "Pg": [79.8, 110], 
-                  "Sn": [121.08, 127.53], 
-                  "Sg": [134.55, 150.07], 
-                  }, 
-            250: {"Pn": [33., 37.23], 
-                  "Pg": [41.47, 52.7], 
-                  "Sn": [66.88, 69.83],  # [60, 66.88], 
-                  "Sg": [69.83, 73.06], 
-                  }, 
-            150: {"Pn": [20., 26.73], 
-                  "Pg": [26.73, 28.9], 
-                  "Sn": [44.68, 48.55],  # [60, 66.88], 
-                  "Sg": [39.06, 44.8], 
-                #   "P": [20, 39.06],
-                #   "S": [39.06, 50],
-                  }
-        }
-        windows = windows[150]
+        # if not self.windows:
+        #     self.windows = {
+        #         1000: {"Pn": [127.21, 135.21],
+        #             "Pg": [172.24, 200], 
+        #             "Sn": [229.37, 237.37], 
+        #             "Sg": [288.72, 300],
+        #             },
+        #         500: {"Pn": [64.51, 69.37], 
+        #             "Pg": [79.8, 110], 
+        #             "Sn": [122.38, 127.53], 
+        #             "Sg": [134.55, 151], 
+        #             }, 
+        #         250: {"Pn": [33., 38.44], 
+        #             "Pg": [41.47, 53.41], 
+        #             "Sn": [65, 68.92], 
+        #             "Sg": [69.83, 78], 
+        #             }, 
+        #         150: {"Pn": [21.9, 26.73], 
+        #             "Pg": [26.73, 31.8], 
+        #             "Sn": [44.68, 48.8],  
+        #             "Sg": [42, 44.8], 
+        #             }
+        #     }
+        windows = self.windows[self.tp_dist_km]
         sr = self.st[0].stats.sampling_rate
         cvals = cmaphex(nvals=len(windows), cmap=self.tp_cmap)
+    
 
-        for ax, data in zip(self.axs, self._data):
-            for i, (label, window) in enumerate(windows.items()):
+        # Plot phase arrival, search window, and peak amplitude
+        for i, (label, window) in enumerate(windows.items()):
+            # Only plot a window patch once
+            patch_plotted = False
+            for ax, data in zip(self.axs, self._data):
                 samp_start, samp_end = [int(_*sr) for _ in window]
 
                 # Figure out the correct time index to plot the figure
                 idx_max = np.argmax(np.abs(data[samp_start:samp_end])) 
                 idx_max += samp_start
-
+                # Get the index in units of the time axis
                 time_max = idx_max / sr
-
+                # Plot the peak amplitude within the search window
                 ax.scatter(time_max, data[idx_max], c=cvals[i], marker="o",
-                           s=20, label=f"{label}: {np.sqrt(data[idx_max]**2):.2E}",
-                           ec="k", zorder=101)
-                # ax.add_patch(
-                #     Rectangle(xy=(window[0], self.st[0].data.min()),
-                #               width=window[1] - window[0],
-                #               height=1.5 * (self.st[0].data.max() - self.st[0].data.min()),
-                #               facecolor=cvals[i], alpha=0.25)
-                #               )
-                ax.add_patch(
-                    Rectangle(xy=(window[0], self.ylim[0]),
-                              width=window[1] - window[0],
-                              height=np.abs(self.ylim[0]) + np.abs(self.ylim[1]),
-                              facecolor=cvals[i], alpha=0.01, zorder=100)
-                              )
+                           s=20, ec="k", zorder=250,
+                           label=f"{label}: {np.sqrt(data[idx_max]**2):.2E}",
+                           )
+                           
+                # Plot the search window, only plot the patch once
+                if not patch_plotted:
+                    ax.add_patch(
+                        Rectangle(
+                            xy=(window[0], self.ylim[0]), 
+                            width=window[1] - window[0],
+                            height=np.abs(self.ylim[0]) + np.abs(self.ylim[1]),
+                            facecolor=cvals[i], alpha=0.25, zorder=150)
+                            )
+                    patch_plotted = True
+                    
+    def set_ylim(self):
+        """Establish ylims either by user set or from the natural plot lims"""
+        # Establish ylim as [ymin, ymax]
+        if self.ylim:
+            if len(self.ylim) == 1:
+                ymax = abs(self.ylim[0])
+                ymin = -1 * ymax
+                self.ylim = [ymin, ymax]
+        # Use natural plot limits
+        else:
+            self.ylim = plt.ylim()
 
-            
     def set_plot_aesthetics(self):
         """
         Set plot aesthetics
@@ -1480,12 +1489,7 @@ class PrettyPlot():
 
             # Subset y axis for waveform plot
             if self.ylim:
-                if len(self.ylim) == 2:
-                    ymin, ymax = self.ylim
-                else:
-                    ymax = abs(self.ylim[0])
-                    ymin = -1 * ymax
-                ax.set_ylim(ymin, ymax)
+                ax.set_ylim(self.ylim[0], self.ylim[1])
 
             # Spectrogram annotation if there are multiple waveforms plotted
             # put it outside the axis so it shows up on white background
@@ -1521,7 +1525,7 @@ class PrettyPlot():
                 title = f"{self.title_prepend}{title}"
         else:
             title = self.title
-        self.ax.set_title(title)
+        self.ax.set_title(title, fontsize=14)  # !!! BCBC
         # plt.suptitle(title)
 
         # Brute force turn off everything
@@ -1531,6 +1535,16 @@ class PrettyPlot():
             self.ax.set_title("")
 
         plt.tight_layout()
+
+    def annotate_subplot_label(self):
+        """
+        Annotate subplot label. Only works in a select amount of cases
+        """
+        # Get xlim and ylim from the axis, assuming everything has been set
+        plt.sca(self.axs[0])
+        plt.figtext(0.001, .99, s=self.subplot_label, c="k", fontsize=27.5,  
+                    zorder=250, ha="left", va="top")
+        
 
     def finalize(self):
         """
@@ -1563,6 +1577,7 @@ class PrettyPlot():
         self.process_waveforms()
         self.get_plot_parameters()
         self.plot_waveforms()
+        self.set_ylim()
         if self.add_trace:
             self.plot_additional_traces()
         if self.spectrogram:
@@ -1573,7 +1588,9 @@ class PrettyPlot():
             self.plot_group_vels()
         if self.tp_phases:
             self.plot_taup_arrivals()
-        self.plot_peak_amplitudes()
+        # self.plot_peak_amplitudes()  # !!! BCBC
+        if self.subplot_label:
+            self.annotate_subplot_label()
         self.set_plot_aesthetics()
         self.finalize()
 

@@ -5,6 +5,7 @@ colors to make it easier to visually separate.
 Models are pulled directly from IRIS EMC links and will be downloaded
 to your local machine
 """
+import os
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
@@ -21,10 +22,12 @@ plot_arrays = {}
 
 # AK135f: depth, rho, vp, vs, qk, qm
 if "ak135f" in choices:
-    ak135f = "http://ds.iris.edu/files/products/emc/data/AK135F/AK135F_AVG.csv"
+    ak135f = "/Users/prof/Data/models/AK135F/AK135F_AVG.csv"
+    if not os.path.exists(ak135f):
+        ak135f = "http://ds.iris.edu/files/products/emc/data/AK135F/AK135F_AVG.csv"
     depth_km, density, vp_kms, vs_kms, qk, qm = \
                         np.loadtxt(ak135f, delimiter=",").T
-
+    breakpoint()
     depth_arrays["ak135f"] = depth_km
     plot_arrays["Vp_ak135f"] = vp_kms
     plot_arrays["Vs_ak135f"] = vs_kms

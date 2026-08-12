@@ -70,9 +70,9 @@ def get_taup_arrivals(source_depth_in_km, distance_in_km, p_phase_list=None,
     """
     # By default query all the crustal directarrivals
     if not p_phase_list:
-        p_phase_list = ["p", "P", "PP", "pP", "Pn", "Pg"]
+        p_phase_list = ["Pg"]
     if not s_phase_list:
-        s_phase_list = ["s", "S", "SS", "sS", "Sn", "Sg"]
+        s_phase_list = ["Sg"]
 
     dist_deg = kilometers2degrees(distance_in_km)
 
@@ -94,6 +94,8 @@ def get_taup_arrivals(source_depth_in_km, distance_in_km, p_phase_list=None,
     
     s_arrivals = [_.time for _ in s_arrivals]
     s_window = [min(s_arrivals), max(s_arrivals)]
+
+    breakpoint()
 
     return p_window, s_window
 
@@ -150,11 +152,11 @@ def plot_tr(tr, p_idx=None, s_idx=None, p_window=None, s_window=None,
     plt.plot(tr.times(), tr.data, c="k", zorder=9, lw=1)
 
     if p_idx:
-        plt.scatter(tr.times()[p_idx], tr.data[p_idx], zorder=10, 
-                c="r", label=f"P {tr.data[p_idx]:.2E}; {tr.times()[p_idx]:.2f}")
+        plt.scatter(tr.times()[p_idx], tr.data[p_idx], zorder=10, c="r", 
+                    label=f"P {tr.data[p_idx]:.2E}; {tr.times()[p_idx]:.2f}")
     if s_idx:
-        plt.scatter(tr.times()[s_idx], tr.data[s_idx], zorder=10,
-                c="g", label=f"S {tr.data[s_idx]:.2E}; {tr.times()[s_idx]:.2f}")
+        plt.scatter(tr.times()[s_idx], tr.data[s_idx], zorder=10, c="g", 
+                    label=f"S {tr.data[s_idx]:.2E}; {tr.times()[s_idx]:.2f}")
     if p_window:
         plt.axvline(p_window[0], c="r", zorder=8, lw=1)
         plt.axvline(p_window[1], c="r", zorder=8, lw=1)
@@ -234,7 +236,6 @@ class P2SRatio:
         self.srclat = None
         self.srclon = None
 
-
     def write(self):        
         """Write to .npz file"""
         dict_out = {"p2sratios": np.array(self.p2sratios),
@@ -263,7 +264,6 @@ class P2SRatio:
         endtime = tr.stats.endtime 
         tr.trim(starttime, endtime)
         return tr
-
 
     def _get_mt(self):
         """Get moment tensor components from CMTSOLUTION for plotting"""
@@ -343,14 +343,17 @@ class P2SRatio:
             fid (str): file identifier pointing to one of the synthetic 
                 waveforms for use in analysis
         """
+        _corners = 8
         tr = self._read_sem(fid)
-        tr.filter("bandpass", freqmin=self.fmin, freqmax=self.fmax)
+        tr.filter("bandpass", freqmin=self.fmin, freqmax=self.fmax,
+                  corners=_corners)
 
-        if False:
+        if True:
             p_window, s_window = get_taup_arrivals(tr.stats.sac["evdp"], 
                                                    tr.stats.sac["dist"])
         else:
             p_window, s_window = get_group_vel_arrivals(tr.stats.sac["dist"])
+
         if not p_window or not s_window:
             if self.path_fig:
                 self.plot_tr(tr)
@@ -365,7 +368,8 @@ class P2SRatio:
         if self.path_fig:
             plot_tr(tr, p_idx, s_idx, p_window, s_window, 
                     title_prepend=f"{self.tag} ",
-                    save=self.path_fig)
+                    save=self.path_fig, show=True)
+            a=1/0
 
         # If more than 1 component we need to get the other 2 arrays
         if len(self.components) > 1:
@@ -373,7 +377,8 @@ class P2SRatio:
             for comp_ in self.components[1:]:
                 fid_ = str(fid).replace(f"X{comp}.sem", f"X{comp_}.sem")
                 tr_ = self._read_sem(fid_)
-                tr_.filter("bandpass", freqmin=self.fmin, freqmax=self.fmax)
+                tr_.filter("bandpass", freqmin=self.fmin, freqmax=self.fmax,
+                           corners=_corners)
 
                 p2sratio_, p_idx_, s_idx_ = get_p2s(tr=tr_, p_window=p_window, 
                                                     s_window=s_window)  
@@ -553,9 +558,9 @@ def parse_args():
                         help="source name")
     parser.add_argument("-c", "--components", default="ZNE", type=str, 
                         nargs="?", help="components to include")
-    parser.add_argument("-f1", "--fmin", type=float, default=1, nargs="?",
+    parser.add_argument("-f1", "--fmin", type=float, default=0.5, nargs="?",
                         help="minimum filter frequency")
-    parser.add_argument("-f2", "--fmax", type=float, default=6, nargs="?",
+    parser.add_argument("-f2", "--fmax", type=float, default=1, nargs="?",
                         help="maximum filter frequency")
     parser.add_argument("-P", "--parallel", action="store_true", 
                         help="use multiprocessing to evaluate in parallel")
@@ -572,58 +577,17 @@ def parse_args():
     return parser.parse_args()
 
 
-<<<<<<< HEAD
-=======
-# def main_old():
-#     args = parse_args()
-   
-#     # Input directories/files
-#     path = f"waveforms/{args.model}/{args.source}" 
-
-#     path = (f"/import/c1/ERTHQUAK/bhchow/work/simblast/"
-#             f"specfem/{args.model}/{args.source}")
-
-#     spectral = "/import/home/bhchow/REPOS/spectral"
-#     path_src  = (f"{spectral}/research/watc/simblast/"
-#                  f"SPECFEM_DATA/CMTSOLUTIONS/paper_events/"
-#                  f"CMTSOLUTION_{args.source}")
-#     path_sta = (f"{spectral}/research/watc/simblast/"
-#                 f"SPECFEM_DATA/STATIONS/STATIONS_PAPER_NK_GRID")
-
-#     # Output directories/files
-#     path_save = (f"data/{args.model}_{args.source}_{args.fmin}_"
-#                  f"{args.fmax}_{args.components}.npz")
-#     path_fig  = f"figures/{args.model}/{args.source}"
-
-#     # Run ratio maker
-#     p2s = P2SRatio(path=path, path_src=path_src, path_sta=path_sta,
-#                    path_save=path_save, path_fig=path_fig,
-#                    fmin=args.fmin, fmax=args.fmax,
-#                    components=args.components, 
-#                    overwrite=args.overwrite,
-#                    )
-#     p2s.calculate_ratio(i=args.i, j=args.j, parallel=args.parallel,
-#                         ntasks=args.ntasks)
-
-#     plot_heatmap(p2s, save=f"figures/{args.model}_{args.source}.png")
-
->>>>>>> 3e3d0d4 (removing hardcodes from prettyplot)
 def main():
     args = parse_args()
    
     # Input directories/files
-<<<<<<< HEAD
     if args.path is None:
-        path = f"NK6-M3"
+        path = f"ISO-M3"
     else:
         path = args.path
     print(path)
 
     path_src = f"CMTSOLUTION_{path}"
-=======
-    path = f"3D-ISO-M3"
-    path_src = "CMTSOLUTION_ISO-M3"
->>>>>>> 3e3d0d4 (removing hardcodes from prettyplot)
     path_sta = "STATIONS"
 
     # Output directories/files
