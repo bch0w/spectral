@@ -95,8 +95,6 @@ def get_taup_arrivals(source_depth_in_km, distance_in_km, p_phase_list=None,
     s_arrivals = [_.time for _ in s_arrivals]
     s_window = [min(s_arrivals), max(s_arrivals)]
 
-    breakpoint()
-
     return p_window, s_window
 
 def get_group_vel_arrivals(distance_in_km):
@@ -302,10 +300,10 @@ class P2SRatio:
                         self.lons.append(tr.stats.sac["stlo"])
                     except Exception as e:
                         error += 1
+                        print(e)
                         continue
                 if error:
                     print(f"{self.tag}: {error}/{len(self.fids[i:j])} errors")
-                    print(e)
             # Use concurrent.futures to parallelize processing
             else:
                 print(f"calculating p2s ratios in parallel for {len(self.fids)}")
@@ -368,8 +366,7 @@ class P2SRatio:
         if self.path_fig:
             plot_tr(tr, p_idx, s_idx, p_window, s_window, 
                     title_prepend=f"{self.tag} ",
-                    save=self.path_fig, show=True)
-            a=1/0
+                    save=self.path_fig, show=False)
 
         # If more than 1 component we need to get the other 2 arrays
         if len(self.components) > 1:
