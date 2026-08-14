@@ -27,10 +27,19 @@ if "ak135f" in choices:
         ak135f = "http://ds.iris.edu/files/products/emc/data/AK135F/AK135F_AVG.csv"
     depth_km, density, vp_kms, vs_kms, qk, qm = \
                         np.loadtxt(ak135f, delimiter=",").T
-    breakpoint()
     depth_arrays["ak135f"] = depth_km
     plot_arrays["Vp_ak135f"] = vp_kms
     plot_arrays["Vs_ak135f"] = vs_kms
+    # Modify the top of the model to remove water and mud layer
+    vs_mod = vs_kms.copy()
+    vs_mod[:4] = vs_kms[4]
+
+    vp_mod = vp_kms.copy()
+    vp_mod[:4] = vp_kms[4]
+
+    plot_arrays["Vp_mod_ak135f"] = vp_mod
+    plot_arrays["Vs_mod_ak135f"] = vs_mod
+
 # IASP91: depth, radius, vp, vs
 if "iasp91" in choices:
     iasp91 = "http://ds.iris.edu/files/products/emc/data/IASP91/IASP91.csv"
@@ -71,11 +80,16 @@ for name, arr in plot_arrays.items():
         color = color_vp
     elif name.startswith("Vs"):
         color = color_vs
+
+    if "mod" in name:
+        ls = "--"
+    else:
+        ls = "-"
     
-    plt.plot(arr, depth_km, color, label=name)
+    plt.plot(arr, depth_km, color, label=name, ls=ls)
 
 # Finalize plotting
-plt.title(choices)
+plt.title(" ".join(choices))
 plt.xlabel("Velocity [km/s]")
 plt.ylabel("Depth [km]")
 plt.gca().invert_yaxis()
