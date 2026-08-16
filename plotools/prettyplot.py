@@ -1088,16 +1088,21 @@ class PrettyPlot():
 
                 # OPTIONAL: annotate the index number next to the waveform
                 if YAXISOFF:
-                    j = (i + 1) // 3
                     jdict = {1: "DC", 15: "ISO", 29: "CLVD"}
-                    ax.text(x, data[0], s=f"{j:0>2}{l[-1]}", c="k", 
-                                            fontsize="small", zorder=200)
-                    # if j not in [1, 15, 29]:
-                    #     ax.text(x, data[0], s=f"{j:0>2}", c="k", 
-                    #             fontsize="small",  zorder=200)
-                    # else:
-                    #     ax.text(x, data[0], s=f"{j:0>2}{l[-1]} ({jdict[j]})", c="k", 
-                    #             fontsize="medium", zorder=200)
+                    # 3-component
+                    if False:
+                        j = (i + 1) // 3
+                        ax.text(x, data[0], s=f"{j:0>2}{l[-1]}", c="k", 
+                                fontsize="small", zorder=200)
+                    # Z-axis only
+                    else:
+                        j = i+1
+                        if j not in [1, 15, 29]:
+                            ax.text(x, data[0], s=f"{j:0>2}", c="k", 
+                                    fontsize="small",  zorder=200)
+                        else:
+                            ax.text(x, data[0], s=f"{j:0>2} ({jdict[j]})", c="k", 
+                                    fontsize="medium", zorder=200)
 
     def plot_additional_traces(self):
         """
@@ -1291,7 +1296,7 @@ class PrettyPlot():
                         #     y = -4E-4
                         # else:
                         #     y = YLABEL
-                        ax.text(x=time, y=self.ylim[0]*0.9, s=name, 
+                        ax.text(x=time, y=self.ylim[0]*0.8, s=name, 
                                 c="k", zorder=125, fontsize=12)
                         plotted_names.append(name)
 
@@ -1387,29 +1392,29 @@ class PrettyPlot():
         and plot its value, as well as the time windows
         """
         # !!! BCBC
-        # if not self.windows:
-        #     self.windows = {
-        #         1000: {"Pn": [127.21, 135.21],
-        #             "Pg": [172.24, 200], 
-        #             "Sn": [229.37, 237.37], 
-        #             "Sg": [288.72, 300],
-        #             },
-        #         500: {"Pn": [64.51, 69.37], 
-        #             "Pg": [79.8, 110], 
-        #             "Sn": [122.38, 127.53], 
-        #             "Sg": [134.55, 151], 
-        #             }, 
-        #         250: {"Pn": [33., 38.44], 
-        #             "Pg": [41.47, 53.41], 
-        #             "Sn": [65, 68.92], 
-        #             "Sg": [69.83, 78], 
-        #             }, 
-        #         150: {"Pn": [21.9, 26.73], 
-        #             "Pg": [26.73, 31.8], 
-        #             "Sn": [44.68, 48.8],  
-        #             "Sg": [42, 44.8], 
-        #             }
-        #     }
+        if not self.windows:
+            self.windows = {
+                1000: {"Pn": [127.62, 127.62 + 1/self.fmin * 2],
+                       "Pg": [169.48, 169.48 + 1/self.fmin * 24], 
+                       "Sn": [228.57, 228.57 + 1/self.fmin * 2], 
+                       "Sg": [277.78, 277.78 + 1/self.fmin * 4 ], # 307.69],
+                        },
+                500: {"Pn": [64.51, 69.37], 
+                    "Pg": [79.8, 110], 
+                    "Sn": [122.38, 127.53], 
+                    "Sg": [134.55, 151], 
+                    }, 
+                250: {"Pn": [33., 38.44], 
+                    "Pg": [41.47, 53.41], 
+                    "Sn": [65, 68.92], 
+                    "Sg": [69.83, 78], 
+                    }, 
+                150: {"Pn": [21.9, 26.73], 
+                    "Pg": [26.73, 31.8], 
+                    "Sn": [44.68, 48.8],  
+                    "Sg": [42, 44.8], 
+                    }
+            }
         windows = self.windows[self.tp_dist_km]
         sr = self.st[0].stats.sampling_rate
         cvals = cmaphex(nvals=len(windows), cmap=self.tp_cmap)
@@ -1427,8 +1432,9 @@ class PrettyPlot():
                 idx_max += samp_start
                 # Get the index in units of the time axis
                 time_max = idx_max / sr
+
                 # Plot the peak amplitude within the search window
-                ax.scatter(time_max, data[idx_max], c=cvals[i], marker="o",
+                ax.scatter(time_max, np.abs(data[idx_max]), c=cvals[i], marker="v",
                            s=20, ec="k", zorder=250,
                            label=f"{label}: {np.sqrt(data[idx_max]**2):.2E}",
                            )

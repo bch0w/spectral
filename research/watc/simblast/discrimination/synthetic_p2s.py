@@ -64,15 +64,16 @@ def get_p2s(tr, p_window, s_window, choice="window"):
 
 
 def get_taup_arrivals(source_depth_in_km, distance_in_km, p_phase_list=None,
-                      s_phase_list=None, model="iasp91"):
+                      s_phase_list=None, 
+                      model="/Users/prof/Repos/spectral/research/seismology/taup_models/ak135f_upper_crust.npz"):
     """
     Get arrival time windows from TauP for a given `TAUP_MODEL`
     """
     # By default query all the crustal directarrivals
     if not p_phase_list:
-        p_phase_list = ["Pg"]
+        p_phase_list = ["P"]
     if not s_phase_list:
-        s_phase_list = ["Sg"]
+        s_phase_list = ["S"]
 
     dist_deg = kilometers2degrees(distance_in_km)
 
@@ -86,6 +87,10 @@ def get_taup_arrivals(source_depth_in_km, distance_in_km, p_phase_list=None,
     p_arrivals = [_.time for _ in p_arrivals]
     p_window = [min(p_arrivals), max(p_arrivals)]
 
+    if p_window[1] - p_window[0] < 2:
+        p_window[0] -= 1
+        p_window[1] += 1
+
     s_arrivals = model.get_travel_times(source_depth_in_km=source_depth_in_km,
                                         distance_in_degree=dist_deg,
                                         phase_list=s_phase_list)
@@ -94,6 +99,7 @@ def get_taup_arrivals(source_depth_in_km, distance_in_km, p_phase_list=None,
     
     s_arrivals = [_.time for _ in s_arrivals]
     s_window = [min(s_arrivals), max(s_arrivals)]
+
 
     return p_window, s_window
 
@@ -163,7 +169,7 @@ def plot_tr(tr, p_idx=None, s_idx=None, p_window=None, s_window=None,
         plt.axvline(s_window[1], c="g", zorder=8, lw=1)
 
     # !!!
-    # plt.xlim(p_window[0]-5, s_window[1]+5)
+    plt.xlim(0, s_window[1]+10)
     # plt.ylim([-1 * tr.data[s_idx] * 3, tr.data[s_idx]])
 
     plt.legend()
@@ -184,8 +190,8 @@ def plot_tr(tr, p_idx=None, s_idx=None, p_window=None, s_window=None,
 class P2SRatio:
     """Gather P2S ratio in class attributes"""
     def __init__(self, path, path_src="CMTSOLUTION", path_sta="STATIONS", 
-                 path_save="data.npz", path_fig="figures", fmin=1, fmax=6, 
-                 components="ZNE", overwrite=False):
+                 choice="taup", path_save="data.npz", path_fig="figures", 
+                 fmin=1, fmax=6, components="ZNE", overwrite=False):
         """
         Setup attributes for P2S
 
@@ -203,6 +209,7 @@ class P2SRatio:
         """
         self.path = Path(path)
         self.tag = self.path.name
+        self.choice = choice
 
         self.path_save = Path(path_save)
         self.path_src = Path(path_src)
@@ -300,6 +307,7 @@ class P2SRatio:
                         self.lons.append(tr.stats.sac["stlo"])
                     except Exception as e:
                         error += 1
+                        breakpoint()
                         print(e)
                         continue
                 if error:
@@ -341,12 +349,12 @@ class P2SRatio:
             fid (str): file identifier pointing to one of the synthetic 
                 waveforms for use in analysis
         """
-        _corners = 8
+        _corners = 4
         tr = self._read_sem(fid)
         tr.filter("bandpass", freqmin=self.fmin, freqmax=self.fmax,
                   corners=_corners)
 
-        if True:
+        if self.choice == "taup":
             p_window, s_window = get_taup_arrivals(tr.stats.sac["evdp"], 
                                                    tr.stats.sac["dist"])
         else:
@@ -547,17 +555,16 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Synthetic P/S Heatmaps")
     parser.add_argument("-p", "--path", type=str, nargs="?", default=None,
                         help="path to waveform files .sem?")
-    parser.add_argument("-m", "--model", type=str, nargs="?", required=False,
-                        # choices=["alpha", "beta", "charlie", "echo"],      
-                        help="model options")
+    parser.add_argument("-C", "--choice", type=str, nargs="?", default="taup",
+                        help="choice for windowing style")
     parser.add_argument("-s", "--source", type=str, nargs="?",  required=False,
                         # choices=["EQ2", "NK6", "NK6b", "ISO"], 
                         help="source name")
     parser.add_argument("-c", "--components", default="ZNE", type=str, 
                         nargs="?", help="components to include")
-    parser.add_argument("-f1", "--fmin", type=float, default=0.5, nargs="?",
+    parser.add_argument("-f1", "--fmin", type=float, default=1, nargs="?",
                         help="minimum filter frequency")
-    parser.add_argument("-f2", "--fmax", type=float, default=1, nargs="?",
+    parser.add_argument("-f2", "--fmax", type=float, default=8, nargs="?",
                         help="maximum filter frequency")
     parser.add_argument("-P", "--parallel", action="store_true", 
                         help="use multiprocessing to evaluate in parallel")
@@ -579,7 +586,7 @@ def main():
    
     # Input directories/files
     if args.path is None:
-        path = f"ISO-M3"
+        path = f"TDL-015"
     else:
         path = args.path
     print(path)
@@ -594,6 +601,7 @@ def main():
     # Run ratio maker
     p2s = P2SRatio(path=path, path_src=path_src, path_sta=path_sta,
                    path_save=path_save, path_fig=path_fig,
+                   choice=args.choice,
                    fmin=args.fmin, fmax=args.fmax,
                    components=args.components, 
                    overwrite=args.overwrite,

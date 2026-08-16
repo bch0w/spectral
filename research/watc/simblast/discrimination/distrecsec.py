@@ -25,7 +25,7 @@ import numpy as np
 
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from matplotlib.collections import LineCollection
-from matplotlib.colors import Normalize
+from matplotlib.colors import BoundaryNorm, Normalize
 from obspy import read, read_events, Stream
 from obspy.geodetics import kilometers2degrees, gps2dist_azimuth
 from obspy.taup import TauPyModel
@@ -210,7 +210,8 @@ class DistRecSec:
 
         dist_m, az, baz = gps2dist_azimuth(lat1=self.src.latitude,
                                            lon1=self.src.longitude,
-                                           lat2=rcv.latitude, lon2=rcv.longitude)
+                                           lat2=rcv.latitude, 
+                                           lon2=rcv.longitude)
 
         sac_header = {
             "iztype": 9,  # Ref time equivalence, IB (9): Begin time
@@ -573,11 +574,40 @@ def reduce_time_shift_fn(dists, reduce_by, src_depth_km=None,
     return lambda d: np.asarray(d) / reduce_by
 
 
+def group_velocity_lines(dist_km_list, group_vels):
+    """
+    Build straight-line distance-vs-time curves for constant group
+    velocities, e.g. to overlay theoretical group-velocity arrivals (Lg, Rg,
+    a crustal Pg/Sg approximation, etc.) on a record section the same way
+    TauP phase curves are overlaid. Unlike TauP arrivals, a constant group
+    velocity is by definition a straight line (time = dist / vel), so only
+    the endpoints of the distance range are needed.
+
+    Parameters
+    ----------
+    dist_km_list : list of float
+        Distances (km) spanning the record section; only the [min, max] is
+        used since a constant-velocity curve is a straight line
+    group_vels : list of float
+        Group velocities [km/s] to build lines for
+
+    Returns
+    -------
+    dict of {vel: (dist_km_array, time_s_array)}
+        Two-point (straight-line) curve for each velocity
+    """
+    dmin, dmax = min(dist_km_list), max(dist_km_list)
+    dist_arr = np.array([dmin, dmax])
+    return {vel: (dist_arr, dist_arr / vel) for vel in group_vels}
+
+
 def plot_record_section(dist_dict, src_depth_km, tp_phases=None,
                         taup_model="iasp91", component="Z", wf_scale=1.,
                         wf_color="k", wf_lw=0.8, fill=True, reduce_by=None,
                         agc_window_s=None, agc_method="rms", agc_eps_pct=1e-2,
                         gain_cmap="inferno", gain_clip_pct=(1, 99),
+                        gain_n_colors=None, group_vels=None, gv_cmap="Dark2",
+                        gv_lw=1.2, gv_ls=":",
                         dist_step_km=None, n_dist=300, tp_cmap="rainbow_r",
                         tp_lw=1.5, xlim=None, ylim=None, title=None,
                         xlabel=None, ylabel="Distance [km]",
@@ -670,6 +700,29 @@ def plot_record_section(dist_dict, src_depth_km, tp_phases=None,
         gain (in dB) across all traces, default (1, 99). Prevents a handful
         of near-silent, extreme-gain samples (e.g. before the first arrival)
         from washing out the color contrast over the rest of the section
+    gain_n_colors : int, optional
+        If given, use a discrete (banded) colorbar with this many bins
+        instead of a continuous gradient for the AGC gain coloring -- e.g.
+        `gain_n_colors=8` splits the [vmin, vmax] dB range (from
+        `gain_clip_pct`) into 8 evenly-spaced, solid-color bands. Default
+        None (continuous colormap)
+    group_vels : list of float, optional
+        Constant group velocities [km/s] to overlay as straight
+        distance-vs-time lines (time = dist / vel), the same way TauP
+        phase curves are overlaid -- e.g. to mark a nominal Lg/Rg or
+        crustal Pg/Sg velocity that isn't tied to a specific TauP phase
+        name. Shifted consistently with the waveforms/TauP curves when
+        `reduce_by` is set. Default None (no lines)
+    gv_cmap : str, optional
+        Colormap used to give each `group_vels` line a distinct color,
+        default 'Dark2' (a qualitative palette -- avoid sequential maps
+        like 'Greys' here, their low end renders too close to white to see
+        against the plot background)
+    gv_lw : float, optional
+        Linewidth for group-velocity lines, default 1.2
+    gv_ls : str, optional
+        Linestyle for group-velocity lines, default ':' (dotted, to
+        visually distinguish from the '--' TauP phase curves)
     dist_step_km / n_dist : see `taup_phase_curves`
     tp_cmap : str, optional
         Colormap used to give each TauP phase a distinct color
@@ -762,14 +815,23 @@ def plot_record_section(dist_dict, src_depth_km, tp_phases=None,
 
     # Shared color scale for gain (dB), clipped to `gain_clip_pct` so a
     # handful of near-silent, extreme-gain samples don't wash out contrast
-    # over the rest of the section
+    # over the rest of the section. `gain_n_colors` swaps the continuous
+    # gradient for a discrete, banded one (same [vmin, vmax] range, split
+    # into N solid bins) via BoundaryNorm + a resampled (N-color) colormap
     norm, cmap = None, None
     if agc_window_s and gain_cmap:
         vmin, vmax = np.percentile(np.concatenate(gain_db_all), gain_clip_pct)
-        norm = Normalize(vmin=vmin, vmax=vmax)
-        cmap = plt.get_cmap(gain_cmap)
-        print(f"\tcoloring by AGC gain: [{vmin:.1f}, {vmax:.1f}]dB "
-              f"(cmap='{gain_cmap}')")
+        if gain_n_colors:
+            cmap = plt.get_cmap(gain_cmap, gain_n_colors)
+            boundaries = np.linspace(vmin, vmax, gain_n_colors + 1)
+            norm = BoundaryNorm(boundaries, ncolors=cmap.N)
+            print(f"\tcoloring by AGC gain: [{vmin:.1f}, {vmax:.1f}]dB "
+                  f"(cmap='{gain_cmap}', discrete, {gain_n_colors} colors)")
+        else:
+            norm = Normalize(vmin=vmin, vmax=vmax)
+            cmap = plt.get_cmap(gain_cmap)
+            print(f"\tcoloring by AGC gain: [{vmin:.1f}, {vmax:.1f}]dB "
+                  f"(cmap='{gain_cmap}')")
 
     # Second pass: plot, using the shared gain color scale (if any)
     mappable = None
@@ -819,6 +881,24 @@ def plot_record_section(dist_dict, src_depth_km, tp_phases=None,
             ax.text(time_arr[-1], dist_arr[-1], f" {phase}", c=cvals[i],
                     fontsize=9, va="center", zorder=11, fontweight="bold")
 
+    # Overlay constant group-velocity lines (straight, time = dist / vel)
+    if group_vels:
+        gv_cvals = cmaphex(nvals=len(group_vels), cmap=gv_cmap)
+        gv_curves = group_velocity_lines(dists, group_vels)
+        print(f"\toverlaying group velocities: "
+              f"{', '.join(f'{v:g}km/s' for v in group_vels)}")
+        for i, vel in enumerate(group_vels):
+            dist_arr, time_arr = gv_curves[vel]
+            if shift_fn is not None:
+                # Shift consistently with the waveforms/TauP curves so the
+                # line stays aligned to the correct reduced/aligned time
+                time_arr = time_arr - shift_fn(dist_arr)
+            ax.plot(time_arr, dist_arr, c=gv_cvals[i], lw=gv_lw, ls=gv_ls,
+                    zorder=9, label=f"{vel:g}km/s")
+            ax.text(time_arr[-1], dist_arr[-1], f" {vel:g}km/s",
+                    c=gv_cvals[i], fontsize=9, va="center", zorder=9.5,
+                    fontweight="bold")
+
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     if xlim:
@@ -862,7 +942,8 @@ def main(dist_km_list, baz=0, src_depth_km=10, tmin=1, tmax=4, corners=4,
          path_cmtsolution=None, mt=None, tp_phases=None, wf_scale=8., xlim=None, ylim=None,
          reduce_by=None, agc_window_s=None, agc_method="rms",
          agc_eps_pct=1e-2, gain_cmap="inferno", gain_clip_pct=(1, 99),
-         taper_vel_kmps=None, taper_vel_width_s=5.,
+         gain_n_colors=None, group_vels=None, gv_cmap="Dark2", gv_lw=1.2,
+         gv_ls=":", taper_vel_kmps=None, taper_vel_width_s=5.,
          ytick_step_km=None, fig_path="FIGURES", wav_path="SAC",
          parallel=True, show=True):
     """
@@ -906,6 +987,8 @@ def main(dist_km_list, baz=0, src_depth_km=10, tmin=1, tmax=4, corners=4,
                         agc_window_s=agc_window_s,
                         agc_method=agc_method, agc_eps_pct=agc_eps_pct,
                         gain_cmap=gain_cmap, gain_clip_pct=gain_clip_pct,
+                        gain_n_colors=gain_n_colors, group_vels=group_vels,
+                        gv_cmap=gv_cmap, gv_lw=gv_lw, gv_ls=gv_ls,
                         ytick_step_km=ytick_step_km, title=title,
                         save=save, show=show)
 
@@ -918,17 +1001,19 @@ if __name__ == "__main__":
         baz=0,
         src_depth_km=0.25,
         tmin=0.5, tmax=1, corners=8,
-        xlim=[-10, 315],
+        xlim=[-10, 375],
         component="Z",
         syngine="ak135f_1s",
         taup_model="/Users/prof/Repos/spectral/research/seismology/taup_models/ak135f_upper_crust.npz",
-        taper_vel_kmps=2.9,
+        taper_vel_kmps=2.7,
         reduce_by="P",
         path_cmtsolution=f"CMTSOLUTION/CMTSOLUTION_{sys.argv[1]}",
         tp_phases=["P", "S", "Pg", "Sg", "Pn", "Sn"],
-        wf_scale=15,
-        agc_window_s=20,
-        gain_cmap="hsv",
+        group_vels=[5.9, 3.2, 3.0, 2.7],
+        wf_scale=100,
+        agc_window_s=0,
+        gain_cmap="cividis",
+        gain_n_colors=256,
         parallel=True,
         show=True,
     )

@@ -142,7 +142,6 @@ class MomTenMeas:
 
         # !!!  BCBC
         self.windows = windows
-
         
         # For storing output files
         self.fig_path = fig_path
@@ -394,8 +393,8 @@ class MomTenMeas:
                         s_start = start
                     if end > s_end:
                         s_end = end
-            self.windows[dist]["P"] = [p_start, s_start]  # Run P all the way to S
-            self.windows[dist]["S"] = [s_start, s_end]
+            # self.windows[dist]["P"] = [p_start, s_start]  # Run P all the way to S
+            # self.windows[dist]["S"] = [s_start, s_end]
                         
         p_win = self.windows[self.dist_km][p_phase]
         s_win = self.windows[self.dist_km][s_phase]
@@ -684,17 +683,17 @@ def main(dist_km=150, baz=45, src_depth_km=1, tmin=2, tmax=4, corners=4,
          show=False, **kwargs):
     """Run and plot"""
     windows = {
-            # 1000: {"Pn": [127.21, 135.21],
-            #        "Pg": [172.24, 200], 
-            #        "Sn": [229.37, 237.37], 
-            #        "Sg": [288.72, 300],
-            #        },
-            # ak135f_2s
-            1000: {"Pn": [131.18, 172.23],
-                   "Pg": [172.23, 200], 
-                   "Sn": [233.3, 267.14], 
-                   "Sg": [288.72, 314],
+            1000: {"Pn": [127.62, 127.62 + tmax * 2],
+                   "Pg": [169.48, 169.48 + tmax * 24],
+                   "Sn": [228.57, 228.57 + tmax * 2],
+                   "Sg": [277.78, 277.78 + tmax * 4], 
                    },
+            # ak135f_2s
+            # 1000: {"Pn": [131.18, 172.23],
+            #        "Pg": [172.23, 200], 
+            #        "Sn": [233.3, 267.14], 
+            #        "Sg": [288.72, 314],
+            #        },
             500: {"Pn": [64.51, 69.37], 
                   "Pg": [79.8, 110], 
                   "Sn": [122.38, 127.53], 
@@ -779,15 +778,17 @@ def main(dist_km=150, baz=45, src_depth_km=1, tmin=2, tmax=4, corners=4,
                "wf_scale": 15
                },
         1000: {"xlim": [100, 370], 
-            #    "ylim": [-.5E-3, 3E-3],
-               "wf_scale": 10,
-               "wf_recsec_spacing": 1
+               "ylim": [-.5E-3, 3E-3],
+               "wf_scale": 30,
+               "wf_recsec_spacing": 1,
+               "subplot_label": "A)",
+               "fig_size":(16,8),
                },
     }
-    if dist_km not in kwargs:
+    if dist_km not in kwargdict:
         kwargs = {}
     else:
-        kwargs = kwargs[dist_km]
+        kwargs = kwargdict[dist_km]
 
     # Collect waveform files used for the plot
     sac_files = []
@@ -798,7 +799,7 @@ def main(dist_km=150, baz=45, src_depth_km=1, tmin=2, tmax=4, corners=4,
     save = f"{fig_path}/rs_{syngine}_z{int(src_depth_km)}_d{dist_km}_b{baz}{tag}.png"
 
     pp = PrettyPlot(fids=sorted(sac_files), 
-                    fig_size=(12, 8),
+                    # fig_size=(14, 8),
                     wf_type="recsec",  
                     fmin=1/tmax, 
                     fmax=1/tmin, 
@@ -807,7 +808,7 @@ def main(dist_km=150, baz=45, src_depth_km=1, tmin=2, tmax=4, corners=4,
                     linewidth=1,
                     ylabel=f"Z Velocity [normalized]",
                     group_vels=[8,7,6,5,4,3],
-                    tp_phases=["Pn", "Pg", "Sn", "Sg"],
+                    tp_phases=["P", "S"],
                     tp_model=taup_model, 
                     tp_dist_km=dist_km, 
                     tp_depth=src_depth_km, 
@@ -816,7 +817,7 @@ def main(dist_km=150, baz=45, src_depth_km=1, tmin=2, tmax=4, corners=4,
                     save=save, 
                     show=True, 
                     legend=False, 
-                    dpi=100, 
+                    dpi=200, 
                     transparent=False,
                     windows=windows,
                     **kwargs)
@@ -829,7 +830,7 @@ if __name__ == "__main__":
     if syngine == "ak135f_1s":
          tmin=1
          tmax=2 
-         taup_model="ak135f_no_mud"
+         taup_model="/Users/prof/Repos/spectral/research/seismology/taup_models/ak135f_upper_crust.npz"
     elif syngine == "ak135f_2s":
          tmin=2
          tmax=3 
@@ -841,13 +842,13 @@ if __name__ == "__main__":
         taup_model = "prem"
 
     kwargs = {
-        "dist_km": 80, 
+        "dist_km": 1000, 
         "baz":0, 
         "src_depth_km":.25,
-        "arrival_choice":"custom_P_S", 
+        "arrival_choice":"custom_Pn_Sn", 
         "tmin":tmin, 
         "tmax":tmax, 
-        "corners": 8,
+        "corners": 4,
         "syngine":syngine,
         "taup_model":taup_model,
         "taup_buffer":0.1,

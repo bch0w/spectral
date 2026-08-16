@@ -39,7 +39,7 @@ if "ak135f" in choices:
 
     plot_arrays["Vp_mod_ak135f"] = vp_mod
     plot_arrays["Vs_mod_ak135f"] = vs_mod
-
+    breakpoint()
 # IASP91: depth, radius, vp, vs
 if "iasp91" in choices:
     iasp91 = "http://ds.iris.edu/files/products/emc/data/IASP91/IASP91.csv"
