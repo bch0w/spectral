@@ -48,7 +48,8 @@ except ImportError:
 SECONDS_PER_DAY = 3600.0 * 24.0
 
 # !!! BCBC
-YAXISOFF=True
+YAXISOFF=False
+PEAKAMP=False
 
 def parse_args():
     """All modifications are accomplished with command line arguments"""
@@ -178,7 +179,7 @@ def parse_args():
                         help="min ticks if --time='a'")
     parser.add_argument("--maxticks", type=int, default=6, 
                         help="max ticks if --time='a'")
-    parser.add_argument("-x", "--xlim", nargs="+", default=None, type=float,
+    parser.add_argument("-x", "--xlim", nargs="+", default=None, type=str,
                         help="time axis limits in s or if `time`=='a' then "
                              "values should be in datetime, see tmarks")
     parser.add_argument("-tm", "--tmarks", nargs="+", 
@@ -797,7 +798,7 @@ class PrettyPlot():
                       f"{self.idx}")
                 st = st[self.idx]
             self.st += st
-        self.st.merge()  # incase we are plotting multiple days
+        # self.st.merge()  # incase we are plotting multiple days
         print(f"{self.st.__str__(extended=True)}")
 
 
@@ -1392,18 +1393,19 @@ class PrettyPlot():
         and plot its value, as well as the time windows
         """
         # !!! BCBC
+        tmax = 1 / self.fmin
         if not self.windows:
             self.windows = {
-                1000: {"Pn": [127.62, 127.62 + 1/self.fmin * 2],
-                       "Pg": [169.48, 169.48 + 1/self.fmin * 24], 
-                       "Sn": [228.57, 228.57 + 1/self.fmin * 2], 
-                       "Sg": [277.78, 277.78 + 1/self.fmin * 4 ], # 307.69],
+                1000: {"Pn": [127.62, 127.62 + tmax * 2],
+                       "Pg": [169.48, 169.48 + tmax * 24], 
+                       "Sn": [228.57, 228.57 + tmax * 2], 
+                       "Sg": [277.78, 277.78 + tmax * 4 ], # 307.69],
                         },
-                500: {"Pn": [64.51, 69.37], 
-                    "Pg": [79.8, 110], 
-                    "Sn": [122.38, 127.53], 
-                    "Sg": [134.55, 151], 
-                    }, 
+                500: {"Pn": [65.68, 65.68 + tmax * 2],
+                      "Pg": [86.18, 86.18 + tmax * 24],
+                      "Sn": [117.59, 117.59 + tmax * 2],
+                      "Sg": [131.57, 131.57 + tmax * 4],
+                      },
                 250: {"Pn": [33., 38.44], 
                     "Pg": [41.47, 53.41], 
                     "Sn": [65, 68.92], 
@@ -1594,7 +1596,8 @@ class PrettyPlot():
             self.plot_group_vels()
         if self.tp_phases:
             self.plot_taup_arrivals()
-        # self.plot_peak_amplitudes()  # !!! BCBC
+        if PEAKAMP:
+            self.plot_peak_amplitudes()  # !!! BCBC
         if self.subplot_label:
             self.annotate_subplot_label()
         self.set_plot_aesthetics()

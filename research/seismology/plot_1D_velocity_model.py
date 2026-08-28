@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 
 choices = sys.argv[1:]
 for choice in choices:
-    assert choice in ["ak135f", "iasp91", "prem"]
+    assert choice in ["ak135f", "ak135f_syngine", "iasp91", "prem"]
 
 
 # Choose which model to plot
@@ -30,6 +30,15 @@ if "ak135f" in choices:
     depth_arrays["ak135f"] = depth_km
     plot_arrays["Vp_ak135f"] = vp_kms
     plot_arrays["Vs_ak135f"] = vs_kms
+# Syngine version of AK135f which removes the mud and water layer
+if "ak135f_syngine" in choices:
+    ak135f = "/Users/prof/Data/models/AK135F/AK135F_AVG.csv"
+    if not os.path.exists(ak135f):
+        ak135f = "http://ds.iris.edu/files/products/emc/data/AK135F/AK135F_AVG.csv"
+    depth_km, density, vp_kms, vs_kms, qk, qm = \
+                        np.loadtxt(ak135f, delimiter=",").T
+    depth_arrays["ak135f"] = depth_km
+
     # Modify the top of the model to remove water and mud layer
     vs_mod = vs_kms.copy()
     vs_mod[:4] = vs_kms[4]
@@ -37,9 +46,8 @@ if "ak135f" in choices:
     vp_mod = vp_kms.copy()
     vp_mod[:4] = vp_kms[4]
 
-    plot_arrays["Vp_mod_ak135f"] = vp_mod
-    plot_arrays["Vs_mod_ak135f"] = vs_mod
-    breakpoint()
+    plot_arrays["Vp_ak135f"] = vp_mod
+    plot_arrays["Vs_ak135f"] = vs_mod
 # IASP91: depth, radius, vp, vs
 if "iasp91" in choices:
     iasp91 = "http://ds.iris.edu/files/products/emc/data/IASP91/IASP91.csv"
@@ -86,7 +94,7 @@ for name, arr in plot_arrays.items():
     else:
         ls = "-"
     
-    plt.plot(arr, depth_km, color, label=name, ls=ls)
+    plt.plot(arr, depth_km, color, label=name[:2], ls=ls, lw=2)
 
 # Finalize plotting
 plt.title(" ".join(choices))

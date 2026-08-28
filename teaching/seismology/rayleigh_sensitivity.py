@@ -9,8 +9,8 @@ import matplotlib.pyplot as plt
 from numpy import e, pi, sin, cos
 
 
-T = 1000
-vs = 3.5  # S-wave from IASP91 [km/s]
+T = 2
+vs = 3.2  # S-wave from IASP91 [km/s]
 vr = vs * 0.92
 
 lambda_x = vr * T  # km
@@ -42,7 +42,7 @@ else:
     fid = f"rayleigh_{int(T)}.png"
 
 plt.tight_layout()
-plt.savefig(f"/Users/chow/Documents/academic/teaching/GEOS604_seismo/lecture_screenshots/surface_waves/{fid}")
+plt.savefig(f"rayleigh_sensitivity_T{T}s.png")
 plt.show()
 
 

@@ -1,0 +1,390 @@
+ PDE 2017  9  3  3 30 1.76 41.3324 129.0297 1.0 5.18 5.18 NK6
+event name:     NK6
+time shift:     00.0000
+half duration:   0.0000
+latitude:       41.3324
+longitude:     129.0297
+depth:           1.0000
+Mrr:       7.141639e+23 
+Mtt:       5.172632e+23 
+Mpp:       4.273256e+23 
+Mrt:       1.300210e+22 
+Mrp:      -2.593009e+23 
+Mtp:       4.511765e+22
+XXXX 2026  4 20 11 21 24.80   0.0000    0.0000   0.0 5.0 5.0 lune_ipts7_iref1_001
+event name: lune_ipts7_iref1_001
+time shift:      0.0000
+half duration:   0.0000
+latitude: 41.3324
+longitude: 129.0297
+depth: 0.25
+Mrr:       3.990525e+23
+Mtt:       1.995103e+07
+Mpp:      -3.990525e+23
+Mrt:       4.293050e+07
+Mrp:      -6.265493e+07
+Mtp:      -1.727809e+07
+XXXX 2026  4 20 11 21 24.80   0.0000    0.0000   0.0 5.0 5.0 lune_ipts7_iref1_002
+event name: lune_ipts7_iref1_002
+time shift:      0.0000
+half duration:   0.0000
+latitude: 41.3324
+longitude: 129.0297
+depth: 0.25
+Mrr:       4.330238e+23
+Mtt:       3.648042e+22
+Mpp:      -3.600629e+23
+Mrt:       4.538294e+07
+Mrp:      -6.226097e+07
+Mtp:      -1.716946e+07
+XXXX 2026  4 20 11 21 24.80   0.0000    0.0000   0.0 5.0 5.0 lune_ipts7_iref1_003
+event name: lune_ipts7_iref1_003
+time shift:      0.0000
+half duration:   0.0000
+latitude: 41.3324
+longitude: 129.0297
+depth: 0.25
+Mrr:       4.615497e+23
+Mtt:       7.250208e+22
+Mpp:      -3.165455e+23
+Mrt:       4.726467e+07
+Mrp:      -6.108407e+07
+Mtp:      -1.684491e+07
+XXXX 2026  4 20 11 21 24.80   0.0000    0.0000   0.0 5.0 5.0 lune_ipts7_iref1_004
+event name: lune_ipts7_iref1_004
+time shift:      0.0000
+half duration:   0.0000
+latitude: 41.3324
+longitude: 129.0297
+depth: 0.25
+Mrr:       4.842715e+23
+Mtt:       1.076120e+23
+Mpp:      -2.690474e+23
+Mrt:       4.855203e+07
+Mrp:      -5.913902e+07
+Mtp:      -1.630853e+07
+XXXX 2026  4 20 11 21 24.80   0.0000    0.0000   0.0 5.0 5.0 lune_ipts7_iref1_005
+event name: lune_ipts7_iref1_005
+time shift:      0.0000
+half duration:   0.0000
+latitude: 41.3324
+longitude: 129.0297
+depth: 0.25
+Mrr:       5.009034e+23
+Mtt:       1.413687e+23
+Mpp:      -2.181660e+23
+Mrt:       4.922883e+07
+Mrp:      -5.645027e+07
+Mtp:      -1.556706e+07
+XXXX 2026  4 20 11 21 24.80   0.0000    0.0000   0.0 5.0 5.0 lune_ipts7_iref1_006
+event name: lune_ipts7_iref1_006
+time shift:      0.0000
+half duration:   0.0000
+latitude: 41.3324
+longitude: 129.0297
+depth: 0.25
+Mrr:       5.112363e+23
+Mtt:       1.733476e+23
+Mpp:      -1.645411e+23
+Mrt:       4.928657e+07
+Mrp:      -5.305165e+07
+Mtp:      -1.462984e+07
+XXXX 2026  4 20 11 21 24.80   0.0000    0.0000   0.0 5.0 5.0 lune_ipts7_iref1_007
+event name: lune_ipts7_iref1_007
+time shift:      0.0000
+half duration:   0.0000
+latitude: 41.3324
+longitude: 129.0297
+depth: 0.25
+Mrr:       5.151403e+23
+Mtt:       2.031466e+23
+Mpp:      -1.088470e+23
+Mrt:       4.872452e+07
+Mrp:      -4.898589e+07
+Mtp:      -1.350864e+07
+XXXX 2026  4 20 11 21 24.80   0.0000    0.0000   0.0 5.0 5.0 lune_ipts7_iref1_008
+event name: lune_ipts7_iref1_008
+time shift:      0.0000
+half duration:   0.0000
+latitude: 41.3324
+longitude: 129.0297
+depth: 0.25
+Mrr:       5.125662e+23
+Mtt:       2.303910e+23
+Mpp:      -5.178413e+22
+Mrt:       4.754974e+07
+Mrp:      -4.430411e+07
+Mtp:      -1.221756e+07
+XXXX 2026  4 20 11 21 24.80   0.0000    0.0000   0.0 5.0 5.0 lune_ipts7_iref1_009
+event name: lune_ipts7_iref1_009
+time shift:      0.0000
+half duration:   0.0000
+latitude: 41.3324
+longitude: 129.0297
+depth: 0.25
+Mrr:       5.035464e+23
+Mtt:       2.547382e+23
+Mpp:       5.929942e+21
+Mrt:       4.577701e+07
+Mrp:      -3.906520e+07
+Mtp:      -1.077285e+07
+XXXX 2026  4 20 11 21 24.80   0.0000    0.0000   0.0 5.0 5.0 lune_ipts7_iref1_010
+event name: lune_ipts7_iref1_010
+time shift:      0.0000
+half duration:   0.0000
+latitude: 41.3324
+longitude: 129.0297
+depth: 0.25
+Mrr:       4.881944e+23
+Mtt:       2.758819e+23
+Mpp:       6.356944e+22
+Mrt:       4.342861e+07
+Mrp:      -3.333503e+07
+Mtp:      -9.192665e+06
+XXXX 2026  4 20 11 21 24.80   0.0000    0.0000   0.0 5.0 5.0 lune_ipts7_iref1_011
+event name: lune_ipts7_iref1_011
+time shift:      0.0000
+half duration:   0.0000
+latitude: 41.3324
+longitude: 129.0297
+depth: 0.25
+Mrr:       4.667033e+23
+Mtt:       2.935564e+23
+Mpp:       1.204095e+23
+Mrt:       4.053409e+07
+Mrp:      -2.718566e+07
+Mtp:      -7.496878e+06
+XXXX 2026  4 20 11 21 24.80   0.0000    0.0000   0.0 5.0 5.0 lune_ipts7_iref1_012
+event name: lune_ipts7_iref1_012
+time shift:      0.0000
+half duration:   0.0000
+latitude: 41.3324
+longitude: 129.0297
+depth: 0.25
+Mrr:       4.393431e+23
+Mtt:       3.075393e+23
+Mpp:       1.757354e+23
+Mrt:       3.712985e+07
+Mrp:      -2.069442e+07
+Mtp:      -5.706817e+06
+XXXX 2026  4 20 11 21 24.80   0.0000    0.0000   0.0 5.0 5.0 lune_ipts7_iref1_013
+event name: lune_ipts7_iref1_013
+time shift:      0.0000
+half duration:   0.0000
+latitude: 41.3324
+longitude: 129.0297
+depth: 0.25
+Mrr:       4.064581e+23
+Mtt:       3.176548e+23
+Mpp:       2.288514e+23
+Mrt:       3.325868e+07
+Mrp:      -1.394295e+07
+Mtp:      -3.844990e+06
+XXXX 2026  4 20 11 21 24.80   0.0000    0.0000   0.0 5.0 5.0 lune_ipts7_iref1_014
+event name: lune_ipts7_iref1_014
+time shift:      0.0000
+half duration:   0.0000
+latitude: 41.3324
+longitude: 129.0297
+depth: 0.25
+Mrr:       3.684618e+23
+Mtt:       3.237757e+23
+Mpp:       2.790895e+23
+Mrt:       2.896927e+07
+Mrp:      -7.016135e+06
+Mtp:      -1.934811e+06
+XXXX 2026  4 20 11 21 24.80   0.0000    0.0000   0.0 5.0 5.0 lune_ipts7_iref1_015
+event name: lune_ipts7_iref1_015
+time shift:      0.0000
+half duration:   0.0000
+latitude: 41.3324
+longitude: 129.0297
+depth: 0.25
+Mrr:       3.258319e+23
+Mtt:       3.258250e+23
+Mpp:       3.258180e+23
+Mrt:       2.431557e+07
+Mrp:      -1.093535e+03
+Mtp:      -3.015596e+02
+XXXX 2026  4 20 11 21 24.80   0.0000    0.0000   0.0 5.0 5.0 lune_ipts7_iref1_016
+event name: lune_ipts7_iref1_016
+time shift:      0.0000
+half duration:   0.0000
+latitude: 41.3324
+longitude: 129.0297
+depth:           0.2500
+Mrr:       3.531589e+20
+Mtt:       2.557902e+20
+Mpp:       2.113154e+20
+Mrt:       6.429627e+18
+Mrp:      -1.282261e+20
+Mtp:       2.231099e+19
+XXXX 2026  4 20 11 21 24.80   0.0000    0.0000   0.0 5.0 5.0 lune_ipts7_iref1_017
+event name: lune_ipts7_iref1_017
+time shift:      0.0000
+half duration:   0.0000
+latitude: 41.3324
+longitude: 129.0297
+depth: 0.25
+Mrr:       4.201904e+23
+Mtt:       2.663886e+23
+Mpp:       2.663886e+23
+Mrt:       3.642553e+07
+Mrp:      -1.207415e+07
+Mtp:      -2.220446e-09
+XXXX 2026  4 20 11 21 24.80   0.0000    0.0000   0.0 5.0 5.0 lune_ipts7_iref1_018
+event name: lune_ipts7_iref1_018
+time shift:      0.0000
+half duration:   0.0000
+latitude: 41.3324
+longitude: 129.0297
+depth: 0.25
+Mrr:       4.597288e+23
+Mtt:       2.314468e+23
+Mpp:       2.314468e+23
+Mrt:       4.183064e+07
+Mrp:      -1.792119e+07
+Mtp:      -2.220446e-09
+XXXX 2026  4 20 11 21 24.80   0.0000    0.0000   0.0 5.0 5.0 lune_ipts7_iref1_019
+event name: lune_ipts7_iref1_019
+time shift:      0.0000
+half duration:   0.0000
+latitude: 41.3324
+longitude: 129.0297
+depth: 0.25
+Mrr:       4.934857e+23
+Mtt:       1.935944e+23
+Mpp:       1.935944e+23
+Mrt:       4.670970e+07
+Mrp:      -2.354286e+07
+Mtp:      -4.440892e-09
+XXXX 2026  4 20 11 21 24.80   0.0000    0.0000   0.0 5.0 5.0 lune_ipts7_iref1_020
+event name: lune_ipts7_iref1_020
+time shift:      0.0000
+half duration:   0.0000
+latitude: 41.3324
+longitude: 129.0297
+depth: 0.25
+Mrr:       5.210369e+23
+Mtt:       1.533074e+23
+Mpp:       1.533074e+23
+Mrt:       5.100137e+07
+Mrp:      -2.886846e+07
+Mtp:      -3.330669e-09
+XXXX 2026  4 20 11 21 24.80   0.0000    0.0000   0.0 5.0 5.0 lune_ipts7_iref1_021
+event name: lune_ipts7_iref1_021
+time shift:      0.0000
+half duration:   0.0000
+latitude: 41.3324
+longitude: 129.0297
+depth: 0.25
+Mrr:       5.420357e+23
+Mtt:       1.110925e+23
+Mpp:       1.110925e+23
+Mrt:       5.465166e+07
+Mrp:      -3.383103e+07
+Mtp:      -4.440892e-09
+XXXX 2026  4 20 11 21 24.80   0.0000    0.0000   0.0 5.0 5.0 lune_ipts7_iref1_022
+event name: lune_ipts7_iref1_022
+time shift:      0.0000
+half duration:   0.0000
+latitude: 41.3324
+longitude: 129.0297
+depth: 0.25
+Mrr:       5.562180e+23
+Mtt:       6.748056e+22
+Mpp:       6.748056e+22
+Mrt:       5.761468e+07
+Mrp:      -3.836815e+07
+Mtp:      -3.330669e-09
+XXXX 2026  4 20 11 21 24.80   0.0000    0.0000   0.0 5.0 5.0 lune_ipts7_iref1_023
+event name: lune_ipts7_iref1_023
+time shift:      0.0000
+half duration:   0.0000
+latitude: 41.3324
+longitude: 129.0297
+depth: 0.25
+Mrr:       5.634056e+23
+Mtt:       2.302001e+22
+Mpp:       2.302001e+22
+Mrt:       5.985316e+07
+Mrp:      -4.242277e+07
+Mtp:      -5.828671e-09
+XXXX 2026  4 20 11 21 24.80   0.0000    0.0000   0.0 5.0 5.0 lune_ipts7_iref1_024
+event name: lune_ipts7_iref1_024
+time shift:      0.0000
+half duration:   0.0000
+latitude: 41.3324
+longitude: 129.0297
+depth: 0.25
+Mrr:       5.635081e+23
+Mtt:      -2.173003e+22
+Mpp:      -2.173003e+22
+Mrt:       6.133895e+07
+Mrp:      -4.594390e+07
+Mtp:      -9.020562e-09
+XXXX 2026  4 20 11 21 24.80   0.0000    0.0000   0.0 5.0 5.0 lune_ipts7_iref1_025
+event name: lune_ipts7_iref1_025
+time shift:      0.0000
+half duration:   0.0000
+latitude: 41.3324
+longitude: 129.0297
+depth: 0.25
+Mrr:       5.565241e+23
+Mtt:      -6.620681e+22
+Mpp:      -6.620681e+22
+Mrt:       6.205336e+07
+Mrp:      -4.888725e+07
+Mtp:      -5.551115e-09
+XXXX 2026  4 20 11 21 24.80   0.0000    0.0000   0.0 5.0 5.0 lune_ipts7_iref1_026
+event name: lune_ipts7_iref1_026
+time shift:      0.0000
+half duration:   0.0000
+latitude: 41.3324
+longitude: 129.0297
+depth: 0.25
+Mrr:       5.425415e+23
+Mtt:      -1.098510e+23
+Mpp:      -1.098510e+23
+Mrt:       6.198742e+07
+Mrp:      -5.121582e+07
+Mtp:      -7.771561e-09
+XXXX 2026  4 20 11 21 24.80   0.0000    0.0000   0.0 5.0 5.0 lune_ipts7_iref1_027
+event name: lune_ipts7_iref1_027
+time shift:      0.0000
+half duration:   0.0000
+latitude: 41.3324
+longitude: 129.0297
+depth: 0.25
+Mrr:       5.217361e+23
+Mtt:      -1.521137e+23
+Mpp:      -1.521137e+23
+Mrt:       6.114196e+07
+Mrp:      -5.290033e+07
+Mtp:      -7.771561e-09
+XXXX 2026  4 20 11 21 24.80   0.0000    0.0000   0.0 5.0 5.0 lune_ipts7_iref1_028
+event name: lune_ipts7_iref1_028
+time shift:      0.0000
+half duration:   0.0000
+latitude: 41.3324
+longitude: 129.0297
+depth: 0.25
+Mrr:       4.943696e+23
+Mtt:      -1.924636e+23
+Mpp:      -1.924636e+23
+Mrt:       5.952759e+07
+Mrp:      -5.391958e+07
+Mtp:      -9.992007e-09
+XXXX 2026  4 20 11 21 24.80   0.0000    0.0000   0.0 5.0 5.0 lune_ipts7_iref1_029
+event name: lune_ipts7_iref1_029
+time shift:      0.0000
+half duration:   0.0000
+latitude: 41.3324
+longitude: 129.0297
+depth: 0.25
+Mrr:       4.607861e+23
+Mtt:      -2.303930e+23
+Mpp:      -2.303930e+23
+Mrt:       5.716464e+07
+Mrp:      -5.426076e+07
+Mtp:      -8.881784e-09
