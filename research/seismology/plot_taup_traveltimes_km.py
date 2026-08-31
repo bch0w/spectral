@@ -23,6 +23,16 @@ DEFAULT_MODEL = (
 # so would just draw an identical, fully overlapping line.
 DEFAULT_PHASES = ["Pg", "Pn", "PmP", "Sg", "Sn", "SmS"]
 
+# Each P-family phase gets its own cool sequential colormap, each
+# S-family phase its own warm one; a phase's triplication legs are
+# then different shades sampled from that one colormap.
+COOL_CMAPS = ["Blues", "Greens", "Purples", "BuGn", "GnBu", "PuBu"]
+WARM_CMAPS = ["Reds", "Oranges", "YlOrBr", "RdPu", "OrRd", "Wistia"]
+
+# Leg 1 of a triplication is solid, leg 2 dashed, leg 3 dotted, etc.,
+# cycling if a phase somehow has more legs than this.
+LINESTYLES = ["-", "--", ":", "-."]
+
 
 def _fold_split_indices(x, min_points=6):
     """Split a 1D array into (start, end) index pairs at its local
@@ -66,6 +76,51 @@ def _fold_split_indices(x, min_points=6):
     return merged
 
 
+def _clip_to_window(dist_km, time_s, max_km):
+    """Restrict a monotonic (dist_km, time_s) leg to dist_km <= max_km,
+    linearly interpolating one extra point exactly at max_km if the
+    leg straddles the window edge.
+
+    Without this, a leg that only has 2 samples (e.g. a head wave like
+    Pn/Sn, whose branch is just its critical-distance onset and its
+    diffraction cutoff) disappears entirely once the window shrinks to
+    where only one of those two points survives a plain boolean mask
+    -- matplotlib can't draw a line through a single point. Since a
+    head wave's time-distance relation is linear, clipping it exactly
+    at the window edge is not an approximation.
+
+    :param dist_km: Monotonic distances for one leg, in km.
+    :type dist_km: numpy.ndarray
+    :param time_s: Travel times paired with ``dist_km``, in seconds.
+    :type time_s: numpy.ndarray
+    :param max_km: Window edge, in km.
+    :type max_km: float
+    :returns: ``(dist_km, time_s)`` clipped to the window.
+    :rtype: tuple[numpy.ndarray, numpy.ndarray]
+    """
+    mask = dist_km <= max_km
+    if mask.all() or not mask.any():
+        return dist_km[mask], time_s[mask]
+
+    idx = np.where(mask)[0]
+    lo, hi = idx.min(), idx.max()
+    result_d = list(dist_km[idx])
+    result_t = list(time_s[idx])
+    if hi + 1 < len(dist_km) and not mask[hi + 1]:
+        d0, d1 = dist_km[hi], dist_km[hi + 1]
+        t0, t1 = time_s[hi], time_s[hi + 1]
+        frac = (max_km - d0) / (d1 - d0)
+        result_d.append(max_km)
+        result_t.append(t0 + frac * (t1 - t0))
+    if lo - 1 >= 0 and not mask[lo - 1]:
+        d0, d1 = dist_km[lo - 1], dist_km[lo]
+        t0, t1 = time_s[lo - 1], time_s[lo]
+        frac = (max_km - d0) / (d1 - d0)
+        result_d.insert(0, max_km)
+        result_t.insert(0, t0 + frac * (t1 - t0))
+    return np.array(result_d), np.array(result_t)
+
+
 def compute_phase_legs(source_depth_km, phase_list=DEFAULT_PHASES,
                         model=DEFAULT_MODEL, max_km=500.0, plot_all=True):
     """Split each requested phase into its individual triplication legs
@@ -89,7 +144,7 @@ def compute_phase_legs(source_depth_km, phase_list=DEFAULT_PHASES,
         antipode.
     :type plot_all: bool
     :returns: One dict per leg with keys ``phase``, ``label``,
-        ``color``, ``seismic_phase`` (the underlying
+        ``color``, ``linestyle``, ``seismic_phase`` (the underlying
         :class:`~obspy.taup.seismic_phase.SeismicPhase`), ``lo``/
         ``hi`` (inclusive absolute indices into
         ``seismic_phase.ray_param``/``.dist``/``.time`` for this leg),
@@ -105,11 +160,9 @@ def compute_phase_legs(source_depth_km, phase_list=DEFAULT_PHASES,
     depth_corrected_model = model.model.depth_correct(source_depth_km)
     phase_names = sorted(parse_phase_list(phase_list))
 
-    # tab20 gives 20 visually distinct colors so a plot with several
-    # phases, each split into multiple triplication legs, doesn't wrap
-    # around and reuse the same color for two different legs.
-    colors = plt.get_cmap("tab20").colors
-    color_idx = 0
+    cool_i = 0
+    warm_i = 0
+    phase_cmaps = {}
     legs = []
     for phase in phase_names:
         ph = SeismicPhase(phase, depth_corrected_model)
@@ -131,13 +184,36 @@ def compute_phase_legs(source_depth_km, phase_list=DEFAULT_PHASES,
                                             mirror_km, mirror_mask))
 
         n_branches = len(phase_branches)
+
+        # Assign this phase its own colormap: warm for S-family names,
+        # cool for everything else (P-family). Different phases within
+        # the same family get different colormaps (e.g. Pg -> Blues,
+        # Pn -> Greens) so they stay distinguishable from each other,
+        # while a phase's own triplication legs are different shades
+        # within that one colormap.
+        if phase not in phase_cmaps:
+            if phase.startswith("S"):
+                cmap_name = WARM_CMAPS[warm_i % len(WARM_CMAPS)]
+                warm_i += 1
+            else:
+                cmap_name = COOL_CMAPS[cool_i % len(COOL_CMAPS)]
+                cool_i += 1
+            phase_cmaps[phase] = plt.get_cmap(cmap_name)
+        cmap = phase_cmaps[phase]
+
+        if n_branches <= 1:
+            shades = [cmap(0.65)]
+        else:
+            shades = [cmap(x) for x in np.linspace(0.35, 0.85, n_branches)]
+
         for j, (lo, hi, dist_km, time_s, mask, mirror_km, mirror_mask) \
                 in enumerate(phase_branches):
-            color = colors[color_idx % len(colors)]
-            color_idx += 1
+            color = shades[j]
+            linestyle = LINESTYLES[j % len(LINESTYLES)]
             label = phase if n_branches == 1 else f"{phase} (leg {j + 1})"
             legs.append(dict(
-                phase=phase, label=label, color=color, seismic_phase=ph,
+                phase=phase, label=label, color=color,
+                linestyle=linestyle, seismic_phase=ph,
                 lo=lo, hi=hi, dist_km=dist_km, time_s=time_s, mask=mask,
                 mirror_km=mirror_km, mirror_mask=mirror_mask,
             ))
@@ -181,14 +257,14 @@ def plot_travel_times_km(source_depth_km, phase_list=DEFAULT_PHASES,
         mirror_mask = leg["mirror_mask"]
         plotted = False
         if mask.any():
-            ax.plot(leg["dist_km"][mask], leg["time_s"][mask],
-                    label=leg["label"], color=leg["color"])
+            d, t = _clip_to_window(leg["dist_km"], leg["time_s"], max_km)
+            ax.plot(d, t, label=leg["label"], color=leg["color"],
+                    linestyle=leg["linestyle"])
             plotted = True
         if plot_all and mirror_mask.any():
-            ax.plot(leg["mirror_km"][mirror_mask],
-                    leg["time_s"][mirror_mask],
-                    label=None if plotted else leg["label"],
-                    color=leg["color"])
+            d, t = _clip_to_window(leg["mirror_km"], leg["time_s"], max_km)
+            ax.plot(d, t, label=None if plotted else leg["label"],
+                    color=leg["color"], linestyle=leg["linestyle"])
 
     if legend:
         handles, labels = ax.get_legend_handles_labels()
@@ -279,10 +355,22 @@ def plot_ray_paths_km(source_depth_km, phase_list=DEFAULT_PHASES,
             arrival = matches[0]
             path_dist_km = arrival.path["dist"] * radius_km
             path_depth_km = arrival.path["depth"]
-            ax.plot(path_dist_km, path_depth_km,
-                    label=None if plotted else leg["label"],
-                    color=leg["color"])
-            plotted = True
+            plot_kwargs = dict(label=None if plotted else leg["label"],
+                                color=leg["color"],
+                                linestyle=leg["linestyle"])
+            ax.plot(path_dist_km, path_depth_km, **plot_kwargs)
+
+            # if leg["phase"].startswith("S"):
+            #     # Same trick as Arrivals.plot_rays'
+            #     # indicate_wave_type=True: matplotlib's "sketch" path
+            #     # filter gives S-wave legs a wiggly rather than a
+            #     # straight line, so they're distinguishable from P at
+            #     # a glance even before checking the legend.
+            #     with plt.rc_context({"path.sketch": (2, 10, 1)}):
+            #         ax.plot(path_dist_km, path_depth_km, **plot_kwargs)
+            # else:
+            #     ax.plot(path_dist_km, path_depth_km, **plot_kwargs)
+            # plotted = True
 
     # Reference lines at the model's velocity discontinuities.
     discons = model.model.s_mod.v_mod.get_discontinuity_depths()
@@ -301,9 +389,11 @@ def plot_ray_paths_km(source_depth_km, phase_list=DEFAULT_PHASES,
         ax.legend(by_label.values(), by_label.keys(), loc="best",
                   numpoints=1)
 
+    plt.axvline(60)
     ax.set_xlabel("Distance (km)")
     ax.set_ylabel("Depth (km)")
     ax.set_xlim(*xlim)
+    ax.set_ylim(0, 30)
     ax.invert_yaxis()
 
     if show:
@@ -312,5 +402,8 @@ def plot_ray_paths_km(source_depth_km, phase_list=DEFAULT_PHASES,
 
 
 if __name__ == "__main__":
-    plot_travel_times_km(source_depth_km=0.25, max_km=1000)
-    plot_ray_paths_km(source_depth_km=0.25, max_km=1000)
+    kwargs = {"max_km": 100,
+              "source_depth_km": 0.25
+              }
+    plot_travel_times_km(show=False, **kwargs)
+    plot_ray_paths_km(**kwargs)

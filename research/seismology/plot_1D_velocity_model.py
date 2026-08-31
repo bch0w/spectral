@@ -75,14 +75,17 @@ for name, arr in plot_arrays.items():
         depth_km = depth_arrays["ak135f"]
         color_vp = "deepskyblue"
         color_vs = "lightcoral"
+        label = name[:2]
     elif name.endswith("iasp91"):
         depth_km = depth_arrays["iasp91"]
         color_vp = "springgreen"
         color_vs = "red"
+        label = name[:2]
     elif name.endswith("prem"):
         depth_km = depth_arrays["prem"]
         color_vp = "violet"
         color_vs = "coral"
+        label = name[:3]
 
     if name.startswith("Vp"):
         color = color_vp
@@ -93,8 +96,15 @@ for name, arr in plot_arrays.items():
         ls = "--"
     else:
         ls = "-"
+
+    if name.endswith("prem") and name[2] == "h":
+        ls = "--"
+    else:
+        ls = "-"
     
-    plt.plot(arr, depth_km, color, label=name[:2], ls=ls, lw=2)
+
+    
+    plt.plot(arr, depth_km, color, label=label, ls=ls, lw=2)
 
 # Finalize plotting
 plt.title(" ".join(choices))
