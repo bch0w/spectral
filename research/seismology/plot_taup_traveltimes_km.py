@@ -27,7 +27,7 @@ DEFAULT_PHASES = ["Pg", "Pn", "PmP", "Sg", "Sn", "SmS"]
 # S-family phase its own warm one; a phase's triplication legs are
 # then different shades sampled from that one colormap.
 COOL_CMAPS = ["Blues", "Greens", "Purples", "BuGn", "GnBu", "PuBu"]
-WARM_CMAPS = ["Reds", "Oranges", "YlOrBr", "RdPu", "OrRd", "Wistia"]
+WARM_CMAPS = ["Reds", "OrRd", "YlOrBr", "RdPu", "OrRd", "Wistia"]
 
 # Leg 1 of a triplication is solid, leg 2 dashed, leg 3 dotted, etc.,
 # cycling if a phase somehow has more legs than this.
@@ -162,7 +162,7 @@ def compute_phase_legs(source_depth_km, phase_list=DEFAULT_PHASES,
 
     cool_i = 0
     warm_i = 0
-    phase_cmaps = {}
+    phase_colors = {}
     legs = []
     for phase in phase_names:
         ph = SeismicPhase(phase, depth_corrected_model)
@@ -185,30 +185,24 @@ def compute_phase_legs(source_depth_km, phase_list=DEFAULT_PHASES,
 
         n_branches = len(phase_branches)
 
-        # Assign this phase its own colormap: warm for S-family names,
-        # cool for everything else (P-family). Different phases within
-        # the same family get different colormaps (e.g. Pg -> Blues,
-        # Pn -> Greens) so they stay distinguishable from each other,
-        # while a phase's own triplication legs are different shades
-        # within that one colormap.
-        if phase not in phase_cmaps:
+        # Assign this phase its own color: warm for S-family names, cool
+        # for everything else (P-family). Different phases within the
+        # same family get different colormaps (e.g. Pg -> Blues, Pn ->
+        # Greens) so they stay distinguishable from each other; every
+        # leg of a given phase shares that one color, and is instead
+        # told apart by linestyle (see LINESTYLES).
+        if phase not in phase_colors:
             if phase.startswith("S"):
                 cmap_name = WARM_CMAPS[warm_i % len(WARM_CMAPS)]
                 warm_i += 1
             else:
                 cmap_name = COOL_CMAPS[cool_i % len(COOL_CMAPS)]
                 cool_i += 1
-            phase_cmaps[phase] = plt.get_cmap(cmap_name)
-        cmap = phase_cmaps[phase]
-
-        if n_branches <= 1:
-            shades = [cmap(0.65)]
-        else:
-            shades = [cmap(x) for x in np.linspace(0.35, 0.85, n_branches)]
+            phase_colors[phase] = plt.get_cmap(cmap_name)(0.6)
+        color = phase_colors[phase]
 
         for j, (lo, hi, dist_km, time_s, mask, mirror_km, mirror_mask) \
                 in enumerate(phase_branches):
-            color = shades[j]
             linestyle = LINESTYLES[j % len(LINESTYLES)]
             label = phase if n_branches == 1 else f"{phase} (leg {j + 1})"
             legs.append(dict(
@@ -270,15 +264,22 @@ def plot_travel_times_km(source_depth_km, phase_list=DEFAULT_PHASES,
         handles, labels = ax.get_legend_handles_labels()
         by_label = dict(zip(labels, handles))
         ax.legend(by_label.values(), by_label.keys(), loc="best",
-                  numpoints=1)
+                  numpoints=1, fontsize=12)
 
     ax.grid(True)
 
-    ax.set_xlabel("Distance (km)")
-    ax.set_ylabel("Time (s)")
+    ax.set_xlabel("Distance (km)", fontsize=16)
+    ax.set_ylabel("Time (s)", fontsize=16)
+    ax.set_title("ak135f travel time curve", fontsize=16)
+    ax.tick_params(axis="x", labelsize=14)
+    ax.tick_params(axis="y", labelsize=14)
+    for axis in ["top", "bottom", "left", "right"]:
+        ax.spines[axis].set_linewidth(1.25)
     ax.set_xlim(20, 100)
     #ax.set_ylim(bottom=0.0)
     ax.set_ylim(5, 30)
+
+    plt.axvline(60, c="k", zorder=3, lw=2, ls="--")
 
     if show:
         plt.show()
@@ -287,7 +288,7 @@ def plot_travel_times_km(source_depth_km, phase_list=DEFAULT_PHASES,
 
 def plot_ray_paths_km(source_depth_km, phase_list=DEFAULT_PHASES,
                        model=DEFAULT_MODEL, max_km=500.0,
-                       rays_per_leg=6, legend=True, ax=None, show=True):
+                       wiggly_s=True, legend=True, ax=None, show=True):
     """Plot TauP ray paths in a distance-vs-depth cross section, colored
     to match :func:`plot_travel_times_km`'s triplication legs.
 
@@ -296,6 +297,13 @@ def plot_ray_paths_km(source_depth_km, phase_list=DEFAULT_PHASES,
     triplication leg (as split by :func:`compute_phase_legs`) is drawn
     in its own color instead of one color per phase name.
 
+    Each leg contributes exactly one ray: the one that arrives at
+    ``max_km``. A leg whose reachable distance range doesn't extend
+    out to ``max_km`` is skipped rather than drawing a shorter ray, so
+    every line in the plot ends exactly at the right edge instead of
+    stopping short of it or, if picked from some other distance,
+    running past it.
+
     :param source_depth_km: Source depth, in kilometers.
     :type source_depth_km: float
     :param phase_list: Phase names to plot.
@@ -303,11 +311,17 @@ def plot_ray_paths_km(source_depth_km, phase_list=DEFAULT_PHASES,
     :param model: Path to an ObsPy TauP ``.npz`` model (or a built-in
         model name, or an existing :class:`~obspy.taup.tau.TauPyModel`).
     :type model: str or obspy.taup.tau.TauPyModel
-    :param max_km: Maximum epicentral distance to plot, in kilometers.
+    :param max_km: Epicentral distance each ray path should arrive at,
+        in kilometers; also the plot's x-axis limit.
     :type max_km: float
-    :param rays_per_leg: Number of individual ray paths to draw per
-        leg, evenly spaced across its visible distance range.
-    :type rays_per_leg: int
+    :param wiggly_s: If ``True``, draw legs whose phase name starts
+        with "S" as a wiggly line via matplotlib's "sketch" path
+        filter (the same trick ``Arrivals.plot_rays`` uses with
+        ``indicate_wave_type=True``), so S-wave legs are visually
+        distinguishable from P-wave legs even without checking colors
+        or the legend. Set to ``False`` for plain straight/dashed
+        lines throughout.
+    :type wiggly_s: bool
     :param legend: Whether to draw a legend.
     :type legend: bool
     :param ax: Existing axes to plot into.
@@ -327,57 +341,40 @@ def plot_ray_paths_km(source_depth_km, phase_list=DEFAULT_PHASES,
     if ax is None:
         _, ax = plt.subplots(figsize=(8, 6), dpi=100)
 
+    degrees = np.degrees(max_km / radius_km)
     for leg in legs:
         ph = leg["seismic_phase"]
-        visible_dist_km = leg["dist_km"][leg["mask"]]
-        if len(visible_dist_km) == 0:
+        # Skip legs that don't actually reach out to max_km -- there's
+        # no arrival to draw for them at this distance.
+        if not (leg["dist_km"].min() <= max_km <= leg["dist_km"].max()):
             continue
-        n_rays = min(rays_per_leg, len(visible_dist_km))
-        # Evenly spaced target distances across this leg's visible
-        # range; each is handed to calc_path, which (unlike shoot_ray)
-        # also handles head waves like Pn/Sn.
-        targets_km = np.linspace(visible_dist_km.min(),
-                                  visible_dist_km.max(), n_rays)
-
-        plotted = False
-        for dist_km in targets_km:
-            degrees = np.degrees(dist_km / radius_km)
-            try:
-                arrivals = ph.calc_path(degrees)
-            except Exception:
-                continue
-            # A single distance can have several crossings during a
-            # triplication; keep only the one belonging to this leg.
-            matches = [a for a in arrivals
-                       if leg["lo"] <= a.ray_param_index <= leg["hi"]]
-            if not matches:
-                continue
-            arrival = matches[0]
-            path_dist_km = arrival.path["dist"] * radius_km
-            path_depth_km = arrival.path["depth"]
-            plot_kwargs = dict(label=None if plotted else leg["label"],
-                                color=leg["color"],
-                                linestyle=leg["linestyle"])
-            ax.plot(path_dist_km, path_depth_km, **plot_kwargs)
-
-            # if leg["phase"].startswith("S"):
-            #     # Same trick as Arrivals.plot_rays'
-            #     # indicate_wave_type=True: matplotlib's "sketch" path
-            #     # filter gives S-wave legs a wiggly rather than a
-            #     # straight line, so they're distinguishable from P at
-            #     # a glance even before checking the legend.
-            #     with plt.rc_context({"path.sketch": (2, 10, 1)}):
-            #         ax.plot(path_dist_km, path_depth_km, **plot_kwargs)
-            # else:
-            #     ax.plot(path_dist_km, path_depth_km, **plot_kwargs)
-            # plotted = True
+        try:
+            arrivals = ph.calc_path(degrees)
+        except Exception:
+            continue
+        # A single distance can have several crossings during a
+        # triplication; keep only the one belonging to this leg.
+        matches = [a for a in arrivals
+                   if leg["lo"] <= a.ray_param_index <= leg["hi"]]
+        if not matches:
+            continue
+        arrival = matches[0]
+        path_dist_km = arrival.path["dist"] * radius_km
+        path_depth_km = arrival.path["depth"]
+        plot_kwargs = dict(label=leg["label"], color=leg["color"])
+        if wiggly_s and leg["phase"].startswith("S"):
+            with plt.rc_context({"path.sketch": (2, 10, 1)}):
+                ax.plot(path_dist_km, path_depth_km, **plot_kwargs)
+        else:
+            ax.plot(path_dist_km, path_depth_km, linestyle=leg["linestyle"],
+                    zorder=10, **plot_kwargs)
 
     # Reference lines at the model's velocity discontinuities.
     discons = model.model.s_mod.v_mod.get_discontinuity_depths()
     xlim = (0, max_km)
     for depth in discons:
         if depth <= max_km * 2:  # skip absurdly deep ones for a tight plot
-            ax.axhline(depth, color="0.75", lw=0.75, zorder=-1)
+            ax.axhline(depth, color="0.75", lw=1.5, zorder=-1)
 
     ax.plot([0], [source_depth_km], marker="*", color="#FEF215",
             markersize=16, zorder=10, markeredgewidth=1.2,
@@ -386,14 +383,42 @@ def plot_ray_paths_km(source_depth_km, phase_list=DEFAULT_PHASES,
     if legend:
         handles, labels = ax.get_legend_handles_labels()
         by_label = dict(zip(labels, handles))
-        ax.legend(by_label.values(), by_label.keys(), loc="best",
+        ax.legend(by_label.values(), by_label.keys(), loc="lower right",
                   numpoints=1)
 
-    plt.axvline(60)
-    ax.set_xlabel("Distance (km)")
-    ax.set_ylabel("Depth (km)")
+    ax.set_xlabel("Distance (km)", fontsize=16)
+    ax.set_ylabel("Depth (km)", fontsize=16)
+    ax.set_title("ak135f ray paths", fontsize=16)
+    ax.tick_params(axis="x", labelsize=14)
+    ax.tick_params(axis="y", labelsize=14)
+    for axis in ["top", "bottom", "left", "right"]:
+        ax.spines[axis].set_linewidth(1.25)
     ax.set_xlim(*xlim)
-    ax.set_ylim(0, 30)
+    ax.set_ylim(0, 24)
+
+    # Annotate each layer's Vp/Vs, right at the depth where it ends.
+    # A layer that extends past the bottom of the plot (the "mantle"
+    # layer starting at 18 km here, whose true base is at 80 km) gets
+    # its annotation placed just above the lower y limit instead, and
+    # its velocities are evaluated at that same clipped depth rather
+    # than at its real, off-screen bottom.
+    v_mod = model.model.s_mod.v_mod
+    y_top, y_bottom = sorted(ax.get_ylim())
+    margin = (y_bottom - y_top) * 0.02
+    x_text = max_km * 0.02
+    for top, bot in zip(discons[:-1], discons[1:]):
+        if top >= y_bottom:
+            break
+        y_text = bot if bot <= y_bottom else y_bottom - margin
+        vp = v_mod.evaluate_above(y_text, "p").item()
+        vs = v_mod.evaluate_above(y_text, "s").item()
+        ax.text(x_text, y_text, f"Vp={vp:.2f}, Vs={vs:.2f}", fontsize=12,
+                color="k", va="bottom", ha="left", zorder=10,
+                bbox=dict(facecolor="white", alpha=0.7, edgecolor="none",
+                          pad=1))
+        if bot > y_bottom:
+            break
+
     ax.invert_yaxis()
 
     if show:
@@ -402,8 +427,9 @@ def plot_ray_paths_km(source_depth_km, phase_list=DEFAULT_PHASES,
 
 
 if __name__ == "__main__":
-    kwargs = {"max_km": 100,
-              "source_depth_km": 0.25
+    kwargs = {
+              "source_depth_km": 0.25,
+              "phase_list": ["Pg", "Pn", "Sg", "Sn"], 
               }
-    plot_travel_times_km(show=False, **kwargs)
-    plot_ray_paths_km(**kwargs)
+    plot_travel_times_km(max_km=100, show=False, **kwargs)
+    plot_ray_paths_km(max_km=60, **kwargs)
