@@ -118,7 +118,7 @@ class MomTenMeas:
         # Set up the Instaseis Database
         self.taup_model = taup_model
         self.syngine = syngine
-        self.db = instaseis.open_db(f"syngine://{self.syngine}")
+
 
 
         # !!! BCBC
@@ -151,6 +151,7 @@ class MomTenMeas:
                 os.makedirs(path_)
 
         # Empty vals for later
+        self.db = None
         self.idx = None
         self.rcv = None
         self.src = None
@@ -228,7 +229,8 @@ class MomTenMeas:
                 instaseis.database_interfaces.base_instaseis_db.\
                 BaseInstaseisDB.get_seismograms
         """
-        st = self.db.get_seismograms(source=self.src, receiver=self.rcv, 
+        db = instaseis.open_db(f"syngine://{self.syngine}")
+        st = db.get_seismograms(source=self.src, receiver=self.rcv, 
                                      components=self.components,  
                                      kind=self.kind, dt=0.01,
                                      remove_source_shift=True)
@@ -393,8 +395,8 @@ class MomTenMeas:
                         s_start = start
                     if end > s_end:
                         s_end = end
-            # self.windows[dist]["P"] = [p_start, s_start]  # Run P all the way to S
-            # self.windows[dist]["S"] = [s_start, s_end]
+            self.windows[dist]["P"] = [p_start, s_start]  # Run P all the way to S
+            self.windows[dist]["S"] = [s_start, s_end]
                         
         p_win = self.windows[self.dist_km][p_phase]
         s_win = self.windows[self.dist_km][s_phase]
@@ -632,33 +634,56 @@ def mtmrun(dist_km, baz, src_depth_km=1, parallel=True, **kwargs):
     return idxs, max_amps, tensors, mtm.pwin_s, mtm.swin_s
 
 
-def plot_beachballs(x, y, t, title=None, save=False, 
-                    p_phase="P", s_phase="S"):
+def plot_beachballs(x, y, t, title=None, save=False,
+                    p_phase="P", s_phase="S", highlight_xlim=None,
+                    highlight_fill="gray", highlight_transparency=50):
     """
     Plot beachballs based on their assigned index `x` and max amplitude `y` with
     the given moment tensor components `t`
+
+    :type highlight_xlim: list or tuple of float
+    :param highlight_xlim: optional [xmin, xmax] defining the x-value span of
+        a shaded rectangle used to highlight a region of the figure. The
+        rectangle spans the entire y-axis. If not given, no rectangle is
+        plotted
+    :type highlight_fill: str
+    :param highlight_fill: fill color of the highlight rectangle
+    :type highlight_transparency: float
+    :param highlight_transparency: transparency (%) of the highlight
+        rectangle, 0 is opaque and 100 is fully transparent
     """
     # Used for coloring beachballs, hex color codes for each index can be used
     # to match waveform plots etc.
-    hexvals = cmaphex(nvals=len(t), cmap="vanimo")
+    hexvals = cmaphex(nvals=len(t), cmap="cividis")
 
     # Plot PyGMT Beachball diagrams showing variation of MT with PS ratio
     with pygmt.config(FONT="7.5p"):
-        region = [0.1, max(x) + 0.5,  0.1,  max(y) * 2.5]
+        region = [0.1, max(x) + 0.5,  0.1,  100]
 
         projection = "X10c/4cl"  # y-axis logarithmic
         
         # Y label with tick every 
         frame = ["af", "+gwhite", 
                 f"ya5f1g5+l{p_phase}/{s_phase} Amplitude Ratio",
-                f"xa1f1g1+l< DC{' '*36}ISO{' '*30}CLVD >",
+                f"xa1f1g1+lDC{' '*60}ISO{' '*53}CLVD",
                 ]
         fig = pygmt.Figure()
         fig.basemap(region=region, projection=projection, frame=frame)
 
+        # Shade a region of the figure to highlight user-defined x-values,
+        # spanning the full y-axis. Plotted before the beachballs so that
+        # they are drawn on top of the highlight
+        if highlight_xlim is not None:
+            xmin, xmax = highlight_xlim
+            fig.plot(
+                x=[xmin, xmax, xmax, xmin, xmin],
+                y=[region[2], region[2], region[3], region[3], region[2]],
+                fill=highlight_fill, transparency=highlight_transparency,
+                )
+
         # Title as separate figure becuase I cannot for the life of me figure
         # out how to plot the title with the frame
-        fig.text(x=1, y=region[-1]*.9, text=title, justify="TL",
+        fig.text(x=2.5, y=region[-1]*.9, text=title, justify="TL",
                  fill="white")
 
         for x_, y_, t_ in zip(x, y, t):
@@ -670,9 +695,9 @@ def plot_beachballs(x, y, t, title=None, save=False,
             fig.meca(spec=tensor_dict, scale="1.25c", longitude=x_, 
                      latitude=y_, depth=0, compression_fill=hexvals[x_-1], 
                      extension_fill="cornsilk",
-                     pen="0.5p,black,solid",)
+                     pen="0.2p,black,solid",)
 
-    fig.savefig(save, dpi=500)
+    fig.savefig(save, dpi=750)
 
 
 def main(dist_km=150, baz=45, src_depth_km=1, tmin=2, tmax=4, corners=4,
@@ -688,29 +713,14 @@ def main(dist_km=150, baz=45, src_depth_km=1, tmin=2, tmax=4, corners=4,
                    "Sn": [228.57, 228.57 + tmax * 2],
                    "Sg": [277.78, 277.78 + tmax * 4], 
                    },
-            # ak135f_2s
-            # 1000: {"Pn": [131.18, 172.23],
-            #        "Pg": [172.23, 200], 
-            #        "Sn": [233.3, 267.14], 
-            #        "Sg": [288.72, 314],
-            #        },
             500: {"Pn": [65.68, 65.68 + tmax * 2], 
-                  "Pg": [86.18, 86.18 + tmax * 24], 
-                  "Sn": [117.59, 117.59 + tmax * 2], 
+                  "Pg": [86.18, 86.18 + tmax * 12], 
+                  # Manually shifted from the TauP arrival time to get the 
+                  # actual 0 Sn amp on the ISO mechanism
+                  "Sn": [117.59+7, 117.59+7 + tmax * 1.75],
+                  # "Sn": [117.59, 117.59 + tmax * 2], 
                   "Sg": [131.57, 131.57 + tmax * 4], 
                   }, 
-            # 50 km depth
-            # 500: {"Pg": [64, 104], 
-            #       "Sg": [105, 140], 
-            #       }, 
-            # 25 km depth
-            # 500: {"Pg": [64, 115], 
-            #       "Sg": [116, 180], 
-            #       }, 
-            # 10 km depth
-            # 500: {"Pg": [68.17, 115.49], 
-            #       "Sg": [116, 144.49], 
-            #       }, 
             250: {"Pn": [33., 38.44], 
                   "Pg": [41.47, 53.41], 
                   "Sn": [65, 68.92], 
@@ -721,12 +731,29 @@ def main(dist_km=150, baz=45, src_depth_km=1, tmin=2, tmax=4, corners=4,
                   "Sn": [44.68, 48.8],  
                   "Sg": [42, 44.8], 
                   },
-            80: {"Pn": [21.9, 26.73], 
-                  "Pg": [26.73, 31.8], 
-                  "Sn": [44.68, 48.8],  
-                  "Sg": [42, 44.8], 
-                  }
+            # ak135f_2s
+            # 1000: {"Pn": [131.18, 172.23],
+            #        "Pg": [172.23, 200], 
+            #        "Sn": [233.3, 267.14], 
+            #        "Sg": [288.72, 314],
+            #        },
+            # ak135f_1s
+            # 80: {"Pn": [21.9, 26.73], 
+            #       "Pg": [26.73, 31.8], 
+            #       "Sn": [44.68, 48.8],  
+            #       "Sg": [42, 44.8], 
+            #       }
         }
+    if src_depth_km != 1:
+        if src_depth_km == 50:
+            windows = {500: {"Pg": [64, 104], 
+                             "Sg": [105, 140]}} 
+        elif src_depth_km == 25:
+            windows = {500: {"Pg": [64, 115], 
+                             "Sg": [116, 180]}}
+        elif src_depth_km == 10:
+            windows = {500: {"Pg": [68.17, 115.49], 
+                             "Sg": [116, 144.49]}}
 
     # Used for RS and BB plots
     title = (f"Dist={dist_km}km; BAz={int(baz%360)}; "
@@ -759,7 +786,8 @@ def main(dist_km=150, baz=45, src_depth_km=1, tmin=2, tmax=4, corners=4,
         
         # Make beachball plots
         save = f"{fig_path}/bb_{syngine}_z{int(src_depth_km)}_d{dist_km}_b{baz}{tag}.png"
-        plot_beachballs(x, y, t, title, save, p_phase, s_phase)
+        plot_beachballs(x, y, t, title, save, p_phase, s_phase,
+                        highlight_xlim=[8.5,23.5])
 
     # Plot record sections
     # Custom look for each of the distances
@@ -799,25 +827,24 @@ def main(dist_km=150, baz=45, src_depth_km=1, tmin=2, tmax=4, corners=4,
     save = f"{fig_path}/rs_{syngine}_z{int(src_depth_km)}_d{dist_km}_b{baz}{tag}.png"
 
     pp = PrettyPlot(fids=sorted(sac_files), 
-                    # fig_size=(14, 8),
+                    fig_size=(14, 8),
                     wf_type="recsec",  
                     fmin=1/tmax, 
                     fmax=1/tmin, 
                     corners=corners, 
-                    colors=["vanimo"], 
-                    linewidth=1,
-                    ylabel=f"Z Velocity [normalized]",
-                    group_vels=[8,7,6,5,4,3],
-                    tp_phases=["P", "S"],
+                    colors=["cividis"], 
+                    linewidth=1.25,
+                    ylabel=f"Normalized Z Velocity",
+                    group_vels=[8.0, 6.8, 5.9, 4.5, 3.6, 3.2, 2.6],
                     tp_model=taup_model, 
                     tp_dist_km=dist_km, 
                     tp_depth=src_depth_km, 
                     tp_start=0,
                     title=title,  
                     save=save, 
-                    show=True, 
+                    show=False, 
                     legend=False, 
-                    dpi=200, 
+                    dpi=250, 
                     transparent=False,
                     windows=windows,
                     **kwargs)
@@ -830,7 +857,8 @@ if __name__ == "__main__":
     if syngine == "ak135f_1s":
          tmin=1
          tmax=2 
-         taup_model="/Users/prof/Repos/spectral/research/seismology/taup_models/ak135f_upper_crust.npz"
+         taup_model=("/Users/prof/Repos/spectral/research/seismology/taup_models/"
+                    "ak135f_upper_crust.npz")
     elif syngine == "ak135f_2s":
          tmin=2
          tmax=3 
@@ -842,9 +870,9 @@ if __name__ == "__main__":
         taup_model = "prem"
 
     kwargs = {
-        "dist_km": 1000, 
+        "dist_km": 500, 
         "baz":0, 
-        "src_depth_km":50,
+        "src_depth_km":0.25,
         "arrival_choice":"custom_Pn_Sn", 
         "tmin":tmin, 
         "tmax":tmax, 
@@ -854,15 +882,21 @@ if __name__ == "__main__":
         "taup_buffer":0.1,
         "components":comp, 
         "skip":False, 
-        "show":False, 
+        "show":True, 
         "parallel":True,
     }
 
-    if True:
+    if False:
         main(**kwargs)
     elif True:
-        for depth in [5, 10, 50]:
+        for depth in [.25, 5, 10, 50]:
+            kwargs["arrival_choice"] = "custom_P_S"
             kwargs["src_depth_km"] = depth
+            main(**kwargs)
+    elif True:
+        for baz in [0, 30, 60, 89.99]:
+            kwargs["baz"] = baz
+            kwargs["arrival_choice"] = "custom_P_S"
             main(**kwargs)
     else:
         for custom in ["Pg_Sg", "Pn_Sn", "Pg_Sn", "Pn_Sg", "P_S"]:

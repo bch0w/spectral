@@ -13,11 +13,12 @@ import pandas as pd
 from pathlib import Path
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from matplotlib import patheffects as pe
-from matplotlib.colors import LogNorm
+from matplotlib.colors import BoundaryNorm
 from matplotlib.patches import Rectangle
 from scipy.interpolate import griddata
 from scipy.ndimage import gaussian_filter
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from pyproj import Transformer
 from obspy.imaging.beachball import beach
 from obspy.taup import TauPyModel
 from obspy.geodetics import kilometers2degrees, gps2dist_azimuth
@@ -27,7 +28,19 @@ logger.setLevel("CRITICAL")
 
 
 ARRIVAL_RG=3.1
-FID_COAST = "/home/bhchow/work/data/cartography/coastline_128_130_40_43.csv"
+
+# Font sizes used throughout the heatmap plot (`plot_heatmap` and
+# `add_waveform_inset`). Edit these to change text sizing globally without
+# hunting through the plotting code for each individual fontsize= call.
+FONTSIZES = {
+    "tick_labels": 17,       # map axes' x/y tick labels
+    "axis_labels": 18,       # "Easting [km]" / "Northing [km]"
+    "title": 20,             # main heatmap title
+    "colorbar_label": 18,  # "<- Earthquake  [P/S Ratio]  Explosion ->"
+    "colorbar_ticks": 17,    # colorbar tick labels
+    "subplot_label": 35,   # "A)", "B)", etc.
+    "inset_annotation": 14,  # waveform inset's duration/distance annotation
+}
 
 def get_p2s(tr, p_window, s_window, choice="window"):
     """
@@ -196,7 +209,7 @@ def plot_tr(tr, p_idx=None, s_idx=None, p_window=None, s_window=None,
     plt.close(f)
 
 
-def add_waveform_inset(fig, ax, lon, lat, tr, p_idx=None, s_idx=None,
+def add_waveform_inset(fig, ax, x, y, tr, p_idx=None, s_idx=None,
                        width=0.11, height=0.075, pad_s=1.0,
                        annotate=True):
     """
@@ -211,8 +224,10 @@ def add_waveform_inset(fig, ax, lon, lat, tr, p_idx=None, s_idx=None,
     sliver.
 
     :param fig: parent matplotlib Figure
-    :param ax: parent map Axes (in lon/lat data coordinates)
-    :param lon/lat: station location the waveform's visible start is pinned to
+    :param ax: parent map Axes (in whatever coordinates it's plotted in --
+        lon/lat degrees, or local UTM km, etc.)
+    :param x/y: station location, in the map Axes' own data coordinates,
+        that the waveform's visible start is pinned to
     :param tr: ObsPy Trace to plot
     :param p_idx/s_idx: sample indices of the picked P/S peak amplitudes
     :param width/height: inset size in figure-fraction units
@@ -242,7 +257,7 @@ def add_waveform_inset(fig, ax, lon, lat, tr, p_idx=None, s_idx=None,
     # Station location -> figure-fraction coordinates, so the inset can be
     # placed as a sibling Axes rather than embedded inside the map Axes
     fx, fy = fig.transFigure.inverted().transform(
-        ax.transData.transform((lon, lat)))
+        ax.transData.transform((x, y)))
 
     # Anchor the inset so (xlo, y_at_xlo) lands exactly on the marker: left
     # edge at the marker's x, and shifted vertically so y_frac lines up
@@ -275,36 +290,36 @@ def add_waveform_inset(fig, ax, lon, lat, tr, p_idx=None, s_idx=None,
         inset_ax.annotate(f"{xhi - xlo:.1f}s\n{tr.stats.sac.dist:.2f}km ",
                           xy=(-.02, 0.5),
                           xycoords="axes fraction", ha="right", va="bottom",
-                          fontsize=14, color="lime",
+                          fontsize=FONTSIZES["inset_annotation"], color="lime",
                           path_effects=[pe.withStroke(linewidth=2, foreground="k")]
                           )# bbox=bbox, zorder=3)
 
     return inset_ax
 
 
-def add_ruler(ax, point1, point2, color="lime", lw=1.5, fontsize=18):
+def get_local_utm_km_transform(origin_lon, origin_lat):
     """
-    Draw a line between two (lon, lat) points on a map Axes and annotate the
-    great-circle distance between them in km.
+    Build a (lons, lats) -> (x_km, y_km) transform into the local UTM zone
+    containing `origin_lon`/`origin_lat`, recentered so that point sits at
+    the origin (0, 0). Used to plot maps in true, evenly-scaled distance
+    (km) from an event rather than in lon/lat degrees.
 
-    :param ax: map Axes (in lon/lat data coordinates)
-    :param point1/point2: (lon, lat) tuples marking the ruler's endpoints
-    :return: distance between the two points, in km
+    :param origin_lon/origin_lat: point to become (0, 0) in the local frame
+        (e.g. the event location) -- also determines which UTM zone is used
+    :return: callable transform(lons, lats) -> (x_km, y_km), each an array;
+        also usable on scalars/lists, matching the input's shape
     """
-    lon1, lat1 = point1
-    lon2, lat2 = point2
-    dist_m, _, _ = gps2dist_azimuth(lat1, lon1, lat2, lon2)
-    dist_km = dist_m / 1000.
+    zone = int((origin_lon + 180) / 6) + 1
+    epsg = (32600 if origin_lat >= 0 else 32700) + zone
+    to_utm = Transformer.from_crs("EPSG:4326", f"EPSG:{epsg}", always_xy=True)
 
-    ax.plot([lon1, lon2], [lat1, lat2], c=color, lw=lw, zorder=15,
-           marker="o", markersize=4, markerfacecolor=color,
-           markeredgecolor="w")
+    origin_x, origin_y = to_utm.transform(origin_lon, origin_lat)
 
-    ax.annotate(f"{dist_km:.1f} km", xy=((lon1 + lon2) / 2, (lat1 + lat2) / 2),
-               xycoords="data", ha="center", va="bottom", fontsize=fontsize,
-               color=color, zorder=16)
+    def transform(lons, lats):
+        x, y = to_utm.transform(lons, lats)
+        return (np.asarray(x) - origin_x) / 1000., (np.asarray(y) - origin_y) / 1000.
 
-    return dist_km
+    return transform
 
 
 class P2SRatio:
@@ -573,10 +588,9 @@ def plot_scatterplot(paths, fmin=2, fmax=4, components="Z", j=-1):
 
 
 def plot_heatmap(p2s, threshold=0.8, interpolate=True, method="linear",
-                 grid_res=200, smooth_sigma=1.5, save="./figures",
-                 cmap="viridis", mt_color="orange", coast_color="k",
-                 fid_coastline=FID_COAST, highlight_stations=None,
-                 ruler=None, title=None, subplot_label=None, annotate=True,
+                 grid_res=200, smooth_sigma=1.5, levels=20, save="./figures",
+                 cmap="viridis", mt_color="gold", highlight_stations=None,
+                 title=None, subplot_label=None, annotate=True,
                  colorbar=True, show=True, log_scale=False):
     """
     For a single event plot a map of amplitude ratios for each station
@@ -591,63 +605,86 @@ def plot_heatmap(p2s, threshold=0.8, interpolate=True, method="linear",
         to disable.
     :param highlight_stations: optional list of station codes to annotate on
         the map with a marker + inset plot of their waveform and P/S picks
-    :param ruler: optional (point1, point2) pair, or list of such pairs,
-        where each point is an (lon, lat) tuple. Draws a line between the
-        two points and annotates the great-circle distance between them
+
     :param log_scale: if True, color the heatmap on a log scale instead of
         linear. P/S ratios often span more than a decade, so log scale can
         resolve structure in the small-ratio (earthquake-like) end that a
         linear scale compresses down near zero.
+    :param interpolate: if True, draw a translucent interpolated heatmap
+        behind the station markers as soft spatial context. The large,
+        solid-colored station markers are always the primary way the data
+        is conveyed either way -- this only toggles the backdrop.
     """
     print("plotting heatmap")
-    f, ax = plt.subplots(1, figsize=(12, 13), dpi=100)
+    f, ax = plt.subplots(1, figsize=(12, 13), dpi=200)
+
+    # Project everything into the local UTM zone, recentered on the event --
+    # gives a map in true, evenly-scaled km rather than lon/lat degrees
+    # (where a degree of longitude and a degree of latitude aren't the same
+    # physical distance), with the event sitting exactly at the origin
+    to_km = get_local_utm_km_transform(p2s.srclon, p2s.srclat)
+    sta_x, sta_y = to_km(p2s.lons, p2s.lats)
+    src_x, src_y = 0., 0.  # by construction
 
     # Interpolation causes some NaN errors with large values
     # Create a regular grid from lon/lat ranges
-    # Set colorscale bounds based on user-defined threshold
+    # Colorscale bounds span the full range of the actual station data,
+    # rather than being capped at a fixed multiple of `threshold` -- so
+    # nothing gets clipped into the extend arrows just for being far from
+    # the earthquake/explosion dividing line
+    p2sratios_arr = np.asarray(p2s.p2sratios, dtype=float)
     if log_scale:
-        # 0 is undefined on a log scale -- use a small positive floor
-        # instead, one decade below `threshold`
-        vmin = threshold / 10
-        vmax = threshold * 2
-        levels = np.geomspace(vmin, vmax, int((vmax - vmin) * 10 * 6))
+        # 0/negative values are undefined on a log scale -- fall back to the
+        # smallest positive value actually present (or threshold/10 if none)
+        positive = p2sratios_arr[p2sratios_arr > 0]
+        # vmin = np.nanmin(positive) if positive.size else threshold / 10
+        # vmax = np.nanmax(p2sratios_arr)
+        vmin = 10E-2
+        vmax = 100
+        levels = np.geomspace(vmin, vmax, levels)
     else:
-        vmin = 0
-        vmax = vmin + threshold * 2
-        levels = np.linspace(vmin, vmax, int((vmax - vmin) * 10 * 6))
-    ticks = [vmin, threshold, vmax]
+        vmin = 0 # np.nanmin(p2sratios_arr)
+        vmax = 100 # np.nanmax(p2sratios_arr)
+        levels = np.linspace(vmin, vmax, levels)
+    # Keep `threshold` as a reference tick (the earthquake/explosion divide)
+    # only when it actually falls within the data's own range
+    ticks = sorted({vmin, vmax} | ({threshold} if vmin <= threshold <= vmax
+                                   else set()))
+    # ticks = sorted({vmin, vmax})
 
     # Fixed, dense grid independent of station density -- interpolating
     # onto a grid only ~4x the station spacing (the old approach) leaves
     # contourf with little to work with and produces a faceted/jagged
     # look, especially for sparse or irregularly-spaced networks
-    pad_lon = 0.05 * (max(p2s.lons) - min(p2s.lons) or 1)
-    pad_lat = 0.05 * (max(p2s.lats) - min(p2s.lats) or 1)
-    lon_grid = np.linspace(min(p2s.lons) - pad_lon,
-                           max(p2s.lons) + pad_lon, grid_res)
-    lat_grid = np.linspace(min(p2s.lats) - pad_lat,
-                           max(p2s.lats) + pad_lat, grid_res)
-    x, y = np.meshgrid(lon_grid, lat_grid)
+    if interpolate:
+        pad_x = 0.05 * (max(sta_x) - min(sta_x) or 1)
+        pad_y = 0.05 * (max(sta_y) - min(sta_y) or 1)
+        x_grid = np.linspace(min(sta_x) - pad_x, max(sta_x) + pad_x, grid_res)
+        y_grid = np.linspace(min(sta_y) - pad_y, max(sta_y) + pad_y, grid_res)
+        x, y = np.meshgrid(x_grid, y_grid)
 
-    # Interpolate within the station convex hull...
-    points = (p2s.lons, p2s.lats)
-    z_interior = griddata(points, p2s.p2sratios, (x, y), method=method)
-    # ...and fill outside it with nearest-neighbor extrapolation instead
-    # of a flat fill_value, which used to draw a hard, jagged-looking
-    # edge that traced the (irregular) convex hull of the station network
-    z_exterior = griddata(points, p2s.p2sratios, (x, y), method="nearest")
-    z = np.where(np.isnan(z_interior), z_exterior, z_interior)
+        # Interpolate within the station convex hull...
+        points = (sta_x, sta_y)
+        z_interior = griddata(points, p2s.p2sratios, (x, y), method=method)
+        # ...and fill outside it with nearest-neighbor extrapolation instead
+        # of a flat fill_value, which used to draw a hard, jagged-looking
+        # edge that traced the (irregular) convex hull of the station network
+        z_exterior = griddata(points, p2s.p2sratios, (x, y), method="nearest")
+        z = np.where(np.isnan(z_interior), z_exterior, z_interior)
 
-    # Light smoothing to knock down remaining small-scale interpolation
-    # artifacts without washing out real spatial structure
-    if smooth_sigma:
-        z = gaussian_filter(z, sigma=smooth_sigma)
+        # Light smoothing to knock down remaining small-scale interpolation
+        # artifacts without washing out real spatial structure
+        if smooth_sigma:
+            z = gaussian_filter(z, sigma=smooth_sigma)
 
-    # Colorbar that respects the vmin vmax values. On a log scale, data
-    # below `vmin` is much more likely (earthquake-like ratios can sit well
-    # under threshold/10), so check both ends rather than just the top
-    extend_max = vmax < z.max()
-    extend_min = log_scale and (vmin > z.min())
+    # Colorbar that respects the vmin vmax values. The large station markers
+    # are always the primary data layer (and what the colorbar reflects), so
+    # extend is checked against the actual station values, not the
+    # interpolated backdrop. On a log scale, data below `vmin` is much more
+    # likely (earthquake-like ratios can sit well under threshold/10), so
+    # check both ends rather than just the top
+    extend_max = vmax < np.nanmax(p2sratios_arr)
+    extend_min = log_scale and (vmin > np.nanmin(p2sratios_arr))
     if extend_max and extend_min:
         extend = "both"
     elif extend_max:
@@ -657,86 +694,115 @@ def plot_heatmap(p2s, threshold=0.8, interpolate=True, method="linear",
     else:
         extend = "neither"
 
+    # Discrete color mapping, binned to the same `levels` used by contourf --
+    # rather than a continuous gradient, both the heatmap and the markers
+    # snap to the same stepped set of colors, and the colorbar renders as
+    # matching discrete blocks instead of a smooth ramp. BoundaryNorm bins
+    # on raw interval membership regardless of spacing, so it works equally
+    # for the linearly- or geometrically-spaced (log scale) `levels`, and
+    # unlike LogNorm it doesn't require strictly positive data
+    cmap_obj = plt.get_cmap(cmap)
+    norm = BoundaryNorm(levels, ncolors=cmap_obj.N, extend=extend)
+
     # PLOT
-    if log_scale:
-        # LogNorm requires strictly positive data -- clip instead of letting
-        # any zero/negative values (e.g. from interpolation/smoothing) error
-        z_plot = np.clip(z, vmin * 1e-2, None)
-        cf = plt.contourf(x, y, z_plot, levels=levels, cmap=cmap,
-                          extend=extend, norm=LogNorm(vmin=vmin, vmax=vmax))
-    else:
-        cf = plt.contourf(x, y, z, vmin=vmin, vmax=vmax, levels=levels,
-                          cmap=cmap, extend=extend)
+    # Crosshair at the source (origin), for easy visual reference to where
+    # the event sits -- dashed, gray, and transparent so it reads as a
+    # guide rather than data, spanning the full extent of the axes
+    ax.axhline(0, color="gray", linestyle="--", linewidth=2, alpha=0.5,
+              zorder=6)
+    ax.axvline(0, color="gray", linestyle="--", linewidth=2, alpha=0.5,
+              zorder=6)
 
-    # Station markers for reference
-    plt.scatter(p2s.lons, p2s.lats, marker="v", alpha=0.75, c="None", 
-                ec="w", s=15, zorder=8)
+    # Translucent interpolated heatmap as soft spatial context -- optional,
+    # and deliberately low alpha so it reads as a backdrop, not the main
+    # signal (that's the markers below)
+    if interpolate:
+        ax.contourf(x, y, z, levels=levels, cmap=cmap, extend=extend,
+                   norm=norm, alpha=0.8, zorder=5)
 
-    # Annotate station name 
-    if False:
-        for lon_, lat_, id_ in zip(p2s.lons, p2s.lats, p2s.ids):
-            plt.text(lon_, lat_, id_, fontsize=7, color="w", alpha=0.5)
-        
+    # Large, solid-colored station markers -- the primary way the P/S ratio
+    # data is conveyed. Marker shape encodes which side of `threshold` a
+    # station falls on: 'o' for explosion-like (>= threshold), 'v' for
+    # earthquake-like (below). A separate ScalarMappable (rather than either
+    # scatter call) backs the colorbar, so it stays valid even if one of the
+    # two marker groups is empty
+    above = p2sratios_arr >= threshold
+    scatter_kwargs = dict(cmap=cmap, norm=norm, zorder=8)
+    plt.scatter(sta_x[~above], sta_y[~above], marker="d", s=185,
+               c=p2sratios_arr[~above], ec="w", lw=1.25, **scatter_kwargs)
+    plt.scatter(sta_x[above], sta_y[above], marker="o",
+               c=p2sratios_arr[above], ec="k", s=150, lw=0.75, **scatter_kwargs)
+    cf = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
+
     # Plot source as location or mechanism
-    mt = [p2s.cmt["Mrr"], p2s.cmt["Mtt"], p2s.cmt["Mpp"], 
+    mt = [p2s.cmt["Mrr"], p2s.cmt["Mtt"], p2s.cmt["Mpp"],
           p2s.cmt["Mrt"], p2s.cmt["Mrp"], p2s.cmt["Mtp"]]
     # Kludge past the fact that ObsPy can't plot the explosion-type nonisotropic
     # source correctly so we replace with an isotropic source
     if p2s.tag.endswith("013") or p2s.tag.endswith("NK6"):
-        mt = [3.258319e+23, 3.25825e+23, 3.25818e+23, 
+        mt = [3.258319e+23, 3.25825e+23, 3.25818e+23,
               24315570.0, -1093.535, -301.5596]
-    bb = beach(mt, xy=(p2s.srclon, p2s.srclat), width=5e-2, 
-               facecolor=mt_color, edgecolor="k", zorder=11, linewidth=1)
+    # width is in the map's data units (km, now that the source sits at the
+    # projected origin) -- ~5km gives a similar visual size to the old 0.05deg
+    bb = beach(mt, xy=(src_x, src_y), width=5,
+               facecolor=mt_color, edgecolor="k", zorder=11, linewidth=1.5)
     ax.add_collection(bb)
 
-    # Add coastline to the map (NK specific)
-    if os.path.exists(fid_coastline):
-        df = pd.read_csv(fid_coastline)
-        for i in df["polygon_id"].unique():
-            df[df["polygon_id"] == i].plot(x="longitude", y="latitude", 
-                                           ax=ax, legend=False, c=coast_color, 
-                                           lw=1.5, zorder=9
-                                           )
-
-    # Ruler(s): line + great-circle distance annotation between point pairs
-    if ruler:
-        # Accept either a single (point1, point2) pair or a list of pairs
-        if not isinstance(ruler[0][0], (list, tuple, np.ndarray)):
-            ruler = [ruler]
-        for point1, point2 in ruler:
-            add_ruler(ax, point1, point2)
-
-    # Accoutremont
-    plt.xlim([128.1, 129.78])  # Manually set
-    plt.ylim([40.56, 42.325])
-    plt.xticks(fontsize=14)
-    plt.yticks(fontsize=14)
-    ax.xaxis.set_major_locator(ticker.MultipleLocator(0.25))
-    ax.yaxis.set_major_locator(ticker.MultipleLocator(0.25))
-    ax.tick_params(axis="both", which="major", labelsize=14)
+    # Accoutremont -- same manually-cropped geographic window as before,
+    # just expressed in the local UTM km frame instead of lon/lat degrees
+    xlim_km, ylim_km = to_km([128.1, 129.78], [40.56, 42.325])
+    plt.xlim([-80, 62.1])
+    plt.ylim([-82.8, 107])
+    plt.xticks(fontsize=FONTSIZES["tick_labels"])
+    plt.yticks(fontsize=FONTSIZES["tick_labels"])
+    ax.xaxis.set_major_locator(ticker.MultipleLocator(10))
+    ax.yaxis.set_major_locator(ticker.MultipleLocator(10))
+    for axis in ["top", "bottom", "left", "right"]:
+        ax.spines[axis].set_linewidth(1.5)
+    ax.tick_params(axis="both", which="major",
+                   labelsize=FONTSIZES["tick_labels"])
     ax.set_aspect("equal")
 
-    plt.xlabel("Longitude", fontsize=14)
-    plt.ylabel("Latitude", fontsize=14)
+    plt.xlabel("Easting [km]", fontsize=FONTSIZES["axis_labels"])
+    plt.ylabel("Northing [km]", fontsize=FONTSIZES["axis_labels"])
     if not title:
         tag, src = p2s.tag.split("_")
         src = src.split("-")[-1]
-        tag = {"ALPHA": "1D", "BETA": "1D_TOPO", "CHARLIE": "1D_TOPO_SCTR"}[tag]
+        tag = {"ALPHA": "1D", "BETA": "1D+TOPO", "CHARLIE": "1D+TOPO+SCATTER"}[tag]
+        srcdict = {"001": "DOUBLE COUPLE (01)", 
+                   "015": "ISOTROPIC (15)",
+                   "013": "ASPHERICAL (13)",
+                   "NK6": "ALVIZURI TAPE 2018 (NK6)"}
+        title = f"{srcdict[src]} MODEL {tag}"
+                #  f"Z={p2s.cmt['depth']}km; "
+                #  f"comp={p2s.components}; "
+                #  f"freq={int(p2s.fmin)}\u2013{int(p2s.fmax)} Hz")
+    ax.set_title(title, fontsize=FONTSIZES["title"])
 
-        title = (f"Model={tag}; Src={src}; Z={p2s.cmt['depth']}km; "
-                 f"Comp={p2s.components}; Freq={p2s.fmin}\u2013{p2s.fmax} Hz")
-    ax.set_title(title, fontsize=16)
-
-    # Reserve a fixed-width strip on the right for the colorbar via `rect`,
-    # rather than just letting tight_layout() use the full figure width.
-    # This matters because the colorbar's own Axes (cax) is appended AFTER
-    # tight_layout() runs (see below) -- if tight_layout() weren't told to
-    # leave this margin, it would let `ax` stretch to fill the whole figure,
-    # leaving no room for the colorbar's tick labels once cax gets carved
-    # out of that space, clipping them off the right edge of the figure.
-    # The reserved fraction is constant regardless of `colorbar`, so `ax`
-    # still doesn't move when the colorbar is toggled on/off.
-    plt.tight_layout(rect=[0, 0, 0.90, 1])
+    # Reserve a strip on the right for the colorbar via `rect`, rather than
+    # just letting tight_layout() use the full figure width. This matters
+    # because the colorbar's own Axes (cax) is appended AFTER tight_layout()
+    # runs (see below) -- if tight_layout() weren't told to leave this
+    # margin, it would let `ax` stretch to fill the whole figure, leaving no
+    # room for the colorbar's tick labels once cax gets carved out of that
+    # space, clipping them off the right edge of the figure. The reserved
+    # fraction is constant regardless of `colorbar`, so `ax` still doesn't
+    # move when the colorbar is toggled on/off.
+    #
+    # Note `ax.set_aspect("equal")` (below) makes `ax` height-bound: its
+    # rendered width in inches is fixed by the data's aspect ratio and the
+    # figure's fixed height, so past a certain point offering it more
+    # rect width does nothing but grow unused right-margin whitespace --
+    # 0.97 leaves just enough slack for the colorbar+its labels (checked
+    # against both linear and log-scale tick label widths) without leaving
+    # a large, wasted gap between it and the figure edge.
+    #
+    # The left bound is pulled in slightly too (rather than left at 0) --
+    # pinning it exactly to the figure edge left tight_layout() with no
+    # slack to push the axes right to fit the rotated y-axis label, which
+    # then rendered a few pixels past the left edge of the canvas and got
+    # clipped in the saved figure.
+    plt.tight_layout(rect=[0.02, 0, 0.97, 1])
 
     # Colorbar lives on its own Axes, appended here -- AFTER tight_layout()
     # rather than before. tight_layout() recomputes subplot spacing from
@@ -752,9 +818,11 @@ def plot_heatmap(p2s, threshold=0.8, interpolate=True, method="linear",
         cb.set_label(rf"$\leftarrow$ Earthquake    "
                      rf"[P/S Ratio]     "
                      rf"Explosion $\rightarrow$",
-                     fontsize=15, c="k")
-        cb.ax.get_yaxis().labelpad = -50
-        cb.ax.tick_params(labelsize=14)
+                     fontsize=FONTSIZES["colorbar_label"], c="w")
+        cb.ax.get_yaxis().labelpad = -55
+        cb.ax.tick_params(labelsize=FONTSIZES["colorbar_ticks"])
+        cb.ax.axhline(threshold, c="w", lw=2)
+        cb.outline.set_linewidth(1.25)
         if log_scale:
             # Default LogNorm tick labels render in scientific notation
             # (e.g. "8x10^-1") -- show the same plain decimal values used
@@ -767,8 +835,10 @@ def plot_heatmap(p2s, threshold=0.8, interpolate=True, method="linear",
     # Subplot label -- `ax` is now the same size/position either way, so
     # this no longer needs a separate position per colorbar on/off
     if subplot_label:
-        plt.figtext(0.09, .9, s=subplot_label, c="k", fontsize=27.5,
+        plt.figtext(0.02, .995, s=subplot_label, c="k",
+                    fontsize=FONTSIZES["subplot_label"],
                     zorder=250, ha="left", va="top")
+
 
     # overlay waveforms + p/s picks for user-requested stations directly on
     # the map, pinned to their true lon/lat location. this must happen after
@@ -791,11 +861,11 @@ def plot_heatmap(p2s, threshold=0.8, interpolate=True, method="linear",
                 continue
 
             idx = ids.index(station)
-            lon_, lat_ = p2s.lons[idx], p2s.lats[idx]
+            x_, y_ = sta_x[idx], sta_y[idx]
 
-            add_waveform_inset(f, ax, lon_, lat_, tr, p_idx, s_idx,
+            add_waveform_inset(f, ax, x_, y_, tr, p_idx, s_idx,
                                width=.25, height=0.15, annotate=annotate)
-            ax.scatter(lon_, lat_, marker="v", c="w", ec="k",  zorder=100,
+            ax.scatter(x_, y_, marker="v", c="w", ec="k",  zorder=100,
                        s=30)
 
     if save:
@@ -826,6 +896,10 @@ def parse_args():
     parser.add_argument("--log-scale", action="store_true",
                         help="color the heatmap on a log scale instead of "
                              "linear")
+    parser.add_argument("--no-interpolate", action="store_true",
+                        help="skip the interpolated heatmap and instead "
+                             "plot the actual station locations, colored by "
+                             "their P/S ratio")
     parser.add_argument("--annotate", action="store_true")
     parser.add_argument("--save", type=str, nargs="?", default=None)
     parser.add_argument("--noshow", action="store_true")
@@ -846,11 +920,6 @@ def parse_args():
                         help="Gaussian smoothing sigma (in grid cells) "
                              "applied to the interpolated heatmap; 0 to "
                              "disable")
-    parser.add_argument("--ruler", type=float, nargs="+", default=None,
-                        help="draw a ruler line + distance annotation (km) "
-                             "between two points on the heatmap; give one "
-                             "or more groups of 'lon1 lat1 lon2 lat2'")
-
     return parser.parse_args()
 
 
@@ -864,12 +933,12 @@ def main():
 
     # Custom set the subplot labels
     try:
-        subplot_label = {"ALPHA/TDL-015": "A)",
-                         "ALPHA/TDL-001": "B)",
+        subplot_label = {"ALPHA/TDL-001": "A)",
+                         "ALPHA/TDL-015": "B)",
                          "ALPHA/TDL-013": "C)",
                          "ALPHA/NK6": "D)",
-                         "CHARLIE/TDL-015": "A)",
-                         "CHARLIE/TDL-001": "B)",
+                         "CHARLIE/TDL-001": "A)",
+                         "CHARLIE/TDL-015": "B)",
                          "CHARLIE/TDL-013": "C)",
                          "CHARLIE/NK6": "D)",
                          }[str(path)]
@@ -894,16 +963,6 @@ def main():
     p2s.calculate_ratio(i=args.i, j=args.j, parallel=args.parallel,
                         ntasks=args.ntasks)
 
-    # Create rulers to add to heatmap figure
-    ruler = None
-    if args.ruler:
-        if len(args.ruler) % 4 != 0:
-            raise ValueError("--ruler must be given in groups of 4 floats: "
-                             "lon1 lat1 lon2 lat2")
-        ruler = [((args.ruler[i], args.ruler[i + 1]),
-                  (args.ruler[i + 2], args.ruler[i + 3]))
-                 for i in range(0, len(args.ruler), 4)]
-
     if args.save:
         save = args.save
     else:
@@ -912,9 +971,10 @@ def main():
     plot_heatmap(p2s, save=save, show=not args.noshow,
                  method="linear", grid_res=args.grid_res,
                  smooth_sigma=args.smooth_sigma,
-                 highlight_stations=args.stations, ruler=ruler,
+                 highlight_stations=args.stations,
                  subplot_label=subplot_label, colorbar=not args.colorbaroff,
-                 annotate=args.annotate, log_scale=args.log_scale
+                 annotate=args.annotate, log_scale=args.log_scale,
+                 interpolate=not args.no_interpolate
                  )
 
 

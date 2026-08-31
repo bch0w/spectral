@@ -30,6 +30,8 @@ from matplotlib.colors import Normalize
 from matplotlib.dates import date2num, AutoDateLocator
 from matplotlib.ticker import MultipleLocator
 from matplotlib.patches import Rectangle
+from matplotlib import patheffects
+from matplotlib.path import Path
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from obspy import read, UTCDateTime, Stream
@@ -48,8 +50,27 @@ except ImportError:
 SECONDS_PER_DAY = 3600.0 * 24.0
 
 # !!! BCBC
-YAXISOFF=False
-PEAKAMP=False
+YAXISOFF=True
+PEAKAMP=True
+
+# Central control for all figure fontsizes. Change a value here to update it
+# everywhere it is used in the script.
+FONTSIZES = {
+    "title": 16,
+    "subplot_label": 27.5,
+    "axis_label": 14.,
+    "xtick_label": 14.,
+    "ytick_label": 14.,
+    "legend": 11,
+    "yaxis_offset": 14,
+    "taup_phase_label": 14,
+    "group_velocity_label": 14,
+    "spectrogram_colorbar_label": 8,
+    "spectrogram_trace_id": 8,
+    "xtick_date_label": "small",
+    "waveform_index_label": "large",
+    "waveform_index_label_highlight": "large",
+}
 
 def parse_args():
     """All modifications are accomplished with command line arguments"""
@@ -167,7 +188,15 @@ def parse_args():
                         help="label for units, defaults to displacement")
     parser.add_argument("-y", "--ylim", nargs="+", type=float, default=None,
                         help="amplitude axis limits in s")
-    
+    parser.add_argument("--ylim_grid", nargs="+", type=float, default=None,
+                        help="Only used if `wf_type`=='grid'. Set a different "
+                             "y-axis limit for each subplot, given as a flat "
+                             "list of ymin/ymax pairs, one pair per subplot, "
+                             "e.g., '--ylim_grid -1 1 -2 2' sets the first "
+                             "subplot to [-1, 1] and the second to [-2, 2]. "
+                             "Must provide a pair for each subplot in the "
+                             "grid. Overrides `--ylim` for grid plots")
+
     # Time axis (X-axis)
     parser.add_argument("-t", "--time", nargs="?", type=str, default="s",
                     help="units for x-axis/time axis. choice: 's'econds "
@@ -518,11 +547,13 @@ def convert_timezone(code, st):
 
     
 def set_plot_aesthetic(
-        ax, xtick_labels=True, ytick_labels=True, 
-        ytick_fontsize=12., xtick_fontsize=12., tick_linewidth=1.5,
+        ax, xtick_labels=True, ytick_labels=True,
+        ytick_fontsize=FONTSIZES["ytick_label"],
+        xtick_fontsize=FONTSIZES["xtick_label"], tick_linewidth=1.5,
         tick_length=5., tick_direction="in", ytick_format="sci",
-        xlabel_fontsize=12., ylabel_fontsize=12., axis_linewidth=1.5, 
-        spine_zorder=500, title_fontsize=12.,
+        xlabel_fontsize=FONTSIZES["axis_label"],
+        ylabel_fontsize=FONTSIZES["axis_label"], axis_linewidth=1.5,
+        spine_zorder=500, title_fontsize=FONTSIZES["title"],
         spine_top=True, spine_bot=True, spine_left=True, spine_right=True, 
         xtick_minor=None, xtick_major=None, ytick_minor=None, ytick_major=None,
         xgrid_major=True, xgrid_minor=True, ygrid_major=True, ygrid_minor=True,
@@ -562,6 +593,7 @@ def set_plot_aesthetic(
     if ytick_format == "sci":
         try:
             ax.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
+            ax.yaxis.get_offset_text().set_fontsize(FONTSIZES["yaxis_offset"])
         except AttributeError:
             # If we are in log format axis this will not work
             pass
@@ -620,7 +652,7 @@ def _set_xaxis_obspy_dates(ax, ticklabels_small=True, minticks=3, maxticks=6):
     ax.xaxis.set_major_formatter(ObsPyAutoDateFormatter(locator))
     ax.xaxis.set_major_locator(locator)
     if ticklabels_small:
-        plt.setp(ax.get_xticklabels(), fontsize='small')
+        plt.setp(ax.get_xticklabels(), fontsize=FONTSIZES["xtick_date_label"])
 
 def cmaphex(nvals, cmap="seismic"):
     """
@@ -634,6 +666,14 @@ def cmaphex(nvals, cmap="seismic"):
         # rgb2hex accepts rgb or rgba
         hex_out.append(mpl.colors.rgb2hex(rgba))
     return hex_out
+
+
+# Downward-pointing triangle marker whose apex sits at (0, 0), i.e., at the
+# actual data point, rather than the default 'v' marker which is centered on
+# the data point (half the triangle above, half below). Vertices mirror
+# Matplotlib's built-in 'triangle_down' path, shifted up by 1 unit so the
+# apex lands on the origin instead of the centroid.
+TRIANGLE_DOWN_TIP_MARKER = Path([[0, 0], [1, 2], [-1, 2], [0, 0]], closed=True)
 
 
 class PrettyPlot():
@@ -651,7 +691,7 @@ class PrettyPlot():
                  nrows=None, ncols=None,
                  # Plotting Aesthetics
                  colors="k", alphas=None, labels=None, linewidth=0.5, 
-                 ylabel="amplitude", ylim=None, xlim=None,
+                 ylabel="amplitude", ylim=None, ylim_grid=None, xlim=None,
                  # Time Axis
                  time="s", minticks=3, maxticks=6, tmarks=None, 
                  tmarks_c="k", group_vels=None,
@@ -712,6 +752,7 @@ class PrettyPlot():
         self.labels = labels
         self.linewidth = linewidth
         self.ylim = ylim
+        self.ylim_grid = ylim_grid
         self.ylabel = ylabel
 
         # Time axis
@@ -719,6 +760,9 @@ class PrettyPlot():
         self.maxticks = maxticks
         self.minticks = minticks
         self.xlim = xlim
+        # Relative time requires xlim to be float values
+        if not self.time.startswith("a"):
+            self.xlim = [float(_) for _ in self.xlim]
         self.tmarks = tmarks
         self.tmarks_c = tmarks_c
         self.group_vels = group_vels
@@ -776,6 +820,7 @@ class PrettyPlot():
         self._labels = None 
         self._colors = None
         self._alphas = None
+        self._ylims = None
 
         # Parameter conflicts
         if self.wf_type == "grid":
@@ -1083,9 +1128,9 @@ class PrettyPlot():
                     zorder=6+i, alpha=a, label=l, 
                     )
                 if self.xlim:
-                    x = self.xlim[0]
+                    x = self.xlim[0] * 1.01
                 else:
-                    x = self._xvals[0]
+                    x = self._xvals[0] * 1.01
 
                 # OPTIONAL: annotate the index number next to the waveform
                 if YAXISOFF:
@@ -1093,17 +1138,27 @@ class PrettyPlot():
                     # 3-component
                     if False:
                         j = (i + 1) // 3
-                        ax.text(x, data[0], s=f"{j:0>2}{l[-1]}", c="k", 
-                                fontsize="small", zorder=200)
+                        ax.text(x, data[0], s=f"{j:0>2}{l[-1]}", c="k",
+                                fontsize=FONTSIZES["waveform_index_label"],
+                                zorder=200)
                     # Z-axis only
                     else:
                         j = i+1
                         if j not in [1, 15, 29]:
-                            ax.text(x, data[0], s=f"{j:0>2}", c="k", 
-                                    fontsize="small",  zorder=200)
+                            ax.text(x, data[0], s=f"{j:0>2}", c="k",
+                                    fontsize=FONTSIZES["waveform_index_label"],
+                                    zorder=200, va="center",
+                                    path_effects=[patheffects.withStroke(
+                                        linewidth=3, foreground="w")]
+                                    )
                         else:
-                            ax.text(x, data[0], s=f"{j:0>2} ({jdict[j]})", c="k", 
-                                    fontsize="medium", zorder=200)
+                            ax.text(x, data[0], s=f"{j:0>2} ({jdict[j]})", c="k",
+                                    fontsize=FONTSIZES[
+                                        "waveform_index_label_highlight"],
+                                    zorder=200, va="center",
+                                    path_effects=[patheffects.withStroke(
+                                        linewidth=3, foreground="w")]
+                                    )
 
     def plot_additional_traces(self):
         """
@@ -1201,7 +1256,8 @@ class PrettyPlot():
         else:
             _label = r"PSD [$(m/s^2/Hz)$]"
             _labelpad = -25
-        cbar.ax.set_ylabel(_label, rotation=270, labelpad=_labelpad, fontsize=8)
+        cbar.ax.set_ylabel(_label, rotation=270, labelpad=_labelpad,
+                           fontsize=FONTSIZES["spectrogram_colorbar_label"])
 
         # HACKY: pushes over the waveform plot over by the same amount but '
         # then turns the space invisible to preserve the shared x-axis
@@ -1287,9 +1343,10 @@ class PrettyPlot():
             max_amp = np.amax(self.st[0].data[win_start:win_end])
 
             # !!! BCBC
-            for ax in self.axs:
+            for ax_i, ax in enumerate(self.axs):
+                ylim = self._ylims[ax_i] or self.ylim
                 for time in times:
-                    ax.axvline(time, alpha=1,  ls="-", color=cvals[i], 
+                    ax.axvline(time, alpha=1,  ls="-", color=cvals[i],
                                zorder=100)
 
                     if name not in plotted_names:
@@ -1297,8 +1354,9 @@ class PrettyPlot():
                         #     y = -4E-4
                         # else:
                         #     y = YLABEL
-                        ax.text(x=time, y=self.ylim[0]*0.8, s=name, 
-                                c="k", zorder=125, fontsize=12)
+                        ax.text(x=time, y=ylim[0]*0.8, s=name,
+                                c="k", zorder=125,
+                                fontsize=FONTSIZES["taup_phase_label"])
                         plotted_names.append(name)
 
         # Plot the global ray paths for sanity check
@@ -1335,15 +1393,23 @@ class PrettyPlot():
                 ax.axvline(tmark, c=c, lw=1, zorder=100, 
                            ls="--", alpha=0.8)
 
-    def plot_group_vels(self, c="r", alpha=1, ls="-", lw=1.5, fontsize=10,
-                        zorder=100):
+    def plot_group_vels(self, c="r", alpha=1, ls="-", lw=2.,
+                        fontsize=FONTSIZES["group_velocity_label"],
+                        outline_color="w", outline_width=6, zorder=100):
         """
         Create time mark lines for a given set of group velocities `group_vel`
         given in units of km/s
         Requires values from TauP arrivals, namely: `tp_dist` and `tp_start`
         to get the correct arrival time
-        Annotates the value of the group velocity at the max amplitude of the 
-        waveform. 
+        Annotates the value of the group velocity at the max amplitude of the
+        waveform.
+
+        :type outline_color: str
+        :param outline_color: color of the outline stroked around the
+            annotation text, making it legible over busy waveforms
+        :type outline_width: float
+        :param outline_width: linewidth of the outline stroked around the
+            annotation text
         """
         # Get phase arrivals from TauP if requested
         assert(self.tp_dist_km is not None or self.tp_dist_deg is not None)
@@ -1376,16 +1442,21 @@ class PrettyPlot():
             else:
                 time += tp_start 
 
-            for ax in self.axs:
+            for ax_i, ax in enumerate(self.axs):
+                ylim = self._ylims[ax_i] or self.ylim
                 # Plot discrete arrivals
-                ax.axvline(time, ymin=0, ymax=0.05, alpha=alpha, ls=ls, lw=lw, 
+                ax.axvline(time, ymin=0, ymax=0.05, alpha=alpha, ls=ls, lw=lw,
                            c=c, zorder=zorder)
-                # self.ax.text(x=time, y=self.st[0].max(), s=f"{name}km/s", 
+                # self.ax.text(x=time, y=self.st[0].max(), s=f"{name}km/s",
                 #              fontsize=fontsize, color=c, alpha=alpha)
                 # !!! BCBC
                 # One space infront of label to get away from the line
-                ax.text(x=time, y=0.9*self.ylim[0], s=f" {name}km/s", 
-                        fontsize=fontsize, color=c, alpha=alpha, zorder=250)
+                ax.text(x=time, y=0.7*ylim[0], s=f" {name} km/s",
+                        fontsize=fontsize, color=c, alpha=alpha, zorder=250,
+                        ha="center",
+                        path_effects=[patheffects.withStroke(
+                            linewidth=outline_width, foreground=outline_color)
+                            ])
 
     def plot_peak_amplitudes(self):
         """
@@ -1402,8 +1473,8 @@ class PrettyPlot():
                        "Sg": [277.78, 277.78 + tmax * 4 ], # 307.69],
                         },
                 500: {"Pn": [65.68, 65.68 + tmax * 2],
-                      "Pg": [86.18, 86.18 + tmax * 24],
-                      "Sn": [117.59, 117.59 + tmax * 2],
+                      "Pg": [86.18, 86.18 + tmax * 12],
+                      "Sn": [117.59+7, 117.59+7 + tmax * 1.75],
                       "Sg": [131.57, 131.57 + tmax * 4],
                       },
                 250: {"Pn": [33., 38.44], 
@@ -1420,36 +1491,50 @@ class PrettyPlot():
         windows = self.windows[self.tp_dist_km]
         sr = self.st[0].stats.sampling_rate
         cvals = cmaphex(nvals=len(windows), cmap=self.tp_cmap)
-    
 
         # Plot phase arrival, search window, and peak amplitude
         for i, (label, window) in enumerate(windows.items()):
             # Only plot a window patch once
             patch_plotted = False
-            for ax, data in zip(self.axs, self._data):
+            for ax_i, (ax, data) in enumerate(zip(self.axs, self._data)):
+                ylim = self._ylims[ax_i] or self.ylim
                 samp_start, samp_end = [int(_*sr) for _ in window]
 
                 # Figure out the correct time index to plot the figure
-                idx_max = np.argmax(np.abs(data[samp_start:samp_end])) 
+                idx_max = np.argmax(np.abs(data[samp_start:samp_end]))
                 idx_max += samp_start
                 # Get the index in units of the time axis
                 time_max = idx_max / sr
 
                 # Plot the peak amplitude within the search window
-                ax.scatter(time_max, np.abs(data[idx_max]), c=cvals[i], marker="v",
-                           s=20, ec="k", zorder=250,
-                           label=f"{label}: {np.sqrt(data[idx_max]**2):.2E}",
-                           )
-                           
+                if i == (len(windows) - 1):
+                    _c_line = "darkgoldenrod"
+                else:
+                    _c_line = cvals[i]
+
+                if False:
+                    ax.axvline(time_max, c=_c_line,
+                               label=f"{label} = {np.sqrt(data[idx_max]**2):.2E}",
+                               lw=1.75, zorder=5, alpha=0.75, ls="--")
+                else:
+                    ax.scatter(time_max, np.abs(data[idx_max]), c=cvals[i],
+                               marker=TRIANGLE_DOWN_TIP_MARKER,
+                               s=100, ec="k", zorder=250,
+                               label=f"{label}: {np.sqrt(data[idx_max]**2):.2E}",
+                               alpha=0.75, lw=0.5
+                               )
+
                 # Plot the search window, only plot the patch once
                 if not patch_plotted:
                     ax.add_patch(
                         Rectangle(
-                            xy=(window[0], self.ylim[0]), 
+                            xy=(window[0], ylim[0]),
                             width=window[1] - window[0],
-                            height=np.abs(self.ylim[0]) + np.abs(self.ylim[1]),
+                            height=np.abs(ylim[0]) + np.abs(ylim[1]),
                             facecolor=cvals[i], alpha=0.25, zorder=150)
                             )
+                    ax.text(window[0], ylim[1]*.97, s=label, c=_c_line,
+                            fontsize=16, zorder=200, ha="right")
                     patch_plotted = True
                     
     def set_ylim(self):
@@ -1464,22 +1549,47 @@ class PrettyPlot():
         else:
             self.ylim = plt.ylim()
 
+        # Allow a different ylim for each subplot when using grid-style plots
+        if self.wf_type == "grid" and self.ylim_grid:
+            assert(len(self.ylim_grid) == 2 * len(self.axs)), (
+                f"`ylim_grid` must provide a [ymin, ymax] pair for each of "
+                f"the {len(self.axs)} grid subplots, i.e., "
+                f"{2 * len(self.axs)} values, not {len(self.ylim_grid)}"
+                )
+            self._ylims = [self.ylim_grid[2 * i: 2 * i + 2]
+                           for i in range(len(self.axs))]
+        else:
+            self._ylims = [self.ylim] * len(self.axs)
+
     def set_plot_aesthetics(self):
         """
         Set plot aesthetics
         """
-        for ax in self.axs:
+        # For grid plots, only the bottom-most subplot in each column should
+        # carry an x-axis label
+        if self.wf_type == "grid":
+            bottom_axes = set()
+            for col in range(self.ncols):
+                col_idxs = [i for i in range(len(self.axs))
+                            if i % self.ncols == col]
+                if col_idxs:
+                    bottom_axes.add(col_idxs[-1])
+        else:
+            bottom_axes = set(range(len(self.axs)))
+
+        for i, ax in enumerate(self.axs):
             if self.legend:
-                leg = ax.legend(loc="upper right", bbox_to_anchor=(1,1), 
-                                bbox_transform=ax.transAxes, 
-                                prop={"size": 8},
-                                ncol=self.ncol_legend, fontsize='small')
+                leg = ax.legend(loc="upper right", bbox_to_anchor=(1,1),
+                                bbox_transform=ax.transAxes,
+                                prop={"size": FONTSIZES["legend"]},
+                                ncol=self.ncol_legend)
                 leg.set(zorder=100)
 
-            if self.time.startswith("a"):
-                ax.set_xlabel(f"Time [UTC{self.time[1:]}]")
-            else:
-                ax.set_xlabel(f"Time [{self.time}]")
+            if i in bottom_axes:
+                if self.time.startswith("a"):
+                    ax.set_xlabel(f"Time [UTC{self.time[1:]}]")
+                else:
+                    ax.set_xlabel(f"Time [{self.time}]")
             if self.ylabel:
                 ax.set_ylabel(self.ylabel)
             else:
@@ -1496,16 +1606,17 @@ class PrettyPlot():
             ax.set_xlim(xstart, xend)  
 
             # Subset y axis for waveform plot
-            if self.ylim:
-                ax.set_ylim(self.ylim[0], self.ylim[1])
+            if self._ylims[i]:
+                ax.set_ylim(self._ylims[i][0], self._ylims[i][1])
 
             # Spectrogram annotation if there are multiple waveforms plotted
             # put it outside the axis so it shows up on white background
             if self.spectrogram and len(self.st) > 1:
-                self.ax.text(0.99, 1.01, self.st[self.sp_idx].get_id(), 
-                                horizontalalignment="right", 
-                                verticalalignment="bottom", 
-                                transform=self.ax.transAxes, fontsize=8)
+                self.ax.text(0.99, 1.01, self.st[self.sp_idx].get_id(),
+                                horizontalalignment="right",
+                                verticalalignment="bottom",
+                                transform=self.ax.transAxes,
+                                fontsize=FONTSIZES["spectrogram_trace_id"])
 
             # Finish off by setting plot aesthetics
             set_plot_aesthetic(ax, ytick_labels=False)
@@ -1533,7 +1644,7 @@ class PrettyPlot():
                 title = f"{self.title_prepend}{title}"
         else:
             title = self.title
-        self.ax.set_title(title, fontsize=14)  # !!! BCBC
+        self.ax.set_title(title, fontsize=FONTSIZES["title"])  # !!! BCBC
         # plt.suptitle(title)
 
         # Brute force turn off everything
@@ -1550,9 +1661,9 @@ class PrettyPlot():
         """
         # Get xlim and ylim from the axis, assuming everything has been set
         plt.sca(self.axs[0])
-        plt.figtext(0.001, .99, s=self.subplot_label, c="k", fontsize=27.5,  
+        plt.figtext(0.001, .99, s=self.subplot_label, c="k",
+                    fontsize=FONTSIZES["subplot_label"],
                     zorder=250, ha="left", va="top")
-        
 
     def finalize(self):
         """
@@ -1564,8 +1675,10 @@ class PrettyPlot():
             else:
                 _fid_out = self.save
             print(f"\tsaving to {_fid_out}")
-            plt.savefig(_fid_out, transparent=self.transparent,
-                        bbox_inches="tight")
+            plt.savefig(_fid_out, transparent=self.transparent)
+            
+            # bbox_inches='tight' screws with the actual figure dimensions
+                        #bbox_inches="tight")
 
         if self.show:
             plt.show()
