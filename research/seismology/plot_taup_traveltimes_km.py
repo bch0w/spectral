@@ -24,56 +24,11 @@ DEFAULT_MODEL = (
 DEFAULT_PHASES = ["Pg", "Pn", "PmP", "Sg", "Sn", "SmS"]
 
 # Each P-family phase gets its own cool sequential colormap, each
-# S-family phase its own warm one; a phase's triplication legs are
-# then different shades sampled from that one colormap.
+# S-family phase its own warm one, sampled once at a fixed point so
+# the whole phase (including any triplication branches it folds
+# through) is a single consistent color.
 COOL_CMAPS = ["Blues", "Greens", "Purples", "BuGn", "GnBu", "PuBu"]
 WARM_CMAPS = ["Reds", "OrRd", "YlOrBr", "RdPu", "OrRd", "Wistia"]
-
-# Leg 1 of a triplication is solid, leg 2 dashed, leg 3 dotted, etc.,
-# cycling if a phase somehow has more legs than this.
-LINESTYLES = ["-", "--", ":", "-."]
-
-
-def _fold_split_indices(x, min_points=6):
-    """Split a 1D array into (start, end) index pairs at its local
-    extrema, i.e. wherever it stops increasing and starts decreasing
-    or vice versa.
-
-    A triplicated phase's distance-vs-time branches are usually
-    returned by TauP as one continuous, non-monotonic array (it only
-    breaks into separate arrays at true shadow-zone gaps), so this is
-    needed to recover the individual legs for separate coloring.
-    TauP's internal tau branches (split at every model discontinuity,
-    not just at ray turning points) also introduce short spurious
-    "legs" a few samples long right at branch boundaries; these are
-    merged into the preceding leg rather than kept as their own.
-
-    :param x: Values to split, e.g. a branch's epicentral distances.
-    :type x: numpy.ndarray
-    :param min_points: Minimum sample count for a run to count as its
-        own leg; shorter runs are merged into the previous leg.
-    :type min_points: int
-    :returns: Inclusive ``(start, end)`` index pairs, one per leg.
-    :rtype: list[tuple[int, int]]
-    """
-    n = len(x)
-    if n < 3:
-        return [(0, n - 1)] if n else []
-    sign = np.sign(np.diff(x))
-    for i in range(1, len(sign)):
-        if sign[i] == 0:
-            sign[i] = sign[i - 1]
-    turns = np.where(np.diff(sign) != 0)[0] + 1
-    bounds = [0, *turns, n - 1]
-    legs = [(bounds[i], bounds[i + 1]) for i in range(len(bounds) - 1)]
-
-    merged = []
-    for start, end in legs:
-        if merged and (end - start + 1) < min_points:
-            merged[-1] = (merged[-1][0], end)
-        else:
-            merged.append((start, end))
-    return merged
 
 
 def _clip_to_window(dist_km, time_s, max_km):
@@ -123,13 +78,18 @@ def _clip_to_window(dist_km, time_s, max_km):
 
 def compute_phase_legs(source_depth_km, phase_list=DEFAULT_PHASES,
                         model=DEFAULT_MODEL, max_km=500.0, plot_all=True):
-    """Split each requested phase into its individual triplication legs
-    and assign each leg its own color.
+    """Gather each requested phase's branches and assign each phase its
+    own color.
 
     This is the shared computation behind :func:`plot_travel_times_km`
-    and :func:`plot_ray_paths_km`, so that a given leg (e.g. "Pg"
-    turning in the upper vs. lower crust) is drawn in the same color
-    on both the travel-time curve and the ray-path fan.
+    and :func:`plot_ray_paths_km`, so that a given phase (e.g. "Sg",
+    including whatever triplication branches it folds through) is
+    drawn in the same color on both the travel-time curve and the
+    ray-path fan. A phase is only split into multiple entries here
+    when TauP itself reports a genuine shadow-zone gap
+    (``_shadow_zone_splits()``); it is not further split at
+    triplication fold points, so a phase retains its own single color
+    and linestyle throughout.
 
     :param source_depth_km: Source depth, in kilometers.
     :type source_depth_km: float
@@ -143,13 +103,14 @@ def compute_phase_legs(source_depth_km, phase_list=DEFAULT_PHASES,
     :param plot_all: Also consider the branch mirrored past the
         antipode.
     :type plot_all: bool
-    :returns: One dict per leg with keys ``phase``, ``label``,
+    :returns: One dict per phase (or per shadow-zone segment, for a
+        phase with a genuine gap) with keys ``phase``, ``label``,
         ``color``, ``linestyle``, ``seismic_phase`` (the underlying
         :class:`~obspy.taup.seismic_phase.SeismicPhase`), ``lo``/
         ``hi`` (inclusive absolute indices into
-        ``seismic_phase.ray_param``/``.dist``/``.time`` for this leg),
-        ``dist_km``, ``time_s``, ``mask``, ``mirror_km``, and
-        ``mirror_mask``.
+        ``seismic_phase.ray_param``/``.dist``/``.time`` for this
+        segment), ``dist_km``, ``time_s``, ``mask``, ``mirror_km``,
+        and ``mirror_mask``.
     :rtype: list[dict]
     """
     if not isinstance(model, TauPyModel):
@@ -160,63 +121,47 @@ def compute_phase_legs(source_depth_km, phase_list=DEFAULT_PHASES,
     depth_corrected_model = model.model.depth_correct(source_depth_km)
     phase_names = sorted(parse_phase_list(phase_list))
 
-    cool_i = 0
-    warm_i = 0
     phase_colors = {}
     legs = []
-    for phase in phase_names:
+    for i, phase in enumerate(phase_names):
         ph = SeismicPhase(phase, depth_corrected_model)
 
-        # Collect only the legs that actually fall inside the window.
-        phase_branches = []
+        # Hardcode look
+        if phase == "Pg":
+            color = "tab:blue"
+            ls = "-"
+        elif phase == "Pn":
+            color = "tab:green"
+            ls="--"
+        elif phase == "Sg":
+            color = "tab:orange"
+            ls="-"
+        elif phase == "Sn":
+            color = "tab:red"
+            ls="--"
+
+        # Collect only the segments that actually fall inside the
+        # window.
         for s in ph._shadow_zone_splits():
-            dist_km_full = ph.dist[s] * radius_km
-            time_s_full = ph.time[s]
-            for a, b in _fold_split_indices(dist_km_full):
-                dist_km = dist_km_full[a:b + 1]
-                time_s = time_s_full[a:b + 1]
-                mask = dist_km <= max_km
-                mirror_km = circumference_km - dist_km
-                mirror_mask = mirror_km <= max_km
-                if mask.any() or (plot_all and mirror_mask.any()):
-                    phase_branches.append((s.start + a, s.start + b,
-                                            dist_km, time_s, mask,
-                                            mirror_km, mirror_mask))
-
-        n_branches = len(phase_branches)
-
-        # Assign this phase its own color: warm for S-family names, cool
-        # for everything else (P-family). Different phases within the
-        # same family get different colormaps (e.g. Pg -> Blues, Pn ->
-        # Greens) so they stay distinguishable from each other; every
-        # leg of a given phase shares that one color, and is instead
-        # told apart by linestyle (see LINESTYLES).
-        if phase not in phase_colors:
-            if phase.startswith("S"):
-                cmap_name = WARM_CMAPS[warm_i % len(WARM_CMAPS)]
-                warm_i += 1
-            else:
-                cmap_name = COOL_CMAPS[cool_i % len(COOL_CMAPS)]
-                cool_i += 1
-            phase_colors[phase] = plt.get_cmap(cmap_name)(0.6)
-        color = phase_colors[phase]
-
-        for j, (lo, hi, dist_km, time_s, mask, mirror_km, mirror_mask) \
-                in enumerate(phase_branches):
-            linestyle = LINESTYLES[j % len(LINESTYLES)]
-            label = phase if n_branches == 1 else f"{phase} (leg {j + 1})"
-            legs.append(dict(
-                phase=phase, label=label, color=color,
-                linestyle=linestyle, seismic_phase=ph,
-                lo=lo, hi=hi, dist_km=dist_km, time_s=time_s, mask=mask,
-                mirror_km=mirror_km, mirror_mask=mirror_mask,
-            ))
+            dist_km = ph.dist[s] * radius_km
+            time_s = ph.time[s]
+            mask = dist_km <= max_km
+            mirror_km = circumference_km - dist_km
+            mirror_mask = mirror_km <= max_km
+            if mask.any() or (plot_all and mirror_mask.any()):
+                legs.append(dict(
+                    phase=phase, label=phase, linestyle=ls, color=color,
+                    seismic_phase=ph, lo=s.start, hi=s.start + len(dist_km) - 1,
+                    dist_km=dist_km, time_s=time_s, mask=mask,
+                    mirror_km=mirror_km, mirror_mask=mirror_mask,
+                ))
     return legs
 
 
 def plot_travel_times_km(source_depth_km, phase_list=DEFAULT_PHASES,
                           model=DEFAULT_MODEL, max_km=500.0, plot_all=True,
-                          legend=True, ax=None, show=True):
+                          legend=True, ax=None, show=True, save=False,
+                          dpi=100):
     """Plot TauP travel-time curves with distance in kilometers.
 
     :param source_depth_km: Source depth, in kilometers.
@@ -244,7 +189,7 @@ def plot_travel_times_km(source_depth_km, phase_list=DEFAULT_PHASES,
                               plot_all=plot_all)
 
     if ax is None:
-        _, ax = plt.subplots(figsize=(8, 12), dpi=100)
+        _, ax = plt.subplots(figsize=(6, 8), dpi=dpi)
 
     for leg in legs:
         mask = leg["mask"]
@@ -253,18 +198,18 @@ def plot_travel_times_km(source_depth_km, phase_list=DEFAULT_PHASES,
         if mask.any():
             d, t = _clip_to_window(leg["dist_km"], leg["time_s"], max_km)
             ax.plot(d, t, label=leg["label"], color=leg["color"],
-                    linestyle=leg["linestyle"])
+                    linestyle=leg["linestyle"], lw=1.75)
             plotted = True
         if plot_all and mirror_mask.any():
             d, t = _clip_to_window(leg["mirror_km"], leg["time_s"], max_km)
             ax.plot(d, t, label=None if plotted else leg["label"],
-                    color=leg["color"], linestyle=leg["linestyle"])
+                    color=leg["color"], linestyle=leg["linestyle"], lw=1.75)
 
     if legend:
         handles, labels = ax.get_legend_handles_labels()
         by_label = dict(zip(labels, handles))
         ax.legend(by_label.values(), by_label.keys(), loc="best",
-                  numpoints=1, fontsize=12)
+                  numpoints=1, fontsize=15, frameon=False)
 
     ax.grid(True)
 
@@ -277,28 +222,37 @@ def plot_travel_times_km(source_depth_km, phase_list=DEFAULT_PHASES,
         ax.spines[axis].set_linewidth(1.25)
     ax.set_xlim(20, 100)
     #ax.set_ylim(bottom=0.0)
-    ax.set_ylim(5, 30)
+    ax.set_ylim(5, 25)
 
     plt.axvline(60, c="k", zorder=3, lw=2, ls="--")
 
+    # Without this, the y-axis label (and the tick labels next to it)
+    # can get clipped at the left edge of the figure, since the axes
+    # box doesn't otherwise leave room for a fontsize=16 label.
+    ax.figure.tight_layout()
+
+    if save:
+        plt.savefig(save, bbox_inches="tight")
     if show:
         plt.show()
+
     return ax
 
 
 def plot_ray_paths_km(source_depth_km, phase_list=DEFAULT_PHASES,
                        model=DEFAULT_MODEL, max_km=500.0,
-                       wiggly_s=True, legend=True, ax=None, show=True):
+                       wiggly_s=True, legend=True, ax=None, show=True,
+                       save=False, dpi=100):
     """Plot TauP ray paths in a distance-vs-depth cross section, colored
-    to match :func:`plot_travel_times_km`'s triplication legs.
+    to match :func:`plot_travel_times_km`'s phase colors.
 
     Similar to ``Arrivals.plot_rays(plot_type="cartesian")``, except
-    the x-axis is kilometers rather than degrees, and each
-    triplication leg (as split by :func:`compute_phase_legs`) is drawn
-    in its own color instead of one color per phase name.
+    the x-axis is kilometers rather than degrees, and colors are
+    assigned per :func:`compute_phase_legs` (cool colors for P-family
+    phases, warm for S-family).
 
-    Each leg contributes exactly one ray: the one that arrives at
-    ``max_km``. A leg whose reachable distance range doesn't extend
+    Each phase contributes exactly one ray: the one that arrives at
+    ``max_km``. A phase whose reachable distance range doesn't extend
     out to ``max_km`` is skipped rather than drawing a shorter ray, so
     every line in the plot ends exactly at the right edge instead of
     stopping short of it or, if picked from some other distance,
@@ -339,7 +293,7 @@ def plot_ray_paths_km(source_depth_km, phase_list=DEFAULT_PHASES,
                               model=model, max_km=max_km, plot_all=False)
 
     if ax is None:
-        _, ax = plt.subplots(figsize=(8, 6), dpi=100)
+        _, ax = plt.subplots(figsize=(6, 8), dpi=dpi)
 
     degrees = np.degrees(max_km / radius_km)
     for leg in legs:
@@ -353,38 +307,42 @@ def plot_ray_paths_km(source_depth_km, phase_list=DEFAULT_PHASES,
         except Exception:
             continue
         # A single distance can have several crossings during a
-        # triplication; keep only the one belonging to this leg.
+        # triplication; keep only ones belonging to this phase segment
+        # (relevant if the phase has more than one shadow-zone
+        # segment) and just take the first -- with legs no longer
+        # split at fold points, any of them is an equally valid single
+        # representative ray for this phase.
         matches = [a for a in arrivals
                    if leg["lo"] <= a.ray_param_index <= leg["hi"]]
         if not matches:
             continue
         arrival = matches[0]
-        path_dist_km = arrival.path["dist"] * radius_km
-        path_depth_km = arrival.path["depth"]
-        plot_kwargs = dict(label=leg["label"], color=leg["color"])
-        if wiggly_s and leg["phase"].startswith("S"):
-            with plt.rc_context({"path.sketch": (2, 10, 1)}):
-                ax.plot(path_dist_km, path_depth_km, **plot_kwargs)
-        else:
-            ax.plot(path_dist_km, path_depth_km, linestyle=leg["linestyle"],
-                    zorder=10, **plot_kwargs)
+        for arrival in arrivals:
+            path_dist_km = arrival.path["dist"] * radius_km
+            path_depth_km = arrival.path["depth"]
+            plot_kwargs = dict(label=leg["label"], color=leg["color"])
+            if wiggly_s and leg["phase"].startswith("S"):
+                with plt.rc_context({"path.sketch": (6, 20, 1)}):
+                    ax.plot(path_dist_km, path_depth_km, lw=1, **plot_kwargs)
+            else:
+                ax.plot(path_dist_km, path_depth_km, linestyle=leg["linestyle"],
+                        zorder=10, **plot_kwargs)
 
     # Reference lines at the model's velocity discontinuities.
     discons = model.model.s_mod.v_mod.get_discontinuity_depths()
-    xlim = (0, max_km)
     for depth in discons:
         if depth <= max_km * 2:  # skip absurdly deep ones for a tight plot
-            ax.axhline(depth, color="0.75", lw=1.5, zorder=-1)
+            ax.axhline(depth, color="0.75", lw=2, zorder=-1)
 
     ax.plot([0], [source_depth_km], marker="*", color="#FEF215",
             markersize=16, zorder=10, markeredgewidth=1.2,
-            markeredgecolor="0.3", clip_on=False)
+            markeredgecolor="k", clip_on=False)
 
     if legend:
         handles, labels = ax.get_legend_handles_labels()
         by_label = dict(zip(labels, handles))
         ax.legend(by_label.values(), by_label.keys(), loc="lower right",
-                  numpoints=1)
+                  numpoints=1, frameon=False, fontsize=15)
 
     ax.set_xlabel("Distance (km)", fontsize=16)
     ax.set_ylabel("Depth (km)", fontsize=16)
@@ -393,8 +351,8 @@ def plot_ray_paths_km(source_depth_km, phase_list=DEFAULT_PHASES,
     ax.tick_params(axis="y", labelsize=14)
     for axis in ["top", "bottom", "left", "right"]:
         ax.spines[axis].set_linewidth(1.25)
-    ax.set_xlim(*xlim)
-    ax.set_ylim(0, 24)
+    ax.set_xlim(-2, max_km+1)
+    ax.set_ylim(-2, 21)
 
     # Annotate each layer's Vp/Vs, right at the depth where it ends.
     # A layer that extends past the bottom of the plot (the "mantle"
@@ -415,21 +373,29 @@ def plot_ray_paths_km(source_depth_km, phase_list=DEFAULT_PHASES,
         ax.text(x_text, y_text, f"Vp={vp:.2f}, Vs={vs:.2f}", fontsize=12,
                 color="k", va="bottom", ha="left", zorder=10,
                 bbox=dict(facecolor="white", alpha=0.7, edgecolor="none",
-                          pad=1))
+                                          pad=1))
         if bot > y_bottom:
             break
 
     ax.invert_yaxis()
 
+    # Same fix as plot_travel_times_km: without this, the y-axis label
+    # (and its tick labels) can get clipped at the left edge of the
+    # figure.
+    ax.figure.tight_layout()
+
+    if save:
+        plt.savefig(save, bbox_inches="tight")
     if show:
         plt.show()
+
     return ax
 
 
 if __name__ == "__main__":
-    kwargs = {
+    kwargs = {"dpi": 250,
               "source_depth_km": 0.25,
               "phase_list": ["Pg", "Pn", "Sg", "Sn"], 
               }
-    plot_travel_times_km(max_km=100, show=False, **kwargs)
-    plot_ray_paths_km(max_km=60, **kwargs)
+    plot_travel_times_km(max_km=120, show=False, save="ak135f_tt.png", **kwargs)
+    plot_ray_paths_km(max_km=60, save="ak135f_rp.png", **kwargs)

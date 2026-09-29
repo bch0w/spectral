@@ -589,7 +589,7 @@ def plot_scatterplot(paths, fmin=2, fmax=4, components="Z", j=-1):
 
 def plot_heatmap(p2s, threshold=0.8, interpolate=True, method="linear",
                  grid_res=200, smooth_sigma=1.5, levels=20, save="./figures",
-                 cmap="viridis", mt_color="gold", highlight_stations=None,
+                 cmap="viridis", mt_color="red", highlight_stations=None,
                  title=None, subplot_label=None, annotate=True,
                  colorbar=True, show=True, log_scale=False):
     """
@@ -768,12 +768,15 @@ def plot_heatmap(p2s, threshold=0.8, interpolate=True, method="linear",
     if not title:
         tag, src = p2s.tag.split("_")
         src = src.split("-")[-1]
-        tag = {"ALPHA": "1D", "BETA": "1D+TOPO", "CHARLIE": "1D+TOPO+SCATTER"}[tag]
-        srcdict = {"001": "DOUBLE COUPLE (01)", 
-                   "015": "ISOTROPIC (15)",
-                   "013": "ASPHERICAL (13)",
-                   "NK6": "ALVIZURI TAPE 2018 (NK6)"}
+        tag = {"ALPHA": "1D", "BETA": "1D+TOPO", "CHARLIE": "1D+TOPO+SCATTER",
+               "NGLL5": "NGLL5 1D+TOPO+SCATTER", 
+               "NGLL7": "NGLL7 1D+TOPO+SCATTER"}[tag]
+        srcdict = {"001": "DOUBLE COUPLE (E01)", 
+                   "015": "ISOTROPIC (E15)",
+                   "013": "ASPHERICAL (E13)",
+                   "NK6": "NORTH KOREA 2017 (NK6)"}
         title = f"{srcdict[src]} MODEL {tag}"
+        title = f"{tag} {srcdict[src]}"
                 #  f"Z={p2s.cmt['depth']}km; "
                 #  f"comp={p2s.components}; "
                 #  f"freq={int(p2s.fmin)}\u2013{int(p2s.fmax)} Hz")
@@ -941,10 +944,11 @@ def main():
                          "CHARLIE/TDL-015": "B)",
                          "CHARLIE/TDL-013": "C)",
                          "CHARLIE/NK6": "D)",
+                         "NGLL5/NK6": "A)",
+                         "NGLL7/NK6": "B)",
                          }[str(path)]
     except KeyError:
         subplot_label = ""
-
 
     path_src = f"tour_de_lune/CMTSOLUTION_{tag}"
     path_sta = "STATIONS"

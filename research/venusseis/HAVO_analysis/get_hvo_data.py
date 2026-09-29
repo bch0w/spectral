@@ -7,16 +7,19 @@ from obspy import read, UTCDateTime, Stream
 from obspy.clients.fdsn import Client
 
 
-c = Client("IRIS")
-path_out = "/Users/chow/Data/nodes/2025-03_HAVO_VENUS/hvodata"
+c = Client("EARTHSCOPE")
+path_out = "./"
+pre_filt = [.001, .005, 120, 125]
+# codes = ["HV.DESD..EH?", "HV.MITD.*.?H?", "HV.KAED..EH?", "IU.POHA.*.BH?"]
+codes = ["HV.DESD..EHZ"]
+juldays = [87]  # range(81, 124, 1)
 
 # Gather for each station0
-for code in ["HV.DESD..EH?", "HV.MITD.*.?H?", "HV.KAED..EH?", "IU.POHA.*.BH?"]:
+for code in codes:
     net, sta, loc, cha = code.split(".")
 
     # Gather for each day of the deployment
-    # for julday in range(81, 124, 1):  # temp deploy length
-    for julday in range(87, 88, 1):  # temp deploy length
+    for julday in juldays:
         start = UTCDateTime(f"2025-{julday:0>3}T00:00:00") 
         end = UTCDateTime(f"2025-{julday:0>3}T23:59:59.59999") 
 
@@ -35,7 +38,7 @@ for code in ["HV.DESD..EH?", "HV.MITD.*.?H?", "HV.KAED..EH?", "IU.POHA.*.BH?"]:
                              endtime=end, level="response")
 
         # Remove response
-        st.remove_response(inventory=inv, output="VEL")
+        st.remove_response(inventory=inv, output="VEL", pre_filt=pre_filt)
 
         # Write to disk
         for tr in st:
@@ -46,10 +49,3 @@ for code in ["HV.DESD..EH?", "HV.MITD.*.?H?", "HV.KAED..EH?", "IU.POHA.*.BH?"]:
         del st
 
 
-# for comp in ["E", "N", "Z"]:
-#     # Check existing files
-#     fid_check = f"{net}.{sta}.*.??{comp}.{start.year}.{start.julday}"
-#     check_bool = glob(os.path.join(path_out, fid_check))
-#     if bool(check_bool):
-#         print(f"{fid_check} exists, skipping")
-#         continue
