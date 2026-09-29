@@ -52,15 +52,15 @@ SECONDS_PER_DAY = 3600.0 * 24.0
 # Central control for all figure fontsizes. Change a value here to update it
 # everywhere it is used in the script.
 FONTSIZES = {
-    "title": 16,
+    "title": 14,
     "subplot_label": 27.5,
-    "axis_label": 14.,
-    "xtick_label": 14.,
-    "ytick_label": 14.,
-    "legend": 11,
-    "yaxis_offset": 14,
-    "taup_phase_label": 14,
-    "group_velocity_label": 14,
+    "axis_label": 12.,
+    "xtick_label": 12.,
+    "ytick_label": 12.,
+    "legend": 10,
+    "yaxis_offset": 12,
+    "taup_phase_label": 12,
+    "group_velocity_label": 12,
     "spectrogram_colorbar_label": 8,
     "spectrogram_trace_id": 8,
     "xtick_date_label": "small",
@@ -748,9 +748,6 @@ class PrettyPlot():
         self.maxticks = maxticks
         self.minticks = minticks
         self.xlim = xlim
-        # Relative time requires xlim to be float values
-        if not self.time.startswith("a"):
-            self.xlim = [float(_) for _ in self.xlim]
         self.tmarks = tmarks
         self.tmarks_c = tmarks_c
         self.group_vels = group_vels
@@ -1117,34 +1114,6 @@ class PrettyPlot():
                 else:
                     x = self._xvals[0] * 1.01
 
-                # OPTIONAL: annotate the index number next to the waveform
-                if YAXISOFF:
-                    jdict = {1: "DC", 15: "ISO", 29: "CLVD"}
-                    # 3-component
-                    if False:
-                        j = (i + 1) // 3
-                        ax.text(x, data[0], s=f"{j:0>2}{l[-1]}", c="k",
-                                fontsize=FONTSIZES["waveform_index_label"],
-                                zorder=200)
-                    # Z-axis only
-                    else:
-                        j = i+1
-                        if j not in [1, 15, 29]:
-                            ax.text(x, data[0], s=f"{j:0>2}", c="k",
-                                    fontsize=FONTSIZES["waveform_index_label"],
-                                    zorder=200, va="center",
-                                    path_effects=[patheffects.withStroke(
-                                        linewidth=3, foreground="w")]
-                                    )
-                        else:
-                            ax.text(x, data[0], s=f"{j:0>2} ({jdict[j]})", c="k",
-                                    fontsize=FONTSIZES[
-                                        "waveform_index_label_highlight"],
-                                    zorder=200, va="center",
-                                    path_effects=[patheffects.withStroke(
-                                        linewidth=3, foreground="w")]
-                                    )
-
     def plot_additional_traces(self):
         """
         Plot additional time series with a common X axis but with a different Y 
@@ -1427,85 +1396,6 @@ class PrettyPlot():
                            c=c, zorder=zorder)
                 ax.text(x=time, y=self.st[0].max(), s=f"{name}km/s",
                              fontsize=fontsize, color=c, alpha=alpha)
-
-    def plot_peak_amplitudes(self):
-        """
-        Given a series of time windows, select the maximum waveform amplitude 
-        and plot its value, as well as the time windows
-        """
-        raise NotImplementedError("Custom routine, not currently used")
-        tmax = 1 / self.fmin
-        if not self.windows:
-            self.windows = {
-                1000: {"Pn": [127.62, 127.62 + tmax * 2],
-                       "Pg": [169.48, 169.48 + tmax * 24], 
-                       "Sn": [228.57, 228.57 + tmax * 2], 
-                       "Sg": [277.78, 277.78 + tmax * 4 ], # 307.69],
-                        },
-                500: {"Pn": [65.68, 65.68 + tmax * 2],
-                      "Pg": [86.18, 86.18 + tmax * 12],
-                      "Sn": [117.59+7, 117.59+7 + tmax * 1.75],
-                      "Sg": [131.57, 131.57 + tmax * 4],
-                      },
-                250: {"Pn": [33., 38.44], 
-                    "Pg": [41.47, 53.41], 
-                    "Sn": [65, 68.92], 
-                    "Sg": [69.83, 78], 
-                    }, 
-                150: {"Pn": [21.9, 26.73], 
-                    "Pg": [26.73, 31.8], 
-                    "Sn": [44.68, 48.8],  
-                    "Sg": [42, 44.8], 
-                    }
-            }
-        windows = self.windows[self.tp_dist_km]
-        sr = self.st[0].stats.sampling_rate
-        cvals = cmaphex(nvals=len(windows), cmap=self.tp_cmap)
-
-        # Plot phase arrival, search window, and peak amplitude
-        for i, (label, window) in enumerate(windows.items()):
-            # Only plot a window patch once
-            patch_plotted = False
-            for ax_i, (ax, data) in enumerate(zip(self.axs, self._data)):
-                ylim = self._ylims[ax_i] or self.ylim
-                samp_start, samp_end = [int(_*sr) for _ in window]
-
-                # Figure out the correct time index to plot the figure
-                idx_max = np.argmax(np.abs(data[samp_start:samp_end]))
-                idx_max += samp_start
-                # Get the index in units of the time axis
-                time_max = idx_max / sr
-
-                # Plot the peak amplitude within the search window
-                if i == (len(windows) - 1):
-                    _c_line = "darkgoldenrod"
-                else:
-                    _c_line = cvals[i]
-
-                if False:
-                    ax.axvline(time_max, c=_c_line,
-                               label=f"{label} = {np.sqrt(data[idx_max]**2):.2E}",
-                               lw=1.75, zorder=5, alpha=0.75, ls="--")
-                else:
-                    ax.scatter(time_max, np.abs(data[idx_max]), c=cvals[i],
-                               marker=TRIANGLE_DOWN_TIP_MARKER,
-                               s=100, ec="k", zorder=250,
-                               label=f"{label}: {np.sqrt(data[idx_max]**2):.2E}",
-                               alpha=0.75, lw=0.5
-                               )
-
-                # Plot the search window, only plot the patch once
-                if not patch_plotted:
-                    ax.add_patch(
-                        Rectangle(
-                            xy=(window[0], ylim[0]),
-                            width=window[1] - window[0],
-                            height=np.abs(ylim[0]) + np.abs(ylim[1]),
-                            facecolor=cvals[i], alpha=0.25, zorder=150)
-                            )
-                    ax.text(window[0], ylim[1]*.97, s=label, c=_c_line,
-                            fontsize=16, zorder=200, ha="right")
-                    patch_plotted = True
                     
     def set_ylim(self):
         """Establish ylims either by user set or from the natural plot lims"""
