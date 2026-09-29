@@ -49,10 +49,6 @@ except ImportError:
 
 SECONDS_PER_DAY = 3600.0 * 24.0
 
-# !!! BCBC
-YAXISOFF=True
-PEAKAMP=True
-
 # Central control for all figure fontsizes. Change a value here to update it
 # everywhere it is used in the script.
 FONTSIZES = {
@@ -603,12 +599,6 @@ def set_plot_aesthetic(
         except AttributeError:
             pass
 
-    # !!! BCBC
-    if YAXISOFF:
-        ax.ticklabel_format(axis="y", style="plain")
-        # ax.tick_params(axis="y", which="both", left=False)
-        plt.yticks([])
-
     # Set xtick label major and minor which is assumed to be a time series
     if xtick_major:
         ax.xaxis.set_major_locator(MultipleLocator(float(xtick_major)))
@@ -706,8 +696,6 @@ class PrettyPlot():
                  # Additional Time Series
                  add_trace=None, tr_time="a", tr_label="", tr_ylabel="", 
                  tr_color="C0", 
-                 # !!! BCBC
-                 windows=None,
                  # Misc.
                  fig_size=None, dpi=100, fig_len=None, fig_asp=None, 
                  legend=True, ncol_legend=1, title=None, title_append="",
@@ -793,9 +781,6 @@ class PrettyPlot():
         self.tr_label = tr_label
         self.tr_ylabel = tr_ylabel
         self.tr_color = tr_color
-
-        # !!!BCBC
-        self.windows = windows
 
         # Figure output control
         self.fig_size = fig_size
@@ -1337,23 +1322,16 @@ class PrettyPlot():
             else:
                 times = [tp_start + time for time in times]
 
-            # Figure out the maximum amplitude in this time window
-            win_start = find_nearest(self._xvals, times[0])
-            win_end = find_nearest(self._xvals, times[-1]) + 1
-            max_amp = np.amax(self.st[0].data[win_start:win_end])
-
-            # !!! BCBC
+            # Plot a vertical line for each of the arrivals and add to legend
             for ax_i, ax in enumerate(self.axs):
                 ylim = self._ylims[ax_i] or self.ylim
                 for time in times:
                     ax.axvline(time, alpha=1,  ls="-", color=cvals[i],
                                zorder=100)
 
+                    # TauP often returns multiple arrivals for the same phase
+                    # name, only label the first one, the colors will match tho
                     if name not in plotted_names:
-                        # if name == "Pn":
-                        #     y = -4E-4
-                        # else:
-                        #     y = YLABEL
                         ax.text(x=time, y=ylim[0]*0.8, s=name,
                                 c="k", zorder=125,
                                 fontsize=FONTSIZES["taup_phase_label"])
@@ -1447,23 +1425,15 @@ class PrettyPlot():
                 # Plot discrete arrivals
                 ax.axvline(time, ymin=0, ymax=0.05, alpha=alpha, ls=ls, lw=lw,
                            c=c, zorder=zorder)
-                # self.ax.text(x=time, y=self.st[0].max(), s=f"{name}km/s",
-                #              fontsize=fontsize, color=c, alpha=alpha)
-                # !!! BCBC
-                # One space infront of label to get away from the line
-                ax.text(x=time, y=0.7*ylim[0], s=f" {name} km/s",
-                        fontsize=fontsize, color=c, alpha=alpha, zorder=250,
-                        ha="center",
-                        path_effects=[patheffects.withStroke(
-                            linewidth=outline_width, foreground=outline_color)
-                            ])
+                ax.text(x=time, y=self.st[0].max(), s=f"{name}km/s",
+                             fontsize=fontsize, color=c, alpha=alpha)
 
     def plot_peak_amplitudes(self):
         """
         Given a series of time windows, select the maximum waveform amplitude 
         and plot its value, as well as the time windows
         """
-        # !!! BCBC
+        raise NotImplementedError("Custom routine, not currently used")
         tmax = 1 / self.fmin
         if not self.windows:
             self.windows = {
@@ -1644,7 +1614,8 @@ class PrettyPlot():
                 title = f"{self.title_prepend}{title}"
         else:
             title = self.title
-        self.ax.set_title(title, fontsize=FONTSIZES["title"])  # !!! BCBC
+
+        self.ax.set_title(title, fontsize=FONTSIZES["title"])
         # plt.suptitle(title)
 
         # Brute force turn off everything
@@ -1709,8 +1680,6 @@ class PrettyPlot():
             self.plot_group_vels()
         if self.tp_phases:
             self.plot_taup_arrivals()
-        if PEAKAMP:
-            self.plot_peak_amplitudes()  # !!! BCBC
         if self.subplot_label:
             self.annotate_subplot_label()
         self.set_plot_aesthetics()
