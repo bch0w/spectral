@@ -48,6 +48,7 @@ OUTPUT = "VEL"  # output unit; DISP=displacement, VEL=velocity, ACC=acceleration
 
 #  Output parameters
 OUTPUT_PATH = "./resprmv"  # path to save new data files with resp. removed
+OVERWRITE = True  # if False, will not overwrite existing files
 
 # Rename internal stream stats to match filename. Filename MUST be in the 
 # following format or this will fail: NN.SSSS.LL.CCC.YYYY.JJJ
@@ -100,7 +101,7 @@ for fid in files:
 
     # Check if this data has already been processed
     path_out = os.path.join(OUTPUT_PATH, fid_out)
-    if os.path.exists(path_out):
+    if os.path.exists(path_out) and not OVERWRITE:
         print("skipped, already processed")
         continue
 
@@ -129,7 +130,9 @@ for fid in files:
     inv[0][0][0].location_code = loc
 
     # Remove response with optional options
-    st.remove_response(inventory=inv, pre_filt=PRE_FILT, output=OUTPUT)
+    breakpoint()
+    st.remove_response(inventory=inv, pre_filt=PRE_FILT, output=OUTPUT, 
+                       plot=True)
 
     # Write out new file with response removed
     st.write(path_out, format="MSEED")
