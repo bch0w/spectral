@@ -1109,10 +1109,6 @@ class PrettyPlot():
                 ax.plot(self._xvals, data,  c=c,  lw=self.linewidth,
                     zorder=6+i, alpha=a, label=l, 
                     )
-                if self.xlim:
-                    x = self.xlim[0] * 1.01
-                else:
-                    x = self._xvals[0] * 1.01
 
     def plot_additional_traces(self):
         """
