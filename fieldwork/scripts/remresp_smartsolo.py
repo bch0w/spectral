@@ -130,9 +130,7 @@ for fid in files:
     inv[0][0][0].location_code = loc
 
     # Remove response with optional options
-    breakpoint()
-    st.remove_response(inventory=inv, pre_filt=PRE_FILT, output=OUTPUT, 
-                       plot=True)
+    st.remove_response(inventory=inv, pre_filt=PRE_FILT, output=OUTPUT)
 
     # Write out new file with response removed
     st.write(path_out, format="MSEED")
