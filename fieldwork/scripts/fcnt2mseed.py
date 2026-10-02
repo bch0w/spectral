@@ -43,7 +43,6 @@ Arguments:
 import argparse
 import os
 from obspy import read, UTCDateTime
-from obspy.clients.nrl import NRL
 
 
 def get_band_code(sampling_rate_hz):
@@ -104,7 +103,7 @@ def print_stream_info(st):
     print(f"\tmax endttime:  {tmax}")
     print(f"\tjulian days range: {tmin.julday} -> {tmax.julday}")
 
-def parse_st_for_jday_and_comp(st, jday, component):
+def parse_st_for_jday_and_comp(st, year, jday, component):
     """
     Given a Stream object, return a new Stream object that contains only the
     traces that fall within the given julian day
@@ -226,7 +225,7 @@ def main():
                     print(f"\tfile '{filename}' exists in 'output', skipping")
                     continue
 
-                st_out = parse_st_for_jday_and_comp(st, jday=jday, 
+                st_out = parse_st_for_jday_and_comp(st, year=year, jday=jday, 
                                                     component=component)
                 for tr in st_out:
                     tr.stats.network = network
