@@ -41,8 +41,10 @@ this will help select the available choices for parameters. See below.
     is enforced by the ObsPy read function. This is done by default here.
 """
 import os
+import re
 import argparse
 import warnings
+from itertools import groupby
 from obspy import read, read_inventory
 
 # Available parameters choices for each node type
@@ -69,6 +71,20 @@ PARAMETERS = {
         }
     }
 BASE_NRL_URL = "https://service.earthscope.org/irisws/nrl/1/combine?"
+
+# Format code -> (attribute name, regex). Code fields have flexible widths so
+# 'S' or 'SSS' both match 3--5 char station names; date fields have fixed
+# widths so that delimiter-free dates (e.g., YYYYMMDD) can still be split
+FIELDS = {
+    "N": ("network", r"[A-Za-z0-9]{1,2}"),
+    "S": ("station", r"[A-Za-z0-9]{1,5}"),
+    "L": ("location", r"[A-Za-z0-9]{0,2}"),
+    "C": ("channel", r"[A-Za-z0-9]{3}"),
+    "Y": ("year", r"\d{4}"),
+    "M": ("month", r"\d{2}"),
+    "D": ("day", r"\d{2}"),
+    "J": ("julday", r"\d{3}"),
+}
 
 
 def parse_args():
@@ -105,8 +121,21 @@ def parse_args():
                         help="where to save the newly created files")
     common.add_argument("--overwrite", action="store_true",
                         help="overwrite any existing files in `save`")
-    common.add_argument("--rename", action="store_true",
-                        help="set NSLC stats from NN.SSSS.LL.CCC.YYYY.JJJ")
+    common.add_argument("--rename", nargs="?", default=None,
+                        const="NN.SSS.LL.CCC.YYYY.JJJ", metavar="FMT",
+                        help="set internal trace stats (network, station, "
+                             "location, channel) from the file name, for "
+                             "when raw stats do not match user-defined "
+                             "naming. Optionally provide a format string "
+                             "FMT describing the file name using codes "
+                             "N=network, S=station, L=location, C=channel, "
+                             "Y=year, M=month, D=day, J=julian day. Other "
+                             "characters are treated as delimiters and file "
+                             "extensions are ignored. If no FMT is given, "
+                             "defaults to 'NN.SSS.LL.CCC.YYYY.JJJ'. Code "
+                             "letter counts are not enforced (S matches 1-5 "
+                             "chars) but date codes are fixed width. "
+                             "e.g., --rename YYYYMMDD.NN.SSS.LL.CCC")
     common.add_argument("--write_inv", type=str, default="inventory.xml",
                         help="filename to write the response out as "
                              "a StationXML file for archival. This will write "
@@ -140,6 +169,37 @@ def parse_args():
                        help="low-cut filter setting")
 
     return parser.parse_args()
+
+
+def parse_fname(fname, fmt="NN.SSS.LL.CCC.YYYY.JJJ"):
+    """
+    Split a file name into its components based on a user-defined format
+    string. Runs of a format code (e.g., 'SSS') count as one field, all other
+    characters are treated as literal delimiters. Any trailing file
+    extension (e.g., .ms, .mseed, .MSEED) is ignored.
+
+    :type fname: str
+    :param fname: file name or path to parse, only the basename is used
+    :type fmt: str
+    :param fmt: format string built from codes N=network, S=station,
+        L=location, C=channel, Y=year, M=month, D=day, J=julian day
+    :rtype: dict
+    :return: parsed components keyed by attribute name, e.g., 'station'
+    :raises ValueError: if the file name does not match the format
+    """
+    pattern = ""
+    for char, _ in groupby(fmt):
+        if char in FIELDS:
+            name, regex = FIELDS[char]
+            pattern += f"(?P<{name}>{regex})"
+        else:
+            pattern += re.escape(char)
+    pattern += r"(?:\.[A-Za-z0-9]+)?"  # optional file extension
+
+    match = re.fullmatch(pattern, os.path.basename(fname))
+    if match is None:
+        raise ValueError(f"'{fname}' does not match format '{fmt}'")
+    return match.groupdict()
 
 
 def build_fairfield_response(preamp_db=0, sample_rate=250, filter_phase="LP",
@@ -287,14 +347,12 @@ def main():
     
         # Determine station naming from internal or from file
         if args.rename:
-            net, sta, loc, cha, *_ = fid.split(".")
-            # Rename internal stats based on filename
-            st[0].stats.network = net
-            st[0].stats.station = sta
-            st[0].stats.location = loc
-            st[0].stats.channel = cha
-        else:
-            net, sta, loc, cha = st[0].id.split(".")
+            parts = parse_fname(fid, args.rename)
+            for key in ("network", "station", "location", "channel"):
+                if key in parts:
+                    setattr(st[0].stats, key, parts[key])
+
+        net, sta, loc, cha = st[0].id.split(".")
 
         # Rename the inventory to match waveform so we can remove response
         inv[0].code = net
