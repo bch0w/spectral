@@ -16,9 +16,11 @@ this will help select the available choices for parameters. See below.
     $ python remresp.py fairfield XX.101..DHZ.2026.* \
         --sample_rate 250 --output_units count --pre_amp_gain 18 \
         --filter_phase LP --dc_filter Off --pre_filt .001 .005 120 125 \
-        --output VEL
+        --output VEL --water_level 60
 
-    $ python remresp.py smartsolo XX.101..DHZ.2026.101 ...
+    # Turn off default options including tapering, demean, and writing inv
+    $ python remresp.py smartsolo XX.101..DHZ.2026.101 --taper_fraction 0 \
+            --write_inv '' --zero_mean_off
 
 .. note:: count or mV kludge
 
@@ -50,6 +52,7 @@ this will help select the available choices for parameters. See below.
 """
 import os
 import argparse
+import warnings
 from obspy import read, read_inventory
 
 # Available parameters choices for each node type
@@ -89,20 +92,38 @@ def parse_args():
     # Arguments shared by every instrument
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("fids", nargs="+", help="required, file ID(s)")
+
+    # Arguments fed into `trace.remove_response()`
     common.add_argument("-f", "--pre_filt", nargs=4, type=float,
                         default=None, metavar=("F1", "F2", "F3", "F4"),
                         help="optional pre filter corners [Hz]")
-    # common.add_argument("-w", "--water_level")
-    common.add_argument("-i", "--output", default="VEL",
+    common.add_argument("--water_level", default=60, type=float,
+                        help="apply a water level in the response removal")
+    common.add_argument("--zero_mean_off", action="store_true",
+                        help="by default response removal zeroes the mean, you "
+                             "can turn it off with this flag (i.e., you will "
+                             "not demean data")
+    common.add_argument("--taper_fraction", type=float, default=0.05,
+                        help="apply a taper during response removal. If 0, "
+                             "no taper is applied")
+    common.add_argument("--output", type=str, default="VEL", 
                         choices=("DISP", "VEL", "ACC"),
                         help="output ground motion quantity")
-    common.add_argument("-s", "--save", default="./response_removed",
+
+    # File saving
+    common.add_argument("--save", default="./response_removed",
                         help="where to save the newly created files")
     common.add_argument("--overwrite", action="store_true",
                         help="overwrite any existing files in `save`")
     common.add_argument("--rename", action="store_true",
                         help="set NSLC stats from NN.SSSS.LL.CCC.YYYY.JJJ")
+    common.add_argument("--write_inv", type=str, default="inventory.xml",
+                        help="filename to write the response out as "
+                             "a StationXML file for archival. This will write "
+                             "the inventory for the first data file only. "
+                             "Set as empty string to toggle off")
 
+    # Instrument specific parameters
     parser = argparse.ArgumentParser(
         description="Remove nominal NRL response from node data")
     sub = parser.add_subparsers(dest="choice", required=True,
@@ -247,22 +268,17 @@ def main():
                                        dc_filter=args.dc_filter, 
                                        output_units=args.output_units
                                        )
-    print(url)
+    print(f"\n{url}\n")
     inv = read_inventory(url)
-    print(inv[0][0][0].response)
-
-    # See `Kludge` comment in top docstring for explanation of this operation
-    if args.output_units == "mV":
-        resp = inv[0][0][0].response
-        resp.response_stages[-1].output_units = "count"
-        resp.instrument_sensitivity.output_units = "count"
+    print(f"{inv[0][0][0].response}\n")
 
     # Change dip to match orientation, see note above
     if args.choice == "fairfield":
         inv[0][0][0].dip = -90.0
 
-    # Begin response removal from each dcata stream
-    for fid in args.fids:
+    # Begin response removal from each data stream
+    print("\n")
+    for i, fid in enumerate(args.fids):
         fid_out = os.path.basename(fid)
         print(fid_out, end="... ")
 
@@ -296,15 +312,23 @@ def main():
         inv[0][0][0].code = cha
         inv[0][0][0].location_code = loc
 
-        # Remove response with optional options
         st.remove_response(inv, output=args.output, pre_filt=args.pre_filt,
-                           water_level=60, taper=True, taper_fraction=0.05, 
-                           zero_mean=True)
+                           water_level=args.water_level,
+                           taper=bool(args.taper_fraction), 
+                           taper_fraction=args.taper_fraction, 
+                           zero_mean=not args.zero_mean_off)
         
         # Write out new file with response removed
         st.write(path_out, format="MSEED")
-        print("done")
+        print("complete")
+
+        # Write Inventory and Response to file
+        if i == 0 and args.write_inv:
+            inv.write(args.write_inv, format="STATIONXML")
+            print(f"Inventory written to '{args.write_inv}'")
 
 
 if __name__ == "__main__":
+    # See comment in top docstring about why this warning filter is here
+    warnings.filterwarnings("ignore", message="The unit 'MV'")
     main()
