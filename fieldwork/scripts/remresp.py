@@ -27,8 +27,7 @@ this will help select the available choices for parameters. See below.
     The warning message below is given if our input data is in units 'mV' 
     because this does not match ObsPy's internal mapping dictionaries. This is
     fine because we only want the gain that is added from this stage so we 
-    rename the intput units. If the output units are counts then this should
-    not be an issue
+    ignore the warning message to avoid confusion.
 
     UserWarning: The unit 'MV' is not known to ObsPy. It will be passed in to 
     evalresp as 'undefined'. This should result in evalresp using the response 
@@ -40,15 +39,6 @@ this will help select the available choices for parameters. See below.
     If Fairfield nodal data were converted using the `fcnt2mseed.py` script, 
     then metadata should define `dip=-90` to maintain +Z up orientation that 
     is enforced by the ObsPy read function. This is done by default here.
-
-.. notes:: Changelog
-
-    Updates
-    10/6/26: 
-        - Combined SmartSolo and Fairfield response removal scripts 
-        - Changed response getting to point at NRL URL rather than ObsPy.
-        - Fixed potential bug: ObsPy assumes raw data is in counts but this is
-            not always true. Option now to take in mV or counts raw data.
 """
 import os
 import argparse
