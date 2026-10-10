@@ -44,7 +44,6 @@ import os
 import re
 import argparse
 import warnings
-from itertools import groupby
 from obspy import read, read_inventory
 
 # Available parameters choices for each node type
@@ -134,8 +133,10 @@ def parse_args():
                              "extensions are ignored. If no FMT is given, "
                              "defaults to 'NN.SSS.LL.CCC.YYYY.JJJ'. Code "
                              "letter counts are not enforced (S matches 1-5 "
-                             "chars) but date codes are fixed width. "
-                             "e.g., --rename YYYYMMDD.NN.SSS.LL.CCC")
+                             "chars) but date codes are fixed width. Wrap "
+                             "literal text containing code letters in square "
+                             "brackets. e.g., --rename YYYYMMDD.NN.SSS.LL.CCC "
+                             "or --rename 'NN.SSS.LL.CCC.YYYY.JJJ[_SLICED]'")
     common.add_argument("--write_inv", type=str, default="inventory.xml",
                         help="filename to write the response out as "
                              "a StationXML file for archival. This will write "
@@ -175,8 +176,10 @@ def parse_fname(fname, fmt="NN.SSS.LL.CCC.YYYY.JJJ"):
     """
     Split a file name into its components based on a user-defined format
     string. Runs of a format code (e.g., 'SSS') count as one field, all other
-    characters are treated as literal delimiters. Any trailing file
-    extension (e.g., .ms, .mseed, .MSEED) is ignored.
+    characters are treated as literal delimiters. Text in square brackets is
+    matched literally, even if it contains format codes (e.g., '[_SLICED]').
+    Repeated codes are matched but only the first occurrence is kept. Any
+    trailing file extension (e.g., .ms, .mseed, .MSEED) is ignored.
 
     :type fname: str
     :param fname: file name or path to parse, only the basename is used
@@ -188,12 +191,24 @@ def parse_fname(fname, fmt="NN.SSS.LL.CCC.YYYY.JJJ"):
     :raises ValueError: if the file name does not match the format
     """
     pattern = ""
-    for char, _ in groupby(fmt):
-        if char in FIELDS:
-            name, regex = FIELDS[char]
-            pattern += f"(?P<{name}>{regex})"
+    seen = set()
+    # Tokens are either [literal text] or a run of one repeated character
+    for token in re.finditer(r"\[(?P<literal>[^\]]*)\]|(?P<run>(.)\3*)", fmt):
+        if token.group("literal") is not None:
+            pattern += re.escape(token.group("literal"))
+            continue
+        run = token.group("run")
+        if run[0] in FIELDS:
+            name, regex = FIELDS[run[0]]
+            # Only capture the first occurrence of a code; repeats are matched
+            # but discarded so that group names are not redefined
+            if name in seen:
+                pattern += f"(?:{regex})"
+            else:
+                pattern += f"(?P<{name}>{regex})"
+                seen.add(name)
         else:
-            pattern += re.escape(char)
+            pattern += re.escape(run)
     pattern += r"(?:\.[A-Za-z0-9]+)?"  # optional file extension
 
     match = re.fullmatch(pattern, os.path.basename(fname))

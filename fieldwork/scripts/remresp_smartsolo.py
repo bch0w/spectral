@@ -1,4 +1,12 @@
 """
+!!!
+NOTE PLEASE READ 10/8/26: 
+I have combined all functionality of this script and my fairfield
+response removal script into `remresp.py`. Please use that script moving forward
+I will no longer update or maintain this script but I will leave it in place
+for reference
+!!!
+
 Remove instrument response from SmartSolo IGU-BD3C-5 Instruments using
 EarthScope Nominal Response Library URLs (NRL)
 
@@ -38,7 +46,7 @@ from obspy import read, read_inventory
 # https://ds.iris.edu/ds/nrl/datalogger/dtcc/smartsolo-igu-bd3c-5/
 PREAMP_DB = 0  # 0 or 6
 SAMPLE_RATE = 100  
-FILTER_PHASE = "LP"  # LP (linear phase), MP (modulated phase)
+FILTER_PHASE = "LP"  # LP (linear phase), MP (minimum phase)
 DC_FILTER = "Off"  #  1, DC, Off
 OUTPUT_UNITS = "mV"  # count, mV
 
