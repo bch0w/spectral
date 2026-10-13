@@ -1109,6 +1109,7 @@ class PrettyPlot():
                 ax.plot(self._xvals, data,  c=c,  lw=self.linewidth,
                     zorder=6+i, alpha=a, label=l, 
                     )
+                print(data.max()) # !!!
 
     def plot_additional_traces(self):
         """
