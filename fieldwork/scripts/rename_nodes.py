@@ -65,6 +65,9 @@ indir = "./"
 outdir = "./"
 nproc = os.cpu_count()  # number of parallel worker processes
 overwrite = False  # if False, skip files whose output already exists
+# If True, delete each original file after its renamed copy has been written
+# successfully (i.e., a true rename). If False, originals are left untouched
+remove_original = True
 
 
 def template_fields(template):
@@ -197,7 +200,7 @@ def rename(fid):
     """
     Rename a single waveform file, updating trace headers and writing the
     result to `outdir`. Skips the file if the output exists and `overwrite`
-    is False.
+    is False. Deletes the original afterwards if `remove_original` is True.
 
     :type fid: str
     :param fid: full path to the input waveform file
@@ -228,6 +231,10 @@ def rename(fid):
     st.write(fid_tmp, format="MSEED")
     os.replace(fid_tmp, fid_out)
 
+    # Only reached if the write succeeded, so the data is never lost
+    if remove_original:
+        os.remove(fid)
+
     return f"{fid} -> {fid_out}"
 
 
@@ -249,8 +256,8 @@ def main():
     if not fids:
         sys.exit(f"no matching files found in {indir}")
 
-    # Validate before doing any work so a bad dict entry fails fast rather
-    # than leaving a partially renamed dataset
+    # Validate before doing any work; files that can't be parsed (e.g., ones
+    # already renamed by a previous run) are reported and skipped
     errors = []
     fids_process = []
     for fid in fids:
@@ -268,8 +275,6 @@ def main():
         sys.exit(0)
 
     os.makedirs(outdir, exist_ok=True)
-
-    breakpoint()
 
     nfail = 0
     with ProcessPoolExecutor(max_workers=nproc) as executor:
