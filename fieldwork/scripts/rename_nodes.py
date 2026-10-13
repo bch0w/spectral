@@ -252,20 +252,28 @@ def main():
     # Validate before doing any work so a bad dict entry fails fast rather
     # than leaving a partially renamed dataset
     errors = []
+    fids_process = []
     for fid in fids:
         try:
             parse_fid(fid)
+            fids_process.append(fid)
         except (KeyError, ValueError) as e:
             errors.append(e.args[0])
     if errors:
         print("\n".join(errors))
-        sys.exit(f"{len(errors)} file(s) could not be parsed, exiting")
+        print(f"{len(errors)} file(s) could not be parsed, skipping")
+    if fids_process:
+        print(f"{len(fids_process)} file(s) will be processed")
+    else:
+        sys.exit(0)
 
     os.makedirs(outdir, exist_ok=True)
 
+    breakpoint()
+
     nfail = 0
     with ProcessPoolExecutor(max_workers=nproc) as executor:
-        futures = {executor.submit(rename, fid): fid for fid in fids}
+        futures = {executor.submit(rename, fid): fid for fid in fids_process}
         for future in as_completed(futures):
             try:
                 print(future.result())
@@ -273,7 +281,7 @@ def main():
                 nfail += 1
                 print(f"FAIL: {futures[future]}: {e}")
 
-    print(f"finished {len(fids)} files with {nfail} failures")
+    print(f"finished {len(fids_process)} files with {nfail} failures")
     if nfail:
         sys.exit(1)
 
