@@ -68,7 +68,7 @@ from pysep.utils.io import read_stations, write_stations_file  # noqa: E402
 KERNELS = {"Lov": "TT", "Ray": "ZZ"}
 OLD_ORIGIN = "2019-01-01T00:00:00"
 NEW_ORIGIN = "2019-01-01T00:00:00"
-LENGTH_S = 20 * 60.
+LENGTH_S = None
 
 
 # =============================================================================
@@ -227,7 +227,7 @@ def inspect(input_dir, nfiles=3, old_origin=OLD_ORIGIN):
 #                                      PREP
 # =============================================================================
 def fix_trace(tr, network, station, channel, old_origin, new_origin,
-              length_s):
+              length_s=None):
     """
     Rename a trace, shift it to a new origin time and trim it
 
@@ -262,7 +262,8 @@ def fix_trace(tr, network, station, channel, old_origin, new_origin,
     tr.stats.channel = channel
 
     tr.stats.starttime += new_origin - old_origin
-    tr.trim(new_origin, new_origin + length_s, nearest_sample=True)
+    if length_s:
+        tr.trim(new_origin, new_origin + length_s, nearest_sample=True)
 
     if "sac" not in tr.stats:
         tr.stats.sac = AttribDict()
