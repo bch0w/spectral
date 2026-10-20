@@ -32,7 +32,7 @@ SAMPLE_RATE = 250.  # must match the sample rate of the response
 
 # Channel code: (azimuth, dip). Band code D = 250-1000 sps short period;
 # instrument code P = geophone. Horizontals assume N oriented to true north.
-CHANNELS = {"DPZ": (0., -90.), "DPN": (0., 0.), "DPE": (90., 0.)}
+CHANNELS = {"DHZ": (0., -90.), "DHN": (0., 0.), "DHE": (90., 0.)}
 
 # Local copy of the NRL response; the NRL URL can also be used directly
 RESPONSE_FILE = os.path.join(
