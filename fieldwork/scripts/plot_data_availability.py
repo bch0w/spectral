@@ -35,6 +35,7 @@ import re
 from pathlib import Path
 
 import matplotlib.colors as mcolors
+import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -238,6 +239,68 @@ def from_tidy_dataframe(df):
     return seed_ids, bin_edges, fraction, min_val, mean_val, max_val
 
 
+def condense_channels(seed_ids, fraction):
+    """
+    Collapse the component channels of each instrument into a single
+    row by replacing the last character of the channel code with '?',
+    e.g. EHZ/EHN/EHE -> EH? and LWD/LWS -> LW?. The condensed row takes
+    the minimum availability across its components in each bin, so a
+    gap on any one component is still visible.
+
+    :type seed_ids: list of str
+    :param seed_ids: sorted NET.STA.LOC.CHAN row labels
+    :type fraction: numpy.ndarray
+    :param fraction: (n_channels, n_bins) fraction of expected samples
+        present
+
+    :rtype: tuple
+    :return: (condensed_ids, condensed_fraction) -- a sorted list of
+        NET.STA.LOC.CH? labels and the matching (n_instruments, n_bins)
+        array
+    """
+    groups = {}
+    for i, seed_id in enumerate(seed_ids):
+        groups.setdefault(f"{seed_id[:-1]}?", []).append(i)
+    condensed_ids = sorted(groups)
+    condensed = np.array([np.nanmin(fraction[groups[gid]], axis=0)
+                          for gid in condensed_ids])
+    return condensed_ids, condensed
+
+
+def trim_time_range(bin_edges, arrays, starttime=None, endtime=None):
+    """
+    Restrict the bins to a time window, keeping every bin that overlaps
+    [starttime, endtime). Trimming the data (rather than only setting
+    the axis limits) keeps the colorscale, ticks and title consistent
+    with what is shown.
+
+    :type bin_edges: numpy.ndarray
+    :param bin_edges: 1D array of Unix timestamps, length n_bins + 1
+    :type arrays: list of numpy.ndarray
+    :param arrays: (n_channels, n_bins) arrays to trim along the bin axis
+    :type starttime: str or None
+    :param starttime: UTC start of the window, any format understood by
+        pandas.Timestamp, e.g. "2025-03-25" or "2025-03-25T12:00"
+    :type endtime: str or None
+    :param endtime: UTC end of the window (exclusive), same format
+
+    :rtype: tuple
+    :return: (trimmed_bin_edges, trimmed_arrays)
+    """
+    t0 = pd.Timestamp(starttime).timestamp() if starttime else -np.inf
+    t1 = pd.Timestamp(endtime).timestamp() if endtime else np.inf
+    keep = (bin_edges[1:] > t0) & (bin_edges[:-1] < t1)
+    if not keep.any():
+        raise ValueError(
+            f"No bins between --starttime {starttime} and --endtime "
+            f"{endtime}; data spans "
+            f"{pd.to_datetime(bin_edges[0], unit='s')} to "
+            f"{pd.to_datetime(bin_edges[-1], unit='s')}")
+    idx = np.flatnonzero(keep)
+    trimmed_edges = bin_edges[idx[0]:idx[-1] + 2]
+    return trimmed_edges, [arr[:, keep] for arr in arrays]
+
+
 def month_restart_ticks(bin_edges, interval_days):
     """
     Build tick positions every `interval_days` days, restarting the
@@ -295,7 +358,7 @@ def julian_day_range_label(bin_edges):
 
 
 def plot_availability(seed_ids, bin_edges, fraction, min_val, mean_val,
-                       max_val, bin_hours, out, annotate=True,
+                       max_val, bin_hours, out, annotate=True, title=None,
                        max_annotated_cells=800, annotate_fontsize=6.5,
                        n_color_bins=11, tick_interval_days=5, dpi=200):
     """
@@ -327,8 +390,10 @@ def plot_availability(seed_ids, bin_edges, fraction, min_val, mean_val,
     :type annotate_fontsize: float
     :param annotate_fontsize: font size for the mean-value cell text
     :type n_color_bins: int
-    :param n_color_bins: number of discrete color levels the 0-1
-        availability colorscale is split into (default: 11)
+    :param n_color_bins: number of discrete color levels the
+        availability colorscale is split into, spanning the minimum
+        non-zero fraction present up to 1 (default: 11). Complete
+        bins (fraction == 1) are drawn in a separate color instead
     :type tick_interval_days: int
     :param tick_interval_days: spacing, in days, between x-axis tick
         marks within a calendar month (see `month_restart_ticks`)
@@ -345,11 +410,36 @@ def plot_availability(seed_ids, bin_edges, fraction, min_val, mean_val,
 
     cmap = plt.get_cmap("RdYlGn", n_color_bins).copy()
     cmap.set_bad(color="#d9d9d9")
-    bounds = np.linspace(0, 1, n_color_bins + 1)
+    # Start the colorscale at the lowest non-zero availability in the set
+    # (floored to 2 decimals for tidy ticks) rather than at 0, so the
+    # color levels resolve the range of availability actually present.
+    # Empty bins are masked and drawn gray, so they don't need a color.
+    present = fraction[fraction > 0]
+    vmin = np.floor(present.min() * 100) / 100 if present.size else 0.
+    if vmin >= 1:
+        vmin = 0.
+    bounds = np.linspace(vmin, 1, n_color_bins + 1)
+    # Use just enough decimals that adjacent colorbar ticks stay distinct
+    # when the range is narrow (e.g. 0.99-1.00 needs 4 decimals)
+    step = bounds[1] - bounds[0]
+    n_decimals = max(2, int(np.ceil(-np.log10(step))))
     norm = mcolors.BoundaryNorm(bounds, n_color_bins)
-    frac_masked = np.ma.masked_where(fraction <= 0, fraction)
+    # Bins with every expected sample present get their own color, drawn
+    # as a separate layer, so even a few missing samples (which would
+    # otherwise land in the top color class) are visibly incomplete
+    complete = fraction >= 1
+    frac_masked = np.ma.masked_where((fraction <= 0) | complete, fraction)
     mesh = ax.pcolormesh(x_edges, y_edges, frac_masked, cmap=cmap,
                           norm=norm, edgecolors="white", linewidth=0.4)
+    complete_color = "#2166ac"
+    complete_cmap = mcolors.ListedColormap([complete_color])
+    ax.pcolormesh(x_edges, y_edges,
+                  np.ma.masked_where(~complete, np.ones_like(fraction)),
+                  cmap=complete_cmap, edgecolors="white", linewidth=0.4)
+    ax.legend(handles=[mpatches.Patch(color=complete_color,
+                                      label="Complete (100%)")],
+              loc="lower right", bbox_to_anchor=(1.0, 1.0),
+              fontsize=10, frameon=False, borderaxespad=0.5)
 
     total_cells = n_rows * n_bins
     do_annotate = annotate and total_cells <= max_annotated_cells
@@ -392,17 +482,23 @@ def plot_availability(seed_ids, bin_edges, fraction, min_val, mean_val,
     ax.set_xticks(ticks)
     tick_labels = [f"{t.strftime('%b %d')}\n{t.dayofyear:03d}"
                    for t in ticks]
-    ax.set_xticklabels(tick_labels, rotation=45, ha="right")
+    ax.set_xticklabels(tick_labels, rotation=45, ha="center")
     ax.set_xlim(x_edges[0], x_edges[-1])
     ax.set_xlabel("Time (UTC)")
     day_range = julian_day_range_label(bin_edges)
-    ax.set_title(f"Data Availability ({bin_hours:g}-hour "
-                 f"bins, {day_range})\n"
-                 f"CV=covered, EX=exposed, WS=windshield")
+    if title:
+        ax.set_title(title)
+    else:
+        ax.set_title(f"Data Availability ({bin_hours:g}-hour "
+                     f"bins, {day_range})\n")
 
     cbar = fig.colorbar(mesh, ax=ax, pad=0.01, boundaries=bounds,
                          ticks=bounds)
-    cbar.set_label("Fraction of expected samples present")
+    # Top class is [x, 1) -- label its upper edge "< 1" so it isn't
+    # mistaken for the separately colored complete (100%) bins
+    tick_labels = [f"{b:.{n_decimals}f}" for b in bounds[:-1]]
+    cbar.set_ticklabels(tick_labels + ["< 1"])
+    cbar.set_label("Fraction of Expected Samples")
 
     if do_annotate:
         fig.text(0.01, 0.01,
@@ -441,8 +537,24 @@ def parse_args():
     parser.add_argument("--annotate-fontsize", type=float, default=6.5)
     parser.add_argument(
         "--n-color-bins", type=int, default=11,
-        help="number of discrete color levels for the 0-1 availability "
-             "colorscale (default: 11)")
+        help="number of discrete color levels for the availability "
+             "colorscale, from the minimum non-zero fraction to 1 "
+             "(default: 11)")
+    parser.add_argument("--title", type=str, default=None)
+    parser.add_argument(
+        "--starttime", default=None,
+        help="UTC start of the plotted window, e.g. 2025-03-25 or "
+             "2025-03-25T12:00; earlier data are not shown")
+    parser.add_argument(
+        "--endtime", default=None,
+        help="UTC end of the plotted window (exclusive), e.g. "
+             "2025-04-10 shows data through the end of Apr 09")
+    parser.add_argument(
+        "--condense", action="store_true",
+        help="show one row per instrument (e.g. EH? instead of "
+             "EHZ/EHN/EHE), taking the minimum availability across its "
+             "components; disables cell annotation since mean values "
+             "aren't comparable across components")
     parser.add_argument(
         "--tick-interval-days", type=int, default=7,
         help="x-axis tick spacing in days within a calendar month, "
@@ -496,8 +608,27 @@ def main():
             df.to_csv(cache_path, index=False)
             print(f"Saved per-bin statistics to {cache_path}")
 
+    if args.starttime or args.endtime:
+        bin_edges, (fraction, min_val, mean_val, max_val) = \
+            trim_time_range(bin_edges,
+                            [fraction, min_val, mean_val, max_val],
+                            args.starttime, args.endtime)
+
+    annotate = args.annotate
+    if args.condense:
+        n_channels = len(seed_ids)
+        seed_ids, fraction = condense_channels(seed_ids, fraction)
+        print(f"Condensed {n_channels} channels into {len(seed_ids)} "
+              "instruments")
+        if annotate:
+            print("Skipping cell annotations: mean values aren't "
+                  "comparable across condensed components")
+            annotate = False
+        min_val = mean_val = max_val = np.full_like(fraction, np.nan)
+
     plot_availability(seed_ids, bin_edges, fraction, min_val, mean_val,
-                       max_val, bin_hours, args.out, annotate=args.annotate,
+                       max_val, bin_hours, args.out, annotate=annotate,
+                       title=args.title,
                        max_annotated_cells=args.max_annotated_cells,
                        annotate_fontsize=args.annotate_fontsize,
                        n_color_bins=args.n_color_bins,

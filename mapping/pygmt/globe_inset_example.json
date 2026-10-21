@@ -1,0 +1,19 @@
+{
+    "center": [-145, 63],
+    "width": "12c",
+    "land": "seashell",
+    "water": "lightblue",
+    "shorelines": "1/0.8p,black",
+    "borders": "1/0.25p,black",
+    "frame_pen": "1.5p,black",
+    "transparent": true,
+    "parallels": [
+        {"lat": 66.5607, "pen": "1p,purple,--"}
+    ],
+    "points": [
+        {"lat": 63.27, "lon": -145.45, "style": "d0.2c", "fill": "red",
+         "pen": "black"},
+        {"lat": 64.859, "lon": -147.849, "style": "c0.2c", "fill": "green",
+         "pen": "black"}
+    ]
+}
