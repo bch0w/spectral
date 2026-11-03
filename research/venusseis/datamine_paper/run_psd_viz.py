@@ -44,7 +44,7 @@ PPSDS = "SPECTRA"
 DATA = "DATA"
 FIGS = "FIGURES"
 LOGS = "logs"
-XX_XML = "ISHTAR.xml"
+XX_XML = "XML/ISHTAR.xml"
 STATE_FILE = "run_psd_viz_state.json"
 
 # Expected file names: NET.STA.LOC.CHA.YEAR.JDAY, e.g. AK.MDM..BHZ.2025.190
@@ -343,7 +343,7 @@ def stationxml_for(channel, root):
     """
     if channel.net == SUB_NETWORK:
         return root / XX_XML
-    return root / f"{channel.net}.{channel.sta}.xml"
+    return root / "XML" / f"{channel.net}.{channel.sta}.xml"
 
 
 def step_compute(runner, channels):
