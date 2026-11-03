@@ -22,6 +22,30 @@ this will help select the available choices for parameters. See below.
     $ python remresp.py smartsolo XX.101..DHZ.2026.101 --taper_fraction 0 \
             --write_inv '' --zero_mean_off
 
+.. rubric:: Offline workflow with a comprehensive StationXML
+
+    Rather than removing response directly, `--make_inv` builds a single
+    StationXML file containing every channel found in the input files, with
+    coordinates taken from a user-defined text/CSV file (see `read_coords`
+    for the format). Response removal is skipped in this mode.
+
+    $ python remresp.py fairfield XX.*.DHZ.2026.* -r 250 -p 18 -d Off \
+        --make_inv --coords stations.csv --write_inv XX_inventory.xml
+
+.. note:: Mixed sample rates
+
+    If `--sample_rate` is not given, the sample rate of each file is read
+    from its header and the matching NRL response is fetched (once per unique
+    sample rate). This allows datasets with multiple sample rates to be
+    processed together. With `--make_inv`, a station that changed sample
+    rate receives one channel epoch per sample rate.
+
+    The resulting StationXML can then be used to remove response without
+    accessing NRL webservices using the 'stationxml' choice
+
+    $ python remresp.py stationxml XX.*.DHZ.2026.* --inv XX_inventory.xml \
+        --pre_filt .001 .005 120 125 --output VEL
+
 .. note:: count or mV kludge
 
     The warning message below is given if our input data is in units 'mV' 
@@ -44,7 +68,9 @@ import os
 import re
 import argparse
 import warnings
-from obspy import read, read_inventory
+from copy import deepcopy
+from obspy import read, read_inventory, UTCDateTime
+from obspy.core.inventory import Inventory, Network, Station, Channel
 
 # Available parameters choices for each node type
 PARAMETERS = {
@@ -83,6 +109,26 @@ FIELDS = {
     "M": ("month", r"\d{2}"),
     "D": ("day", r"\d{2}"),
     "J": ("julday", r"\d{3}"),
+}
+
+# Accepted header names (lowercase) for each column of the coordinate file
+COORD_COLUMNS = {
+    "network": ("network", "net"),
+    "station": ("station", "sta", "name"),
+    "latitude": ("latitude", "lat"),
+    "longitude": ("longitude", "lon", "long"),
+    "elevation": ("elevation", "elev", "elv"),
+    "depth": ("depth",),
+}
+
+# Channel orientation code -> (azimuth, dip) following SEED convention, where
+# dip=-90 is +Z up. See the Fairfield sign convention note above
+ORIENTATIONS = {
+    "Z": (0.0, -90.0),
+    "N": (0.0, 0.0),
+    "1": (0.0, 0.0),
+    "E": (90.0, 0.0),
+    "2": (90.0, 0.0),
 }
 
 
@@ -140,22 +186,32 @@ def parse_args():
     common.add_argument("--write_inv", type=str, default="inventory.xml",
                         help="filename to write the response out as "
                              "a StationXML file for archival. This will write "
-                             "the inventory for the first data file only. "
+                             "the inventory for the first data file only, "
+                             "or for all files if `--make_inv` is set. "
                              "Set as empty string to toggle off")
 
     # Instrument specific parameters
     parser = argparse.ArgumentParser(
         description="Remove nominal NRL response from node data")
     sub = parser.add_subparsers(dest="choice", required=True,
-                                metavar="{fairfield,smartsolo}")
+                                metavar="{fairfield,smartsolo,stationxml}")
+
+    # Remove response with an existing StationXML file, no NRL access needed
+    p = sub.add_parser("stationxml", parents=[common],
+                       help="use an existing StationXML file, e.g., one "
+                            "created with `--make_inv`")
+    p.add_argument("-i", "--inv", type=str, required=True,
+                   help="path to StationXML file containing responses for "
+                        "all channels in `fids`")
 
     helps = {"fairfield": "Magseis Fairfield ZLand 3C",
              "smartsolo": "SmartSolo IGU-BD3C-5"}
     for name, opts in PARAMETERS.items():
         p = sub.add_parser(name, parents=[common], help=helps[name])
-        p.add_argument("-r", "--sample_rate", type=int, required=True,
+        p.add_argument("-r", "--sample_rate", type=int, default=None,
                        choices=opts["sample_rate"],
-                       help="final sample rate [Hz]")
+                       help="final sample rate [Hz]. If not given, the "
+                            "sample rate is read from each file header")
         p.add_argument("-u", "--output_units", default="mV",
                        choices=opts["output_units"],
                        help="units of the data on disk")
@@ -168,8 +224,24 @@ def parse_args():
         p.add_argument("-d", "--dc_filter", required=True,
                        choices=opts["dc_filter"],
                        help="low-cut filter setting")
+        p.add_argument("--make_inv", action="store_true",
+                       help="instead of removing response, write a single "
+                            "StationXML file (to `write_inv`) containing "
+                            "all channels in `fids`. Requires `--coords`")
+        p.add_argument("-c", "--coords", type=str, default=None,
+                       help="text or CSV file with station coordinates, "
+                            "used with `--make_inv`. Columns are "
+                            "'station latitude longitude [elevation]' or "
+                            "set by a header row, see `read_coords`")
 
-    return parser.parse_args()
+    args = parser.parse_args()
+    if getattr(args, "make_inv", False):
+        if not args.coords:
+            parser.error("`--make_inv` requires `--coords`")
+        if not args.write_inv:
+            parser.error("`--make_inv` requires a `--write_inv` filename")
+
+    return args
 
 
 def parse_fname(fname, fmt="NN.SSS.LL.CCC.YYYY.JJJ"):
@@ -215,6 +287,182 @@ def parse_fname(fname, fmt="NN.SSS.LL.CCC.YYYY.JJJ"):
     if match is None:
         raise ValueError(f"'{fname}' does not match format '{fmt}'")
     return match.groupdict()
+
+
+def read_coords(fid):
+    """
+    Read station coordinates from a comma- or whitespace-delimited text file.
+    Blank lines and lines starting with '#' are ignored. If the first line
+    contains a latitude column name, it is treated as a header and columns
+    may be in any order (see `COORD_COLUMNS` for accepted names; unknown
+    columns are ignored). Otherwise columns are assumed to be
+    'station latitude longitude [elevation] [depth]'. e.g.,
+
+        network,station,latitude,longitude,elevation
+        XX,101,64.8591,-147.8492,140.5
+
+    :type fid: str
+    :param fid: path to the coordinate file
+    :rtype: dict
+    :return: {(network or None, station): (lat, lon, elevation, depth)};
+        network is None if the file has no network column. Elevation [m]
+        and depth [m] default to 0 if not given
+    :raises ValueError: if required columns are missing or values are bad
+    """
+    aliases = {alias: name for name, names in COORD_COLUMNS.items()
+               for alias in names}
+    columns = ["station", "latitude", "longitude", "elevation", "depth"]
+
+    with open(fid, "r") as f:
+        lines = [line.strip() for line in f]
+    lines = [line for line in lines if line and not line.startswith("#")]
+
+    coords = {}
+    for i, line in enumerate(lines):
+        if "," in line:
+            values = [val.strip() for val in line.split(",")]
+        else:
+            values = line.split()
+
+        # Header row defines column order
+        if i == 0 and any(aliases.get(val.lower()) == "latitude"
+                          for val in values):
+            columns = [aliases.get(val.lower()) for val in values]
+            for name in ("station", "latitude", "longitude"):
+                if name not in columns:
+                    raise ValueError(f"'{fid}' header missing '{name}'")
+            continue
+
+        row = {name: val for name, val in zip(columns, values)
+               if name and val}
+        try:
+            key = (row.get("network"), row["station"])
+            coords[key] = (float(row["latitude"]), float(row["longitude"]),
+                           float(row.get("elevation", 0)),
+                           float(row.get("depth", 0)))
+        except (KeyError, ValueError) as e:
+            raise ValueError(f"'{fid}' could not parse line: '{line}'") from e
+
+    return coords
+
+
+def rename_stream(st, fid, fmt=None):
+    """
+    Set the trace stats (network, station, location, channel) of the first
+    trace in a Stream from its file name. Does nothing if `fmt` is not given.
+
+    :type st: obspy.core.stream.Stream
+    :param st: stream to rename in place
+    :type fid: str
+    :param fid: file name the stream was read from
+    :type fmt: str
+    :param fmt: file name format string, see `parse_fname`
+    """
+    if not fmt:
+        return
+    parts = parse_fname(fid, fmt)
+    for key in ("network", "station", "location", "channel"):
+        if key in parts:
+            setattr(st[0].stats, key, parts[key])
+
+
+def build_inventory(get_template, fids, coords, fmt=None, sample_rate=None):
+    """
+    Build a comprehensive Inventory containing every unique channel found in
+    a list of waveform files. Each channel receives a copy of the response
+    of a template channel (e.g., from NRL) for its sample rate, coordinates
+    from a user-defined coordinate file, an orientation from its channel
+    code, and start and end dates spanning all data found for that channel.
+    Channels recorded at more than one sample rate get one epoch per rate.
+
+    :type get_template: callable
+    :param get_template: function taking a sample rate [Hz] and returning
+        the channel whose response, sensor and datalogger are copied
+    :type fids: list of str
+    :param fids: waveform file IDs, only the headers are read
+    :type coords: dict
+    :param coords: station coordinates, output of `read_coords`
+    :type fmt: str
+    :param fmt: optional file name format to set trace stats from file names,
+        see `parse_fname`
+    :type sample_rate: float
+    :param sample_rate: expected sample rate [Hz] of the response; channels
+        with a different sample rate are flagged with a warning
+    :rtype: obspy.core.inventory.inventory.Inventory
+    :return: inventory with one network per network code found in the data
+    :raises ValueError: if any station is missing from `coords`
+    """
+    # Collect the time span of each unique channel and sample rate
+    spans = {}
+    for fid in fids:
+        try:
+            st = read(fid, headonly=True)
+        except (TypeError, IsADirectoryError):
+            print(f"{os.path.basename(fid)}... skipped, unknown file format")
+            continue
+        rename_stream(st, fid, fmt)
+        for tr in st:
+            key = (tr.id, tr.stats.sampling_rate)
+            start, end = tr.stats.starttime, tr.stats.endtime
+            if key in spans:
+                start = min(start, spans[key][0])
+                end = max(end, spans[key][1])
+            spans[key] = (start, end)
+
+    # Fail early if any station does not have coordinates
+    missing = set()
+    for tid, _ in spans:
+        net, sta = tid.split(".")[:2]
+        if (net, sta) not in coords and (None, sta) not in coords:
+            missing.add(f"{net}.{sta}")
+    if missing:
+        raise ValueError(f"no coordinates for station(s): "
+                         f"{', '.join(sorted(missing))}")
+
+    # Build channels and sort them into {network: {station: [channels]}}
+    channels = {}
+    for (tid, rate), (start, end) in sorted(spans.items()):
+        net, sta, loc, cha = tid.split(".")
+        if sample_rate and rate != sample_rate:
+            warnings.warn(f"{tid} sample rate {rate} Hz does not match "
+                          f"response sample rate {sample_rate} Hz")
+        try:
+            template = get_template(rate)
+        except ValueError as e:
+            raise ValueError(f"{tid}: {e}") from e
+        lat, lon, elev, depth = coords.get((net, sta),
+                                           coords.get((None, sta)))
+        azimuth, dip = ORIENTATIONS.get(cha[-1],
+                                        (template.azimuth, template.dip))
+        channel = Channel(code=cha, location_code=loc, latitude=lat,
+                          longitude=lon, elevation=elev, depth=depth,
+                          azimuth=azimuth, dip=dip, sample_rate=rate,
+                          start_date=start, end_date=end,
+                          sensor=deepcopy(template.sensor),
+                          data_logger=deepcopy(template.data_logger),
+                          response=deepcopy(template.response))
+        channels.setdefault(net, {}).setdefault(sta, []).append(channel)
+
+    networks = []
+    for net, stations in channels.items():
+        net_stations = []
+        for sta, chans in stations.items():
+            start = min(cha.start_date for cha in chans)
+            end = max(cha.end_date for cha in chans)
+            net_stations.append(
+                Station(code=sta, latitude=chans[0].latitude,
+                        longitude=chans[0].longitude,
+                        elevation=chans[0].elevation, channels=chans,
+                        start_date=start, end_date=end, creation_date=start)
+                )
+        networks.append(
+            Network(code=net, stations=net_stations,
+                    start_date=min(s.start_date for s in net_stations),
+                    end_date=max(s.end_date for s in net_stations))
+            )
+
+    return Inventory(networks=networks, source="remresp.py",
+                     created=UTCDateTime())
 
 
 def build_fairfield_response(preamp_db=0, sample_rate=250, filter_phase="LP",
@@ -308,29 +556,45 @@ def build_smartsolo_response(preamp_db=0, sample_rate=250, filter_phase="LP",
             f"&format=stationxml&nodata=404")
 
 
-def main():
-    args = parse_args()
+def get_nrl_inventory(args, sample_rate, cache=None):
+    """
+    Download the nominal response for the chosen instrument from NRL. If
+    `args.sample_rate` is set it overrides `sample_rate`.
 
-    # Few set up tasks
-    if not os.path.exists(args.save):
-        os.makedirs(args.save)
+    :type args: argparse.Namespace
+    :param args: parsed command line arguments, see `parse_args`
+    :type sample_rate: float
+    :param sample_rate: sample rate [Hz] of the data, e.g., from the header
+    :type cache: dict
+    :param cache: optional {sample_rate: Inventory} of previously downloaded
+        responses, updated in place so each sample rate is fetched only once
+    :rtype: obspy.core.inventory.inventory.Inventory
+    :return: single-channel inventory with the attached response
+    :raises ValueError: if NRL has no response for the sample rate
+    """
+    sample_rate = args.sample_rate or sample_rate
+    if cache is not None and sample_rate in cache:
+        return cache[sample_rate]
 
-    assert(args.fids), f"{len(args.fids)} file IDs found"
+    # Header sample rates are floats, NRL expects one of the listed integers
+    choices = PARAMETERS[args.choice]["sample_rate"]
+    if sample_rate not in choices:
+        raise ValueError(f"no NRL response for {sample_rate} Hz, must be one "
+                         f"of {choices}")
 
-    # Get response information from NRL
     if args.choice == "fairfield":
-        url = build_fairfield_response(preamp_db=args.pre_amp_gain, 
-                                       sample_rate=args.sample_rate, 
+        url = build_fairfield_response(preamp_db=args.pre_amp_gain,
+                                       sample_rate=int(sample_rate),
                                        filter_phase=args.filter_phase,
-                                       dc_filter=args.dc_filter, 
-                                       output_units=args.output_units, 
+                                       dc_filter=args.dc_filter,
+                                       output_units=args.output_units,
                                        sensor_lf=5
                                        )
     elif args.choice == "smartsolo":
-        url = build_smartsolo_response(preamp_db=args.pre_amp_gain, 
-                                       sample_rate=args.sample_rate, 
+        url = build_smartsolo_response(preamp_db=args.pre_amp_gain,
+                                       sample_rate=int(sample_rate),
                                        filter_phase=args.filter_phase,
-                                       dc_filter=args.dc_filter, 
+                                       dc_filter=args.dc_filter,
                                        output_units=args.output_units
                                        )
     print(f"\n{url}\n")
@@ -340,6 +604,44 @@ def main():
     # Change dip to match orientation, see note above
     if args.choice == "fairfield":
         inv[0][0][0].dip = -90.0
+
+    if cache is not None:
+        cache[sample_rate] = inv
+
+    return inv
+
+
+def main():
+    """
+    Remove response from each file, using either a nominal NRL response or a
+    user-provided StationXML file, or build a comprehensive StationXML file.
+    """
+    args = parse_args()
+
+    assert(args.fids), f"{len(args.fids)} file IDs found"
+
+    # Get response information from file, NRL responses are fetched per
+    # sample rate as they are needed and cached by `get_nrl_inventory`
+    from_nrl = args.choice != "stationxml"
+    nrl_cache = {}
+    if not from_nrl:
+        inv = read_inventory(args.inv)
+        print(f"\n{inv}\n")
+
+    # Build and write one inventory for all files, no response removal
+    if from_nrl and args.make_inv:
+        coords = read_coords(args.coords)
+        inv = build_inventory(
+            lambda rate: get_nrl_inventory(args, rate, nrl_cache)[0][0][0],
+            args.fids, coords, fmt=args.rename, sample_rate=args.sample_rate
+            )
+        inv.write(args.write_inv, format="STATIONXML")
+        print(f"\n{inv}\n")
+        print(f"Inventory written to '{args.write_inv}'")
+        return
+
+    if not os.path.exists(args.save):
+        os.makedirs(args.save)
 
     # Begin response removal from each data stream
     print("\n")
@@ -361,19 +663,21 @@ def main():
             continue
     
         # Determine station naming from internal or from file
-        if args.rename:
-            parts = parse_fname(fid, args.rename)
-            for key in ("network", "station", "location", "channel"):
-                if key in parts:
-                    setattr(st[0].stats, key, parts[key])
+        rename_stream(st, fid, args.rename)
 
-        net, sta, loc, cha = st[0].id.split(".")
-
-        # Rename the inventory to match waveform so we can remove response
-        inv[0].code = net
-        inv[0][0].code = sta
-        inv[0][0][0].code = cha
-        inv[0][0][0].location_code = loc
+        # Rename the NRL inventory to match waveform so we can remove response
+        if from_nrl:
+            try:
+                inv = get_nrl_inventory(args, st[0].stats.sampling_rate,
+                                        nrl_cache)
+            except ValueError as e:
+                print(f"skipped, {e}")
+                continue
+            net, sta, loc, cha = st[0].id.split(".")
+            inv[0].code = net
+            inv[0][0].code = sta
+            inv[0][0][0].code = cha
+            inv[0][0][0].location_code = loc
 
         st.remove_response(inv, output=args.output, pre_filt=args.pre_filt,
                            water_level=args.water_level,
@@ -386,7 +690,7 @@ def main():
         print("complete")
 
         # Write Inventory and Response to file
-        if i == 0 and args.write_inv:
+        if i == 0 and from_nrl and args.write_inv:
             inv.write(args.write_inv, format="STATIONXML")
             print(f"Inventory written to '{args.write_inv}'")
 

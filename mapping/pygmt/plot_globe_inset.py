@@ -19,8 +19,17 @@ Example (see globe_inset_example.json):
     }
 
 Point keys: lat, lon (required); style, fill, pen, label, font, justify,
-offset (optional, see `DEFAULT_POINT`). If "center" is omitted the globe
-is centered on the mean location of the points and catalog events.
+offset, arrow, arrow_pen, arrow_fill, arrow_head, arrow_gap (optional, see
+`DEFAULT_POINT`). Set "arrow": true to draw an arrow from an offset label
+to its marker. If "center" is omitted the map is centered on the mean
+location of the points and catalog events.
+
+"projection" picks the map projection by name: orthographic (default),
+azimuthal_equidistant, lambert_azimuthal, robinson, mollweide, hammer,
+winkel_tripel, eckert4, eckert6, equidistant_cylindrical, miller or
+mercator. Any other value is used as a full GMT -J string, e.g.
+"G-150/45/10c", in which case "width" is ignored. "region" overrides
+the default whole-world GMT -R region.
 
 Earthquake catalogs are read from QuakeML with ObsPy and listed under
 "catalogs". Paths may be globs, and relative paths are relative to the
@@ -34,8 +43,10 @@ JSON file:
 
 Catalog keys: files (required); symbol, size, size_by_magnitude,
 size_range, mag_range, color_by ("depth", "time" or null), fill, cmap,
-cmap_reverse, color_range, colorbar, colorbar_label, pen (optional, see
-`DEFAULT_CATALOG`).
+cmap_reverse, color_range, colorbar, colorbar_label, pen, name, legend,
+legend_magnitudes (optional, see `DEFAULT_CATALOG`). Catalogs sized by
+magnitude get example markers in a legend beside the globe, placed with
+the top-level "legend_position" and "legend_box" keys.
 
 Usage:
     python plot_globe_inset.py globe_inset_example.json --out inset.png
@@ -43,6 +54,7 @@ Usage:
 import argparse
 import glob
 import json
+import tempfile
 from pathlib import Path
 
 import numpy as np
@@ -51,6 +63,8 @@ from obspy import read_events
 
 # Map-level styling, overridden by top-level keys in the JSON file
 DEFAULTS = {
+    "projection": "orthographic",  # name in PROJECTIONS, or a GMT -J
+    "region": None,  # GMT -R; None picks a whole-world region
     "center": None,  # [lon, lat]; None centers on the mean of the points
     "width": "8c",
     "land": "seashell",
@@ -58,8 +72,32 @@ DEFAULTS = {
     "shorelines": "1/0.8p,black",
     "borders": "1/0.25p,black",
     "frame_pen": "1.5p,black",
+    "frame": "0",  # GMT -B; "0" is a plain outline, e.g. "afg" annotates
     "transparent": True,
     "parallels": [],
+    # GMT legend position and box; default sits right of the globe
+    "legend_position": "JMR+jML+o0.3c/0c",
+    "legend_box": "+gwhite+p0.5p,black",
+}
+
+# Named projections: GMT -J template and the latitude limit of the default
+# region (None for -Rg, the whole globe, used by azimuthal projections).
+# Azimuthal projections are centered on "center"; the rest only use its
+# longitude as the central meridian.
+PROJECTIONS = {
+    "orthographic": ("G{lon}/{lat}/{width}", None),
+    "azimuthal_equidistant": ("E{lon}/{lat}/{width}", None),
+    # Horizon of 180 shows the whole world (GMT's default is a hemisphere)
+    "lambert_azimuthal": ("A{lon}/{lat}/180/{width}", None),
+    "robinson": ("N{lon}/{width}", 90),
+    "mollweide": ("W{lon}/{width}", 90),
+    "hammer": ("H{lon}/{width}", 90),
+    "winkel_tripel": ("R{lon}/{width}", 90),
+    "eckert4": ("Kf{lon}/{width}", 90),
+    "eckert6": ("Ks{lon}/{width}", 90),
+    "equidistant_cylindrical": ("Q{lon}/{width}", 90),
+    "miller": ("J{lon}/{width}", 90),
+    "mercator": ("M{lon}/{width}", 80),  # poles are at infinity
 }
 
 # Per-point styling, overridden by keys on each point in the JSON file
@@ -71,6 +109,11 @@ DEFAULT_POINT = {
     "font": "10p,Helvetica-Bold,black",
     "justify": "LM",  # Left-Middle: text starts to the right of the point
     "offset": "0.25c/0c",  # nudge the text away from the marker
+    "arrow": False,  # draw an arrow from the label to the marker
+    "arrow_pen": "0.75p,black",
+    "arrow_fill": "black",  # arrowhead fill
+    "arrow_head": "0.2c",  # arrowhead length
+    "arrow_gap": 0.05,  # cm left clear at the label and marker ends
 }
 
 # Per-catalog styling, overridden by keys on each catalog in the JSON file
@@ -88,6 +131,9 @@ DEFAULT_CATALOG = {
     "colorbar": True,
     "colorbar_label": None,  # None picks "Depth (km)" or "Year"
     "pen": "0.25p,black",
+    "name": None,  # legend header for this catalog
+    "legend": True,  # show magnitude sizes in the legend
+    "legend_magnitudes": None,  # e.g. [4, 5, 6]; None picks round values
 }
 
 
@@ -192,14 +238,87 @@ def magnitude_sizes(mag, size_range, mag_range=None):
     :rtype: numpy.ndarray
     :return: marker sizes in cm
     """
+    mag_range = resolve_mag_range(mag, mag_range)
     if mag_range is None:
-        if np.isnan(mag).all():
-            return np.full_like(mag, size_range[0])
-        mag_range = [np.nanmin(mag), np.nanmax(mag)]
+        return np.full_like(mag, size_range[0])
     span = mag_range[1] - mag_range[0]
     scaled = (mag - mag_range[0]) / span if span > 0 else np.ones_like(mag)
     scaled = np.nan_to_num(np.clip(scaled, 0, 1), nan=0.)
     return size_range[0] + scaled * (size_range[1] - size_range[0])
+
+
+def resolve_mag_range(mag, mag_range=None):
+    """
+    Pick the magnitude range that marker sizes are scaled over.
+
+    :type mag: numpy.ndarray
+    :param mag: event magnitudes, NaN where unknown
+    :type mag_range: list of float or None
+    :param mag_range: user-set [min, max]; returned unchanged if given
+    :rtype: list of float or None
+    :return: [min, max] magnitude, or None if no event has a magnitude
+    """
+    if mag_range is not None:
+        return mag_range
+    if np.isnan(mag).all():
+        return None
+    return [float(np.nanmin(mag)), float(np.nanmax(mag))]
+
+
+def legend_magnitudes(mag_range, max_entries=5):
+    """
+    Choose round magnitudes spanning `mag_range` to show in the legend:
+    whole magnitudes if at least two fall inside the range, otherwise
+    the range's ends rounded to one decimal.
+
+    :type mag_range: list of float
+    :param mag_range: [min, max] magnitude
+    :type max_entries: int
+    :param max_entries: most magnitudes to return; whole magnitudes are
+        thinned to every 2nd, 3rd, ... value to fit
+    :rtype: list of float
+    :return: magnitudes in increasing order
+    """
+    mags = np.arange(np.ceil(mag_range[0]), np.floor(mag_range[1]) + 1)
+    if mags.size < 2:
+        return sorted({round(mag_range[0], 1), round(mag_range[1], 1)})
+    step = int(np.ceil(mags.size / max_entries))
+    return list(mags[::-1][::step][::-1])
+
+
+def magnitude_legend_lines(events, catalog):
+    """
+    Build GMT legend-spec lines showing marker size for a few
+    magnitudes of one catalog.
+
+    :type events: dict
+    :param events: output of `read_catalog`
+    :type catalog: dict
+    :param catalog: catalog styling, see `DEFAULT_CATALOG`
+    :rtype: list of str
+    :return: legend-spec lines, empty if the catalog isn't sized by
+        magnitude, has its legend turned off, or has no magnitudes
+    """
+    if not (catalog["size_by_magnitude"] and catalog["legend"]):
+        return []
+    mag_range = resolve_mag_range(events["mag"], catalog["mag_range"])
+    if mag_range is None:
+        return []
+    mags = catalog["legend_magnitudes"] or legend_magnitudes(mag_range)
+    sizes = magnitude_sizes(np.array(mags, dtype=float),
+                            catalog["size_range"], mag_range)
+    # Symbols are drawn in a column wide enough for the largest marker
+    x_symbol = max(catalog["size_range"]) / 2 + 0.1
+    x_text = max(catalog["size_range"]) + 0.3
+    fill = catalog["fill"] if catalog["color_by"] is None else "gray70"
+
+    lines = []
+    if catalog["name"]:
+        lines.append(f"H 9p,Helvetica-Bold {catalog['name']}")
+    for mag, size in zip(mags, sizes):
+        lines.append(f"S {x_symbol:g}c {catalog['symbol']} {size:.3f}c "
+                     f"{fill} {catalog['pen']} {x_text:g}c M{mag:g}")
+    return lines
 
 
 def plot_catalog(fig, events, catalog, width_cm, n_colorbars):
@@ -285,8 +404,8 @@ def mean_center(lats, lons):
 
 def plot_globe(config):
     """
-    Draw the orthographic globe with parallels, catalog events and points
-    from `config`.
+    Draw the global map with parallels, catalog events and points from
+    `config`.
 
     :type config: dict
     :param config: output of `load_config`
@@ -307,19 +426,22 @@ def plot_globe(config):
     else:
         center_lon, center_lat = 0, 0
 
+    projection, region = build_projection(config, center_lon, center_lat)
+    frame_size = map_size(projection, region)
+
     fig = pygmt.Figure()
     pygmt.config(MAP_FRAME_PEN=config["frame_pen"])
     fig.coast(
-        # Orthographic projection (G) centered on the region of interest
-        projection=f"G{center_lon:g}/{center_lat:g}/{config['width']}",
-        region="g",  # global
+        projection=projection,
+        region=region,
         land=config["land"],
         water=config["water"],
         shorelines=config["shorelines"],
         borders=config["borders"],
     )
-    # Draw the border/frame around the globe
-    fig.basemap(frame=True)
+    # Draw the border/frame around the map
+    with pygmt.config(MAP_FRAME_TYPE="plain"):
+        fig.basemap(frame=config["frame"])
 
     # Lines of constant latitude, e.g. the Arctic Circle
     circle_lons = np.arange(-180, 180.1, 1)
@@ -329,20 +451,230 @@ def plot_globe(config):
                  pen=parallel.get("pen", "1p,black,--"))
 
     # Catalogs go beneath the points so labeled sites stay visible
-    width_cm = float(str(config["width"]).rstrip("c"))
     n_colorbars = 0
     for events, catalog in zip(catalog_events, config["catalogs"]):
-        n_colorbars += plot_catalog(fig, events, catalog, width_cm,
+        n_colorbars += plot_catalog(fig, events, catalog, frame_size[0],
                                     n_colorbars)
+
+    legend_lines = []
+    for events, catalog in zip(catalog_events, config["catalogs"]):
+        lines = magnitude_legend_lines(events, catalog)
+        if lines and legend_lines:
+            legend_lines.append("G 0.15c")  # gap between catalogs
+        legend_lines.extend(lines)
+    if legend_lines:
+        with tempfile.NamedTemporaryFile("w", suffix=".txt") as spec:
+            spec.write("\n".join(legend_lines) + "\n")
+            spec.flush()
+            fig.legend(spec=spec.name, position=config["legend_position"],
+                       box=config["legend_box"] or False)
 
     for point in config["points"]:
         fig.plot(x=point["lon"], y=point["lat"], style=point["style"],
                  fill=point["fill"], pen=point["pen"])
         if point["label"]:
-            fig.text(x=point["lon"], y=point["lat"], text=point["label"],
-                     font=point["font"], justify=point["justify"],
-                     offset=point["offset"])
+            draw_label(fig, point)
+
+    # Arrows are drawn last, on a Cartesian frame (in cm) laid exactly over
+    # the map, because the label offset is a distance on the page
+    for point in config["points"]:
+        if point["label"] and point["arrow"]:
+            draw_label_arrow(fig, point, projection, region, frame_size)
     return fig
+
+
+def draw_label(fig, point, line_spacing=1.2):
+    """
+    Draw a point's label. GMT text doesn't break lines on "\\n", so a
+    multi-line label is split and each line drawn with its own vertical
+    offset, stacked so the block as a whole honors the vertical part of
+    `justify` (T: hangs down from the anchor, M: centered on it, B: sits
+    on it).
+
+    :type fig: pygmt.Figure
+    :param fig: figure to draw on
+    :type point: dict
+    :param point: point styling, see `DEFAULT_POINT`
+    :type line_spacing: float
+    :param line_spacing: line height as a multiple of the font size
+    """
+    lines = str(point["label"]).split("\n")
+    if len(lines) == 1:
+        fig.text(x=point["lon"], y=point["lat"], text=lines[0],
+                 font=point["font"], justify=point["justify"],
+                 offset=point["offset"])
+        return
+
+    dx, dy = (to_cm(v) for v in str(point["offset"]).split("/"))
+    font_size = point["font"].split(",")[0]
+    height = to_cm(font_size if font_size[-1].isalpha() else
+                   f"{font_size}p") * line_spacing
+    vertical = next((c for c in point["justify"].upper() if c in "TMB"),
+                    "M")
+    n = len(lines)
+    for i, line in enumerate(lines):
+        if vertical == "T":
+            shift = -i * height
+        elif vertical == "B":
+            shift = (n - 1 - i) * height
+        else:
+            shift = ((n - 1) / 2 - i) * height
+        fig.text(x=point["lon"], y=point["lat"], text=line,
+                 font=point["font"], justify=point["justify"],
+                 offset=f"{dx:g}c/{dy + shift:g}c")
+
+
+def to_cm(value):
+    """
+    Convert a GMT length such as "0.25c", "0.1i" or "6p" to centimeters.
+    Plain numbers are taken to be centimeters.
+
+    :type value: str or float
+    :param value: GMT length
+    :rtype: float
+    :return: length in cm
+    """
+    value = str(value).strip()
+    units = {"c": 1, "i": 2.54, "p": 2.54 / 72}
+    if value and value[-1] in units:
+        return float(value[:-1]) * units[value[-1]]
+    return float(value)
+
+
+def build_projection(config, center_lon, center_lat):
+    """
+    Turn the config's "projection" into a GMT -J string and matching -R
+    region. Names in `PROJECTIONS` are filled in with the map center and
+    width; anything else is passed to GMT unchanged as a full -J string
+    (e.g. "G-150/45/10c").
+
+    :type config: dict
+    :param config: output of `load_config`
+    :type center_lon: float
+    :param center_lon: projection center longitude in degrees
+    :type center_lat: float
+    :param center_lat: projection center latitude in degrees (only used
+        by azimuthal projections)
+    :rtype: tuple of str
+    :return: (projection, region)
+    """
+    name = config["projection"]
+    if name in PROJECTIONS:
+        template, max_lat = PROJECTIONS[name]
+        projection = template.format(lon=f"{center_lon:g}",
+                                     lat=f"{center_lat:g}",
+                                     width=config["width"])
+    else:
+        projection, max_lat = name, None
+    if config["region"]:
+        region = config["region"]
+    elif max_lat is None:
+        region = "g"
+    else:
+        # Whole-world map with the center longitude in the middle
+        region = (f"{center_lon - 180:g}/{center_lon + 180:g}/"
+                  f"{-max_lat:g}/{max_lat:g}")
+    return projection, region
+
+
+def run_mapproject(args):
+    """
+    Run GMT mapproject and return its numeric output.
+
+    :type args: str
+    :param args: mapproject arguments, without the output redirect
+    :rtype: numpy.ndarray
+    :return: 2D array of the output rows (empty if there were none)
+    """
+    with tempfile.NamedTemporaryFile(suffix=".txt") as out:
+        with pygmt.clib.Session() as lib:
+            lib.call_module("mapproject", f"{args} ->{out.name}")
+        return np.loadtxt(out.name, ndmin=2)
+
+
+def map_size(projection, region):
+    """
+    Get the width and height of the map frame on the page.
+
+    :type projection: str
+    :param projection: GMT -J string
+    :type region: str
+    :param region: GMT -R string
+    :rtype: tuple of float
+    :return: (width, height) in cm
+    """
+    width, height = run_mapproject(f"-J{projection} -R{region} -W")[0]
+    return width, height
+
+
+def project_xy(lon, lat, projection, region):
+    """
+    Project a location onto the page, measured from the lower-left
+    corner of the map frame.
+
+    :type lon: float
+    :param lon: longitude in degrees
+    :type lat: float
+    :param lat: latitude in degrees
+    :type projection: str
+    :param projection: GMT -J string
+    :type region: str
+    :param region: GMT -R string
+    :rtype: tuple
+    :return: (x, y) in cm, or None if the location isn't on the map (e.g.
+        the far side of an orthographic globe)
+    """
+    with tempfile.NamedTemporaryFile("w", suffix=".txt") as src:
+        src.write(f"{lon} {lat}\n")
+        src.flush()
+        # -S drops locations outside the map
+        xy = run_mapproject(f"{src.name} -J{projection} -R{region} -S")
+    return tuple(xy[0]) if xy.size else None
+
+
+def draw_label_arrow(fig, point, projection, region, frame_size):
+    """
+    Draw an arrow from a point's offset label to its marker. The arrow
+    starts at the label's justification anchor (e.g. the left-middle of
+    the text for justify="LM") and stops short of the marker's edge.
+
+    :type fig: pygmt.Figure
+    :param fig: figure to draw on
+    :type point: dict
+    :param point: point styling, see `DEFAULT_POINT`
+    :type projection: str
+    :param projection: GMT -J string of the map
+    :type region: str
+    :param region: GMT -R string of the map
+    :type frame_size: tuple of float
+    :param frame_size: (width, height) of the map frame in cm
+    """
+    marker = project_xy(point["lon"], point["lat"], projection, region)
+    if marker is None:
+        print(f"skipping arrow for {point['label']}: point is not visible "
+              "on the map")
+        return
+    dx, dy = (to_cm(v) for v in str(point["offset"]).split("/"))
+    length = np.hypot(dx, dy)
+    # Marker size is the number after the symbol code, e.g. "c0.2c"
+    marker_radius = to_cm(point["style"][1:]) / 2
+    start_gap = point["arrow_gap"]
+    end_gap = marker_radius + point["arrow_gap"]
+    if length <= start_gap + end_gap:
+        print(f"skipping arrow for {point['label']}: offset is too small "
+              "to fit an arrow between the label and marker")
+        return
+
+    ux, uy = -dx / length, -dy / length  # unit vector, label -> marker
+    x0 = marker[0] + dx + ux * start_gap
+    y0 = marker[1] + dy + uy * start_gap
+    x1 = marker[0] + ux * -end_gap
+    y1 = marker[1] + uy * -end_gap
+    fig.plot(x=[x0], y=[y0], direction=([x1], [y1]),
+             style=f"v{point['arrow_head']}+e+s+h0.5",
+             pen=point["arrow_pen"], fill=point["arrow_fill"],
+             projection=f"X{frame_size[0]:g}c/{frame_size[1]:g}c",
+             region=[0, frame_size[0], 0, frame_size[1]])
 
 
 def parse_args():

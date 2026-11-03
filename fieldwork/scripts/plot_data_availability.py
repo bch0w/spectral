@@ -360,10 +360,12 @@ def julian_day_range_label(bin_edges):
 def plot_availability(seed_ids, bin_edges, fraction, min_val, mean_val,
                        max_val, bin_hours, out, annotate=True, title=None,
                        max_annotated_cells=800, annotate_fontsize=6.5,
-                       n_color_bins=11, tick_interval_days=5, dpi=200):
+                       n_color_bins=11, tick_interval_days=5, dpi=200,
+                       segments=None):
     """
     Render the station/component-by-time availability grid and save
-    it.
+    it. If `segments` is given, each time segment gets its own panel,
+    with broken-axis marks between them.
 
     :type seed_ids: list of str
     :param seed_ids: sorted NET.STA.LOC.CHAN row labels
@@ -399,14 +401,25 @@ def plot_availability(seed_ids, bin_edges, fraction, min_val, mean_val,
         marks within a calendar month (see `month_restart_ticks`)
     :type dpi: int
     :param dpi: figure save resolution
+    :type segments: list of tuple or None
+    :param segments: [(first_bin, last_bin + 1), ...] index ranges to
+        plot as separate panels (see `find_segments`); None plots every
+        bin in one panel
     """
     n_rows, n_bins = fraction.shape
-    x_edges = pd.to_datetime(bin_edges, unit="s")
-    y_edges = np.arange(n_rows + 1)
+    if segments is None:
+        segments = [(0, n_bins)]
+    seg_bins = [i1 - i0 for i0, i1 in segments]
 
-    fig_w = float(np.clip(2 + n_bins * 0.3, 8, 40))
+    fig_w = float(np.clip(2 + sum(seg_bins) * 0.3, 8, 40))
     fig_h = float(np.clip(1.5 + n_rows * 0.35, 4, 20))
-    fig, ax = plt.subplots(figsize=(fig_w, fig_h))
+    # One panel per segment, sized by its number of bins, sharing rows
+    fig, axes = plt.subplots(
+        1, len(segments), figsize=(fig_w, fig_h), sharey=True,
+        squeeze=False, layout="constrained",
+        gridspec_kw={"width_ratios": seg_bins})
+    fig.get_layout_engine().set(wspace=0.02, w_pad=0.02)
+    axes = axes[0]
 
     cmap = plt.get_cmap("RdYlGn", n_color_bins).copy()
     cmap.set_bad(color="#d9d9d9")
@@ -424,6 +437,96 @@ def plot_availability(seed_ids, bin_edges, fraction, min_val, mean_val,
     step = bounds[1] - bounds[0]
     n_decimals = max(2, int(np.ceil(-np.log10(step))))
     norm = mcolors.BoundaryNorm(bounds, n_color_bins)
+    complete_color = "#2166ac"
+
+    total_cells = n_rows * sum(seg_bins)
+    do_annotate = annotate and total_cells <= max_annotated_cells
+    if annotate and not do_annotate:
+        print(f"Skipping cell annotations: grid has {total_cells} "
+              f"cells > --max-annotated-cells {max_annotated_cells} "
+              "(coarsen --bin-hours, or raise --max-annotated-cells, "
+              "to force annotation).")
+
+    for k, (ax, (i0, i1)) in enumerate(zip(axes, segments)):
+        # Only the last panel labels its end date; elsewhere it would
+        # collide with the next panel's start date across the break
+        mesh = draw_segment(ax, seed_ids, bin_edges[i0:i1 + 1],
+                            fraction[:, i0:i1], mean_val[:, i0:i1], cmap,
+                            norm, complete_color, do_annotate,
+                            annotate_fontsize, tick_interval_days,
+                            end_tick=k == len(segments) - 1)
+
+    axes[0].set_yticks(np.arange(n_rows) + 0.5)
+    axes[0].set_yticklabels(seed_ids)
+    axes[0].invert_yaxis()  # shared, so this flips every panel
+    if len(axes) > 1:
+        draw_axis_breaks(axes)
+    axes[-1].legend(handles=[mpatches.Patch(color=complete_color,
+                                            label="Complete (100%)")],
+                    loc="lower right", bbox_to_anchor=(1.0, 1.0),
+                    fontsize=10, frameon=False, borderaxespad=0.5)
+
+    fig.supxlabel("Time (UTC)")
+    day_range = julian_day_range_label(bin_edges)
+    title = title or (f"Data Availability ({bin_hours:g}-hour bins, "
+                      f"{day_range})")
+    fig.suptitle(title)
+
+    cbar = fig.colorbar(mesh, ax=list(axes), pad=0.01, boundaries=bounds,
+                         ticks=bounds)
+    # Top class is [x, 1) -- label its upper edge "< 1" so it isn't
+    # mistaken for the separately colored complete (100%) bins
+    tick_labels = [f"{b:.{n_decimals}f}" for b in bounds[:-1]]
+    cbar.set_ticklabels(tick_labels + ["< 1"])
+    cbar.set_label("Fraction of Expected Samples")
+
+    if do_annotate:
+        fig.text(0.01, 0.01,
+                "Cell text: mean data value in that bin (raw miniseed "
+                "units)",
+                fontsize=8, color="dimgray")
+    fig.savefig(out, dpi=dpi, bbox_inches="tight")
+    print(f"Saved figure to {out}")
+
+
+def draw_segment(ax, seed_ids, bin_edges, fraction, mean_val, cmap, norm,
+                 complete_color, annotate, annotate_fontsize,
+                 tick_interval_days, end_tick=True):
+    """
+    Draw one continuous time segment of the availability grid on `ax`.
+
+    :type ax: matplotlib.axes.Axes
+    :param ax: axes to draw on
+    :type seed_ids: list of str
+    :param seed_ids: row labels, used for the station separator lines
+    :type bin_edges: numpy.ndarray
+    :param bin_edges: this segment's Unix timestamp bin edges
+    :type fraction: numpy.ndarray
+    :param fraction: (n_channels, n_seg_bins) fraction of expected
+        samples present
+    :type mean_val: numpy.ndarray
+    :param mean_val: (n_channels, n_seg_bins) mean data value per bin
+    :type cmap: matplotlib.colors.Colormap
+    :param cmap: colormap for partially complete bins
+    :type norm: matplotlib.colors.BoundaryNorm
+    :param norm: color normalization shared by all segments
+    :type complete_color: str
+    :param complete_color: color for complete (100%) bins
+    :type annotate: bool
+    :param annotate: annotate non-empty cells with their mean value
+    :type annotate_fontsize: float
+    :param annotate_fontsize: font size for the mean-value cell text
+    :type tick_interval_days: int
+    :param tick_interval_days: x tick spacing in days within a month
+    :type end_tick: bool
+    :param end_tick: label the segment's end edge with a tick
+    :rtype: matplotlib.collections.QuadMesh
+    :return: the partial-availability mesh, for the colorbar
+    """
+    n_rows, n_bins = fraction.shape
+    x_edges = pd.to_datetime(bin_edges, unit="s")
+    y_edges = np.arange(n_rows + 1)
+
     # Bins with every expected sample present get their own color, drawn
     # as a separate layer, so even a few missing samples (which would
     # otherwise land in the top color class) are visibly incomplete
@@ -431,24 +534,12 @@ def plot_availability(seed_ids, bin_edges, fraction, min_val, mean_val,
     frac_masked = np.ma.masked_where((fraction <= 0) | complete, fraction)
     mesh = ax.pcolormesh(x_edges, y_edges, frac_masked, cmap=cmap,
                           norm=norm, edgecolors="white", linewidth=0.4)
-    complete_color = "#2166ac"
-    complete_cmap = mcolors.ListedColormap([complete_color])
     ax.pcolormesh(x_edges, y_edges,
                   np.ma.masked_where(~complete, np.ones_like(fraction)),
-                  cmap=complete_cmap, edgecolors="white", linewidth=0.4)
-    ax.legend(handles=[mpatches.Patch(color=complete_color,
-                                      label="Complete (100%)")],
-              loc="lower right", bbox_to_anchor=(1.0, 1.0),
-              fontsize=10, frameon=False, borderaxespad=0.5)
+                  cmap=mcolors.ListedColormap([complete_color]),
+                  edgecolors="white", linewidth=0.4)
 
-    total_cells = n_rows * n_bins
-    do_annotate = annotate and total_cells <= max_annotated_cells
-    if annotate and not do_annotate:
-        print(f"Skipping cell annotations: grid has {total_cells} "
-              f"cells > --max-annotated-cells {max_annotated_cells} "
-              "(coarsen --bin-hours, or raise --max-annotated-cells, "
-              "to force annotation).")
-    if do_annotate:
+    if annotate:
         centers = (bin_edges[:-1] + bin_edges[1:]) / 2
         bin_centers = pd.to_datetime(centers, unit="s")
         for r in range(n_rows):
@@ -473,41 +564,125 @@ def plot_availability(seed_ids, bin_edges, fraction, min_val, mean_val,
         elif locations[r] != locations[r - 1]:
             ax.axhline(r, color="black", linewidth=0.8)
 
-    ax.set_yticks(np.arange(n_rows) + 0.5)
-    ax.set_yticklabels(seed_ids)
-    ax.invert_yaxis()
     ticks = month_restart_ticks(bin_edges, tick_interval_days)
-    range_ticks = pd.DatetimeIndex([x_edges[0], x_edges[-1]])
+    last = x_edges[-1] if end_tick else x_edges[-1] - pd.Timedelta(days=1)
+    ticks = ticks[(ticks >= x_edges[0]) & (ticks <= last)]
+    range_ticks = [x_edges[0], x_edges[-1]] if end_tick else [x_edges[0]]
     ticks = pd.DatetimeIndex(sorted(set(ticks) | set(range_ticks)))
     ax.set_xticks(ticks)
     tick_labels = [f"{t.strftime('%b %d')}\n{t.dayofyear:03d}"
                    for t in ticks]
     ax.set_xticklabels(tick_labels, rotation=45, ha="center")
     ax.set_xlim(x_edges[0], x_edges[-1])
-    ax.set_xlabel("Time (UTC)")
-    day_range = julian_day_range_label(bin_edges)
-    if title:
-        ax.set_title(title)
-    else:
-        ax.set_title(f"Data Availability ({bin_hours:g}-hour "
-                     f"bins, {day_range})\n")
+    return mesh
 
-    cbar = fig.colorbar(mesh, ax=ax, pad=0.01, boundaries=bounds,
-                         ticks=bounds)
-    # Top class is [x, 1) -- label its upper edge "< 1" so it isn't
-    # mistaken for the separately colored complete (100%) bins
-    tick_labels = [f"{b:.{n_decimals}f}" for b in bounds[:-1]]
-    cbar.set_ticklabels(tick_labels + ["< 1"])
-    cbar.set_label("Fraction of Expected Samples")
 
-    if do_annotate:
-        fig.text(0.01, 0.01,
-                "Cell text: mean data value in that bin (raw miniseed "
-                "units)",
-                fontsize=8, color="dimgray")
-    fig.tight_layout(rect=(0, 0.02, 1, 1))
-    fig.savefig(out, dpi=dpi, bbox_inches="tight")
-    print(f"Saved figure to {out}")
+def draw_axis_breaks(axes, size=10):
+    """
+    Join side-by-side panels with broken-axis marks: hide the facing
+    spines and draw a pair of diagonal slashes at the top and bottom of
+    each break.
+
+    :type axes: list of matplotlib.axes.Axes
+    :param axes: panels ordered left to right
+    :type size: float
+    :param size: slash marker size in points
+    """
+    slash = dict(marker=[(-1, -1), (1, 1)], markersize=size,
+                 linestyle="none", color="black", mec="black", mew=1.2,
+                 clip_on=False)
+    for left, right in zip(axes[:-1], axes[1:]):
+        left.spines["right"].set_visible(False)
+        right.spines["left"].set_visible(False)
+        right.tick_params(axis="y", left=False)
+        left.plot([1, 1], [0, 1], transform=left.transAxes, **slash)
+        right.plot([0, 0], [0, 1], transform=right.transAxes, **slash)
+
+
+def sort_rows(seed_ids, arrays, sort_by="name", reverse=False):
+    """
+    Reorder the rows by name, or by when each row's data starts or ends.
+    Ties (e.g. the components of one instrument, which usually share
+    times) fall back to name order so related rows stay together, and
+    rows with no data at all always go last.
+
+    :type seed_ids: list of str
+    :param seed_ids: row labels, in name order
+    :type arrays: list of numpy.ndarray
+    :param arrays: (n_rows, n_bins) arrays to reorder along the row axis;
+        the first must be the availability fraction
+    :type sort_by: str
+    :param sort_by: "name", "starttime" (first bin with data) or
+        "endtime" (last bin with data)
+    :type reverse: bool
+    :param reverse: sort latest (or Z-A) first instead
+    :rtype: tuple
+    :return: (sorted_seed_ids, sorted_arrays)
+    """
+    has_data = np.nan_to_num(arrays[0]) > 0
+    n_bins = has_data.shape[1]
+    keys = []
+    for r, seed_id in enumerate(seed_ids):
+        bins = np.flatnonzero(has_data[r])
+        if sort_by == "starttime":
+            t = bins[0] if bins.size else None
+        elif sort_by == "endtime":
+            t = bins[-1] if bins.size else None
+        else:
+            t = 0
+        if t is not None and reverse and sort_by != "name":
+            t = n_bins - t  # flip the time order, keep names A-Z
+        keys.append((t is None, t or 0, seed_id))
+    order = sorted(range(len(seed_ids)), key=lambda r: keys[r])
+    if reverse and sort_by == "name":
+        order = order[::-1]
+    return ([seed_ids[r] for r in order],
+            [arr[order] for arr in arrays])
+
+
+def find_segments(fraction, bin_edges, min_gap_days):
+    """
+    Split the bins into continuous segments, cutting out every run of
+    bins where no row has any data that lasts at least `min_gap_days`.
+    Shorter empty runs stay in place (drawn gray) so brief outages are
+    still visible.
+
+    :type fraction: numpy.ndarray
+    :param fraction: (n_channels, n_bins) fraction of expected samples
+        present
+    :type bin_edges: numpy.ndarray
+    :param bin_edges: 1D array of Unix timestamps, length n_bins + 1
+    :type min_gap_days: float
+    :param min_gap_days: shortest all-empty span, in days, to cut out
+    :rtype: list of tuple
+    :return: [(first_bin, last_bin + 1), ...] index ranges to plot
+    """
+    empty = ~(np.nan_to_num(fraction) > 0).any(axis=0)
+    segments = []
+    start = 0
+    i = 0
+    n_bins = empty.size
+    while i < n_bins:
+        if not empty[i]:
+            i += 1
+            continue
+        j = i
+        while j < n_bins and empty[j]:
+            j += 1
+        gap_days = (bin_edges[j] - bin_edges[i]) / 86400
+        if gap_days >= min_gap_days:
+            if i > start:
+                segments.append((start, i))
+            print(f"Cutting {gap_days:g}-day gap with no data: "
+                  f"{pd.to_datetime(bin_edges[i], unit='s')} to "
+                  f"{pd.to_datetime(bin_edges[j], unit='s')}")
+            start = j
+        i = j
+    if start < n_bins:
+        segments.append((start, n_bins))
+    if not segments:
+        raise ValueError("No data in any bin to plot")
+    return segments
 
 
 def parse_args():
@@ -555,6 +730,20 @@ def parse_args():
              "EHZ/EHN/EHE), taking the minimum availability across its "
              "components; disables cell annotation since mean values "
              "aren't comparable across components")
+    parser.add_argument(
+        "--sort", choices=["name", "starttime", "endtime"], default="name",
+        help="row order: alphabetical by name (default), or by the first "
+             "(starttime) or last (endtime) bin with data; ties are "
+             "ordered by name and rows with no data go last")
+    parser.add_argument(
+        "--reverse-sort", action="store_true",
+        help="reverse --sort, e.g. latest starttime first")
+    parser.add_argument(
+        "--break-gaps", type=float, nargs="?", const=7.0, default=None,
+        metavar="DAYS",
+        help="cut out spans with no data on any row lasting at least "
+             "DAYS (default 7 if no value is given) and draw the "
+             "remaining periods as separate panels with a broken axis")
     parser.add_argument(
         "--tick-interval-days", type=int, default=7,
         help="x-axis tick spacing in days within a calendar month, "
@@ -626,6 +815,15 @@ def main():
             annotate = False
         min_val = mean_val = max_val = np.full_like(fraction, np.nan)
 
+    if args.sort != "name" or args.reverse_sort:
+        seed_ids, (fraction, min_val, mean_val, max_val) = sort_rows(
+            seed_ids, [fraction, min_val, mean_val, max_val], args.sort,
+            args.reverse_sort)
+
+    segments = None
+    if args.break_gaps is not None:
+        segments = find_segments(fraction, bin_edges, args.break_gaps)
+
     plot_availability(seed_ids, bin_edges, fraction, min_val, mean_val,
                        max_val, bin_hours, args.out, annotate=annotate,
                        title=args.title,
@@ -633,7 +831,7 @@ def main():
                        annotate_fontsize=args.annotate_fontsize,
                        n_color_bins=args.n_color_bins,
                        tick_interval_days=args.tick_interval_days,
-                       dpi=args.dpi)
+                       dpi=args.dpi, segments=segments)
 
 
 if __name__ == "__main__":
