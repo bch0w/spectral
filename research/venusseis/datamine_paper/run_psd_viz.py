@@ -6,10 +6,10 @@ Scans the MiniSEED directory (DATA) for every available channel and runs
 three steps:
 
 1. ``compute``: build one combined PPSD NPZ per channel in SPECTRA
-2. ``pdf``: plot a PPSD PDF figure for each NPZ into FIGURES
-3. ``compare``: plot per-station comparisons, grouping each main station
-   (e.g., AK.MDM) with its sub-stations (e.g., XX.MDMC, XX.MDMU, XX.MDMW),
-   one figure per component
+2. ``pdf``: plot a PPSD PDF figure for each NPZ into FIGURES/ppsd
+3. ``compare``: plot per-station comparisons into FIGURES/compare, grouping
+   each main station (e.g., AK.MDM) with its sub-stations (e.g., XX.MDMC,
+   XX.MDMU, XX.MDMW), one figure per component
 
 Every task's outcome is recorded in a JSON state file. On re-runs, tasks that
 succeeded (and whose output still exists) are skipped, and tasks that failed
@@ -43,6 +43,10 @@ SCRIPT = "/Users/prof/repos/psd_viz/psd_tools.py"
 PPSDS = "SPECTRA"
 DATA = "DATA"
 FIGS = "FIGURES"
+# Work-in-progress figures go in subdirectories of FIGS; paper figures stay
+# at its top level
+PDF_SUBDIR = "ppsd"
+COMPARE_SUBDIR = "compare"
 LOGS = "logs"
 XX_XML = "XML/ISHTAR.xml"
 STATE_FILE = "run_psd_viz_state.json"
@@ -417,7 +421,8 @@ def step_pdf(runner, channels):
     """
     args = runner.args
     spectra = Path(args.spectra)
-    figs = Path(args.figures)
+    figs = Path(args.figures) / PDF_SUBDIR
+    figs.mkdir(parents=True, exist_ok=True)
     print(f"\n=== Step 2: plot PPSD PDFs ({len(channels)} channels) ===")
     for chan in channels:
         key = f"pdf:{chan.sncl}"
@@ -452,7 +457,8 @@ def step_compare(runner, channels):
     """
     args = runner.args
     spectra = Path(args.spectra).resolve()
-    figs = Path(args.figures)
+    figs = Path(args.figures) / COMPARE_SUBDIR
+    figs.mkdir(parents=True, exist_ok=True)
     main_names = {c.sta for c in channels if c.net != SUB_NETWORK}
 
     groups = defaultdict(list)
@@ -531,7 +537,9 @@ def parse_args():
     parser.add_argument("--spectra", default=PPSDS,
                         help="NPZ output directory")
     parser.add_argument("--figures", default=FIGS,
-                        help="Figure output directory")
+                        help="Figure directory; PPSD PDFs go in its "
+                             f"'{PDF_SUBDIR}' and comparisons in its "
+                             f"'{COMPARE_SUBDIR}' subdirectory")
     parser.add_argument("--logs", default=LOGS,
                         help="Directory for logs and the state file")
     args = parser.parse_args()
