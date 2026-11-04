@@ -209,7 +209,8 @@ def speed_labels(speed_bins=SPEED_BINS):
 
 
 def plot_rose(ax, df, calm=0.5, rmax=None, title=None, legend=True,
-              speed_bins=SPEED_BINS, n_sectors=N_SECTORS):
+              speed_bins=SPEED_BINS, n_sectors=N_SECTORS, fontsize=10,
+              calm_y=-0.18):
     """
     Draw a stacked wind rose on a polar axis.
 
@@ -232,11 +233,17 @@ def plot_rose(ax, df, calm=0.5, rmax=None, title=None, legend=True,
     :param speed_bins: lower edges of speed classes
     :type n_sectors: int
     :param n_sectors: number of direction sectors
+    :type fontsize: float
+    :param fontsize: font size of the compass labels, calm note and legend;
+        radial labels are 3 pt smaller
+    :type calm_y: float
+    :param calm_y: vertical position of the calm note in axis coordinates,
+        or None to leave the note out
     :rtype: float
     :return: largest sector total in percent
     """
     hist, pct_calm = rose_histogram(df, calm, speed_bins, n_sectors)
-    cmap = plt.get_cmap("viridis", len(speed_bins))
+    cmap = plt.get_cmap("plasma", len(speed_bins))
     theta = np.deg2rad(np.arange(n_sectors) * 360 / n_sectors)
     width = np.deg2rad(360 / n_sectors) * 0.9
     bottom = np.zeros(n_sectors)
@@ -249,7 +256,8 @@ def plot_rose(ax, df, calm=0.5, rmax=None, title=None, legend=True,
     ax.set_theta_zero_location("N")
     ax.set_theta_direction(-1)
     ax.set_xticks(np.deg2rad([0, 45, 90, 135, 180, 225, 270, 315]))
-    ax.set_xticklabels(["N", "NE", "E", "SE", "S", "SW", "W", "NW"])
+    ax.set_xticklabels(["N", "NE", "E", "SE", "S", "SW", "W", "NW"],
+                       fontsize=fontsize)
     peak = bottom.max()
     rlim = rmax or peak * 1.1
     ax.set_ylim(0, rlim)
@@ -258,15 +266,17 @@ def plot_rose(ax, df, calm=0.5, rmax=None, title=None, legend=True,
     ax.set_yticks(np.arange(step, rlim, step))
     ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda r, _: f"{r:g}%"))
     ax.set_rlabel_position(112.5)
-    ax.tick_params(axis="y", labelsize=7)
+    ax.tick_params(axis="y", labelsize=fontsize - 3)
     ax.grid(alpha=0.4)
-    ax.text(0.5, -0.18, f"calm (<{calm:g} m/s): {pct_calm:.1f}%",
-            transform=ax.transAxes, ha="center", fontsize=8)
+    if calm_y is not None:
+        ax.text(0.5, calm_y, f"calm (<{calm:g} m/s): {pct_calm:.1f}%",
+                transform=ax.transAxes, ha="center", fontsize=fontsize)
     if title:
         ax.set_title(title, pad=14)
     if legend:
         ax.legend(title="Speed (m/s)", loc="center left",
-                  bbox_to_anchor=(1.1, 0.5), fontsize=8, title_fontsize=8,
+                  bbox_to_anchor=(1.1, 0.5), fontsize=fontsize,
+                  title_fontsize=fontsize,
                   frameon=False)
     return peak
 
@@ -283,6 +293,22 @@ def date_span(df):
     t0, t1 = df.index[0], df.index[-1]
     ndays = (t1 - t0).total_seconds() / 86400
     return f"{t0:%Y-%m-%d} to {t1:%Y-%m-%d} ({ndays:.0f} d)"
+
+
+def date_span_short(df):
+    """
+    Format the date range of a dataset compactly for small panel titles.
+
+    :type df: pandas.DataFrame
+    :param df: time-indexed data
+    :rtype: str
+    :return: e.g. "2025-03-26 – 05-07 (42 d)"; the end year is only
+        repeated if it differs from the start year
+    """
+    t0, t1 = df.index[0], df.index[-1]
+    ndays = (t1 - t0).total_seconds() / 86400
+    end = f"{t1:%m-%d}" if t1.year == t0.year else f"{t1:%Y-%m-%d}"
+    return f"{t0:%Y-%m-%d} – {end} ({ndays:.0f} d)"
 
 
 def daily_stats(df, calm=0.5):
@@ -318,7 +344,7 @@ def daily_stats(df, calm=0.5):
     return stats.dropna(subset=["median"])
 
 
-def plot_direction_wheel(ax, fontsize=7):
+def plot_direction_wheel(ax, fontsize=9):
     """
     Draw a color ring on a polar axis as the legend for DIR_CMAP.
 
@@ -344,7 +370,7 @@ def plot_direction_wheel(ax, fontsize=7):
     ax.set_title("Direction (from)", fontsize=fontsize, pad=4)
 
 
-def plot_speed_panel(ax, df, calm=0.5, avg_sec=600, fontsize=8,
+def plot_speed_panel(ax, df, calm=0.5, avg_sec=600, fontsize=10,
                      ylabel=True):
     """
     Plot averaged wind speed over time for one station on one axis.
@@ -552,9 +578,12 @@ def plot_speed_overview(data, fid_out, calm=0.5, avg_sec=600,
     plt.close(fig)
 
 
-def plot_all_roses(data, fid_out, calm=0.5):
+def plot_all_roses(data, fid_out, calm=0.5, width=7.0, fontsize=8):
     """
     Plot every station's wind rose on one figure with a shared scale.
+
+    The figure is drawn at its printed size (``width`` inches, fitting a
+    US letter page), so font sizes are the sizes that appear on the page.
 
     :type data: dict
     :param data: ``{station: DataFrame}`` of averaged wind data
@@ -562,6 +591,11 @@ def plot_all_roses(data, fid_out, calm=0.5):
     :param fid_out: output figure path
     :type calm: float
     :param calm: calm threshold in m/s
+    :type width: float
+    :param width: figure width in inches
+    :type fontsize: float
+    :param fontsize: base font size in points; station names are 2 pt
+        larger, radial labels 1.5 pt smaller
     """
     # Order panels by deployment start time, then station code for ties
     stas = sorted(data, key=lambda s: (data[s].index[0], s))
@@ -570,21 +604,45 @@ def plot_all_roses(data, fid_out, calm=0.5):
     rmax = np.ceil(max(peaks) * 1.05)
     ncol = min(4, len(stas))
     nrow = int(np.ceil(len(stas) / ncol))
-    fig, axs = plt.subplots(nrow, ncol, figsize=(3.6 * ncol, 4.4 * nrow),
+    # Each row is a square rose plus room for the title and calm note
+    panel = width / ncol
+    height = nrow * panel * 1.2 + 0.4
+    fig, axs = plt.subplots(nrow, ncol, figsize=(width, height),
                             subplot_kw={"projection": "polar"},
-                            squeeze=False,
-                            gridspec_kw={"hspace": 0.55, "wspace": 0.35})
+                            squeeze=False)
+    fig.subplots_adjust(left=0.03, right=0.97, top=0.9, bottom=0.11,
+                        hspace=0.42, wspace=0.32)
     for ax, sta in zip(axs.flat, stas):
         plot_rose(ax, data[sta], calm=calm, rmax=rmax, legend=False,
-                  title=f"{sta}\n{date_span(data[sta])}")
-        ax.title.set_fontsize(9)
+                  fontsize=fontsize, calm_y=None)
+        # Calm percentage in the lower-left corner, clear of the S label;
+        # the threshold itself is given once in the legend title
+        pct_calm = rose_histogram(data[sta], calm)[1]
+        ax.text(-0.04, -0.04, f"calm\n{pct_calm:.1f}%",
+                transform=ax.transAxes, ha="left", va="bottom",
+                fontsize=fontsize, linespacing=1.1)
+        # Cardinal labels only, so neighbouring E and W labels do not touch;
+        # the 45 degree grid lines still mark the intercardinal directions
+        ax.set_xticklabels(["N", "", "E", "", "S", "", "W", ""],
+                           fontsize=fontsize)
+        ax.tick_params(axis="x", pad=-2)
+        ax.tick_params(axis="y", labelsize=fontsize - 1.5)
+        ax.set_rlabel_position(157.5)
+        ax.text(0.5, 1.2, sta, transform=ax.transAxes, ha="center",
+                va="bottom", fontsize=fontsize + 2, fontweight="bold")
+        ax.text(0.5, 1.13, date_span_short(data[sta]),
+                transform=ax.transAxes, ha="center", va="bottom",
+                fontsize=fontsize)
     for ax in axs.flat[len(stas):]:
         ax.set_visible(False)
     handles, labels = axs.flat[0].get_legend_handles_labels()
-    fig.legend(handles, labels, title="Speed (m/s)", loc="lower center",
-               ncol=len(labels), frameon=False,
-               bbox_to_anchor=(0.5, -0.02 - 0.06 / nrow))
-    fig.savefig(fid_out, dpi=200, bbox_inches="tight")
+    fig.legend(handles, labels,
+               title=f"Speed (m/s); calm is < {calm:g} m/s",
+               loc="lower center",
+               ncol=len(labels), frameon=False, fontsize=fontsize,
+               title_fontsize=fontsize, bbox_to_anchor=(0.5, -0.01),
+               handlelength=1.6, columnspacing=1.2)
+    fig.savefig(fid_out, dpi=300, bbox_inches="tight", pad_inches=0.03)
     plt.close(fig)
 
 
