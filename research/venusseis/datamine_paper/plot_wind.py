@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Plot wind roses and wind summary figures for ISHTAR anemometer stations.
+Plot wind roses and wind speed figures for ISHTAR anemometer stations.
 
 Reads day-long MiniSEED files of wind speed (``LWS``, m/s) and wind
 direction (``LWD``, degrees clockwise from North, direction the wind blows
@@ -14,10 +14,11 @@ Three figure types are written to FIGURES/WIND:
 1. ``<STA>_windrose.png``: wind rose for each station
 2. ``ALL_windrose.png``: every station's wind rose on one page with shared
    speed bins and radial scale, for direct comparison in a paper
-3. ``<STA>_wind_summary.png``: wind rose plus a daily time series (median,
-   interquartile range and maximum of the averaged speed) and an
-   hour-of-day vs. day heatmap, which shows low- and high-wind days and
-   any diurnal cycle at a glance
+3. ``ALL_wind_speed.png``: average wind speed over time for every station
+   with one column per deployment period. Each averaged sample is colored
+   by direction, with the daily median, interquartile range and a
+   downwind arrow at each day's maximum, which shows low- and high-wind
+   days at a glance
 
 A CSV of daily wind statistics per station is also written so that quiet
 and windy days can be cross-referenced against the seismic noise spectra.
@@ -48,6 +49,13 @@ PATH_OUT = "./FIGURES/WIND"
 # Speed bin edges (m/s); last bin is open-ended
 SPEED_BINS = [0.5, 2, 4, 6, 8, 10]
 N_SECTORS = 16
+# Cyclic colormap for wind direction: N red, E gold, S teal, W blue, and
+# back to red, so 359 and 1 degrees share a color. Colors are kept at mid
+# lightness so every direction stays visible on a white background
+DIR_CMAP = matplotlib.colors.LinearSegmentedColormap.from_list(
+    "wind_direction",
+    ["#c0392b", "#e09f1f", "#2a9d8f", "#3b5ba5", "#c0392b"], N=256
+)
 FNAME_RE = re.compile(
     r"^(?P<net>\w+)\.(?P<sta>\w+)\.(?P<loc>\w*)\.(?P<cha>LW[DS])\."
     r"(?P<year>\d{4})\.(?P<jday>\d{3})$"
@@ -128,9 +136,18 @@ def load_station(fids_lws, fids_lwd, avg_sec=600, min_frac=0.5):
     drc = read_channel(fids_lwd)
     df = pd.concat({"speed": spd, "direction": drc}, axis=1,
                    join="inner").dropna()
-    # Remove physically impossible values
-    df = df[(df.speed >= 0) & (df.speed < 100)
-            & (df.direction >= 0) & (df.direction <= 360)]
+    # Fault codes (e.g. speed 1000, direction 999) come in bursts where the
+    # neighboring 'valid' samples are also corrupt (20-100 m/s), so every
+    # window containing a fault is dropped, not just the fault samples
+    fault = ((df.speed < 0) | (df.speed >= 100)
+             | (df.direction < 0) | (df.direction > 360))
+    block = f"{max(avg_sec, 60)}s"
+    bad_blocks = df.index[fault].floor(block).unique()
+    in_bad = df.index.floor(block).isin(bad_blocks)
+    if fault.any():
+        print(f"  dropping {len(bad_blocks)} {block} window(s) with "
+              f"{fault.sum()} fault samples")
+    df = df[~in_bad]
 
     if avg_sec <= 1:
         return df
@@ -277,16 +294,23 @@ def daily_stats(df, calm=0.5):
     :type calm: float
     :param calm: calm threshold in m/s
     :rtype: pandas.DataFrame
-    :return: one row per UTC day with median, percentiles, max, percent
-        calm and data coverage
+    :return: one row per UTC day with median, percentiles, max, direction
+        (from) at the time of the max, percent calm and data coverage
     """
     grp = df.speed.resample("1D")
+    # Time of each day's strongest averaged wind, for its direction
+    t_max = grp.apply(lambda s: s.idxmax() if len(s) else pd.NaT)
+    dir_at_max = pd.Series(
+        [df.direction.get(t, np.nan) if pd.notna(t) else np.nan
+         for t in t_max], index=t_max.index
+    )
     stats = pd.DataFrame({
         "median": grp.median(),
         "p25": grp.quantile(0.25),
         "p75": grp.quantile(0.75),
         "p95": grp.quantile(0.95),
         "max": grp.max(),
+        "dir_at_max": dir_at_max,
         "pct_calm": grp.apply(lambda s: 100 * (s < calm).mean()
                               if len(s) else np.nan),
         "n": grp.count(),
@@ -294,90 +318,237 @@ def daily_stats(df, calm=0.5):
     return stats.dropna(subset=["median"])
 
 
-def plot_summary(df, sta, fid_out, calm=0.5, avg_sec=600):
+def plot_direction_wheel(ax, fontsize=7):
     """
-    Plot a three-panel wind summary for one station.
+    Draw a color ring on a polar axis as the legend for DIR_CMAP.
 
-    Panels: wind rose; daily median speed with interquartile band and
-    daily maximum; hour-of-day vs. date heatmap of mean speed.
+    :type ax: matplotlib.projections.polar.PolarAxes
+    :param ax: polar axis to draw the ring on
+    :type fontsize: float
+    :param fontsize: font size of the compass labels and title
+    """
+    theta = np.linspace(0, 2 * np.pi, 361)
+    radius = np.array([0.55, 1.0])
+    color = np.tile(np.rad2deg(theta[:-1]), (1, 1))
+    ax.pcolormesh(theta, radius, color, cmap=DIR_CMAP, vmin=0, vmax=360,
+                  shading="flat", rasterized=True)
+    ax.set_theta_zero_location("N")
+    ax.set_theta_direction(-1)
+    ax.set_ylim(0, 1)
+    ax.set_yticks([])
+    ax.set_xticks(np.deg2rad([0, 90, 180, 270]))
+    ax.set_xticklabels(["N", "E", "S", "W"], fontsize=fontsize)
+    ax.tick_params(axis="x", pad=-1)
+    ax.grid(False)
+    ax.spines["polar"].set_visible(False)
+    ax.set_title("Direction (from)", fontsize=fontsize, pad=4)
 
+
+def plot_speed_panel(ax, df, calm=0.5, avg_sec=600, fontsize=8,
+                     ylabel=True):
+    """
+    Plot averaged wind speed over time for one station on one axis.
+
+    Every averaged sample is drawn at its true time and colored by
+    direction (calms in gray). The daily median and interquartile band are
+    overlaid, and each day's maximum is an arrow pointing downwind.
+
+    :type ax: matplotlib.axes.Axes
+    :param ax: axis to draw on
     :type df: pandas.DataFrame
     :param df: averaged wind data with ``speed`` and ``direction`` columns
-    :type sta: str
-    :param sta: station code for the title
+    :type calm: float
+    :param calm: calm threshold in m/s
+    :type avg_sec: int
+    :param avg_sec: averaging window used, for labeling
+    :type fontsize: float
+    :param fontsize: font size of tick and axis labels
+    :type ylabel: bool
+    :param ylabel: label the y-axis; turn off when the figure carries a
+        single shared y-label
+    :rtype: float
+    :return: upper y-limit used, with headroom for the arrows
+    """
+    stats = daily_stats(df, calm)
+    days = stats.index + pd.Timedelta(hours=12)
+    times = df.index + pd.Timedelta(seconds=avg_sec / 2)
+    is_calm = (df.speed < calm).values
+    ax.scatter(times[is_calm], df.speed[is_calm], s=2.5, color="0.6",
+               alpha=0.4, lw=0, zorder=0, rasterized=True)
+    ax.scatter(times[~is_calm], df.speed[~is_calm],
+               c=df.direction[~is_calm], cmap=DIR_CMAP, vmin=0, vmax=360,
+               s=2.5, alpha=0.5, lw=0, zorder=0, rasterized=True,
+               label=f"{avg_sec // 60:g}-min mean")
+    # Summary overlays are neutral so they do not compete with the
+    # direction colors
+    ax.fill_between(days, stats.p25, stats.p75, color="0.2", alpha=0.15,
+                    lw=0)
+    # Faint dashed edges so the band reads at print size
+    for edge in (stats.p25, stats.p75):
+        ax.plot(days, edge, ls="--", lw=0.8, color="0.3", alpha=0.6,
+                zorder=1)
+    # Legend proxy showing both the fill and its dashed edge
+    ax.add_patch(matplotlib.patches.Rectangle(
+        (0, 0), 0, 0, facecolor=(0.2, 0.2, 0.2, 0.15),
+        edgecolor=(0.3, 0.3, 0.3, 0.6), ls="--", lw=0.8, label="daily IQR"
+    ))
+    ax.plot(days, stats["median"], "o-", color="k", ms=2.5, lw=1,
+            label="daily median")
+    # Daily max as an arrow pointing downwind (direction the wind blows
+    # toward) in map view: north up, east right. 'uv' angles are in screen
+    # space, so orientation does not depend on the axis scaling
+    to_rad = np.deg2rad((stats.dir_at_max + 180) % 360)
+    ax.quiver(mdates.date2num(days), stats["max"], np.sin(to_rad),
+              np.cos(to_rad), angles="uv", pivot="middle",
+              scale_units="inches", scale=6, units="inches", width=0.01,
+              headwidth=4, headlength=4.5, headaxislength=4, color="k",
+              zorder=3)
+    ax.plot([], [], ls="none", marker=r"$\rightarrow$", ms=fontsize + 3,
+            color="k", label="daily max\n(downwind)")
+    if ylabel:
+        ax.set_ylabel("Average wind speed (m/s)", fontsize=fontsize)
+    # Headroom so arrows at the top are not clipped
+    ytop = stats["max"].max() * 1.12
+    ax.set_ylim(0, ytop)
+    ax.grid(alpha=0.3)
+    ax.tick_params(labelsize=fontsize)
+    # Round tick steps keep labels short (no 2.5/12.5), which matters when
+    # panels sit close together
+    ax.yaxis.set_major_locator(
+        matplotlib.ticker.MaxNLocator(nbins=5, steps=[1, 2, 5, 10])
+    )
+    ax.xaxis.set_major_locator(mdates.AutoDateLocator(minticks=3,
+                                                      maxticks=5))
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %d"))
+    return ytop
+
+
+def plot_speed_overview(data, fid_out, calm=0.5, avg_sec=600,
+                        splits=("2025-07-01", "2025-08-15"),
+                        own_ylim=("K24KA",)):
+    """
+    Plot every station's average wind speed panel, one column per campaign.
+
+    Deployments are grouped into columns by start time using the
+    ``splits`` dates, so stations in a column cover similar date ranges;
+    each column is ordered by start time. Panels are labeled
+    alphabetically down each column in turn. A single direction color
+    wheel and the shared legend fill the empty cells of the column with
+    the most free space.
+
+    :type data: dict
+    :param data: ``{station: DataFrame}`` of averaged wind data
     :type fid_out: str
     :param fid_out: output figure path
     :type calm: float
     :param calm: calm threshold in m/s
     :type avg_sec: int
     :param avg_sec: averaging window used, for labeling
+    :type splits: tuple of str
+    :param splits: UTC dates separating the columns, in increasing order;
+        N dates give N + 1 columns
+    :type own_ylim: tuple of str
+    :param own_ylim: stations that keep their own y-axis range; all other
+        panels in a column share one range so speeds compare directly
     """
-    stats = daily_stats(df, calm)
-    fig = plt.figure(figsize=(13, 7.5))
-    gs = fig.add_gridspec(2, 2, width_ratios=[1, 2.1],
-                          height_ratios=[1, 1.1], wspace=0.25, hspace=0.35)
-    ax_rose = fig.add_subplot(gs[:, 0], projection="polar")
-    ax_ts = fig.add_subplot(gs[0, 1])
-    ax_hm = fig.add_subplot(gs[1, 1], sharex=ax_ts)
+    edges = ([pd.Timestamp.min.tz_localize("UTC")]
+             + [pd.Timestamp(s, tz="UTC") for s in splits]
+             + [pd.Timestamp.max.tz_localize("UTC")])
+    order = sorted(data, key=lambda s: (data[s].index[0], s))
+    cols = [[s for s in order if lo <= data[s].index[0] < hi]
+            for lo, hi in zip(edges[:-1], edges[1:])]
+    cols = [c for c in cols if c]
+    if not cols:
+        return
+    ncol = len(cols)
+    nrow = max(len(c) for c in cols)
 
-    plot_rose(ax_rose, df, calm=calm, legend=False)
-    ax_rose.legend(title="Speed (m/s)", loc="upper center",
-                   bbox_to_anchor=(0.5, -0.18), ncol=3, fontsize=8,
-                   title_fontsize=8, frameon=False)
+    # Sized close to a full-page journal width (~7 in) so that, once
+    # scaled down, the smallest text prints at roughly 6-7 pt
+    fs = 10
+    fig = plt.figure(figsize=(3.9 * ncol, 2.5 * nrow + 0.4))
+    # Tight spacing: x tick labels are shown only on the bottom panel of
+    # each column, so rows need room for the panel titles alone
+    gs = fig.add_gridspec(nrow, ncol, hspace=0.2, wspace=0.13)
+    letters = iter("abcdefghijklmnopqrstuvwxyz")
+    first_ax = None
+    for icol, stas in enumerate(cols):
+        # Every panel in a column spans the same whole UTC days, from the
+        # earliest start to the latest end in that column, so dates line up
+        # vertically even where a station has no data
+        t0 = min(data[s].index[0] for s in stas).floor("D")
+        t1 = (max(data[s].index[-1] for s in stas)
+              + pd.Timedelta(seconds=avg_sec)).ceil("D")
+        col_ax = None
+        shared = {}
+        for irow, sta in enumerate(stas):
+            ax = fig.add_subplot(gs[irow, icol], sharex=col_ax)
+            col_ax = col_ax or ax
+            ytop = plot_speed_panel(ax, data[sta], calm=calm,
+                                    avg_sec=avg_sec, fontsize=fs,
+                                    ylabel=False)
+            if sta not in own_ylim:
+                shared[ax] = ytop
+            ax.set_title(f"({next(letters)}) {sta}", loc="left",
+                         fontsize=fs + 2, fontweight="bold")
+            # Compact span; full dates are on the shared time axis
+            t_a, t_b = data[sta].index[0], data[sta].index[-1]
+            ndays = (t_b - t_a).total_seconds() / 86400
+            ax.set_title(f"{t_a:%b %d}–{t_b:%b %d} ({ndays:.0f} d)",
+                         loc="right", fontsize=fs - 1)
+            first_ax = first_ax or ax
+        # Half-day pad keeps arrows on the first and last days unclipped
+        pad = pd.Timedelta(hours=12)
+        col_ax.set_xlim(t0 - pad, t1 + pad)
+        # Date labels only under the bottom panel of the column
+        for ax in fig.axes[-len(stas):-1]:
+            ax.tick_params(labelbottom=False)
+        # Evenly spaced date ticks from the column start; the automatic
+        # locator gives only two ticks for month-long spans at this width
+        ndays = (t1 - t0).days
+        step = 14 if ndays > 35 else 7 if ndays > 16 else 4
+        ticks = pd.date_range(t0, t1, freq=f"{step}D")
+        col_ax.xaxis.set_major_locator(
+            matplotlib.ticker.FixedLocator(mdates.date2num(ticks))
+        )
+        # Shared y-range for the column, set by its windiest shared station
+        for ax in shared:
+            ax.set_ylim(0, max(shared.values()))
 
-    # Daily time series
-    days = stats.index + pd.Timedelta(hours=12)
-    # Every averaged sample at its true time, faint, to show the spread
-    ax_ts.scatter(df.index + pd.Timedelta(seconds=avg_sec / 2), df.speed,
-                  s=2, color="0.35", alpha=0.15, lw=0, zorder=0,
-                  rasterized=True, label=f"{avg_sec // 60:g}-min mean")
-    ax_ts.fill_between(days, stats.p25, stats.p75, color="C0", alpha=0.3,
-                       lw=0, label="interquartile range")
-    ax_ts.plot(days, stats["median"], "o-", color="C0", ms=3,
-               label="median")
-    ax_ts.plot(days, stats["max"], "v", color="C3", ms=4,
-               label=f"max {avg_sec // 60:g}-min mean")
-    q_lo, q_hi = stats["median"].quantile([0.25, 0.75])
-    ax_ts.axhspan(0, q_lo, color="0.5", alpha=0.08, lw=0)
-    ax_ts.axhline(q_hi, color="0.4", lw=0.8, ls="--")
-    ax_ts.axhline(q_lo, color="0.4", lw=0.8, ls=":")
-    ax_ts.text(1.005, q_hi, "windy-day\nthreshold", va="center",
-               fontsize=7, transform=ax_ts.get_yaxis_transform())
-    ax_ts.text(1.005, q_lo, "quiet-day\nthreshold", va="center",
-               fontsize=7, transform=ax_ts.get_yaxis_transform())
-    ax_ts.set_ylabel("Daily wind speed (m/s)")
-    ax_ts.set_ylim(bottom=0)
-    leg = ax_ts.legend(loc="lower left", bbox_to_anchor=(0, 1.0),
-                       fontsize=8, ncol=4, frameon=False,
-                       borderaxespad=0.2)
-    # Legend marker for the faint scatter is otherwise nearly invisible
+    # Fill the empty cells of the column with the most free space with the
+    # color wheel and the shared legend; fall back to space below the
+    # figure if every cell is used
+    short = min(range(ncol), key=lambda i: (len(cols[i]), i))
+    n_empty = nrow - len(cols[short])
+    if n_empty:
+        area = gs[nrow - n_empty:, short].subgridspec(
+            1, 2, width_ratios=[1, 1.3], wspace=0.25
+        )
+        ax_wheel = fig.add_subplot(area[0], projection="polar")
+        ax_leg = fig.add_subplot(area[1])
+    else:
+        ax_wheel = fig.add_axes([0.13, -0.16, 0.12, 0.14],
+                                projection="polar")
+        ax_leg = fig.add_axes([0.3, -0.16, 0.5, 0.14])
+    plot_direction_wheel(ax_wheel, fontsize=fs)
+    ax_wheel.text(0.5, -0.2, f"gray: calm\n(<{calm:g} m/s)", fontsize=fs - 1,
+                  ha="center", va="top", transform=ax_wheel.transAxes)
+
+    ax_leg.axis("off")
+    handles, labels = first_ax.get_legend_handles_labels()
+    leg = ax_leg.legend(handles, labels, loc="center left", fontsize=fs,
+                        frameon=False, borderaxespad=0, handlelength=1.5)
+    # Direction-colored legend marker would show one arbitrary hue; use a
+    # neutral, larger marker since the wheel explains the colors
     for handle in leg.legend_handles:
         if hasattr(handle, "set_sizes"):
-            handle.set_sizes([12])
-            handle.set_alpha(0.6)
-    ax_ts.grid(alpha=0.3)
-    plt.setp(ax_ts.get_xticklabels(), visible=False)
+            handle.set_sizes([20])
+            handle.set_array(None)
+            handle.set_facecolor("0.4")
+            handle.set_alpha(0.8)
 
-    # Hour-of-day vs date heatmap (hourly mean speed)
-    hourly = df.speed.resample("1h").mean()
-    grid = hourly.to_frame("speed").assign(
-        date=hourly.index.floor("D"), hour=hourly.index.hour
-    ).pivot_table(index="hour", columns="date", values="speed")
-    grid = grid.reindex(columns=pd.date_range(grid.columns[0],
-                                              grid.columns[-1], freq="D"))
-    x = mdates.date2num(list(grid.columns) + [grid.columns[-1]
-                                               + pd.Timedelta(days=1)])
-    mesh = ax_hm.pcolormesh(x, np.arange(25), grid.values, cmap="viridis",
-                            shading="flat", vmin=0)
-    cax = ax_hm.inset_axes([1.01, 0, 0.015, 1])
-    fig.colorbar(mesh, cax=cax, label="Hourly mean speed (m/s)")
-    ax_hm.set_ylabel("Hour of day (UTC)")
-    ax_hm.set_yticks([0, 6, 12, 18, 24])
-    ax_hm.xaxis.set_major_locator(mdates.AutoDateLocator())
-    ax_hm.xaxis.set_major_formatter(mdates.DateFormatter("%b %d"))
-
-    fig.suptitle(f"{sta} wind, {date_span(df)}", fontsize=13)
-    fig.savefig(fid_out, dpi=200, bbox_inches="tight")
+    fig.supylabel("Average wind speed (m/s)", fontsize=fs + 2, x=0.085)
+    fig.savefig(fid_out, dpi=300, bbox_inches="tight")
     plt.close(fig)
 
 
@@ -473,9 +644,6 @@ def main():
                     bbox_inches="tight")
         plt.close(fig)
 
-        plot_summary(df, sta, os.path.join(args.out,
-                                           f"{sta}_wind_summary.png"),
-                     calm=args.calm, avg_sec=args.avg)
         daily_stats(df, args.calm).round(3).to_csv(
             os.path.join(args.out, f"{sta}_daily_wind.csv"),
             index_label="date"
@@ -484,6 +652,10 @@ def main():
     if len(data) > 1:
         plot_all_roses(data, os.path.join(args.out, "ALL_windrose.png"),
                        calm=args.calm)
+    if data:
+        plot_speed_overview(data, os.path.join(args.out,
+                                               "ALL_wind_speed.png"),
+                            calm=args.calm, avg_sec=args.avg)
     print(f"figures written to {args.out}")
 
 
