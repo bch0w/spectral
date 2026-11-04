@@ -26,4 +26,4 @@ if __name__ == "__main__":
     main(description=__doc__, reference="C", omit="permanent",
          sites="KAED,RND", exclude_sites="",
          outfile="FIGURES/covered_relative.png",
-         panel_height=2.4)
+         panel_height=2.4 )

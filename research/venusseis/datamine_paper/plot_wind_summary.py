@@ -2,17 +2,19 @@
 """
 Summary of wind-induced noise at every site, one curve per installation.
 
-Condensed version of plot_wind_binned.py. Rows are sites and columns are
-components (Z, N, E). Each panel has one curve per station (Permanent,
-Covered, Uncovered, Windscreen): the station's median spectrum during
-windy hours minus its own median spectrum during calm hours, using the
-wind measured at the site's anemometer (<SITE>A). Positive values mean
-more noise when it is windy.
+Rows are sites and columns are components (Z, N, E). Each panel has one
+curve per station (Permanent, Covered, Uncovered, Windscreen): the
+station's median spectrum during windy hours minus its own median spectrum
+during calm hours, using the wind measured at the site's anemometer
+(<SITE>A). Positive values mean more noise when it is windy.
 
 Windy and calm hours use the same thresholds at every site (default: calm
 < 1 m/s, windy >= 4 m/s), so curves compare directly. Sites without enough
 calm or windy hours are left out, with a note printed. PSDs are smoothed
 and limited to each site's common window as in plot_permanent_relative.py.
+Wind is read with plot_wind.py (faulty samples removed), averaged in
+10-minute windows, and each PSD hour gets the mean of the 10-minute windows
+it spans.
 
 Example::
 
@@ -28,10 +30,101 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
 from plot_permanent_relative import (  # noqa: E402
-    KEY_ORDER, MUTED_TEXT, PERMANENT_COLOR, SUFFIX_COLORS, common_window,
-    key_label, load_stations, log_bins, station_key, style_axis,
+    KEY_ORDER, MUTED_TEXT, PERMANENT_COLOR, SUFFIX_COLORS, channel_data,
+    common_window, key_label, load_stations, log_bins, station_key,
+    style_axis, to_bins,
 )
-from plot_wind_binned import binned_spectra, hourly_wind  # noqa: E402
+from plot_wind import find_wind_files, load_station  # noqa: E402
+
+
+# Wind is averaged in 10-minute windows; each PSD covers one hour
+WIND_AVG_SEC = 600
+PSD_WINDOW_SEC = 3600
+
+
+def hourly_wind(site, data_dir, suffix="A"):
+    """
+    Load a site's wind speed as 10-minute means keyed by start time.
+
+    :type site: str
+    :param site: site code, e.g. MITD
+    :type data_dir: str
+    :param data_dir: MiniSEED directory holding LWS/LWD day files
+    :type suffix: str
+    :param suffix: suffix of the anemometer station code
+    :rtype: dict
+    :return: Unix start time (s) -> mean wind speed (m/s)
+    """
+    station = f"{site}{suffix}"
+    files = find_wind_files(data_dir, [station]).get(station)
+    if not files or not files["LWS"] or not files["LWD"]:
+        raise SystemExit(f"No wind data for {station} in {data_dir}")
+    df = load_station(files["LWS"], files["LWD"], avg_sec=WIND_AVG_SEC)
+    times = df.index.asi8 // 1_000_000_000
+    return dict(zip(times.tolist(), df.speed.to_numpy()))
+
+
+def wind_for_segments(times, wind, min_windows=4):
+    """
+    Average the 10-minute wind means spanned by each PSD window.
+
+    :type times: numpy.ndarray
+    :param times: PSD window start times (Unix s)
+    :type wind: dict
+    :param wind: 10-minute wind means from hourly_wind
+    :type min_windows: int
+    :param min_windows: minimum number of 10-minute means needed (of 6)
+    :rtype: numpy.ndarray
+    :return: mean wind speed per PSD window, NaN if too little wind data
+    """
+    n = PSD_WINDOW_SEC // WIND_AVG_SEC
+    out = np.full(len(times), np.nan)
+    for i, t in enumerate(times):
+        start = int(t) - int(t) % WIND_AVG_SEC
+        vals = [wind[start + k * WIND_AVG_SEC] for k in range(n)
+                if start + k * WIND_AVG_SEC in wind]
+        if len(vals) >= min_windows:
+            out[i] = np.mean(vals)
+    return out
+
+
+def binned_spectra(station, comp, window, wind, edges, centers, args):
+    """
+    Median spectrum of one station and component per wind-speed bin.
+
+    :type station: Station
+    :param station: station to process
+    :type comp: str
+    :param comp: component code
+    :type window: tuple of int
+    :param window: (start, end) in Unix seconds
+    :type wind: dict
+    :param wind: 10-minute wind means from hourly_wind
+    :type edges: list of float
+    :param edges: wind bin edges in m/s; the last bin is open-ended
+    :type centers: numpy.ndarray
+    :param centers: frequency bin centers in Hz
+    :type args: argparse.Namespace
+    :param args: parsed command line arguments
+    :rtype: tuple or None
+    :return: (median dB [wind bins, freq bins], PSD windows per wind bin),
+        or None if the station lacks the component; bins with fewer than
+        args.min_hours windows are NaN
+    """
+    data = channel_data(station, comp, window)
+    if data is None or len(data[1]) == 0:
+        return None
+    binned = to_bins(data[0], data[2], centers, args.octave_fraction)
+    speed = wind_for_segments(data[1], wind)
+    uppers = list(edges[1:]) + [np.inf]
+    medians = np.full((len(edges), centers.size), np.nan)
+    counts = np.zeros(len(edges), dtype=int)
+    for b, (low, high) in enumerate(zip(edges, uppers)):
+        sel = (speed >= low) & (speed < high)
+        counts[b] = sel.sum()
+        if counts[b] >= args.min_hours:
+            medians[b] = np.nanmedian(binned[sel], axis=0)
+    return medians, counts
 
 
 def site_curves(stations, wind, comps, centers, args):
@@ -41,7 +134,7 @@ def site_curves(stations, wind, comps, centers, args):
     :type stations: list of Station
     :param stations: stations at the site
     :type wind: dict
-    :param wind: 10-minute wind means from plot_wind_binned.hourly_wind
+    :param wind: 10-minute wind means from hourly_wind
     :type comps: list of str
     :param comps: component codes
     :type centers: numpy.ndarray

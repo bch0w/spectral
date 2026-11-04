@@ -48,6 +48,7 @@ FNAME_RE = re.compile(
     r"(?P<loc>[A-Za-z0-9]*)\.(?P<chan>[A-Za-z0-9]+)\."
     r"(?P<year>\d{4})\.(?P<doy>\d{3})$"
 )
+FONTSIZE=14
 
 
 def discover_files(data_dir, pattern):
@@ -457,28 +458,28 @@ def plot_availability(seed_ids, bin_edges, fraction, min_val, mean_val,
                             end_tick=k == len(segments) - 1)
 
     axes[0].set_yticks(np.arange(n_rows) + 0.5)
-    axes[0].set_yticklabels(seed_ids)
+    axes[0].set_yticklabels(seed_ids, fontsize=FONTSIZE)
     axes[0].invert_yaxis()  # shared, so this flips every panel
     if len(axes) > 1:
         draw_axis_breaks(axes)
     axes[-1].legend(handles=[mpatches.Patch(color=complete_color,
                                             label="Complete (100%)")],
                     loc="lower right", bbox_to_anchor=(1.0, 1.0),
-                    fontsize=10, frameon=False, borderaxespad=0.5)
+                    fontsize=FONTSIZE, frameon=False, borderaxespad=0.5)
 
-    fig.supxlabel("Time (UTC)")
+    fig.supxlabel("Time (UTC)", fontsize=FONTSIZE)
     day_range = julian_day_range_label(bin_edges)
     title = title or (f"Data Availability ({bin_hours:g}-hour bins, "
                       f"{day_range})")
-    fig.suptitle(title)
+    fig.suptitle(title, fontsize=FONTSIZE)
 
     cbar = fig.colorbar(mesh, ax=list(axes), pad=0.01, boundaries=bounds,
                          ticks=bounds)
     # Top class is [x, 1) -- label its upper edge "< 1" so it isn't
     # mistaken for the separately colored complete (100%) bins
     tick_labels = [f"{b:.{n_decimals}f}" for b in bounds[:-1]]
-    cbar.set_ticklabels(tick_labels + ["< 1"])
-    cbar.set_label("Fraction of Expected Samples")
+    cbar.set_ticklabels(tick_labels + ["< 1"], fontsize=FONTSIZE)
+    cbar.set_label("Fraction of Expected Samples", fontsize=FONTSIZE)
 
     if do_annotate:
         fig.text(0.01, 0.01,
@@ -572,7 +573,7 @@ def draw_segment(ax, seed_ids, bin_edges, fraction, mean_val, cmap, norm,
     ax.set_xticks(ticks)
     tick_labels = [f"{t.strftime('%b %d')}\n{t.dayofyear:03d}"
                    for t in ticks]
-    ax.set_xticklabels(tick_labels, rotation=45, ha="center")
+    ax.set_xticklabels(tick_labels, rotation=45, ha="center", fontsize=FONTSIZE)
     ax.set_xlim(x_edges[0], x_edges[-1])
     return mesh
 
