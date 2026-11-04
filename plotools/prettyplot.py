@@ -484,15 +484,15 @@ def spectrogram(ax, xvals, tr, per_lap=0.9, wlen=None, log=False,
     freq = np.concatenate((freq, [freq[-1] + 2 * halfbin_freq]))
     freq -= halfbin_freq
 
-    # We do the same for the time axis (NOTE: This is not used, see below)
-    time = np.concatenate((time, [time[-1] + 2 * halfbin_time]))
-    time -= halfbin_time
-
-    # Hijack and change the time axis to match the waveforms so we can use
-    # sharex, otherwise they are on separate x axes. 
-    # We apply the same time shifting as above to get proper t0
-    new_time = np.linspace(xvals.min(), xvals.max(), len(time))
-    new_time += (time[0] + 2 * halfbin_time) / SECONDS_PER_DAY 
+    # mlab returns window *centre* times in seconds after the first sample.
+    # Turn them into bin edges, then map the edges onto the waveform x-axis
+    # (seconds, minutes, hours or Matplotlib date numbers) so sharex lines
+    # the image up with the waveform. The units-per-second factor comes
+    # from the full span of `xvals`, which avoids float round-off when
+    # `xvals` are date numbers
+    time = np.concatenate((time - halfbin_time, [time[-1] + halfbin_time]))
+    units_per_sec = (xvals[-1] - xvals[0]) / ((len(xvals) - 1) / samp_rate)
+    new_time = xvals[0] + time * units_per_sec
 
     # Plot times
     im = ax.pcolormesh(new_time, freq, specgram, norm=norm, **kwargs)
@@ -604,9 +604,9 @@ def set_plot_aesthetic(
         ax.xaxis.set_major_locator(MultipleLocator(float(xtick_major)))
     if xtick_minor:
         ax.xaxis.set_minor_locator(MultipleLocator(float(xtick_minor)))
-    if ytick_minor:
-        ax.yaxis.set_major_locator(MultipleLocator(float(ytick_major)))
     if ytick_major:
+        ax.yaxis.set_major_locator(MultipleLocator(float(ytick_major)))
+    if ytick_minor:
         ax.yaxis.set_minor_locator(MultipleLocator(float(ytick_minor)))
 
     plt.sca(ax)
@@ -803,6 +803,7 @@ class PrettyPlot():
         self._colors = None
         self._alphas = None
         self._ylims = None
+        self._ref_time = None
 
         # Parameter conflicts
         if self.wf_type == "grid":
@@ -897,6 +898,10 @@ class PrettyPlot():
         if self.time.startswith("a") and len(self.time) > 1:
             self.st = convert_timezone(code=self.time[1:], st=self.st)
 
+        # Relative time axes (and `xlim`) are measured from the first sample
+        # of the first trace as read, so remember it before any trimming
+        self._ref_time = self.st[0].stats.starttime
+
         # Trim data shorter so we don't process the entire waveform but add some
         # buffer so that preprocessing on the tails of the data doesn't show up.
         # the tail data will stay there but we will set the xlim of the plot to 
@@ -908,18 +913,56 @@ class PrettyPlot():
                 buffer = (end - start) * self.trim_pct  # some % of the record
                 self.st.trim(starttime=start - buffer, endtime=end + buffer)
             else:
-                starttime = self.st[0].stats.starttime
-                buffer = (float(self.xlim[1]) - float(self.xlim[0])) * \
-                                                                   self.trim_pct
-                self.st.trim(
-                    starttime=starttime + (float(self.xlim[0]) - buffer),
-                    endtime=starttime + (float(self.xlim[1]) + buffer)
-                    )
+                # `xlim` is in the units of `time` and includes the t0 and
+                # tstart offsets, so undo those to get seconds after the
+                # reference time
+                x0, x1 = [self._rel_to_seconds(float(_)) for _ in self.xlim]
+                buffer = (x1 - x0) * self.trim_pct
+                self.st.trim(starttime=self._ref_time + (x0 - buffer),
+                             endtime=self._ref_time + (x1 + buffer))
             print(f"\ttrimming with {buffer}s buffer on either end")
 
             if not self.st:
                 print("Trimming removed all data, please check `xlim` values")
                 sys.exit()
+
+    def _seconds_per_unit(self):
+        """
+        Return the number of seconds in one unit of a relative time axis
+
+        :rtype: float
+        :return: 1 for 's', 60 for 'm', 3600 for 'h'
+        """
+        return {"s": 1., "m": 60., "h": 3600.}.get(self.time, 1.)
+
+    def _rel_to_seconds(self, x):
+        """
+        Convert a value on the relative time axis to seconds after the
+        reference time (first sample of the first trace as read)
+
+        :type x: float
+        :param x: time in the units of `time`, including t0/tstart offsets
+        :rtype: float
+        :return: seconds after `_ref_time`
+        """
+        return (x + self.t0 - self.tstart) * self._seconds_per_unit()
+
+    def _default_origin(self):
+        """
+        Origin time used for TauP arrivals and group velocities when
+        `tp_start` is not given: the start of `xlim` if set, otherwise the
+        first plotted sample. Matches the units of the time axis.
+
+        :rtype: UTCDateTime or float
+        :return: UTCDateTime if `time` is absolute, else relative time
+        """
+        if self.time.startswith("a"):
+            if self.xlim:
+                return UTCDateTime(self.xlim[0])
+            return self.st[0].stats.starttime
+        if self.xlim:
+            return float(self.xlim[0])
+        return float(self._xvals[0])
 
     def process_waveforms(self):
         """
@@ -995,13 +1038,12 @@ class PrettyPlot():
                 _set_xaxis_obspy_dates(ax, minticks=self.minticks, 
                                        maxticks=self.maxticks)
         else:
-            xvals = times
-            if self.time == "s":
-                pass
-            elif self.time == "m":
-                xvals /= 60
-            elif self.time == "h":
-                xvals /= 3600
+            # Measure from the reference time so trimming (by `xlim` or to
+            # a common window) does not reset the axis to zero
+            if self._ref_time is None:
+                self._ref_time = self.st[0].stats.starttime
+            offset = self.st[0].stats.starttime - self._ref_time
+            xvals = (times + offset) / self._seconds_per_unit()
             xvals -= self.t0
             xvals += self.tstart
 
@@ -1022,7 +1064,7 @@ class PrettyPlot():
         # Normalize data by its own max so everything falls between [-1, 1]
         if self.wf_norm:
             for i, d in enumerate(data[:]):
-                data[i] = d / d.max()
+                data[i] = d / np.abs(d).max()
         # Absolute value of each trace if we just want to look at rel. amplitude
         if self.wf_abs:
             data = [np.abs(d) for d in data]
@@ -1057,7 +1099,7 @@ class PrettyPlot():
                 spacing = self.wf_recsec_spacing
             else:
                 # Set an arbitrary spacing based on the order of magnitude 
-                oom = np.floor(np.log10(np.amax(self.st[0].data)))
+                oom = np.floor(np.log10(np.abs(self.st[0].data).max()))
                 spacing = self.wf_recsec_spacing* 10 ** oom
             print(f"\trecsec spacing is {spacing}")
 
@@ -1262,11 +1304,8 @@ class PrettyPlot():
            
         # Determine the time series starttime of the event because the TauP
         # times are relative to an origin time
-        if self.tp_start is None: 
-            if self.time.startswith("a"):
-                tp_start = UTCDateTime(self._xvals[0])
-            else:
-                tp_start = float(self._xvals[0])
+        if self.tp_start is None:
+            tp_start = self._default_origin()
         else:
             if self.time.startswith("a"):
                 tp_start = UTCDateTime(self.tp_start)
@@ -1364,11 +1403,8 @@ class PrettyPlot():
 
         # Determine the time series starttime of the event because the TauP
         # times are relative to an origin time
-        if self.tp_start is None: 
-            if self.time.startswith("a"):
-                tp_start = UTCDateTime(self._xvals[0])
-            else:
-                tp_start = float(self._xvals[0])
+        if self.tp_start is None:
+            tp_start = self._default_origin()
         else:
             if self.time.startswith("a"):
                 tp_start = UTCDateTime(self.tp_start)
@@ -1544,7 +1580,10 @@ class PrettyPlot():
         if self.output:
             if not os.path.exists(self.output):
                 os.makedirs(self.output)
-            self.st.write(os.path.join(self.output, self.fids), format="MSEED")
+            for tr in self.st:
+                fid_out = os.path.join(self.output, f"{tr.get_id()}.mseed")
+                print(f"\twriting {fid_out}")
+                tr.write(fid_out, format="MSEED")
 
     def main(self):
         """
