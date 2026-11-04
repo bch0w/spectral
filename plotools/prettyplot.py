@@ -34,7 +34,7 @@ from matplotlib import patheffects
 from matplotlib.path import Path
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-from obspy import read, UTCDateTime, Stream
+from obspy import read, read_inventory, UTCDateTime, Stream, Inventory
 from obspy.taup import TauPyModel, plot_ray_paths
 from obspy.geodetics import kilometers2degrees, degrees2kilometers
 from obspy.imaging.cm import obspy_sequential
@@ -75,6 +75,17 @@ def parse_args():
     # Waveform Processing
     parser.add_argument("fids", nargs="+", 
                         help="required, file ID(s), wildcards accepted")
+    parser.add_argument("--merge", action="store_true",
+                        help="merge traces with the same ID into one, "
+                             "e.g., a gappy file or consecutive day files "
+                             "of one channel. Gaps are filled according to "
+                             "`merge_fill`. Every channel found is plotted "
+                             "and `idx` is ignored")
+    parser.add_argument("--merge_fill", type=str, default="interpolate",
+                        help="how `merge` fills gaps: 'interpolate' "
+                             "(default, linear between the samples on "
+                             "either side), 'latest' (repeat the last "
+                             "sample) or a number, e.g. 0")
     parser.add_argument("--idx", nargs="?", type=int, default=0,
                         help="if the file in `fids` read has more than one " 
                              "trace in it, allows user to choose index of " 
@@ -113,6 +124,40 @@ def parse_args():
                              "on either side of the trace will be cut and " 
                              "processed")
     
+    # Instrument response removal (all parameters start with rr_), these
+    # map onto ObsPy's Stream.remove_response()
+    parser.add_argument("--inv", nargs="+", type=str, default=None,
+                        help="StationXML file(s) used to remove the "
+                             "instrument response from the raw data. "
+                             "Response removal happens after trimming and "
+                             "before all other processing. See all 'rr_*' "
+                             "parameters to control it")
+    parser.add_argument("--rr_output", type=str, default="VEL",
+                        choices=["DISP", "VEL", "ACC", "DEF"],
+                        help="output units after response removal: "
+                             "displacement, velocity, acceleration or "
+                             "'DEF' for the response's default units")
+    parser.add_argument("--rr_water_level", type=_float_or_none, default=60.,
+                        help="water level in dB for the deconvolution, "
+                             "'none' to turn it off. Defaults to 60")
+    parser.add_argument("--rr_pre_filt", nargs=4, type=float, default=None,
+                        help="four corner frequencies (f1 f2 f3 f4) in Hz "
+                             "of a cosine taper applied in the frequency "
+                             "domain before deconvolution")
+    parser.add_argument("--rr_zero_mean_off", action="store_true",
+                        help="do not demean the data before deconvolution")
+    parser.add_argument("--rr_taper_off", action="store_true",
+                        help="do not taper the data before deconvolution")
+    parser.add_argument("--rr_taper_fraction", type=float, default=0.05,
+                        help="taper fraction of the cosine taper applied "
+                             "before deconvolution. Defaults to 0.05")
+    parser.add_argument("--rr_exact", action="store_true",
+                        help="use ObsPy's remove_response() as is, which "
+                             "evaluates the response at every FFT "
+                             "frequency. Slower for long windows; by "
+                             "default the response is evaluated on a "
+                             "coarse grid and interpolated")
+
     # Waveform options
     parser.add_argument("--wf_type", nargs="?", type=str, default="default",
                         help="Option for how to plot the waveforms:\n"
@@ -153,7 +198,7 @@ def parse_args():
                              "based on the alphabetical index. First you need "
                              "to plot the normal sorted one and then you can" \
                              "rearrange based on that order")
-    parser.add_argument("--wf_grid", nargs="+", type=int, default=None,
+    parser.add_argument("--wf_grid", nargs=2, type=int, default=None,
                         help="(nrow, ncol) If `wf_type` is 'grid', determine " \
                             "the number of rows and columns of that grid. " \
                             "For example, '--wf_grid 2 3' will give you 2 rows "
@@ -166,10 +211,11 @@ def parse_args():
     # Plot Aesthetics for Waveforms
     parser.add_argument("-c", "--colors", nargs="+", type=str, default="k",
                         help="how to select color for waveforms:\n" 
-                             "'k': select one color for all waveforms\n" 
+                             "'k', 'red', '#d62728': one color for all "
+                             "waveforms\n" 
                              "['k', 'r']: make a list of colors for each trace "
                              "must match the length of traces\n" 
-                             "'CN': use CN colors, predefiend colors in MPL,\n" 
+                             "'C?': use the C0, C1, ... color cycle of MPL\n" 
                              "'viridis': use a colormap and plot discrete " 
                              "colors from the map based on length of stream"
                              )
@@ -262,6 +308,14 @@ def parse_args():
                         help=" adjust cmap to clip at lower and/or upper end")
     parser.add_argument("--sp_vmax", default=None, type=float,
                         help="maximum value threshold for spectrogram")
+    parser.add_argument("--sp_wlen", type=float, default=None,
+                        help="spectrogram window length in seconds. By "
+                             "default the shortest window (>=128 samples) "
+                             "giving at most ~2000 time columns is used, so "
+                             "longer time ranges get longer windows")
+    parser.add_argument("--sp_overlap", type=float, default=0.9,
+                        help="fractional overlap of spectrogram windows, "
+                             "0 to 1. Defaults to 0.9")
     parser.add_argument("--sp_idx", type=int, default=0,
                         help="Iff multiple waveforms plotted, choose which of "
                              "them to use for the spectrogram. Defaults to 0. " 
@@ -323,6 +377,20 @@ def parse_args():
     return parser.parse_args()
 
 
+def _float_or_none(value):
+    """
+    Argparse type that accepts a float or the string 'none'
+
+    :type value: str
+    :param value: command line value
+    :rtype: float or None
+    :return: the value as a float, or None if 'none' was given
+    """
+    if str(value).lower() == "none":
+        return None
+    return float(value)
+
+
 def find_nearest(array, value):
     """
     Find the nearest index in a consecutive (time) array given a chosen value
@@ -354,154 +422,305 @@ def _nearest_pow_2(x):
         return b
     
 
-def spectrogram(ax, xvals, tr, per_lap=0.9, wlen=None, log=False, 
-                dbscale=False, mult=8., cmap=None, ncolors=256, zorder=None, 
-                clip=[0.0, 1.0]):
+def spectrogram(ax, xvals, data, samp_rate, xrange=None, per_lap=0.9,
+                wlen=None, log=False, dbscale=False, mult=8., cmap=None,
+                ncolors=256, zorder=None, clip=[0.0, 1.0], vmax=None,
+                max_cols=2000, max_rows=1024):
     """
-    Computes and plots spectrogram of the input data.
+    Computes and plots the spectrogram of a time series on a shared time axis.
 
     .. note::
-        Modified from ObsPys Spectrogram function
+        Modified from ObsPy's spectrogram function
         https://docs.obspy.org/_modules/obspy/imaging/spectrogram.html\
             #spectrogram
-    
-        I also removed the non-log plotting option which uses imshow because I 
-        didn't want to figure out how to change the x-axis values to match
-        the waveform for sharex=True to work. So this might be a little slower
-        when using non-log spectrogram y-scale but hopefully not significantly.
 
+        Only the displayed time range is computed, and the number of
+        columns and rows is capped so that hours of data stay fast to
+        compute and draw. A linear frequency axis is drawn with imshow;
+        a log frequency axis uses pcolormesh on log-spaced rows.
 
-    :type tr: obspy Trace
-    :param tr: Trace object to get data and sampling rate from
+    :type ax: matplotlib.axes.Axes
+    :param ax: axis to plot into, sharing its x-axis with the waveform
+    :type xvals: np.ndarray
+    :param xvals: x-axis value of every sample in `data` (seconds, minutes,
+        hours or Matplotlib date numbers)
+    :type data: np.ndarray
+    :param data: time series
+    :type samp_rate: float
+    :param samp_rate: sampling rate of `data` in Hz
+    :type xrange: tuple of float or None
+    :param xrange: (xmin, xmax) in `xvals` units to compute the spectrogram
+        over, e.g. the plot's x-limits. None uses all of `data`
     :type per_lap: float
-    :param per_lap: Percentage of overlap of sliding window, ranging from 0
-        to 1. High overlaps take a long time to compute.
-    :type wlen: int or float
-    :param wlen: Window length for fft in seconds. If this parameter is too
-        small, the calculation will take forever. If None, it defaults to a
-        window length matching 128 samples.
+    :param per_lap: fraction of overlap of the sliding window, 0 to 1
+    :type wlen: float or None
+    :param wlen: window length in seconds. If None, the shortest power-of-two
+        window of at least 128 samples is used that gives no more than
+        `max_cols` columns, so long time ranges get longer windows (and
+        finer frequency resolution) instead of millions of columns
     :type log: bool
-    :param log: Logarithmic frequency axis if True, linear frequency axis
-        otherwise.
-    :type outfile: str
-    :param outfile: String for the filename of output file, if None
-        interactive plotting is activated.
-    :type fmt: str
-    :param fmt: Format of image to save
-    :type axes: :class:`matplotlib.axes.Axes`
-    :param axes: Plot into given axes, this deactivates the fmt and
-        outfile option.
+    :param log: logarithmic frequency axis if True, linear otherwise
     :type dbscale: bool
-    :param dbscale: If True 10 * log10 of color values is taken, if False the
-        sqrt is taken.
+    :param dbscale: if True 10 * log10 of the power is plotted, if False the
+        square root
     :type mult: float
-    :param mult: Pad zeros to length mult * wlen. This will make the
-        spectrogram smoother.
-    :type cmap: :class:`matplotlib.colors.Colormap`
-    :param cmap: Specify a custom colormap instance. If not specified, then the
-        default ObsPy sequential colormap is used.
+    :param mult: zero-pad each window to `mult` times its length for a
+        smoother look, limited so there are at most `max_rows` frequencies
+    :type cmap: str or None
+    :param cmap: colormap name, defaults to ObsPy's sequential colormap
+    :type ncolors: int
+    :param ncolors: number of discrete colors in the colormap
     :type zorder: float
-    :param zorder: Specify the zorder of the plot. Only of importance if other
-        plots in the same axes are executed.
-    :type title: str
-    :param title: Set the plot title
-    :type show: bool
-    :param show: Do not call `plt.show()` at end of routine. That way, further
-        modifications can be done to the figure before showing it.
+    :param zorder: zorder of the image
     :type clip: [float, float]
-    :param clip: adjust colormap to clip at lower and/or upper end. The given
-        percentages of the amplitude range (linear or logarithmic depending
-        on option `dbscale`) are clipped.
+    :param clip: clip the color range at these fractions of the amplitude
+        range (linear or dB depending on `dbscale`)
+    :type vmax: float or None
+    :param vmax: absolute upper color limit, overrides the upper `clip`
+    :type max_cols: int
+    :param max_cols: maximum number of time columns
+    :type max_rows: int
+    :param max_rows: maximum number of frequency rows
+    :rtype: matplotlib.cm.ScalarMappable
+    :return: the plotted image, for a colorbar
     """
     if not cmap:
         cmap = obspy_sequential
     else:
         cmap = plt.get_cmap(cmap, ncolors)
+    samp_rate = float(samp_rate)
+    xvals = np.asarray(xvals)
+    data = np.asarray(data, dtype=float)
+    # x units per second, from the full span to avoid date round-off
+    units_per_sec = (xvals[-1] - xvals[0]) / ((len(xvals) - 1) / samp_rate)
 
-    # enforce float for samp_rate
-    samp_rate = float(tr.stats.sampling_rate)
+    # Samples inside the displayed range
+    if xrange is not None:
+        i0 = max(0, int(np.searchsorted(xvals, xrange[0])))
+        i1 = min(len(data), int(np.searchsorted(xvals, xrange[1])) + 1)
+    else:
+        i0, i1 = 0, len(data)
+    npts_show = i1 - i0
 
-    # set wlen from samp_rate if not specified otherwise
-    if not wlen:
-        wlen = 128 / samp_rate
-
-    npts = tr.stats.npts
-
-    # nfft needs to be an integer, otherwise a deprecation will be raised
-    # XXX add condition for too many windows => calculation takes for ever
-    nfft = int(_nearest_pow_2(wlen * samp_rate))
-
-    if npts < nfft:
-        msg = (f'Input signal too short ({npts} samples, window length '
-            f'{wlen} seconds, nfft {nfft} samples, sampling rate '
-            f'{samp_rate} Hz)')
-        raise ValueError(msg)
-
-    if mult is not None:
-        mult = int(_nearest_pow_2(mult))
-        mult = mult * nfft
+    # Window length: user choice, or grow it until the column count fits
+    if wlen:
+        nfft = int(_nearest_pow_2(wlen * samp_rate))
+    else:
+        nfft = 128
+        while npts_show / (nfft * (1 - per_lap)) > max_cols and \
+                nfft < npts_show // 4:
+            nfft *= 2
     nlap = int(nfft * float(per_lap))
+    # A user-set window may still give too many columns; skip ahead instead
+    step = nfft - nlap
+    if (npts_show - nfft) / step > max_cols:
+        nlap = max(0, nfft - int(np.ceil((npts_show - nfft) / max_cols)))
+        step = nfft - nlap
 
-    data = tr.data - tr.data.mean()
-    end = npts / samp_rate
-
-    # Here we call not plt.specgram as this already produces a plot
-    # specgram should be faster as it computes only the
-    # arrays
-    specgram, freq, time = mlab.specgram(data, Fs=samp_rate, NFFT=nfft,
-                                        pad_to=mult, noverlap=nlap)
-
-    if len(time) < 2:
-        msg = (f'Input signal too short ({npts} samples, window length '
-            f'{wlen} seconds, nfft {nfft} samples, {nlap} samples window '
-            f'overlap, sampling rate {samp_rate} Hz)')
+    # Pad half a window on each side (where data exists) so the first and
+    # last columns are centred at the edges of the displayed range
+    i0 = max(0, i0 - nfft // 2)
+    i1 = min(len(data), i1 + nfft // 2)
+    data = data[i0:i1]
+    npts = len(data)
+    if npts < nfft:
+        msg = (f"Input signal too short ({npts} samples, window length "
+               f"{nfft / samp_rate} seconds, nfft {nfft} samples, sampling "
+               f"rate {samp_rate} Hz)")
         raise ValueError(msg)
+
+    pad_to = nfft
+    if mult is not None:
+        pad_to = int(_nearest_pow_2(mult)) * nfft
+        while pad_to // 2 > max_rows and pad_to > nfft:
+            pad_to //= 2
+
+    specgram, freq, time = mlab.specgram(data - data.mean(), Fs=samp_rate,
+                                         NFFT=nfft, pad_to=pad_to,
+                                         noverlap=nlap)
+    if len(time) < 2:
+        msg = (f"Input signal too short ({npts} samples, window length "
+               f"{nfft / samp_rate} seconds, nfft {nfft} samples, {nlap} "
+               f"samples window overlap, sampling rate {samp_rate} Hz)")
+        raise ValueError(msg)
+    print(f"\tspectrogram: {nfft / samp_rate:g} s windows, "
+          f"{len(time)} columns x {len(freq) - 1} rows")
 
     # db scale and remove zero/offset for amplitude
     if dbscale:
-        specgram = 10 * np.log10(specgram[1:, :])
+        with np.errstate(divide="ignore"):
+            specgram = 10 * np.log10(specgram[1:, :])
+        finite = np.isfinite(specgram)
+        specgram[~finite] = specgram[finite].min()
     else:
         specgram = np.sqrt(specgram[1:, :])
     freq = freq[1:]
 
-    vmin, vmax = clip
-    if vmin < 0 or vmax > 1 or vmin >= vmax:
+    vmin, vmax_frac = clip
+    if vmin < 0 or vmax_frac > 1 or vmin >= vmax_frac:
         msg = "Invalid parameters for clip option."
         raise ValueError(msg)
     _range = float(specgram.max() - specgram.min())
     vmin = specgram.min() + vmin * _range
-    vmax = specgram.min() + vmax * _range
-
+    if vmax is None:
+        vmax = specgram.min() + vmax_frac * _range
     norm = Normalize(vmin, vmax, clip=True)
 
-    # calculate half bin width
+    # Bin edges: mlab gives window centres (seconds after the first sample
+    # of `data`) and bin-centre frequencies
     halfbin_time = (time[1] - time[0]) / 2.0
     halfbin_freq = (freq[1] - freq[0]) / 2.0
+    t_edges = np.concatenate((time - halfbin_time,
+                              [time[-1] + halfbin_time]))
+    x_edges = xvals[i0] + t_edges * units_per_sec
+    f_edges = np.concatenate((freq - halfbin_freq,
+                              [freq[-1] + halfbin_freq]))
 
-    kwargs = {'cmap': cmap, 'zorder': zorder}
-    # pcolor expects one bin more at the right end, and we must also shift
-    # our frequency bins to the center, currently they define the right edge
-    freq = np.concatenate((freq, [freq[-1] + 2 * halfbin_freq]))
-    freq -= halfbin_freq
-
-    # mlab returns window *centre* times in seconds after the first sample.
-    # Turn them into bin edges, then map the edges onto the waveform x-axis
-    # (seconds, minutes, hours or Matplotlib date numbers) so sharex lines
-    # the image up with the waveform. The units-per-second factor comes
-    # from the full span of `xvals`, which avoids float round-off when
-    # `xvals` are date numbers
-    time = np.concatenate((time - halfbin_time, [time[-1] + halfbin_time]))
-    units_per_sec = (xvals[-1] - xvals[0]) / ((len(xvals) - 1) / samp_rate)
-    new_time = xvals[0] + time * units_per_sec
-
-    # Plot times
-    im = ax.pcolormesh(new_time, freq, specgram, norm=norm, **kwargs)
-
-    # Log scaling for frequency values (y-axis)
+    kwargs = {"cmap": cmap, "zorder": zorder, "norm": norm}
     if log:
-        ax.set_yscale('log')
-
+        # Sample the rows on a log-spaced grid so pcolormesh stays small
+        nrow = min(len(freq), 400)
+        # Frequencies below 1 / window length are not resolved (only zero
+        # padding), so the log axis starts there
+        f_low = max(f_edges[0], samp_rate / nfft)
+        f_log = np.geomspace(f_low, f_edges[-1], nrow + 1)
+        centres = np.sqrt(f_log[:-1] * f_log[1:])
+        rows = np.clip(np.searchsorted(f_edges, centres) - 1, 0,
+                       len(freq) - 1)
+        im = ax.pcolormesh(x_edges, f_log, specgram[rows], rasterized=True,
+                           **kwargs)
+        ax.set_yscale("log")
+    else:
+        im = ax.imshow(specgram, origin="lower", aspect="auto",
+                       interpolation="nearest",
+                       extent=(x_edges[0], x_edges[-1], f_edges[0],
+                               f_edges[-1]), **kwargs)
     return im
+
+
+def fast_remove_response(tr, inventory, output="VEL", water_level=60.,
+                         pre_filt=None, zero_mean=True, taper=True,
+                         taper_fraction=0.05, n_eval=2 ** 15):
+    """
+    Remove the instrument response of a Trace in place, like ObsPy's
+    Trace.remove_response(), but much faster for long traces.
+
+    ObsPy evaluates the full response with evalresp at every FFT frequency
+    (about one million points for an hour of 100 Hz data), which dominates
+    the run time. The response is smooth, so here it is evaluated at
+    about `n_eval` frequencies (evenly spaced, plus log-spaced points at low
+    frequency) and interpolated (real and imaginary parts) onto the FFT
+    grid. Every other step (demean, taper, pre-filter,
+    water level, inverse FFT) follows ObsPy 1.5 exactly. Traces short
+    enough to need fewer than `n_eval` frequencies, and polynomial
+    responses, are passed straight to ObsPy.
+
+    :type tr: obspy.core.trace.Trace
+    :param tr: trace to correct, modified in place
+    :type inventory: obspy.core.inventory.Inventory
+    :param inventory: inventory containing the trace's response
+    :type output: str
+    :param output: 'DISP', 'VEL', 'ACC' or 'DEF'
+    :type water_level: float or None
+    :param water_level: water level in dB, None to turn it off
+    :type pre_filt: list of float or None
+    :param pre_filt: four corner frequencies of the frequency-domain taper
+    :type zero_mean: bool
+    :param zero_mean: demean the data before deconvolution
+    :type taper: bool
+    :param taper: apply a cosine taper before deconvolution
+    :type taper_fraction: float
+    :param taper_fraction: fraction of the trace tapered at each end
+    :type n_eval: int
+    :param n_eval: number of frequencies at which the response is evaluated
+    :rtype: obspy.core.trace.Trace
+    :return: the corrected trace
+    """
+    from obspy.core.inventory import PolynomialResponseStage
+    from obspy.signal.invsim import (cosine_taper, cosine_sac_taper,
+                                     invert_spectrum)
+    from obspy.signal.util import _npts2nfft
+
+    kwargs = dict(output=output, water_level=water_level, pre_filt=pre_filt,
+                  zero_mean=zero_mean, taper=taper,
+                  taper_fraction=taper_fraction)
+    response = tr._get_response(inventory)
+    npts = tr.stats.npts
+    nfft = _npts2nfft(npts)
+    if (not response.response_stages
+            or isinstance(response.response_stages[0],
+                          PolynomialResponseStage)
+            or nfft // 2 + 1 <= n_eval):
+        return tr.remove_response(inventory=inventory, **kwargs)
+
+    data = tr.data.astype(np.float64)
+    if zero_mean:
+        data -= data.mean()
+    if taper:
+        data *= cosine_taper(npts, taper_fraction, sactaper=True,
+                             halfcosine=False)
+    data = np.fft.rfft(data, n=nfft)
+    freqs = np.fft.rfftfreq(nfft, d=tr.stats.delta)
+
+    # Coarse response, interpolated onto the FFT frequencies. Linear
+    # spacing covers the passband; extra log-spaced points resolve the steep
+    # response near 0 Hz, which matters for DISP without `pre_filt`
+    f_eval = np.union1d(np.linspace(0, freqs[-1], n_eval),
+                        np.geomspace(freqs[1], freqs[-1], n_eval // 4))
+    resp_eval = response.get_evalresp_response_for_frequencies(
+        f_eval, output=output)
+    freq_response = (np.interp(freqs, f_eval, resp_eval.real)
+                     + 1j * np.interp(freqs, f_eval, resp_eval.imag))
+
+    if pre_filt:
+        data *= cosine_sac_taper(freqs, flimit=pre_filt)
+    if water_level is None:
+        freq_response[0] = 0.0
+        freq_response[1:] = 1.0 / freq_response[1:]
+    else:
+        invert_spectrum(freq_response, water_level)
+    data *= freq_response
+    data[-1] = abs(data[-1]) + 0.0j
+    tr.data = np.fft.irfft(data)[0:npts]
+    return tr
+
+
+def merge_stream(st, fill="interpolate"):
+    """
+    Merge traces with the same ID into one continuous trace each, e.g., the
+    segments of a gappy file, or consecutive day files of one channel.
+    Traces keep the order in which their IDs first appear in `st`.
+
+    :type st: obspy.core.stream.Stream
+    :param st: stream to merge
+    :type fill: str or float
+    :param fill: how to fill gaps: 'interpolate' (linear between the samples
+        on either side), 'latest' (repeat the last sample before the gap),
+        or a number to fill with
+    :rtype: obspy.core.stream.Stream
+    :return: merged stream
+    """
+    if fill not in ("interpolate", "latest"):
+        try:
+            fill = float(fill)
+        except (TypeError, ValueError):
+            raise ValueError(f"`merge_fill` must be 'interpolate', 'latest' "
+                             f"or a number, not {fill!r}") from None
+
+    order = []
+    for tr in st:
+        if tr.id not in order:
+            order.append(tr.id)
+
+    gaps = st.get_gaps()
+    st = st.copy()
+    st.merge(method=1, fill_value=fill)
+    if gaps:
+        total = sum(max(gap[6], 0) for gap in gaps)
+        print(f"\tmerged {len(gaps)} gap(s)/overlap(s), {total:.2f} s of gaps "
+              f"filled with {fill!r}")
+
+    return Stream([tr for id_ in order for tr in st.select(id=id_)])
 
 
 def convert_timezone(code, st):
@@ -674,11 +893,16 @@ class PrettyPlot():
                  # Processing
                  taper=0, fmin=None, fmax=None, zerophase=False, corners=4,
                  resample=False, t0=0, tstart=0, detrend=False, integrate=0,
+                 merge=False, merge_fill="interpolate",
                  differentiate=0, trim_pct=1.,
+                 # Response removal
+                 inv=None, rr_output="VEL", rr_water_level=60.,
+                 rr_pre_filt=None, rr_zero_mean=True, rr_taper=True,
+                 rr_taper_fraction=0.05, rr_exact=False,
                  # Waveform plotting
                  wf_abs=False, wf_type="default", wf_norm=False, wf_scale=1,
                  wf_recsec_spacing=1, wf_spacing_exact=False, wf_order=None,
-                 nrows=None, ncols=None,
+                 wf_grid=None, nrows=None, ncols=None,
                  # Plotting Aesthetics
                  colors="k", alphas=None, labels=None, linewidth=0.5, 
                  ylabel="amplitude", ylim=None, ylim_grid=None, xlim=None,
@@ -692,7 +916,7 @@ class PrettyPlot():
                  # Spectrogram
                  spectrogram=False, sp_cmap="viridis", sp_numcol=256,
                  sp_dbscale=True, sp_logscale=False, sp_clip=None,
-                 sp_vmax=None, sp_idx=0,
+                 sp_vmax=None, sp_idx=0, sp_wlen=None, sp_overlap=0.9,
                  # Additional Time Series
                  add_trace=None, tr_time="a", tr_label="", tr_ylabel="", 
                  tr_color="C0", 
@@ -708,6 +932,8 @@ class PrettyPlot():
         # Waveforms
         self.fids = fids
         self.idx = idx
+        self.merge = merge
+        self.merge_fill = merge_fill
 
         # Preprocessing
         self.taper = taper
@@ -723,6 +949,17 @@ class PrettyPlot():
         self.differentiate = differentiate
         self.trim_pct = trim_pct
 
+        # Instrument response removal, `inv` may be StationXML path(s) or an
+        # ObsPy Inventory
+        self.inv = inv
+        self.rr_output = rr_output
+        self.rr_water_level = rr_water_level
+        self.rr_pre_filt = rr_pre_filt
+        self.rr_zero_mean = rr_zero_mean
+        self.rr_taper = rr_taper
+        self.rr_taper_fraction = rr_taper_fraction
+        self.rr_exact = rr_exact
+
         # Plot structure control
         self.wf_abs = wf_abs
         self.wf_type = wf_type
@@ -733,6 +970,11 @@ class PrettyPlot():
         self.wf_order = wf_order
         self.nrows = nrows
         self.ncols = ncols
+        # `wf_grid` is shorthand for (nrows, ncols)
+        if wf_grid:
+            assert len(wf_grid) == 2, \
+                f"`wf_grid` must be two integers (nrows ncols), not {wf_grid}"
+            self.nrows, self.ncols = [int(_) for _ in wf_grid]
 
         # Waveform style parameters
         self.colors = colors
@@ -771,6 +1013,8 @@ class PrettyPlot():
         self.sp_clip = sp_clip or [0., 1.]
         self.sp_vmax = sp_vmax
         self.sp_idx = sp_idx
+        self.sp_wlen = sp_wlen
+        self.sp_overlap = sp_overlap
 
         # Additional time series on shared-X axis
         self.add_trace = add_trace
@@ -804,6 +1048,7 @@ class PrettyPlot():
         self._alphas = None
         self._ylims = None
         self._ref_time = None
+        self._tz_shift = 0.
 
         # Parameter conflicts
         if self.wf_type == "grid":
@@ -821,12 +1066,13 @@ class PrettyPlot():
                 else:
                     sys.exit("no function `read_sem()` from PySEP")
             print(fid)
-            if len(st) > 1:
-                print(f"\t> WARNING: more than 1 trace found, taking index "
-                      f"{self.idx}")
+            if len(st) > 1 and not self.merge:
+                print(f"\t> WARNING: {len(st)} traces found, taking index "
+                      f"{self.idx}. Use `merge` to join gappy data")
                 st = st[self.idx]
             self.st += st
-        # self.st.merge()  # incase we are plotting multiple days
+        if self.merge:
+            self.st = merge_stream(self.st, fill=self.merge_fill)
         print(f"{self.st.__str__(extended=True)}")
 
 
@@ -896,7 +1142,10 @@ class PrettyPlot():
        
         # Shift to correct time axis
         if self.time.startswith("a") and len(self.time) > 1:
+            _start = self.st[0].stats.starttime
             self.st = convert_timezone(code=self.time[1:], st=self.st)
+            # Kept so response removal can match inventory epochs in UTC
+            self._tz_shift = self.st[0].stats.starttime - _start
 
         # Relative time axes (and `xlim`) are measured from the first sample
         # of the first trace as read, so remember it before any trimming
@@ -963,6 +1212,52 @@ class PrettyPlot():
         if self.xlim:
             return float(self.xlim[0])
         return float(self._xvals[0])
+
+    def remove_response(self):
+        """
+        Remove the instrument response with ObsPy's Stream.remove_response()
+        using the StationXML given by `inv`. Runs after trimming, so only the
+        (buffered) plot window is deconvolved, and before all other
+        processing. If no `ylabel` was set, it is updated to match the
+        output units.
+        """
+        if isinstance(self.inv, Inventory):
+            inv = self.inv
+        else:
+            fids = [self.inv] if isinstance(self.inv, str) else self.inv
+            inv = Inventory()
+            for fid in fids:
+                inv += read_inventory(fid)
+
+        print(f"\tremoving response, output={self.rr_output}, "
+              f"water_level={self.rr_water_level}, "
+              f"pre_filt={self.rr_pre_filt}")
+
+        # Inventory epochs are in UTC, so undo any time zone shift while
+        # looking up the response
+        for tr in self.st:
+            tr.stats.starttime -= self._tz_shift
+        kwargs = dict(output=self.rr_output, water_level=self.rr_water_level,
+                      pre_filt=self.rr_pre_filt, zero_mean=self.rr_zero_mean,
+                      taper=self.rr_taper,
+                      taper_fraction=self.rr_taper_fraction)
+        try:
+            for tr in self.st:
+                if self.rr_exact:
+                    tr.remove_response(inventory=inv, **kwargs)
+                else:
+                    fast_remove_response(tr, inv, **kwargs)
+        finally:
+            for tr in self.st:
+                tr.stats.starttime += self._tz_shift
+
+        # Label the amplitude axis with physical units unless the user
+        # already chose a label
+        units = {"DISP": "Displacement [m]", "VEL": "Velocity [m/s]",
+                 "ACC": r"Acceleration [m/s$^2$]"}
+        if self.rr_output in units and \
+                str(self.ylabel).lower() == "amplitude":
+            self.ylabel = units[self.rr_output]
 
     def process_waveforms(self):
         """
@@ -1110,18 +1405,28 @@ class PrettyPlot():
         # WAVEFORM STYLES
         # Determine the waveform styling including colors and opacity (alpha)
         alphas = self.alphas or [1] * n
-        # User-selection of colors
-        if len(self.colors) > 1:
-            colors = self.colors
-        elif len(self.colors) == 1:
-            if self.colors[0] == "C?":
-                colors = [f"C{i}" for i in range(n)]
-            # Allow colormaps that we make into discrete colors
-            elif len(self.colors[0]) > 1:
-                cmap = mpl.colormaps[self.colors[0]]
-                colors = cmap(np.linspace(0.1, 1, n))
-            else:
-                colors = [self.colors[0]] * n
+        # User-selection of colors. A single value can be 'C?' (color cycle),
+        # any Matplotlib color (e.g. 'k', 'red', '#d62728'), or a colormap
+        # name, which is sampled into `n` discrete colors
+        _colors = self.colors
+        if isinstance(_colors, str):
+            _colors = [_colors]
+        if len(_colors) > 1:
+            colors = list(_colors)
+            if len(colors) < n:
+                print(f"\t> WARNING: {len(colors)} colors for {n} traces, "
+                      f"repeating colors")
+                colors = [colors[i % len(colors)] for i in range(n)]
+        elif _colors[0] in ("C?", "CN"):
+            colors = [f"C{i}" for i in range(n)]
+        elif mpl.colors.is_color_like(_colors[0]):
+            colors = [_colors[0]] * n
+        elif _colors[0] in mpl.colormaps:
+            cmap = mpl.colormaps[_colors[0]]
+            colors = cmap(np.linspace(0.1, 1, n))
+        else:
+            raise ValueError(f"`colors` value {_colors[0]!r} is not a "
+                             f"Matplotlib color or colormap name")
         # User-overwrite of the waveform labels put in legends
         if self.labels:
             labels = self.labels 
@@ -1204,6 +1509,11 @@ class PrettyPlot():
         twax.set_ylabel(self.tr_ylabel, rotation=-90, labelpad=20)
 
         self.twax = twax
+        # Draw the waveform axis above the twin axis so the added trace sits
+        # behind the waveform; the waveform axis background is hidden so the
+        # added trace still shows through
+        self.ax.set_zorder(twax.get_zorder() + 1)
+        self.ax.patch.set_visible(False)
         if self.spectrogram:
             _size = 2.5
             _pad = 0.05
@@ -1217,12 +1527,23 @@ class PrettyPlot():
         the spectrogram for the `sp_idx` index of the Stream. Cannot be used
         in conjunction with `wf_type`=='grid' option
         """
+        # Only the displayed range is computed, not the trimming buffers
+        xrange = None
+        if self.xlim:
+            if self.time.startswith("a"):
+                xrange = [date2num(UTCDateTime(_).datetime)
+                          for _ in self.xlim]
+            else:
+                xrange = [float(_) for _ in self.xlim]
+        tr = self.st[self.sp_idx]
         im = spectrogram(
-            ax=self.ax_spectra, xvals=self._xvals, tr=self.st[self.sp_idx], 
-            log=self.sp_logscale, dbscale=self.sp_dbscale, 
+            ax=self.ax_spectra, xvals=self._xvals, data=tr.data,
+            samp_rate=tr.stats.sampling_rate, xrange=xrange,
+            wlen=self.sp_wlen, per_lap=self.sp_overlap,
+            log=self.sp_logscale, dbscale=self.sp_dbscale,
             cmap=self.sp_cmap, ncolors=self.sp_numcol,
-            clip=self.sp_clip,
-            ) 
+            clip=self.sp_clip, vmax=self.sp_vmax,
+            )
         self.ax_spectra.set_ylabel("Freq. [Hz]")
         self.ax_spectra.axis("tight")
         self.ax_spectra.grid(False) 
@@ -1432,6 +1753,7 @@ class PrettyPlot():
     def set_ylim(self):
         """Establish ylims either by user set or from the natural plot lims"""
         # Establish ylim as [ymin, ymax]
+        user_ylim = bool(self.ylim)
         if self.ylim:
             if len(self.ylim) == 1:
                 ymax = abs(self.ylim[0])
@@ -1450,6 +1772,9 @@ class PrettyPlot():
                 )
             self._ylims = [self.ylim_grid[2 * i: 2 * i + 2]
                            for i in range(len(self.axs))]
+        elif self.wf_type == "grid" and not user_ylim:
+            # Each subplot keeps its own natural limits
+            self._ylims = [ax.get_ylim() for ax in self.axs]
         else:
             self._ylims = [self.ylim] * len(self.axs)
 
@@ -1471,12 +1796,22 @@ class PrettyPlot():
 
         for i, ax in enumerate(self.axs):
             if self.legend:
-                leg = ax.legend(loc="upper right", bbox_to_anchor=(1,1),
+                handles, labels = ax.get_legend_handles_labels()
+                # Include the added trace (`add_trace`) in the same legend
+                if self.twax is not None and ax is self.ax:
+                    _h, _l = self.twax.get_legend_handles_labels()
+                    handles, labels = handles + _h, labels + _l
+                leg = ax.legend(handles, labels,
+                                loc="upper right", bbox_to_anchor=(1,1),
                                 bbox_transform=ax.transAxes,
                                 prop={"size": FONTSIZES["legend"]},
                                 ncol=self.ncol_legend)
                 leg.set(zorder=100)
 
+            # Grid subplots share the x-axis, so only the bottom one in each
+            # column needs tick labels
+            if i not in bottom_axes:
+                ax.tick_params(axis="x", labelbottom=False)
             if i in bottom_axes:
                 if self.time.startswith("a"):
                     ax.set_xlabel(f"Time [UTC{self.time[1:]}]")
@@ -1591,6 +1926,8 @@ class PrettyPlot():
         """
         self.setup_plot()
         self.trim_waveform()
+        if self.inv:
+            self.remove_response()
         self.process_waveforms()
         self.get_plot_parameters()
         self.plot_waveforms()
@@ -1619,5 +1956,7 @@ if __name__ == "__main__":
     args_dict["legend"] = not args_dict.pop("no_legend", False)
     args_dict["show"] = not args_dict.pop("noshow", False)
     args_dict["sp_dbscale"] = not args_dict.pop("sp_dbscale_off", False)
+    args_dict["rr_zero_mean"] = not args_dict.pop("rr_zero_mean_off", False)
+    args_dict["rr_taper"] = not args_dict.pop("rr_taper_off", False)
     pp = PrettyPlot(fids, **args_dict)
     pp.main()
