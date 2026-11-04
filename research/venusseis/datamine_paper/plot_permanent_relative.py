@@ -329,27 +329,28 @@ def paired_difference(data, ref, centers, octave_fraction):
     return sta_binned - ref_binned
 
 
-def style_axis(ax, args, last_col):
+def style_axis(ax, args):
     """
     Apply the shared axis styling. Tick labels are plain numbers (0.1, 1,
-    10); only the last column labels the right edge so that labels of
-    neighboring panels do not collide.
+    10). Labels sitting on the panel edges are anchored inward (left edge
+    label left-aligned, right edge label right-aligned) so every panel
+    shows its full range without colliding with its neighbors.
 
     :type ax: matplotlib.axes.Axes
     :param ax: axis to style
     :type args: argparse.Namespace
     :param args: parsed command line arguments
-    :type last_col: bool
-    :param last_col: True for panels in the right-most column
     """
     ax.set_xscale("log")
     ax.set_xlim(args.fmin, args.fmax)
     decades = 10.0 ** np.arange(np.ceil(np.log10(args.fmin)),
                                 np.floor(np.log10(args.fmax)) + 1)
-    labels = [f"{d:g}" for d in decades]
-    if not last_col and np.isclose(decades[-1], args.fmax):
-        labels[-1] = ""
-    ax.set_xticks(decades, labels)
+    ax.set_xticks(decades, [f"{d:g}" for d in decades])
+    for value, label in zip(decades, ax.get_xticklabels()):
+        if np.isclose(value, args.fmin):
+            label.set_horizontalalignment("left")
+        elif np.isclose(value, args.fmax):
+            label.set_horizontalalignment("right")
     ax.grid(True, which="both", lw=0.25, color="#d8d7d2")
     for side in ("top", "right"):
         ax.spines[side].set_visible(False)
@@ -453,7 +454,7 @@ def plot(by_site, components, outfile, args):
                         color=MUTED_TEXT)
             if row == nrow - 1:
                 ax.set_xlabel("Frequency (Hz)")
-            style_axis(ax, args, last_col=col == ncol - 1)
+            style_axis(ax, args)
 
         # Panels in a row share y-limits fitted to that row's data (always
         # including 0 dB), with extra headroom for the date label
