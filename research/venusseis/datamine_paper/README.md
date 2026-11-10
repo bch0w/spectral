@@ -1,8 +1,8 @@
 # ISHTAR data mine paper: seismic noise and wind
 
 Scripts for the data mine paper figures. Run them through the symlinks in
-`/Users/prof/Work/akvenus/{ppsd,windygrams}` (recreate with
-`./setup_links.sh`). Env `psd_viz` for `ppsd/`, `work` for `windygrams/`.
+`/Users/prof/Work/akvenus/{ppsd,windygrams}`. Env `psd_viz` for `ppsd/`,
+`work` for `windygrams/`.
 
 **In the paper:** `k24k_wind_data.png` (= `wind_covers.png`) and
 `wind_compare_mitdu_mitdc_hvmitd_1hz.png`, both from `plot_wind_states.py`
@@ -50,10 +50,10 @@ and copied by hand to `windygrams/FIGURES/FOR_PAPER/`.
 
 ## Code outside this repo
 
-- PySEP `pplot.py` changes: branch `pplot-envelope-spectrogram` (pushed,
-  not merged). Wind-state figures fail without it.
-- `psd_viz`: local-only branch `compare-mixed-grids`, not pushed.
-- Both are also saved as patches in `external/`.
+- PySEP: wind-state figures need the `pplot.py` envelope and spectrogram
+  options, merged into PySEP.
+- `psd_viz`: `run_psd_viz.py` needs the local branch `compare-mixed-grids`
+  (kept local only).
 
 ## Unsolved
 
