@@ -1,0 +1,69 @@
+# Default configuration for windygrams.py: every window, station and
+# component. Other configs can extend this one with `base: windygrams.yaml`
+# and only list what they change (nested sections are merged key by key,
+# lists are replaced).
+#
+# YAML notes: quote times ("13:10"), otherwise YAML reads them as numbers.
+
+# Directories, relative to the directory of windygrams.py
+paths:
+  data: DATA          # MiniSEED day files, NET.STA.LOC.CHA.YEAR.JDAY
+  wind: WIND          # smoothed wind speed files, made on demand
+  xml: XML            # StationXML: ISHTAR.xml and NET.STA.xml
+  out: FIGURES        # figures go to out/<wind condition>/<window>/
+year: 2025
+
+# What to plot. `windows` takes window names or wildcards, e.g. "k24k_*",
+# "*_high" or "all"
+select:
+  windows: all
+  stations: [C, U, W]  # XX Covered, Uncovered, Windscreen; Permanent
+  components: [Z, N, E]
+
+# Processing applied to every figure
+processing:
+  fmin: 1.0           # highpass corner in Hz
+  ylim: 2.0e-5        # symmetric waveform y-limit in m/s
+  wind_smooth: 60     # running mean of the 1 Hz wind speed in seconds
+  envelope: false     # overlay the Hilbert envelope of the waveform
+  env_smooth: 60      # running mean of the envelope in seconds
+
+# Keyword arguments passed straight to pysep.pplot.PrettyPlot
+pplot:
+  merge: true
+  trim_pct: 0.1
+  time: a
+  rr_output: VEL
+  ylabel: Velocity [m/s]
+  spectrogram: true
+  sp_vmin: -190
+  sp_vmax: -140
+  sp_cmap: viridis
+  tr_color: C3
+  tr_ylabel: Wind speed (m/s), 1-min mean
+  tr_ylim: [0, 14]
+  tr_front: true
+  wf_env_color: C0
+  fig_size: [10, 6]
+  dpi: 200
+  show: false
+
+# Each site: XX channel band/instrument code, the permanent station and its
+# channel code, and the local time zone used in titles
+sites:
+  DESD: {cha: HH, perm: HV.DESD, perm_cha: EH, tz: Pacific/Honolulu}
+  H23K: {cha: DH, perm: AK.H23K, perm_cha: BH, tz: America/Anchorage}
+  K24K: {cha: EH, perm: AK.K24K, perm_cha: BH, tz: America/Anchorage}
+  KAED: {cha: HH, perm: HV.KAED, perm_cha: EH, tz: Pacific/Honolulu}
+  MDM: {cha: DH, perm: AK.MDM, perm_cha: BH, tz: America/Anchorage}
+  MITD: {cha: HH, perm: HV.MITD, perm_cha: HH, tz: Pacific/Honolulu}
+  PAX: {cha: EH, perm: AK.PAX, perm_cha: BH, tz: America/Anchorage}
+  RND: {cha: EH, perm: AK.RND, perm_cha: BH, tz: America/Anchorage}
+
+# Windows: site, julian day, start and end in UTC (same day) and a
+# description, which also names the output subdirectory ('high wind' ->
+# high_wind). K24K and MITD were hand-picked; the rest are from
+# find_windows.py
+windows:
+  desd_low: {site: DESD, jday: 120, start: "14:00", end: "18:00",
+             desc: low wind}

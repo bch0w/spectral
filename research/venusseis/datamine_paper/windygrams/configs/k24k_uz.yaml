@@ -1,0 +1,12 @@
+# Example of a smaller selection: K24K windows, Uncovered and permanent
+# stations, vertical component only, with the wind-comparison envelope.
+# Everything else comes from windygrams.yaml.
+base: windygrams.yaml
+
+select:
+  windows: ["k24k_*"]
+  stations: [U, P]
+  components: [Z]
+
+processing:
+  envelope: true

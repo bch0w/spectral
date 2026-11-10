@@ -1,0 +1,9 @@
+# HV.DESD in the DESD low-wind window on the same scale as the XX figures
+# (>1 Hz, -190 to -140 dB), to check for the ~35 Hz line seen at DESDU
+base: ../../soi.yaml
+paths:
+  out: CHECKS/desd_35hz
+select:
+  windows: [desd_low]
+  stations: [C, U, W, P]
+  components: [Z, N, E]

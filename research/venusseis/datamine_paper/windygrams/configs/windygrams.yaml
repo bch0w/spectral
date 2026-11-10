@@ -1,0 +1,116 @@
+# Default configuration for windygrams.py: every window, station and
+# component. Other configs can extend this one with `base: windygrams.yaml`
+# and only list what they change (nested sections are merged key by key,
+# lists are replaced).
+#
+# YAML notes: quote times ("13:10"), otherwise YAML reads them as numbers.
+
+# Directories, relative to the directory of windygrams.py
+paths:
+  data: DATA          # MiniSEED day files, NET.STA.LOC.CHA.YEAR.JDAY
+  wind: WIND          # smoothed wind speed files, made on demand
+  xml: XML            # StationXML: ISHTAR.xml and NET.STA.xml
+  out: FIGURES        # figures go to out/<wind condition>/<window>/
+year: 2025
+
+# What to plot. `windows` takes window names or wildcards, e.g. "k24k_*",
+# "*_high" or "all"
+select:
+  windows: all
+  stations: [C, U, W, P]  # XX Covered, Uncovered, Windscreen; Permanent
+  components: [Z, N, E]
+
+# Processing applied to every figure
+processing:
+  fmin: 5.0           # highpass corner in Hz
+  ylim: 2.0e-5        # symmetric waveform y-limit in m/s
+  wind_smooth: 60     # running mean of the 1 Hz wind speed in seconds
+  envelope: false     # overlay the Hilbert envelope of the waveform
+  env_smooth: 60      # running mean of the envelope in seconds
+
+# Keyword arguments passed straight to pysep.pplot.PrettyPlot
+pplot:
+  merge: true
+  trim_pct: 0.1
+  time: a
+  rr_output: VEL
+  ylabel: Velocity [m/s]
+  spectrogram: true
+  sp_vmin: -190
+  sp_vmax: -110
+  tr_color: C3
+  tr_ylabel: Wind speed (m/s), 1-min mean
+  tr_ylim: [0, 14]
+  tr_front: true
+  wf_env_color: C0
+  fig_size: [10, 6]
+  dpi: 200
+  show: false
+
+# Each site: XX channel band/instrument code, the permanent station and its
+# channel code, and the local time zone used in titles
+sites:
+  DESD: {cha: HH, perm: HV.DESD, perm_cha: EH, tz: Pacific/Honolulu}
+  H23K: {cha: DH, perm: AK.H23K, perm_cha: BH, tz: America/Anchorage}
+  K24K: {cha: EH, perm: AK.K24K, perm_cha: BH, tz: America/Anchorage}
+  KAED: {cha: HH, perm: HV.KAED, perm_cha: EH, tz: Pacific/Honolulu}
+  MDM: {cha: DH, perm: AK.MDM, perm_cha: BH, tz: America/Anchorage}
+  MITD: {cha: HH, perm: HV.MITD, perm_cha: HH, tz: Pacific/Honolulu}
+  PAX: {cha: EH, perm: AK.PAX, perm_cha: BH, tz: America/Anchorage}
+  RND: {cha: EH, perm: AK.RND, perm_cha: BH, tz: America/Anchorage}
+
+# Windows: site, julian day, start and end in UTC (same day) and a
+# description, which also names the output subdirectory ('high wind' ->
+# high_wind). K24K and MITD were hand-picked; the rest are from
+# find_windows.py
+windows:
+  k24k_high: {site: K24K, jday: 267, start: "13:10", end: "17:10",
+              desc: high wind}
+  k24k_low: {site: K24K, jday: 271, start: "12:00", end: "16:00",
+             desc: low wind}
+  k24k_rise: {site: K24K, jday: 246, start: "19:40", end: "23:40",
+              desc: rising wind}
+  k24k_rise2: {site: K24K, jday: 267, start: "05:10", end: "09:10",
+               desc: rising wind}
+  mitd_high: {site: MITD, jday: 97, start: "13:00", end: "17:00",
+              desc: high wind}
+  mitd_low: {site: MITD, jday: 113, start: "14:00", end: "18:00",
+             desc: low wind}
+  mitd_drop: {site: MITD, jday: 98, start: "06:50", end: "10:50",
+              desc: falling wind}
+  desd_high: {site: DESD, jday: 101, start: "19:20", end: "23:20",
+              desc: high wind}
+  desd_low: {site: DESD, jday: 120, start: "14:00", end: "18:00",
+             desc: low wind}
+  desd_change: {site: DESD, jday: 96, start: "01:40", end: "05:40",
+                desc: falling wind}
+  h23k_high: {site: H23K, jday: 193, start: "12:40", end: "16:40",
+              desc: high wind}
+  h23k_low: {site: H23K, jday: 198, start: "12:40", end: "16:40",
+             desc: low wind}
+  h23k_change: {site: H23K, jday: 193, start: "05:50", end: "09:50",
+                desc: rising wind}
+  kaed_high: {site: KAED, jday: 97, start: "00:00", end: "04:00",
+              desc: high wind}
+  kaed_low: {site: KAED, jday: 87, start: "05:50", end: "09:50",
+             desc: low wind}
+  kaed_change: {site: KAED, jday: 104, start: "00:50", end: "04:50",
+                desc: falling wind}
+  mdm_high: {site: MDM, jday: 202, start: "07:20", end: "11:20",
+             desc: high wind}
+  mdm_low: {site: MDM, jday: 199, start: "07:20", end: "11:20",
+            desc: low wind}
+  mdm_change: {site: MDM, jday: 195, start: "10:20", end: "14:20",
+               desc: rising wind}
+  pax_high: {site: PAX, jday: 267, start: "00:00", end: "04:00",
+             desc: high wind}
+  pax_low: {site: PAX, jday: 269, start: "00:00", end: "04:00",
+            desc: low wind}
+  pax_change: {site: PAX, jday: 258, start: "18:10", end: "22:10",
+               desc: rising wind}
+  rnd_high: {site: RND, jday: 250, start: "04:00", end: "08:00",
+             desc: high wind}
+  rnd_low: {site: RND, jday: 275, start: "04:00", end: "08:00",
+            desc: low wind}
+  rnd_change: {site: RND, jday: 253, start: "07:30", end: "11:30",
+               desc: rising wind}

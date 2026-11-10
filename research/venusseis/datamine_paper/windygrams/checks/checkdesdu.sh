@@ -1,0 +1,27 @@
+pplot DATA/XX.DESDU..HHN.2025.120 \
+	--inv XML/ISHTAR.xml \
+	--merge \
+	--trim_pct 0.1 \
+	--time a \
+	--rr_output VEL \
+	--ylabel 'Velocity [m/s]' \
+	--spectrogram \
+	--sp_vmin -190 \
+	--sp_vmax -140 \
+	--sp_cmap viridis \
+	--tr_color C3 \
+	--tr_ylabel 'Wind speed (m/s), 1-min mean' \
+	--tr_ylim 0 14 \
+	--tr_front \
+	--fig_size 10 6 \
+	--dpi 200 \
+	--fmin 1 \
+	--ylim -0.00002 0.00002 \
+	--xlim 2025-04-30T14:00:00.000000Z 2025-04-30T18:00:00.000000Z \
+	--rr_pre_filt 0.05 0.1 45 50 \
+	--add_trace WIND/XX.DESDA..LWS.2025.120 \
+	--tr_label 'DESDA wind speed' \
+	--title 'XX.DESDU..HHN low wind (wind 0.6 m/s mean), 2025-04-30 04:00-08:00 HST, >1 Hz' \
+	--save FIGURES/low_wind/desd_low/XX.DESDU..HHN.png \
+	--wf_env \
+	--wf_env_smooth 60
